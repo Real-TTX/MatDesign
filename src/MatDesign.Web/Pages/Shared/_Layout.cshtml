@@ -9,7 +9,8 @@
     var sub = ViewData["PageSub"] as string;
     var crumbs = ViewData["Crumbs"] as IReadOnlyList<(string Text, string? Url)> ?? [];
     var width = ViewData["Width"] as string;
-    var active = shell.ActiveHref ?? Navigation.ActiveHref(Context.Request.Path.Value ?? "/");
+    // A page can name the menu item it belongs to (ViewData["ActiveHref"]): a component page belongs to its group in the menu.
+    var active = ViewData["ActiveHref"] as string ?? shell.ActiveHref ?? Navigation.ActiveHref(Context.Request.Path.Value ?? "/", Context.Request.QueryString.Value);
 }
 <!DOCTYPE html>
 <html lang="en" data-app="@app.Id" @Html.Raw(shell.RootAttributes)>
@@ -31,27 +32,7 @@
                 <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-nav__close" data-nav-close aria-label="Close the menu">@Ui.Icon("x")</button>
             </div>
 
-            <nav class="mat-nav__scroll" aria-label="Main">
-                <ul class="mat-nav__list">
-                    @foreach (var group in shell.Nav)
-                    {
-                        if (group.Title is not null)
-                        {
-                            <li class="mat-nav__group" role="presentation">@group.Title</li>
-                        }
-
-                        foreach (var item in group.Items)
-                        {
-                            var isActive = item.Href == active;
-                            <li>
-                                <a class="mat-nav__item @(isActive ? "is-active" : "")" href="@item.Href" aria-current="@(isActive ? "page" : null)">
-                                    @Ui.Icon(item.Icon)<span>@item.Title</span>
-                                </a>
-                            </li>
-                        }
-                    }
-                </ul>
-            </nav>
+            <partial name="_Menu" model="(shell, active)" />
 
             <div class="mat-nav__foot">
                 <div class="mat-nav__account">
@@ -137,6 +118,8 @@
             <a class="mat-menu__item @(item.Danger ? "mat-menu__item--danger" : "")" role="menuitem" href="@item.Href">@Ui.Icon(item.Icon)<span>@item.Title</span></a>
         }
     </div>
+
+    <partial name="_MenuSwitchPopup" model="(shell, active)" />
 
     <script src="/ui/matui.js?v=@Toolkit.Hash"></script>
     @await RenderSectionAsync("Scripts", required: false)

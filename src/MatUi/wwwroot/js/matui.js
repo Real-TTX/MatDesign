@@ -7,6 +7,10 @@
      data-theme-toggle                      the 3-state button (system -> light -> dark); data-theme-save-url posts the choice
      data-theme-set="system|light|dark"     a button of a segmented control in the settings that chooses the theme (aria-pressed follows)
      data-nav-toggle / data-nav-close       open / close the menu drawer (phones)
+     data-nav-branch="key"                  the parent of a submenu in the menu (aria-expanded; the choice is remembered per app)
+     data-nav-set="id" / data-nav-panel="id"  the menu switcher: an entry of its menu shows the panel of items with the same id;
+                                            the menu names the element with the switcher and the panels: data-nav-scope="id"
+     data-scrollspy                         an index of #links to sections of the page ("On this page"): the link of the section in view is marked
      data-menu-toggle="id"                  open the context menu #id next to the button; data-menu-place="top|bottom"
      data-dialog-open="id" / data-dialog-close   open / close a <dialog class="mat-dialog">
      data-confirm="Question?"               ask in a dialog before a submit button, a form or a link goes ahead
@@ -121,12 +125,153 @@
     var nav = $('.mat-nav', shell);
     if (open) {
       drawerOpener = opener || doc.activeElement;
-      var first = nav && $('.mat-nav__item', nav);
+      var first = nav && $('.mat-nav__scroll:not([hidden]) .mat-nav__item', nav);
       if (first) { first.focus({ preventScroll: true }); }
     } else if (drawerOpener && drawerOpener.focus) {
       drawerOpener.focus({ preventScroll: true });
       drawerOpener = null;
     }
+  }
+
+  // ------------------------------------------------------------------------------ menu: submenus and menu sets (SHELL-13, SHELL-15)
+  // A parent item is a button (data-nav-branch="key", aria-expanded) that opens its children. The branch with the current page is open
+  // (server side: is-open + is-current); what the user opened or closed is remembered per app. A menu set is a panel of items
+  // (data-nav-panel="id"); the switcher under the logo (data-nav-set="id" in its menu) shows one panel at a time.
+  var BRANCH_KEY = 'mat-nav-branches';
+
+  function branchStore() {
+    try { return JSON.parse(localStorage.getItem(BRANCH_KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+
+  function branchId(btn) { return (root.getAttribute('data-app') || '') + ':' + btn.getAttribute('data-nav-branch'); }
+
+  function setBranch(btn, open, remember) {
+    var branch = btn.closest('.mat-nav__branch');
+    if (!branch) { return; }
+    if (!open && branch.contains(doc.activeElement) && doc.activeElement !== btn) { btn.focus({ preventScroll: true }); }
+    branch.classList.toggle('is-open', open);
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (remember) {
+      var store = branchStore();
+      store[branchId(btn)] = open;
+      try { localStorage.setItem(BRANCH_KEY, JSON.stringify(store)); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function restoreBranches() {
+    var store = branchStore();
+    $$('[data-nav-branch]').forEach(function (btn) {
+      var saved = store[branchId(btn)];
+      // the branch of the current page stays open whatever was saved
+      if (typeof saved === 'boolean' && !btn.closest('.mat-nav__branch').classList.contains('is-current')) { setBranch(btn, saved, false); }
+    });
+  }
+
+  // The popup of the switcher names the element that holds the switcher and the panels (data-nav-scope="id"), so a menu in a
+  // documentation example never touches the menu of the page.
+  function setNavSet(id, popup) {
+    var menu = popup || $('.mat-menu[data-nav-scope]');
+    var scope = menu && doc.getElementById(menu.getAttribute('data-nav-scope'));
+    if (!scope) { return; }
+    var panels = $$('[data-nav-panel]', scope);
+    if (!panels.some(function (p) { return p.getAttribute('data-nav-panel') === id; })) { return; }
+    panels.forEach(function (p) { p.hidden = p.getAttribute('data-nav-panel') !== id; });
+    var chosen = null;
+    var buttons = $$('[data-nav-set]', menu);
+    buttons.forEach(function (b) {
+      var on = b.getAttribute('data-nav-set') === id;
+      b.setAttribute('aria-checked', on ? 'true' : 'false');
+      if (on) { chosen = b; }
+    });
+    var switcher = $('.mat-switcher', scope);
+    if (switcher && chosen) {
+      var name = $('.mat-switcher__name', switcher);
+      if (name) { name.textContent = chosen.getAttribute('data-nav-title') || ''; }
+      var use = $('.mat-switcher__icon use', switcher);
+      var from = $('use', chosen);
+      if (use && from) { use.setAttribute('href', from.getAttribute('href')); }
+      var dot = $('.mat-switcher__dot', switcher);
+      if (dot) { dot.hidden = !buttons.some(function (b) { return b !== chosen && b.hasAttribute('data-nav-attention'); }); }
+    }
+    var shown = $('[data-nav-panel]:not([hidden])', scope);
+    if (shown) { shown.scrollTop = 0; }
+    root.dispatchEvent(new CustomEvent('mat:navset', { detail: { set: id } }));
+  }
+
+  // ------------------------------------------------------------------------------------------ on this page: scrollspy (SHELL-16)
+  // An index (data-scrollspy) of links to sections of the page; the link of the section that is at the top of the screen is marked
+  // (is-active, aria-current="location"). It works for several indexes at once (the one beside the content and the one in the dialog).
+  var spyPending = false;
+
+  function scrollContainer(el) {
+    for (var p = el.parentElement; p; p = p.parentElement) {
+      var o = getComputedStyle(p).overflowY;
+      if ((o === 'auto' || o === 'scroll') && p.scrollHeight > p.clientHeight) { return p; }
+    }
+    return null;
+  }
+
+  function keepInView(box, el) {
+    var b = box.getBoundingClientRect(), r = el.getBoundingClientRect();
+    if (r.top < b.top) { box.scrollTop -= b.top - r.top + 8; } else if (r.bottom > b.bottom) { box.scrollTop += r.bottom - b.bottom + 8; }
+  }
+
+  function updateSpy() {
+    spyPending = false;
+    $$('[data-scrollspy]').forEach(function (nav) {
+      var entries = [];
+      $$('a[href^="#"]', nav).forEach(function (a) {
+        var target = doc.getElementById(decodeURIComponent(a.getAttribute('href').slice(1)));
+        if (target) { entries.push({ a: a, target: target }); }
+      });
+      if (entries.length === 0) { return; }
+      var targets = entries.map(function (e) { return e.target; }).filter(function (t, i, all) { return all.indexOf(t) === i; });
+      targets.sort(function (a, b) { return a.compareDocumentPosition(b) & 4 ? -1 : 1; });
+      var box = scrollContainer(targets[0]);
+      var top = box ? box.getBoundingClientRect().top : 0;
+      var line = top + (parseFloat(getComputedStyle(root).getPropertyValue('--mat-topbar-h')) || 56) + 24;
+      var current = targets[0];
+      targets.forEach(function (t) { if (t.getBoundingClientRect().top <= line) { current = t; } });
+      // at the very end of the page the last section is the current one even when it is too short to reach the line
+      if (box && box.scrollTop + box.clientHeight >= box.scrollHeight - 2) { current = targets[targets.length - 1]; }
+      entries.forEach(function (e) {
+        var on = e.target === current;
+        e.a.classList.toggle('is-active', on);
+        if (on) { e.a.setAttribute('aria-current', 'location'); } else { e.a.removeAttribute('aria-current'); }
+        if (on) { var aside = e.a.closest('.mat-toc-aside'); if (aside) { keepInView(aside, e.a); } }
+      });
+    });
+  }
+
+  function scheduleSpy() {
+    if (!spyPending) { spyPending = true; window.requestAnimationFrame(updateSpy); }
+  }
+
+  // Arrow keys inside the menu: up and down walk the visible items, right opens a parent (or goes to its first child), left closes it (or goes to the parent).
+  function navKeys(e) {
+    var panel = e.target.closest('.mat-nav__scroll');
+    if (!panel || e.ctrlKey || e.metaKey || e.altKey) { return false; }
+    var keys = ['ArrowDown', 'ArrowUp', 'Home', 'End', 'ArrowRight', 'ArrowLeft'];
+    if (keys.indexOf(e.key) < 0) { return false; }
+    var items = $$('.mat-nav__item', panel).filter(function (el) { return !el.closest('.mat-nav__branch:not(.is-open)') || !el.classList.contains('mat-nav__item--sub'); });
+    var current = e.target.closest('.mat-nav__item');
+    var i = items.indexOf(current);
+    if (i < 0) { return false; }
+    var target = null;
+    if (e.key === 'ArrowDown') { target = items[Math.min(items.length - 1, i + 1)]; }
+    else if (e.key === 'ArrowUp') { target = items[Math.max(0, i - 1)]; }
+    else if (e.key === 'Home') { target = items[0]; }
+    else if (e.key === 'End') { target = items[items.length - 1]; }
+    else if (e.key === 'ArrowRight' && current.hasAttribute('data-nav-branch')) {
+      if (current.getAttribute('aria-expanded') !== 'true') { setBranch(current, true, true); }
+      else { target = $('.mat-nav__sub .mat-nav__item', current.closest('.mat-nav__branch')); }
+    } else if (e.key === 'ArrowLeft') {
+      if (current.hasAttribute('data-nav-branch') && current.getAttribute('aria-expanded') === 'true') { setBranch(current, false, true); }
+      else if (current.classList.contains('mat-nav__item--sub')) { target = $('[data-nav-branch]', current.closest('.mat-nav__branch')); }
+    } else { return false; }
+    e.preventDefault();
+    if (target) { target.focus(); }
+    return true;
   }
 
   // ------------------------------------------------------------------------------------------------ context menus
@@ -428,14 +573,25 @@
     var themeSet = t.closest('[data-theme-set]');
     if (themeSet) { chooseTheme(themeSet, themeSet.getAttribute('data-theme-set')); return; }
 
+    var branchBtn = t.closest('[data-nav-branch]');
+    if (branchBtn) { setBranch(branchBtn, branchBtn.getAttribute('aria-expanded') !== 'true', true); return; }
+
     var navToggle = t.closest('[data-nav-toggle]');
     if (navToggle) { setNav(!(app() && app().classList.contains('is-nav-open')), navToggle); return; }
-    if (t.closest('[data-nav-close]') || t.classList.contains('mat-backdrop') || (t.closest('.mat-nav__item') && app() && app().classList.contains('is-nav-open'))) { setNav(false); }
+    // a link in the drawer closes it; a parent of a submenu only opens its children
+    if (t.closest('[data-nav-close]') || t.classList.contains('mat-backdrop') || (t.closest('.mat-nav__item:not([data-nav-branch])') && app() && app().classList.contains('is-nav-open'))) { setNav(false); }
 
     var menuBtn = t.closest('[data-menu-toggle]');
     if (menuBtn) { e.preventDefault(); toggleMenu(menuBtn); return; }
     if (openMenu && !t.closest('.mat-menu')) { closeMenu(); }
     else if (openMenu && t.closest('.mat-menu__item')) { setTimeout(closeMenu, 0); }
+
+    var setBtn = t.closest('[data-nav-set]');
+    if (setBtn) { setNavSet(setBtn.getAttribute('data-nav-set'), setBtn.closest('.mat-menu')); return; }
+
+    // a link to a section of the page inside a dialog (the index on a phone) closes the dialog and lets the browser jump
+    var jump = t.closest('dialog a[href^="#"]');
+    if (jump) { closeDialog(jump.closest('dialog'), 'jump'); setTimeout(scheduleSpy, 50); return; }
 
     var opener = t.closest('[data-dialog-open]');
     if (opener) { e.preventDefault(); openDialog(opener.getAttribute('data-dialog-open'), opener); return; }
@@ -496,6 +652,8 @@
       return;
     }
 
+    if (!openMenu && e.target.closest && navKeys(e)) { return; }
+
     var tab = e.target.closest && e.target.closest('[role=tab]');
     if (tab && (e.key === 'ArrowRight' || e.key === 'ArrowLeft' || e.key === 'Home' || e.key === 'End')) {
       var tabs = $$('[role=tab]', tab.closest('[data-tabs]'));
@@ -513,8 +671,9 @@
     if (sc && !sc.disabled) { e.preventDefault(); sc.click(); }
   });
 
-  window.addEventListener('resize', function () { closeMenu(); });
-  doc.addEventListener('scroll', function (e) { if (openMenu && !e.target.closest) { closeMenu(); } }, true);
+  window.addEventListener('resize', function () { closeMenu(); scheduleSpy(); });
+  doc.addEventListener('scroll', function (e) { if (openMenu && !e.target.closest) { closeMenu(); } scheduleSpy(); }, true);
+  window.addEventListener('hashchange', scheduleSpy);
 
   // ------------------------------------------------------------------------------------------------------- init
   // a meter is filled by data: <div class="mat-meter__fill" data-value="63"> (no inline style in the markup)
@@ -523,6 +682,11 @@
   }
 
   function init() {
+    scheduleSpy();
+    // the saved state of the submenus is applied without animating them
+    root.classList.add('mat-nav-init');
+    restoreBranches();
+    window.requestAnimationFrame(function () { window.requestAnimationFrame(function () { root.classList.remove('mat-nav-init'); }); });
     fillMeters();
     applyTheme(currentTheme(), false);
     refreshDependents();
@@ -551,6 +715,8 @@
     toast: toast,
     theme: { get: currentTheme, set: function (t) { applyTheme(t); } },
     accent: { set: setAccent, custom: customAccent },
+    scrollspy: { update: updateSpy },
+    nav: { set: setNavSet, branch: function (key, open) { var b = $('[data-nav-branch="' + key + '"]'); if (b) { setBranch(b, open !== false, true); } } },
     refresh: function (scope) { refreshDependents(scope); fillMeters(scope); }
   };
 })();

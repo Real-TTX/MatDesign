@@ -165,3 +165,43 @@ a.mat-tile:hover { transform: translateY(-2px); box-shadow: var(--mat-shadow-2);
 .mat-menu__item--danger, .mat-menu__item--danger .mat-icon { color: var(--mat-danger-text); }
 .mat-menu__item--danger:hover { background: var(--mat-danger-bg); }
 .mat-menu__sep { height: 1px; background: var(--mat-border); margin: var(--mat-space-2) var(--mat-space-1); }
+
+/* ---- On this page (SHELL-16): a long page with an index beside it, like the one of Bootstrap's documentation ----
+   Below 1100 px the index is not drawn beside the content: a "Jump to" button opens it in a dialog (full screen on a phone). */
+.mat-with-toc { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--mat-space-6); align-items: start; }
+.mat-with-toc__main { min-width: 0; display: flex; flex-direction: column; gap: var(--mat-space-8); }
+.mat-toc-aside { display: none; }
+.mat-toc-bar { display: flex; }
+@media (min-width: 1100px) {
+  .mat-with-toc { grid-template-columns: minmax(0, 1fr) 15rem; }
+  .mat-toc-aside {
+    display: block;
+    position: sticky;
+    top: calc(var(--mat-topbar-h) + var(--mat-space-4));
+    align-self: start;
+    max-height: calc(100dvh - var(--mat-topbar-h) - var(--mat-space-8));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: var(--mat-space-4);
+  }
+  .mat-toc-bar { display: none; }
+}
+.mat-toc { display: flex; flex-direction: column; gap: var(--mat-space-1); font-size: var(--mat-fs-sm); }
+.mat-toc__title { font-size: var(--mat-fs-xs); font-weight: 650; letter-spacing: .07em; text-transform: uppercase; color: var(--mat-text-muted); padding: 0 var(--mat-space-3) var(--mat-space-2); }
+.mat-toc__list { list-style: none; display: flex; flex-direction: column; gap: 1px; }
+.mat-toc__list .mat-toc__list { margin: 0 0 var(--mat-space-2) var(--mat-space-3); padding-left: var(--mat-space-2); border-left: 1px solid var(--mat-border); }
+.mat-toc__link {
+  display: flex; align-items: center; gap: var(--mat-space-2);
+  min-height: var(--mat-control-h-sm);
+  padding: 0 var(--mat-space-3);
+  border-radius: var(--mat-radius-sm);
+  color: var(--mat-text-muted);
+  text-decoration: none;
+  transition: background var(--mat-dur-fast) var(--mat-ease), color var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-toc__link:hover { background: var(--mat-accent-soft); color: var(--mat-text); text-decoration: none; }
+.mat-toc__link.is-active { background: var(--mat-accent-soft-strong); color: var(--mat-accent-text); font-weight: 650; }
+.mat-toc__link--group { margin-top: var(--mat-space-2); font-size: var(--mat-fs-xs); font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: var(--mat-text); }
+.mat-toc__link .mat-nav__badge { margin-left: auto; }
+/* a section that is a target of the index stays clear of the sticky top bar */
+.mat-anchor { scroll-margin-top: calc(var(--mat-topbar-h) + var(--mat-space-4)); }

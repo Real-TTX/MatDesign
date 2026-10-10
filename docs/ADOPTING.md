@@ -54,6 +54,10 @@ Replace the app's own frame with the shell:
 | The menu scrolls on its own; the page never scrolls | `SHELL-07` |
 | A breadcrumb above every page | `SHELL-08` |
 | Page head: icon, title (`h1`), one line | `SHELL-09` |
+| Badges at the right end of an item: a count (`99+` above 99) or a dot, in the tone of the meaning, with a text for screen readers | `SHELL-14` |
+| Submenus: a parent is a button that opens its children, one level deep; the branch with the current page is open | `SHELL-13` |
+| More than one menu (for example Administration): one panel of items per menu and the switcher under the logo | `SHELL-15` |
+| A long page has an index beside it ("On this page"), a "Jump to" dialog on small screens | `SHELL-16` |
 | Sign-in, setup and error pages without a menu: a centred card (`mat-auth`) | `SHELL-11` |
 
 Saving the theme: `data-theme-save-url` on the theme button posts the choice (`theme=system|light|dark`) so it can be kept per user; without it the choice stays in the browser.

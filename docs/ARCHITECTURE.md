@@ -44,6 +44,23 @@ this page. So the examples are not mock-ups: if the shell is wrong, the site is 
 The toolbar and the pager are Razor partials driven by models (`ToolbarModel`, `PagerModel`): one implementation for every list on the site and in the samples. The toolbar's three
 dialogs belong to **one GET form** through the `form` attribute, so each dialog sends the complete state and a result is a link that can be shared.
 
+### The menu is data
+
+The items of the menu are not markup an app writes but a model the partial `_Menu` draws: a `NavSet` (one menu: id, title, icon) holds `NavGroup`s (a small heading) of `NavItem`s
+(title, address, icon, an optional `NavBadge`, optional children). A parent has children and no address: it is a button that opens them, one level deep (`NavSet.IsValid` and a test
+check this). A `NavBadge` is a count (above 99 it reads `99+`) or a dot, in a tone that follows the status colours; a closed parent shows the sum of its children's badges in the most
+urgent tone. An app with more than one `NavSet` gets the switcher under the logo; the set that has the current page is the one drawn visible, the others are in the page with `hidden`, so
+choosing another one in the switcher swaps them without a request. The popup of the switcher is drawn at the end of the page like the user menu, because the menu has a backdrop filter and
+that would make it the frame of a fixed popup; it names the element that holds the panels (`data-nav-scope`) so that an example in the documentation can show a menu without touching the menu
+of the page. The choice of open and closed branches is remembered in the browser per app and never overrides the branch of the current page.
+
+### Long pages and one page for the components
+
+The components are not a list of pages to click through but one page, grouped, with an index beside it (`mat-with-toc`, `mat-toc`): a sticky column from 1100 px, a "Jump to" dialog below that
+(full screen on a phone). `data-scrollspy` marks the link of the section at the top; it computes per index from the position of the sections, so the index beside the content and the one in the dialog
+agree and two indexes on one page do not disturb each other. Because every example of every component is on the same page, **all ids share one page**: a test checks that no id appears twice and
+that every `#link` leads to a section that exists.
+
 ## 5. The documentation cannot drift from the toolkit
 
 - **Components** are data (`ComponentCatalog`): each example is one raw string, rendered live and shown as source. A test checks every one: the classes exist in the toolkit's CSS,

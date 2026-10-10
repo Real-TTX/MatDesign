@@ -4,7 +4,7 @@
     ViewData["Title"] = "Motion and layers";
     ViewData["PageIcon"] = "play";
     ViewData["PageSub"] = "Short, purposeful, one easing curve. And the order of what is on top.";
-    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Foundations", "/Foundations"), ("Motion", null));
+    ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Foundations", "/Foundations"), ("Motion", null));
     DesignToken T(string n) => Toolkit.Tokens.First(t => t.Name == n);
     var durations = new (string Token, string Key)[] { ("--mat-dur-fast", "fast"), ("--mat-dur", "base"), ("--mat-dur-slow", "slow") };
     var layers = new[] { "--mat-z-nav", "--mat-z-topbar", "--mat-z-menu", "--mat-z-dialog", "--mat-z-toast" };

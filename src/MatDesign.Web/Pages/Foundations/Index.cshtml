@@ -4,7 +4,7 @@
     ViewData["Title"] = "Foundations";
     ViewData["PageIcon"] = "layers";
     ViewData["PageSub"] = "The values every control is made of. They are custom properties, so an app can never drift from them.";
-    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Foundations", "/Foundations"), ("Colour", null));
+    ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Foundations", "/Foundations"), ("Colour", null));
 
     var me = AccentReport.For(AppRegistry.Get("matdesign")!);
     DesignToken? Find(string name) => Toolkit.Tokens.FirstOrDefault(t => t.Name == name);

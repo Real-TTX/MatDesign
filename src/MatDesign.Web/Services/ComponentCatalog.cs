@@ -3,8 +3,9 @@ namespace MatDesign.Web.Services;
 /// <summary>
 /// One example of a component. <see cref="Html"/> is rendered live and shown as source, so the example and what a developer copies can never
 /// differ. <see cref="Js"/> is the script call that does the same (for dialogs and toasts); <see cref="Demo"/> adds a "Try it" button.
+/// <see cref="Frame"/> names a look of the live area that is not part of the markup (a menu is shown in a box as wide as the menu).
 /// </summary>
-public sealed record ComponentExample(string Title, string Html, string? Note = null, string? Js = null, string? Demo = null, bool Live = true);
+public sealed record ComponentExample(string Title, string Html, string? Note = null, string? Js = null, string? Demo = null, bool Live = true, string? Frame = null);
 
 /// <summary>A control of the toolkit as the component pages document it.</summary>
 public sealed record ComponentDoc(
@@ -25,10 +26,24 @@ public static class ComponentCatalog
 {
     public static readonly IReadOnlyList<string> Groups = ["Actions", "Forms", "Lists and data", "Content", "Navigation", "Feedback"];
 
+    /// <summary>One line per group, shown above its components on the components page.</summary>
+    public static readonly IReadOnlyDictionary<string, string> GroupSummaries = new Dictionary<string, string>
+    {
+        ["Actions"] = "Buttons, and how they are arranged under a form or a list.",
+        ["Forms"] = "Fields, choices and the layout of a form: labels above, hints below, errors at the field.",
+        ["Lists and data"] = "Everything for a list of items: the toolbar, the table, pagination, the gallery.",
+        ["Content"] = "Cards, labels, facts, meters, empty states and code.",
+        ["Navigation"] = "The items of the menu with badges and submenus, switching between menus, tabs, the breadcrumb, steps and the index of a long page.",
+        ["Feedback"] = "Alerts, toasts, dialogs, tooltips and placeholders.",
+    };
+
+    /// <summary>The anchor of a group on the components page.</summary>
+    public static string GroupAnchor(string group) => "group-" + System.Text.RegularExpressions.Regex.Replace(group.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+
     public static ComponentDoc? Get(string id) => All.FirstOrDefault(c => c.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
-    private static string I(string name)
-        => $"<svg class=\"mat-icon\" aria-hidden=\"true\" focusable=\"false\"><use href=\"#mat-i-{name}\"></use></svg>";
+    private static string I(string name, string? extraClass = null)
+        => $"<svg class=\"mat-icon{(extraClass is null ? string.Empty : " " + extraClass)}\" aria-hidden=\"true\" focusable=\"false\"><use href=\"#mat-i-{name}\"></use></svg>";
 
     public static IReadOnlyList<ComponentDoc> All { get; } =
     [
@@ -169,8 +184,7 @@ public static class ComponentCatalog
             ["FORM-01", "FORM-04", "FORM-07", "FORM-10", "LIST-01"],
             [
                 new("An edit form", $"""
-                    <form class="mat-form" method="get" action="/Components/Detail" novalidate>
-                      <input type="hidden" name="id" value="form-layout" />
+                    <form class="mat-form" method="get" action="/Components#form-layout" novalidate>
                       <div class="mat-card">
                         <div class="mat-card__head">{I("edit")}<span class="mat-card__title">Item</span></div>
                         <div class="mat-card__body">
@@ -231,7 +245,7 @@ public static class ComponentCatalog
                         <span class="mat-chip">Category: Finance<a class="mat-chip__x" href="#" aria-label="Remove the filter Category">{I("x")}</a></span>
                       </div>
 
-                      <form id="tb-form" method="get" action="/Components/Detail" hidden><input type="hidden" name="id" value="toolbar" /></form>
+                      <form id="tb-form" method="get" action="/Components#toolbar" hidden></form>
 
                       <dialog class="mat-dialog mat-dialog--sm" id="tb-search" aria-labelledby="tb-search-title">
                         <div class="mat-dialog__form">
@@ -545,6 +559,161 @@ public static class ComponentCatalog
                     """, "The bar alone does not say which step it is: the hidden text does, for screen readers (COLOR-04)."),
             ],
             ["Put the title of the current step and \"Step 3 of 5\" next to the bar."]),
+
+        new("navmenu", "Menu items, badges and submenus", "Navigation", "sidebar",
+            "What the menu on the left is made of: items with an icon, badges at the right end, and parents that open their children.",
+            ["SHELL-02", "SHELL-13", "SHELL-14", "COLOR-03", "COLOR-04", "A11Y-02"],
+            [
+                new("Items and badges", $"""
+                    <nav class="mat-nav__scroll" aria-label="Demo menu">
+                      <ul class="mat-nav__list">
+                        <li><a class="mat-nav__item is-active" href="#" aria-current="page">{I("home")}<span>Dashboard</span></a></li>
+                        <li class="mat-nav__group" role="presentation">Work</li>
+                        <li><a class="mat-nav__item" href="#">{I("mail")}<span>Inbox</span><span class="mat-nav__badge">12<span class="mat-sr-only"> unread</span></span></a></li>
+                        <li><a class="mat-nav__item" href="#">{I("alert")}<span>Alerts</span><span class="mat-nav__badge mat-nav__badge--warn">3<span class="mat-sr-only"> to look at</span></span></a></li>
+                        <li><a class="mat-nav__item" href="#">{I("archive")}<span>Backups</span><span class="mat-nav__badge mat-nav__badge--error">1<span class="mat-sr-only"> failed</span></span></a></li>
+                        <li><a class="mat-nav__item" href="#">{I("bell")}<span>News</span><span class="mat-nav__badge mat-nav__badge--dot"><span class="mat-sr-only">something new</span></span></a></li>
+                        <li><a class="mat-nav__item" href="#">{I("folder")}<span>Files</span><span class="mat-nav__badge mat-nav__badge--plain">99+<span class="mat-sr-only"> files</span></span></a></li>
+                      </ul>
+                    </nav>
+                    """, "A count at the right end; above 99 it reads 99+. Tones: accent (default), ok, warn, error, info, plain; a dot says that something is new. Every badge has a text for screen readers.", Frame: "menu"),
+                new("A submenu", $"""
+                    <nav class="mat-nav__scroll" aria-label="Demo submenu">
+                      <ul class="mat-nav__list">
+                        <li class="mat-nav__branch is-open is-current">
+                          <button type="button" class="mat-nav__item mat-nav__parent" aria-expanded="true" aria-controls="demo-sub-items" data-nav-branch="demo-items">
+                            {I("list")}<span>Items</span>{I("chevron-down", "mat-nav__chev")}
+                          </button>
+                          <div class="mat-nav__sub" id="demo-sub-items">
+                            <ul class="mat-nav__list">
+                              <li><a class="mat-nav__item mat-nav__item--sub is-active" href="#" aria-current="page"><span>All items</span><span class="mat-nav__badge mat-nav__badge--plain">12<span class="mat-sr-only"> items</span></span></a></li>
+                              <li><a class="mat-nav__item mat-nav__item--sub" href="#"><span>Needs review</span><span class="mat-nav__badge mat-nav__badge--warn">3<span class="mat-sr-only"> to review</span></span></a></li>
+                              <li><a class="mat-nav__item mat-nav__item--sub" href="#"><span>Gallery</span></a></li>
+                            </ul>
+                          </div>
+                        </li>
+                        <li class="mat-nav__branch">
+                          <button type="button" class="mat-nav__item mat-nav__parent" aria-expanded="false" aria-controls="demo-sub-settings" data-nav-branch="demo-settings">
+                            {I("settings")}<span>Settings</span><span class="mat-nav__badge mat-nav__badge--error mat-nav__badge--sum">1<span class="mat-sr-only"> failed</span></span>{I("chevron-down", "mat-nav__chev")}
+                          </button>
+                          <div class="mat-nav__sub" id="demo-sub-settings">
+                            <ul class="mat-nav__list">
+                              <li><a class="mat-nav__item mat-nav__item--sub" href="#"><span>General</span></a></li>
+                              <li><a class="mat-nav__item mat-nav__item--sub" href="#"><span>Backups</span><span class="mat-nav__badge mat-nav__badge--error">1<span class="mat-sr-only"> failed</span></span></a></li>
+                            </ul>
+                          </div>
+                        </li>
+                      </ul>
+                    </nav>
+                    """, "The parent is a button, not a page: it opens its children. The branch that has the current page is open when the page loads (is-open, is-current); the sum of the children's badges stands in for them while it is closed.", Frame: "menu"),
+            ],
+            [
+                "A submenu is one level deep; the children show no icon. If the section has a page of its own, that page is its first child.",
+                "The user's choice (open or closed) is remembered per app; the branch with the current page is open whatever was saved.",
+                "Arrow keys: up and down walk the visible items, right opens a parent or goes to its first child, left closes it or goes back to the parent.",
+                "In the shell the menu is drawn by the partial `_Menu` from a `NavSet` (items, badges, children); an app does not write this markup by hand.",
+            ]),
+
+        new("switcher", "Menu switcher", "Navigation", "toggle",
+            "More than one menu in an app, for example the everyday work and the administration: a switcher under the logo swaps the items.",
+            ["SHELL-15", "SHELL-01", "SHELL-14", "DIALOG-07"],
+            [
+                new("Work and Administration", $"""
+                    <div id="switch-demo">
+                      <div class="mat-nav__switch">
+                        <button type="button" class="mat-switcher" data-menu-toggle="switch-demo-menu" data-menu-place="bottom" aria-haspopup="menu" aria-expanded="false">
+                          <span class="mat-switcher__icon">{I("briefcase")}</span>
+                          <span class="mat-switcher__text"><small>Menu</small><span class="mat-switcher__name">Work</span></span>
+                          {I("chevron-down", "mat-switcher__chev")}
+                          <span class="mat-switcher__dot"></span>
+                        </button>
+                      </div>
+                      <nav class="mat-nav__scroll" aria-label="Work" data-nav-panel="work">
+                        <ul class="mat-nav__list">
+                          <li><a class="mat-nav__item is-active" href="#" aria-current="page">{I("dashboard")}<span>Dashboard</span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("list")}<span>Items</span><span class="mat-nav__badge mat-nav__badge--plain">12<span class="mat-sr-only"> items</span></span></a></li>
+                        </ul>
+                      </nav>
+                      <nav class="mat-nav__scroll" aria-label="Administration" data-nav-panel="admin" hidden>
+                        <ul class="mat-nav__list">
+                          <li><a class="mat-nav__item" href="#">{I("users")}<span>Users</span><span class="mat-nav__badge mat-nav__badge--warn">3<span class="mat-sr-only"> invitations pending</span></span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("shield")}<span>Roles</span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("clock")}<span>Audit log</span></a></li>
+                        </ul>
+                      </nav>
+                    </div>
+                    <div class="mat-menu" id="switch-demo-menu" role="menu" aria-label="Menus" data-nav-scope="switch-demo" hidden>
+                      <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="true" data-nav-set="work" data-nav-title="Work">{I("briefcase")}<span>Work</span>{I("check", "mat-menu__check")}</button>
+                      <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="false" data-nav-set="admin" data-nav-title="Administration" data-nav-attention>{I("shield")}<span>Administration</span><span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn"><span class="mat-sr-only">needs attention</span></span>{I("check", "mat-menu__check")}</button>
+                    </div>
+                    """, "Click the switcher and choose Administration. The dot on the switcher says that the other menu needs attention (an item with a warning or an error badge).", Frame: "menu"),
+            ],
+            [
+                "The switcher appears only when an app has at least two menus; a menu the user may not use is not offered.",
+                "When a page loads, the menu that has the current page is shown. Choosing a menu only swaps the items: nothing is loaded.",
+                "The popup is a context menu drawn at the end of the page and names the element that holds the switcher and the panels (`data-nav-scope`).",
+                "Below the logo, above the items: the logo and the foot of the menu (user, theme button, version) stay where they are.",
+            ]),
+
+        new("toc", "On this page", "Navigation", "list",
+            "A long page with an index beside it, as in Bootstrap's documentation: one click jumps to a section, and the section in view is marked.",
+            ["SHELL-16", "MOBILE-02", "DIALOG-03", "A11Y-03"],
+            [
+                new("The index", """
+                    <nav class="mat-toc" aria-label="On this page">
+                      <p class="mat-toc__title">On this page</p>
+                      <ul class="mat-toc__list">
+                        <li><a class="mat-toc__link mat-toc__link--group" href="#group-forms">Forms</a>
+                          <ul class="mat-toc__list">
+                            <li><a class="mat-toc__link" href="#fields">Fields</a></li>
+                            <li><a class="mat-toc__link is-active" href="#choices" aria-current="location">Switches, checks and segments</a></li>
+                            <li><a class="mat-toc__link" href="#form-layout">Form layout</a></li>
+                          </ul>
+                        </li>
+                        <li><a class="mat-toc__link mat-toc__link--group" href="#group-lists-and-data">Lists and data</a></li>
+                      </ul>
+                    </nav>
+                    """, "Groups and sections, the one in view marked (is-active, aria-current=\"location\"). The links lead to the sections of this very page: try them."),
+                new("The layout with the index beside the content", """
+                    <div class="mat-with-toc">
+                      <div class="mat-with-toc__main">
+                        <div class="mat-toc-bar">
+                          <button type="button" class="mat-btn mat-btn--secondary mat-btn--sm" data-dialog-open="toc-dialog">Jump to a section</button>
+                        </div>
+                        <section id="intro" class="mat-anchor"><h2>Introduction</h2>...</section>
+                        <section id="usage" class="mat-anchor"><h2>Usage</h2>...</section>
+                      </div>
+                      <aside class="mat-toc-aside">
+                        <nav class="mat-toc" aria-label="On this page" data-scrollspy>
+                          <p class="mat-toc__title">On this page</p>
+                          <ul class="mat-toc__list">
+                            <li><a class="mat-toc__link" href="#intro">Introduction</a></li>
+                            <li><a class="mat-toc__link" href="#usage">Usage</a></li>
+                          </ul>
+                        </nav>
+                      </aside>
+                    </div>
+                    <!-- below 1100 px the aside is hidden and the button opens the same index in a dialog (full screen on a phone) -->
+                    <dialog class="mat-dialog mat-dialog--sm" id="toc-dialog" aria-labelledby="toc-dialog-title">
+                      <div class="mat-dialog__form">
+                        <div class="mat-dialog__head"><h2 class="mat-dialog__title" id="toc-dialog-title">On this page</h2><button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">...</button></div>
+                        <div class="mat-dialog__body">
+                          <nav class="mat-toc" aria-label="On this page" data-scrollspy>
+                            <ul class="mat-toc__list">
+                              <li><a class="mat-toc__link" href="#intro">Introduction</a></li>
+                              <li><a class="mat-toc__link" href="#usage">Usage</a></li>
+                            </ul>
+                          </nav>
+                        </div>
+                      </div>
+                    </dialog>
+                    """, "From 1100 px the index is a sticky column beside the content. Below that, the \"Jump to\" button opens the same list in a dialog, which closes when a link is chosen.", Live: false),
+            ],
+            [
+                "`data-scrollspy` on the index marks the link of the section that is at the top of the screen; it works for the index beside the content and the one in the dialog at the same time.",
+                "Give the sections `mat-anchor` so that they stop below the sticky top bar when a link jumps to them.",
+                "Use it for long pages: documentation, a long settings page, a long form with sections. A short page needs no index.",
+            ]),
 
         new("alerts", "Alerts", "Feedback", "alert",
             "A message inside the page. It stays until it is dismissed or the page changes.",

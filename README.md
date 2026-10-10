@@ -23,7 +23,9 @@ These are the rules that make a Mat app look like a Mat app. They are in the rul
 
 - **The menu is always on the left, the logo above it.** At the bottom: the user (a click opens a context menu with *Show account*, *Sign out* …) next to the
   **3-state theme button** (System / Light / Dark), and below them the **version**. The menu scrolls on its own, separately from the content.
-- **The content always has a breadcrumb above it.**
+- **The menu can have badges, submenus and more than one menu.** A badge at the right end of an item carries a count or a dot in the tone of its meaning; a parent opens its
+  children (one level, the branch with the current page is open); an app with distinct areas such as an *Administration* has one menu per area and a **switcher under the logo**.
+- **The content always has a breadcrumb above it.** A long page has an index beside it ("On this page") so that one click jumps to a section.
 - **Every list and every gallery has a toolbar above it.** *Search*, *Filter* and *Sort* are three buttons, and each opens a **dialog**.
 - **Buttons are always under the content** (create, edit, settings), from positive to negative: *Save*, *Back*, a space, *Delete*. The control enforces the order.
 - **Confirmations, alerts and inputs are always dialogs**, never `window.confirm`. **On a phone every dialog is full screen with the X at the top right.**
@@ -50,8 +52,8 @@ and checked for WCAG AA, for every app, in light and dark.
 | **Identity** | The apps of the family and their accent, a contrast report per app, a **palette check** (which accents are too close to tell apart, with proposals) and an **audit**: how close each app's code is to the rules today, from a static scan of its repository. |
 | **Rules** | The rulebook, searchable, with a page per rule. |
 | **Foundations** | Colour (light and dark side by side), type, spacing and radii, motion and layers, the icon sprite, and every design token, read from the CSS. |
-| **Shell** | Anatomy of the frame around every page, a live sample, the HTML skeleton. |
-| **Components** | Buttons, button row, fields, switches, form layout, toolbar, table, pagination, gallery, cards, pills, tabs, menu, dialogs, alerts, toasts … each live, with the markup and the rules it follows. |
+| **Shell** | Anatomy of the frame around every page (switcher, items with badges and submenus, foot), a live sample with an administration behind the switcher, the HTML skeleton. |
+| **Components** | Every control on **one page** with an index beside it that marks the section in view (and jumps there on one click): buttons, fields, form layout, toolbar, table, pagination, menu items with badges and submenus, the menu switcher, dialogs, alerts, toasts … each live, with the markup to copy and the rules it follows. |
 | **Patterns** | The page types (list, gallery, edit, settings, dashboard, sign-in) in real frames, on a desktop and on a phone, in the accent of any app. |
 | **Builder** | Try an accent: what the toolkit derives from it, contrast in both modes, the nearest app, the real screens in that colour, the snippet. |
 | **Download** | MatUi as an archive or file by file, how to use it, and the design system as JSON (`/api/rules`, `/api/tokens` …). |
@@ -117,7 +119,7 @@ Every example in the component catalogue is rendered live and shown as source fr
 
 ## Tests
 
-`dotnet test` runs 170+ tests without Docker or a browser (and `tests/e2e` the browser checks, see Status). They check, among other things:
+`dotnet test` runs 200+ tests without Docker or a browser (and `tests/e2e` the browser checks, see Status). They check, among other things:
 
 - the colour maths against what CSS `color-mix(in oklab, …)` gives, and WCAG AA for **every app, in light and dark**
 - the two places that write the dark set are identical; no literal colour outside the tokens; no web font; every class and property is `mat-`-prefixed

@@ -4,7 +4,7 @@
     ViewData["Title"] = "Type";
     ViewData["PageIcon"] = "type";
     ViewData["PageSub"] = "System fonts, one scale, mono for technical values.";
-    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Foundations", "/Foundations"), ("Type", null));
+    ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Foundations", "/Foundations"), ("Type", null));
     string Value(string name) => Toolkit.Tokens.First(t => t.Name == name).Light;
     var sizes = new (string Key, string Name, string Px, string Use)[]
     {

@@ -15,9 +15,15 @@ public sealed class ShellModel
 {
     public required MatApp App { get; init; }
 
-    public required IReadOnlyList<NavGroup> Nav { get; init; }
+    /// <summary>The menus of the app. With more than one, the switcher under the logo appears (SHELL-15).</summary>
+    public required IReadOnlyList<NavSet> Menus { get; init; }
 
     public string? ActiveHref { get; init; }
+
+    public bool HasSwitcher => Menus.Count > 1;
+
+    /// <summary>The menu that is shown: the one that has the current page, otherwise the first.</summary>
+    public NavSet CurrentMenu(string? active) => Menus.FirstOrDefault(m => m.Contains(active)) ?? Menus[0];
 
     public required string UserName { get; init; }
 
@@ -74,7 +80,7 @@ public sealed class ShellModel
     {
         App = AppRegistry.Get("matdesign")!,
         Tagline = "Identity of the Mat apps",
-        Nav = Navigation.Groups,
+        Menus = Navigation.Sets,
         UserName = "Visitor",
         UserRole = "Guest",
         UserLine = "MatDesign has no accounts",

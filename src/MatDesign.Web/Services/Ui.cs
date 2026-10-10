@@ -41,9 +41,17 @@ public static partial class Ui
     [GeneratedRegex(@"(?<![\w>-])((?:mat|data|aria)-[a-z0-9_-]+|is-(?:invalid|selected|active|current|done))(?![\w-])")]
     private static partial Regex IdentifierRegex();
 
-    /// <summary>Plain text in which the toolkit's own identifiers (<c>mat-btn-row</c>, <c>data-confirm</c>, <c>aria-label</c>) are set as code.</summary>
+    /// <summary>
+    /// Plain text in which a pair of backticks and the toolkit's own identifiers (<c>mat-btn-row</c>, <c>data-confirm</c>, <c>aria-label</c>) are set as code.
+    /// Everything is encoded; an identifier inside backticks is set as code once.
+    /// </summary>
     public static IHtmlContent Rich(string text)
-        => new HtmlString(IdentifierRegex().Replace(WebUtility.HtmlEncode(text), "<code>$1</code>"));
+    {
+        var parts = Regex.Split(text, "(`[^`]+`)").Select(part => part.Length > 1 && part[0] == '`' && part[^1] == '`'
+            ? "<code>" + WebUtility.HtmlEncode(part[1..^1]) + "</code>"
+            : IdentifierRegex().Replace(WebUtility.HtmlEncode(part), "<code>$1</code>"));
+        return new HtmlString(string.Concat(parts));
+    }
 
     /// <summary>A colour as an SVG rectangle: <c>fill</c> is an attribute, not an inline style, so a page can show any colour without breaking the no-inline-style rule.</summary>
     public static IHtmlContent Swatch(string hex, string kind = "dot")

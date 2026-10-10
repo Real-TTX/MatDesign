@@ -30,6 +30,13 @@ public class SiteHelpersTests
     }
 
     [Fact]
+    public void Rich_also_sets_backticks_as_code_once_and_encodes_what_is_in_them()
+    {
+        Assert.Equal("The <code>data-nav-scope</code> names it and <code>a &lt; b</code> stays text.", Ui.Rich("The `data-nav-scope` names it and `a < b` stays text.").ToString());
+        Assert.Equal("<code>_Menu</code> draws <code>mat-nav__item</code>.", Ui.Rich("`_Menu` draws mat-nav__item.").ToString());
+    }
+
+    [Fact]
     public void An_icon_is_a_use_of_the_sprite_and_a_bad_name_is_refused()
     {
         Assert.Contains("href=\"#mat-i-star\"", Ui.Icon("star").ToString());
@@ -79,11 +86,20 @@ public class SiteHelpersTests
     [InlineData("/Identity", "/Identity")]
     [InlineData("/Identity/Palette", "/Identity/Palette")]
     [InlineData("/Identity/App", "/Identity")]
-    [InlineData("/Foundations/Icons", "/Foundations")]
-    [InlineData("/Components/Detail", "/Components")]
+    [InlineData("/Foundations/Icons", "/Foundations/Icons")]
+    [InlineData("/Foundations/Type", "/Foundations/Type")]
+    [InlineData("/Patterns/Detail", "/Patterns")]
     [InlineData("/rules/detail", "/Rules")]
     public void The_longest_matching_item_of_the_menu_is_the_active_one(string path, string expected)
         => Assert.Equal(expected, Navigation.ActiveHref(path));
+
+    [Theory]
+    [InlineData("/Reports", "?kind=weekly", "/Reports?kind=weekly")]
+    [InlineData("/Reports", "?kind=monthly&x=1", "/Reports?kind=monthly")]
+    [InlineData("/Reports", "?kind=other", "/Reports")]
+    [InlineData("/Reports", "", "/Reports")]
+    public void A_menu_item_with_a_query_is_active_only_when_the_query_matches(string path, string query, string expected)
+        => Assert.Equal(expected, Navigation.ActiveHref(["/Reports", "/Reports?kind=weekly", "/Reports?kind=monthly"], path, query));
 
     [Fact]
     public void An_unknown_path_marks_nothing()
@@ -92,8 +108,115 @@ public class SiteHelpersTests
     [Fact]
     public void Every_href_of_the_menu_is_unique()
     {
-        var hrefs = Navigation.Groups.SelectMany(g => g.Items).Select(i => i.Href).ToList();
+        var hrefs = Navigation.Pages.Select(i => i.Href).ToList();
         Assert.Equal(hrefs.Count, hrefs.Distinct().Count());
+    }
+
+    // ---------------------------------------------------------------------------------------------------- menus: badges, submenus, sets
+
+    [Fact]
+    public void The_menus_of_the_site_obey_the_rules_for_submenus()
+    {
+        // SHELL-13: one level of children, a parent is no page, every child is.
+        Assert.True(Navigation.Sets.Count >= 2, "the site has a switcher of its own");
+        Assert.All(Navigation.Sets, s => Assert.True(s.IsValid, s.Id));
+        Assert.Equal(Navigation.Sets.Count, Navigation.Sets.Select(s => s.Id).Distinct().Count());
+        Assert.Contains(Navigation.Sets, s => s.AllItems.Any(i => i.IsParent));
+        foreach (var set in Navigation.Sets)
+        {
+            var parents = set.AllItems.Where(i => i.IsParent).ToList();
+            Assert.All(parents, p => Assert.Null(p.Href));
+            Assert.Equal(parents.Count, parents.Select(p => p.Key).Distinct().Count());
+        }
+    }
+
+    [Fact]
+    public void A_menu_with_a_second_level_below_the_first_is_not_valid()
+    {
+        var tooDeep = new NavSet("x", "X", "list", [new(null, [new("A", null, "list", Children: [new("B", null, null, Children: [new("C", "/c", null)])])])]);
+        Assert.False(tooDeep.IsValid);
+        var parentWithAddress = new NavSet("y", "Y", "list", [new(null, [new("A", "/a", "list", Children: [new("B", null, null)])])]);
+        Assert.False(parentWithAddress.IsValid, "a child without an address is not a page");
+    }
+
+    [Theory]
+    [InlineData(3, "3")]
+    [InlineData(99, "99")]
+    [InlineData(100, "99+")]
+    [InlineData(12000, "99+")]
+    public void A_count_in_the_menu_never_exceeds_99_plus(int number, string text)
+        => Assert.Equal(text, NavBadge.Count(number).Text);
+
+    [Fact]
+    public void A_badge_is_a_count_or_a_dot_and_has_a_tone()
+    {
+        Assert.Equal("mat-nav__badge", NavBadge.Count(2).Classes());
+        Assert.Equal("mat-nav__badge mat-nav__badge--warn", NavBadge.Count(2, "warn").Classes());
+        Assert.Equal("mat-nav__badge mat-nav__badge--error mat-nav__badge--dot", NavBadge.Dot("error").Classes());
+        Assert.Equal("mat-nav__badge mat-nav__badge--plain mat-nav__badge--sum", NavBadge.Count(2, "plain").Classes(sum: true));
+    }
+
+    [Fact]
+    public void A_closed_parent_shows_the_sum_of_its_children_in_the_most_urgent_tone()
+    {
+        var parent = new NavItem("Items", null, "list", Children:
+        [
+            new("All", "/all", null, NavBadge.Count(12, "plain", "items")),
+            new("Review", "/review", null, NavBadge.Count(3, "warn", "to review")),
+            new("Plain", "/plain", null),
+        ]);
+
+        var sum = parent.SumOfChildren;
+        Assert.NotNull(sum);
+        Assert.Equal("15", sum.Text);
+        Assert.Equal("warn", sum.Tone);
+        Assert.Contains("to review", sum.Label);
+    }
+
+    [Fact]
+    public void Badges_that_are_not_counts_add_up_to_a_dot()
+    {
+        var sum = NavBadge.Sum([NavBadge.Count(2, "ok"), NavBadge.Dot("error")]);
+        Assert.NotNull(sum);
+        Assert.True(sum.IsDot);
+        Assert.Equal("error", sum.Tone);
+        Assert.Null(NavBadge.Sum([]));
+    }
+
+    [Fact]
+    public void A_parent_with_a_badge_of_its_own_does_not_add_one_up()
+    {
+        var parent = new NavItem("Items", null, "list", NavBadge.Count(7, "accent"), [new("A", "/a", null, NavBadge.Count(1, "warn"))]);
+        Assert.Null(parent.SumOfChildren);
+    }
+
+    [Fact]
+    public void The_menu_that_has_the_current_page_is_the_one_that_is_shown()
+    {
+        var shell = ShellModel.Site();
+        Assert.True(shell.HasSwitcher);
+        Assert.Equal("design", shell.CurrentMenu("/Identity").Id);
+        Assert.Equal("design", shell.CurrentMenu("/Foundations/Type").Id);
+        Assert.Equal("toolkit", shell.CurrentMenu("/Shell").Id);
+        Assert.Equal("toolkit", shell.CurrentMenu("/Components").Id);
+        Assert.Equal("design", shell.CurrentMenu("/nowhere").Id);
+        Assert.Equal("design", shell.CurrentMenu(null).Id);
+    }
+
+    [Fact]
+    public void A_menu_asks_for_attention_when_an_item_has_a_warning_or_an_error_badge()
+    {
+        Assert.True(Navigation.Sets.Single(s => s.Id == "design").NeedsAttention, "the palette has pairs that are too close");
+        Assert.False(Navigation.Sets.Single(s => s.Id == "toolkit").NeedsAttention);
+    }
+
+    [Fact]
+    public void The_html_tag_keeps_its_attributes_for_values_only()
+    {
+        Assert.Equal(string.Empty, ShellModel.Site().RootAttributes);
+        var shell = new ShellModel { App = MatDesign.Core.AppRegistry.Get("matmail")!, Menus = Navigation.Sets, UserName = "A", UserRole = "B", Version = "v", Theme = "dark", CustomAccent = "#ff6600", PreviewQuery = "app=matmail" };
+        Assert.Equal("data-theme=\"dark\" data-accent=\"custom\" data-custom-accent=\"#ff6600\" data-preview", shell.RootAttributes);
+        Assert.Equal(string.Empty, new ShellModel { App = shell.App, Menus = Navigation.Sets, UserName = "A", UserRole = "B", Version = "v", Theme = "<script>" }.RootAttributes);
     }
 
     // ---------------------------------------------------------------------------------------------------- lists
@@ -197,8 +320,8 @@ public class SiteHelpersTests
     public void The_shell_skeleton_is_the_one_of_the_layout()
     {
         // The skeleton on the shell page is written by hand: it must still name every part of the shell the layout draws.
-        var layout = File.ReadAllText(TestPaths.Web("Pages/Shared/_Layout.cshtml"));
-        foreach (var part in new[] { "mat-app", "mat-nav", "mat-nav__brand", "mat-nav__close", "mat-nav__scroll", "mat-nav__foot", "mat-user", "mat-theme", "mat-nav__version", "mat-main", "mat-topbar", "mat-burger", "mat-crumbs", "mat-page", "mat-page__head", "mat-menu" })
+        var layout = File.ReadAllText(TestPaths.Web("Pages/Shared/_Layout.cshtml")) + File.ReadAllText(TestPaths.Web("Pages/Shared/_Menu.cshtml")) + File.ReadAllText(TestPaths.Web("Services/Navigation.cs"));
+        foreach (var part in new[] { "mat-app", "mat-nav", "mat-nav__brand", "mat-nav__close", "mat-nav__switch", "mat-switcher", "mat-nav__branch", "mat-nav__sub", "mat-nav__badge", "mat-nav__scroll", "mat-nav__foot", "mat-user", "mat-theme", "mat-nav__version", "mat-main", "mat-topbar", "mat-burger", "mat-crumbs", "mat-page", "mat-page__head", "mat-menu" })
         {
             Assert.Contains(part, layout);
             Assert.Contains(part, ShellSkeleton.Html);

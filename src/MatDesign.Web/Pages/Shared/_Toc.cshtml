@@ -1,0 +1,21 @@
+@*
+    The index of the components page ("On this page", SHELL-16): the groups and, below each, its components. It is drawn twice, beside the
+    content and in the dialog that small screens open, so both are marked by the scroll spy.
+*@
+<nav class="mat-toc" aria-label="On this page" data-scrollspy>
+    <p class="mat-toc__title">On this page</p>
+    <ul class="mat-toc__list">
+        @foreach (var group in ComponentCatalog.Groups)
+        {
+            <li>
+                <a class="mat-toc__link mat-toc__link--group" href="#@ComponentCatalog.GroupAnchor(group)">@group</a>
+                <ul class="mat-toc__list">
+                    @foreach (var component in ComponentCatalog.All.Where(c => c.Group == group))
+                    {
+                        <li><a class="mat-toc__link" href="#@component.Id">@component.Name</a></li>
+                    }
+                </ul>
+            </li>
+        }
+    </ul>
+</nav>

@@ -17,6 +17,11 @@
         "auth" => ("Sign in", "login", Crumbs.Of(("Sign in", null))),
         _ => ("Items", "list", Crumbs.Of(("Work", Model.Query("list")), ("Items", null))),
     };
+    if (Model.AreaPage is { } areaPage)
+    {
+        (pageTitle, pageIcon, crumbs) = (areaPage.Title, areaPage.Icon, areaPage.Crumbs);
+    }
+
     ViewData["Title"] = pageTitle;
     ViewData["PageIcon"] = pageIcon;
     ViewData["Crumbs"] = crumbs;

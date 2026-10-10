@@ -241,9 +241,9 @@ function expectTrue(value, what) {
   // ---------------------------------------------------------------------------------------------------- the toolkit's own dialogs
   console.log('\nScript dialogs and toasts');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components/Detail?id=dialogs');
+    const { ctx, page } = await open(desktopOptions, '/Components#dialogs');
     await check('MatUi.confirm, alert and prompt are dialogs and return their results; a toast follows', async () => {
-      await page.click('[data-doc-demo="dialogs"]');
+      await page.click('#dialogs [data-doc-demo="dialogs"]');
       await page.waitForSelector('dialog[open] .mat-dialog__title');
       expect(await page.textContent('dialog[open] .mat-dialog__title'), 'Please confirm', 'confirm');
       await page.click('dialog[open] button[value="ok"]');
@@ -257,7 +257,7 @@ function expectTrue(value, what) {
       expectTrue((await page.textContent('.mat-toasts')).includes('Created: Photos'), 'no toast with the result of the prompt');
     });
     await check('a click on Cancel in a confirmation returns false and nothing else happens', async () => {
-      await page.click('[data-confirm]');
+      await page.click('#dialogs [data-confirm]');
       await page.waitForSelector('dialog[open]');
       await page.click('dialog[open] [data-dialog-close]');
       await page.waitForTimeout(250);
@@ -315,6 +315,182 @@ function expectTrue(value, what) {
       await page.waitForLoadState('networkidle');
       expectTrue(page.url().includes('accent=%231a73e8'), 'the preset is not in the address: ' + page.url());
       expectTrue((await page.textContent('#contrast-title + .mat-pill')).includes('AA'), 'no verdict');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- the menu
+  console.log('\nThe menu: badges, submenus, switching');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=list');
+    const branchState = () => page.evaluate(() => {
+      const b = document.querySelector('[data-nav-branch="items"]');
+      const sub = document.getElementById(b.getAttribute('aria-controls'));
+      return { expanded: b.getAttribute('aria-expanded'), open: b.closest('.mat-nav__branch').classList.contains('is-open'), visible: getComputedStyle(sub).visibility };
+    });
+    await check('the branch with the current page is open when the page loads and its child is marked', async () => {
+      expect(await branchState(), { expanded: 'true', open: true, visible: 'visible' }, 'branch');
+      expect(await page.locator('.mat-nav__item--sub[aria-current="page"]').textContent().then(t => t.trim().replace(/\s+/g, ' ')), 'All items 12 items', 'current child');
+    });
+    await check('a parent opens and closes its children, and the closed children cannot be reached with the keyboard', async () => {
+      await page.click('[data-nav-branch="items"]');
+      await page.waitForTimeout(350);
+      expect(await branchState(), { expanded: 'false', open: false, visible: 'hidden' }, 'closed');
+      await page.click('[data-nav-branch="items"]');
+      await page.waitForTimeout(350);
+      expect((await branchState()).expanded, 'true', 'open again');
+    });
+    await check('the closed parent shows the sum of its children badges, the open one does not', async () => {
+      const sum = page.locator('[data-nav-branch="items"] .mat-nav__badge--sum');
+      expect(await sum.count(), 1, 'sum badges');
+      expectTrue(await sum.isHidden(), 'the sum is shown while the branch is open');
+      await page.click('[data-nav-branch="items"]');
+      await page.waitForTimeout(350);
+      expectTrue(await sum.isVisible(), 'the sum is not shown while the branch is closed');
+      expect((await sum.textContent()).trim().split(/\s/)[0], '15', 'sum');
+      await page.click('[data-nav-branch="items"]');
+    });
+    await check('what the user closed is remembered after a reload; the branch with the current page stays open', async () => {
+      await page.click('[data-nav-branch="items"]');
+      await page.goto(BASE + '/Preview?app=matmail&view=dashboard', { waitUntil: 'networkidle' });
+      expect((await branchState()).expanded, 'false', 'closed branch after a reload on another page');
+      await page.goto(BASE + '/Preview?app=matmail&view=list', { waitUntil: 'networkidle' });
+      expect((await branchState()).expanded, 'true', 'the current page keeps its branch open');
+    });
+    await check('arrow keys walk the items; right opens a parent, left goes back to it', async () => {
+      await page.click('[data-nav-branch="items"]');
+      await page.focus('[data-nav-branch="items"]');
+      await page.keyboard.press('ArrowRight');
+      expect((await branchState()).expanded, 'true', 'opened by ArrowRight');
+      await page.keyboard.press('ArrowRight');
+      expect(await page.evaluate(() => document.activeElement.textContent.trim().replace(/\s+/g, ' ')), 'All items 12 items', 'first child');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.textContent.trim().split(/\s/)[0]), 'Needs', 'next child');
+      await page.keyboard.press('ArrowLeft');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-nav-branch')), 'items', 'back to the parent');
+      await page.keyboard.press('ArrowLeft');
+      expect((await branchState()).expanded, 'false', 'closed by ArrowLeft');
+      await page.keyboard.press('Home');
+      expect(await page.evaluate(() => document.activeElement.textContent.trim()), 'Dashboard', 'Home');
+    });
+    await check('the switcher shows the current menu and a dot because Administration needs attention', async () => {
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'Work', 'name');
+      expectTrue(await page.locator('.mat-switcher__dot').isVisible(), 'no dot');
+    });
+    await check('choosing Administration swaps the items without loading a page', async () => {
+      const before = page.url();
+      await page.click('.mat-switcher');
+      await page.click('[data-nav-set="admin"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'Administration', 'name');
+      expect(page.url(), before, 'the address');
+      expectTrue(await page.locator('[data-nav-panel="admin"]').isVisible() && !(await page.locator('[data-nav-panel="work"]').isVisible()), 'panels');
+      expect(await page.getAttribute('[data-nav-set="admin"]', 'aria-checked'), 'true', 'checked');
+      const items = await page.locator('[data-nav-panel="admin"] .mat-nav__item').allTextContents();
+      expectTrue(items.some(t => t.includes('Users')) && items.some(t => t.includes('Audit log')), 'the items of the administration');
+    });
+    await check('a page of the administration is loaded with the administration menu shown', async () => {
+      await page.click('[data-nav-panel="admin"] a.mat-nav__item[href*="area=users"]');
+      await page.waitForLoadState('networkidle');
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'Administration', 'name after the page loaded');
+      expect(await page.getAttribute('a[href*="area=users"].mat-nav__item', 'aria-current'), 'page', 'current item');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#switcher');
+    const dot = () => page.locator('#switch-demo .mat-switcher__dot').isVisible();
+    await check('the dot on the switcher is there while the other menu needs attention and goes when it is shown', async () => {
+      expectTrue(await dot(), 'no dot while Work is shown');
+      await page.click('#switch-demo .mat-switcher');
+      await page.click('#switch-demo-menu [data-nav-set="admin"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('#switch-demo .mat-switcher__name')).trim(), 'Administration', 'name');
+      expectTrue(!(await dot()), 'the dot is still there while the menu that needs attention is shown');
+      expectTrue(await page.locator('#switch-demo [data-nav-panel="admin"]').isVisible(), 'the items of the administration');
+      expectTrue(await page.locator('.mat-nav [data-nav-panel="toolkit"]').isVisible(), 'the menu of the page was swapped by an example');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list');
+    await check('on a phone a parent opens its children without closing the drawer; a link closes it', async () => {
+      await page.click('[data-nav-toggle]');
+      await page.waitForTimeout(450);
+      // the branch of the current page is open: closing and opening it must leave the drawer where it is
+      await page.click('[data-nav-branch="items"]');
+      await page.waitForTimeout(350);
+      expect(await page.evaluate(() => document.querySelector('.mat-app').classList.contains('is-nav-open')), true, 'drawer after closing a parent');
+      await page.click('[data-nav-branch="items"]');
+      await page.waitForTimeout(350);
+      expect(await page.evaluate(() => document.querySelector('.mat-app').classList.contains('is-nav-open')), true, 'drawer after opening a parent');
+      await page.click('.mat-nav__item--sub:has-text("Gallery")');
+      await page.waitForLoadState('networkidle');
+      expect(await page.evaluate(() => document.querySelector('.mat-app').classList.contains('is-nav-open')), false, 'drawer after following a link');
+    });
+    await check('the switcher works in the drawer: its popup is above the drawer', async () => {
+      await page.goto(BASE + '/Preview?app=matmail&view=list', { waitUntil: 'networkidle' });
+      await page.click('[data-nav-toggle]');
+      await page.waitForTimeout(450);
+      await page.click('.mat-switcher');
+      await page.waitForTimeout(250);
+      const above = await page.evaluate(() => { const m = document.getElementById('nav-switch-menu').getBoundingClientRect(); const hit = document.elementFromPoint(m.x + m.width / 2, m.y + 12); return !!(hit && hit.closest('#nav-switch-menu')); });
+      expectTrue(above, 'the popup is hidden behind the drawer');
+      await page.click('[data-nav-set="admin"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'Administration', 'name');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- long pages: the index
+  console.log('\nOn this page: the index of a long page');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components');
+    await check('the index sits beside the content and stays in view while the page scrolls', async () => {
+      const before = await page.locator('.mat-toc-aside').boundingBox();
+      await page.evaluate(() => { document.querySelector('.mat-main').scrollTop = 3000; });
+      await page.waitForTimeout(300);
+      const after = await page.locator('.mat-toc-aside').boundingBox();
+      const main = await page.locator('.mat-with-toc__main').boundingBox();
+      expectTrue(Math.abs(before.y - after.y) < 120, 'the index scrolled away: ' + before.y + ' -> ' + after.y);
+      expectTrue(after.x > main.x + main.width - 1, 'the index is not beside the content');
+    });
+    await check('a click on a component jumps to it, below the top bar, and the index marks it', async () => {
+      await page.click('.mat-toc-aside a[href="#table"]');
+      await page.waitForTimeout(500);
+      const top = await page.evaluate(() => document.getElementById('table').getBoundingClientRect().top);
+      expectTrue(top >= 50 && top < 160, 'the section is not just below the top bar: ' + top);
+      expect(await page.getAttribute('.mat-toc-aside a[href="#table"]', 'aria-current'), 'location', 'aria-current');
+      expect(await page.locator('.mat-toc-aside .mat-toc__link.is-active').count(), 1, 'marked links');
+    });
+    await check('scrolling changes the marked link', async () => {
+      await page.evaluate(() => { document.getElementById('dialogs').scrollIntoView(); });
+      await page.waitForTimeout(500);
+      expect(await page.getAttribute('.mat-toc-aside a[href="#dialogs"]', 'aria-current'), 'location', 'dialogs');
+      expectTrue(!(await page.locator('.mat-toc-aside a[href="#table"]').getAttribute('aria-current')), 'table is still marked');
+    });
+    await check('the example inside a component works: a dependent field of a form example', async () => {
+      await page.evaluate(() => document.getElementById('form-layout').scrollIntoView());
+      expectTrue(await page.locator('#fl-mail').isVisible(), 'the e-mail field is hidden while the switch is on');
+      await page.click('#form-layout label.mat-switch');
+      expectTrue(!(await page.locator('#fl-mail').isVisible()), 'the e-mail field is still shown');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components');
+    await check('on a phone there is no index beside the content: a button opens it in a full-screen dialog and a link closes it', async () => {
+      expectTrue(!(await page.locator('.mat-toc-aside').isVisible()), 'the index is shown beside the content on a phone');
+      await page.click('.mat-toc-bar button');
+      await page.waitForTimeout(350);
+      const box = await page.locator('#toc-dialog').boundingBox();
+      expect([Math.round(box.width), Math.round(box.height)], [390, 844], 'size');
+      await page.click('#toc-dialog a[href="#toolbar"]');
+      await page.waitForTimeout(600);
+      expect(await page.evaluate(() => document.getElementById('toc-dialog').open), false, 'dialog after the jump');
+      const top = await page.evaluate(() => document.getElementById('toolbar').getBoundingClientRect().top);
+      expectTrue(top >= 40 && top < 200, 'the section is not near the top: ' + top);
     });
     await ctx.close();
   }

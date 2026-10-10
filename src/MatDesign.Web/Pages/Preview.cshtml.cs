@@ -44,7 +44,28 @@ public class PreviewModel : PageModel
 
     public MatApp App { get; private set; } = null!;
 
-    public string Query(string view) => $"/Preview?{Base()}&view={view}";
+    /// <summary>The address of a page of the sample app. An <paramref name="area"/> tells two menu items apart that show the same kind of page.</summary>
+    public string Query(string view, string? area = null) => $"/Preview?{Base()}&view={view}" + (area is null ? string.Empty : $"&area={area}");
+
+    /// <summary>The areas of the sample's menus: the title of the page, its icon and the breadcrumb above it.</summary>
+    private static readonly Dictionary<string, (string Title, string Icon, string[] Trail)> Areas = new()
+    {
+        ["review"] = ("Needs review", "alert", ["Work", "Items"]),
+        ["users"] = ("Users", "users", ["Administration"]),
+        ["roles"] = ("Roles", "shield", ["Administration"]),
+        ["general"] = ("General", "settings", ["Administration", "Settings"]),
+        ["security"] = ("Security", "lock", ["Administration", "Settings"]),
+        ["backups"] = ("Backups", "archive", ["Administration", "Settings"]),
+        ["audit"] = ("Audit log", "clock", ["Administration"]),
+    };
+
+    public string? Area { get; private set; }
+
+    /// <summary>The page of an area (a menu item that is not one of the basic views), or null.</summary>
+    public (string Title, string Icon, IReadOnlyList<(string Text, string? Url)> Crumbs)? AreaPage
+        => Area is not null && Areas.TryGetValue(Area, out var a)
+            ? (a.Title, a.Icon, [.. a.Trail.Select(t => (t, (string?)Query("dashboard"))), (a.Title, null)])
+            : null;
 
     private string Base()
     {
@@ -69,7 +90,8 @@ public class PreviewModel : PageModel
         var theme = Request.Query["theme"].ToString() is "light" or "dark" ? Request.Query["theme"].ToString() : null;
         var accent = Request.Query["accent"].ToString();
         var customAccent = accent.Length == 7 && accent[0] == '#' && accent[1..].All(Uri.IsHexDigit) ? accent : null;
-        var active = View == "auth" ? string.Empty : Query(View);
+        Area = Request.Query["area"].ToString() is { Length: > 0 } requested && Areas.ContainsKey(requested) ? requested : null;
+        var active = View == "auth" ? string.Empty : Query(View, Area);
 
         Shell = new ShellModel
         {
@@ -79,19 +101,45 @@ public class PreviewModel : PageModel
             CustomAccent = customAccent,
             PreviewQuery = Base(),
             ActiveHref = active,
-            Nav =
+            Menus =
             [
-                new(null, [new("Dashboard", Query("dashboard"), "dashboard")]),
-                new("Work",
+                // The menu of the sample: a submenu with badges, and an administration behind the switcher.
+                new("work", "Work", "briefcase",
                 [
-                    new("Items", Query("list"), "list"),
-                    new("Gallery", Query("gallery"), "grid"),
-                    new("New item", Query("form"), "plus"),
+                    new(null, [new("Dashboard", Query("dashboard"), "dashboard")]),
+                    new("Work",
+                    [
+                        new("Items", null, "list", Children:
+                        [
+                            new("All items", Query("list"), null, NavBadge.Count(12, "plain", "items")),
+                            new("Needs review", Query("list", "review"), null, NavBadge.Count(3, "warn", "to review")),
+                            new("Gallery", Query("gallery"), null),
+                            new("New item", Query("form"), null),
+                        ]),
+                    ]),
+                    new("Account",
+                    [
+                        new("Settings", Query("settings"), "settings"),
+                        new("Sign in page", Query("auth"), "login"),
+                    ]),
                 ]),
-                new("Account",
+                new("admin", "Administration", "shield",
                 [
-                    new("Settings", Query("settings"), "settings"),
-                    new("Sign in page", Query("auth"), "login"),
+                    new(null,
+                    [
+                        new("Users", Query("list", "users"), "users", NavBadge.Count(3, "warn", "invitations pending")),
+                        new("Roles", Query("gallery", "roles"), "shield"),
+                    ]),
+                    new("System",
+                    [
+                        new("Settings", null, "settings", Children:
+                        [
+                            new("General", Query("settings", "general"), null),
+                            new("Security", Query("form", "security"), null),
+                            new("Backups", Query("dashboard", "backups"), null, NavBadge.Count(1, "error", "failed")),
+                        ]),
+                        new("Audit log", Query("list", "audit"), "clock"),
+                    ]),
                 ]),
             ],
             UserName = "Alex Morgan",

@@ -149,7 +149,8 @@ public partial class MarkupContractTests
     [Fact]
     public void Every_icon_of_the_menu_the_catalogues_and_the_skeleton_is_in_the_sprite()
     {
-        var names = Navigation.Groups.SelectMany(g => g.Items).Select(i => i.Icon)
+        var names = Navigation.Sets.SelectMany(s => s.AllItems).Select(i => i.Icon).OfType<string>()
+            .Concat(Navigation.Sets.Select(s => s.Icon))
             .Concat(ComponentCatalog.All.Select(c => c.Icon))
             .Concat(PatternCatalog.All.Select(p => p.Icon))
             .Concat(SpriteReference().Matches(ShellSkeleton.Html).Select(m => m.Groups[1].Value))
@@ -160,12 +161,12 @@ public partial class MarkupContractTests
     [Fact]
     public void Every_item_of_the_menu_has_a_page()
     {
-        foreach (var item in Navigation.Groups.SelectMany(g => g.Items))
+        foreach (var item in Navigation.Pages)
         {
-            var folder = item.Href == "/" ? "Index.cshtml" : item.Href.Trim('/').Split('/')[^1] + "/Index.cshtml";
-            var direct = item.Href == "/" ? TestPaths.Web("Pages/Index.cshtml") : TestPaths.Web($"Pages/{item.Href.Trim('/').Replace('/', Path.DirectorySeparatorChar)}.cshtml");
-            var nested = TestPaths.Web($"Pages/{item.Href.Trim('/').Replace('/', Path.DirectorySeparatorChar)}/Index.cshtml");
-            Assert.True(File.Exists(direct) || File.Exists(nested) || File.Exists(TestPaths.Web($"Pages/{folder}")), $"no page for the menu item {item.Title} ({item.Href})");
+            var path = item.Href!.Split('?')[0].Trim('/').Replace('/', Path.DirectorySeparatorChar);
+            var direct = path.Length == 0 ? TestPaths.Web("Pages/Index.cshtml") : TestPaths.Web($"Pages/{path}.cshtml");
+            var nested = TestPaths.Web($"Pages/{path}/Index.cshtml");
+            Assert.True(File.Exists(direct) || File.Exists(nested), $"no page for the menu item {item.Title} ({item.Href})");
         }
     }
 

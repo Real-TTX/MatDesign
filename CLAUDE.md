@@ -43,9 +43,10 @@ src/MatDesign.Core         no web types
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /api/*, /health, Razor Pages
   Services/                  ToolkitFiles, Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
-                             ComponentCatalog, PatternCatalog, ShellSkeleton, AuditData
+                             ComponentCatalog, PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Patterns, Builder, Download, Preview (the sample app)
-  Pages/Shared/              _Layout (the shell), _Bare (no menu), _Head, _Toolbar, _Pager, _AccentSwatches, _ContrastCard, _FoundationsTabs
+  Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (switcher, items, badges, submenus), _MenuSwitchPopup, _Head, _Toolbar, _Pager,
+                             _Toc + _Component (the components page), _AccentSwatches, _ContrastCard, _FoundationsTabs
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons
 tests/MatDesign.Tests      unit tests + the site in memory
 tests/e2e                  run.js: the behaviour in a real browser against a running site

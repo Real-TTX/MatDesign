@@ -3,13 +3,14 @@
     ViewData["Title"] = "Shell";
     ViewData["PageIcon"] = "sidebar";
     ViewData["PageSub"] = "The frame around every page of every app: menu on the left, breadcrumb above the content.";
-    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Shell", null));
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), ("Shell", null));
 
     var parts = new (string Title, string Text, string Rule)[]
     {
         ("Logo and app name", "Always at the top of the menu. A click leads to the start page.", "SHELL-01"),
-        ("Menu items", "An icon and a label. The current page is marked; related items sit under small headings; a count is a badge.", "SHELL-02"),
-        ("The menu scrolls on its own", "The page itself never scrolls. Logo and foot stay in place while the items between them scroll.", "SHELL-07"),
+        ("The menu switcher", "Directly under the logo, only when an app has more than one menu (Work, Administration). A dot says that another menu needs attention.", "SHELL-15"),
+        ("Menu items", "An icon and a label. The current page is marked; related items sit under small headings; a badge at the right end carries a count or a dot; a parent opens its submenu.", "SHELL-02"),
+        ("The menu scrolls on its own", "The page itself never scrolls. Logo, switcher and foot stay in place while the items between them scroll.", "SHELL-07"),
         ("The user and the theme button", "The user is a button that opens a context menu (account, settings, Sign out last). Beside it the 3-state button: System, Light, Dark.", "SHELL-03"),
         ("The version", "Below the user, in mono, small and muted: the app name and its version.", "SHELL-06"),
         ("The breadcrumb", "Above every page. The last item is the current page and not a link. On a phone the last two are shown.", "SHELL-08"),
@@ -19,21 +20,22 @@
 }
 
 <section class="mat-section" aria-labelledby="anatomy-title">
-    <div class="mat-section__head"><h2 id="anatomy-title">Anatomy</h2><p class="mat-section__lead">Eight parts, always in the same place. The numbers lead to the rules.</p></div>
+    <div class="mat-section__head"><h2 id="anatomy-title">Anatomy</h2><p class="mat-section__lead">Nine parts, always in the same place. The numbers lead to the rules.</p></div>
     <div class="doc-anatomy">
-        <div class="doc-wire" role="img" aria-label="A wireframe of the shell with eight numbered parts">
+        <div class="doc-wire" role="img" aria-label="A wireframe of the shell with nine numbered parts">
             <div class="doc-wire__nav">
                 <div class="doc-wire__brand"><b class="doc-n">1</b><span>Logo, name</span></div>
-                <div class="doc-wire__items"><b class="doc-n">2</b><span>Menu items</span><b class="doc-n">3</b><span class="doc-wire__note">scrolls on its own</span></div>
+                <div class="doc-wire__switch"><b class="doc-n">2</b><span>Menu switcher</span></div>
+                <div class="doc-wire__items"><b class="doc-n">3</b><span>Items, badges, submenus</span><b class="doc-n">4</b><span class="doc-wire__note">scrolls on its own</span></div>
                 <div class="doc-wire__foot">
-                    <div><b class="doc-n">4</b><span>User · theme</span></div>
-                    <div><b class="doc-n">5</b><span>Version</span></div>
+                    <div><b class="doc-n">5</b><span>User · theme</span></div>
+                    <div><b class="doc-n">6</b><span>Version</span></div>
                 </div>
             </div>
             <div class="doc-wire__main">
-                <div class="doc-wire__top"><b class="doc-n">6</b><span>Breadcrumb</span></div>
-                <div class="doc-wire__head"><b class="doc-n">7</b><span>Icon · Title · line</span></div>
-                <div class="doc-wire__body"><b class="doc-n">8</b><span>Content: toolbar, list or form, buttons under it</span></div>
+                <div class="doc-wire__top"><b class="doc-n">7</b><span>Breadcrumb</span></div>
+                <div class="doc-wire__head"><b class="doc-n">8</b><span>Icon · Title · line</span></div>
+                <div class="doc-wire__body"><b class="doc-n">9</b><span>Content: toolbar, list or form, buttons under it</span></div>
             </div>
         </div>
         <ol class="doc-steps">
@@ -49,6 +51,20 @@
     <div class="mat-section__head"><h2 id="live-title">The real thing</h2><p class="mat-section__lead">This is a sample app of the family drawn by the same layout as this site, here in the accent of MatMail. Use its menu, the user menu and the theme button.</p></div>
     <div class="doc-frames">
         <iframe class="doc-frame" title="The shell on a desktop" loading="lazy" src="/Preview?app=matmail&amp;view=list"></iframe>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="menus-title">
+    <div class="mat-section__head">
+        <h2 id="menus-title">Badges, submenus and more than one menu</h2>
+        <p class="mat-section__lead">
+            The same sample app, now showing its <strong>Administration</strong>: the switcher under the logo swapped the items, <em>Settings</em> is a parent with three children, and badges carry counts in the tone of their meaning
+            (amber: look at it, red: it failed). Open the switcher and choose <em>Work</em>, or close and open a submenu: the choice is remembered.
+            The markup of each piece is under <a href="/Components#navmenu">Menu items, badges and submenus</a> and <a href="/Components#switcher">Menu switcher</a>.
+        </p>
+    </div>
+    <div class="doc-frames">
+        <iframe class="doc-frame" title="The administration menu with a submenu and badges" loading="lazy" src="/Preview?app=matmail&amp;view=dashboard&amp;area=backups"></iframe>
     </div>
 </section>
 

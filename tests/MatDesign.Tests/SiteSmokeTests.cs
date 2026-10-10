@@ -117,7 +117,7 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     [Fact]
     public async Task Every_list_page_has_its_toolbar_above_the_list_and_the_three_dialogs()
     {
-        foreach (var url in new[] { "/Identity", "/Identity/Palette", "/Identity/Audit", "/Rules", "/Foundations/Icons", "/Foundations/Tokens", "/Components", "/Patterns" })
+        foreach (var url in new[] { "/Identity", "/Identity/Palette", "/Identity/Audit", "/Rules", "/Foundations/Icons", "/Foundations/Tokens", "/Patterns" })
         {
             var (_, html) = await Get(url);
             var toolbar = html.IndexOf("class=\"mat-toolbar\"", StringComparison.Ordinal);
@@ -131,10 +131,9 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
-    public async Task Every_component_and_pattern_page_answers()
+    public async Task Every_pattern_rule_and_app_page_answers()
     {
-        var urls = ComponentCatalog.All.Select(c => $"/Components/Detail?id={c.Id}")
-            .Concat(PatternCatalog.All.Select(p => $"/Patterns/Detail?id={p.Id}"))
+        var urls = PatternCatalog.All.Select(p => $"/Patterns/Detail?id={p.Id}")
             .Concat(RuleBook.All.Select(r => $"/Rules/Detail?id={r.Id}"))
             .Concat(AppRegistry.All.Select(a => $"/Identity/App?id={a.Id}"));
         var problems = new List<string>();
@@ -148,9 +147,129 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         Assert.True(problems.Count == 0, string.Join("\n", problems));
     }
 
+    [GeneratedRegex(@"\sid=""([^""]+)""")]
+    private static partial Regex IdAttribute();
+
+    [GeneratedRegex(@"\shref=""#([^""]+)""")]
+    private static partial Regex FragmentLink();
+
+    [Fact]
+    public async Task The_components_page_has_every_component_under_its_group_and_in_the_index()
+    {
+        // SHELL-16: one long page, an index beside it (and in a dialog for small screens), both marked by the scroll spy.
+        var (status, html) = await Get("/Components");
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Single(Heading().Matches(html));
+        Assert.Contains("class=\"mat-toc-aside\"", html);
+        Assert.Equal(2, Regex.Matches(html, "<nav class=\"mat-toc\"[^>]*data-scrollspy").Count);
+        Assert.Contains("data-dialog-open=\"toc-dialog\"", html);
+        Assert.Contains("id=\"toc-dialog\"", html);
+
+        foreach (var group in ComponentCatalog.Groups)
+        {
+            var anchor = ComponentCatalog.GroupAnchor(group);
+            Assert.Contains($"<section class=\"doc-group mat-anchor\" id=\"{anchor}\"", html);
+            Assert.True(Regex.Matches(html, $"href=\"#{anchor}\"").Count >= 2, $"{group} is in the index beside the content and in the dialog");
+        }
+
+        foreach (var component in ComponentCatalog.All)
+        {
+            Assert.Contains($"<section class=\"doc-component mat-anchor\" id=\"{component.Id}\"", html);
+            Assert.True(Regex.Matches(html, $"mat-toc__link( is-active)?\" href=\"#{component.Id}\"").Count >= 2, $"{component.Id} is in the index beside the content and in the dialog");
+        }
+    }
+
+    [Fact]
+    public async Task The_ids_of_the_components_page_are_unique_and_every_fragment_link_leads_somewhere()
+    {
+        // All the examples share one page: two controls with the same id, or a link to a section that is not there, would break it.
+        var (_, html) = await Get("/Components");
+        var ids = IdAttribute().Matches(html).Select(m => WebUtility.HtmlDecode(m.Groups[1].Value)).ToList();
+        var twice = ids.GroupBy(i => i).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
+        Assert.True(twice.Count == 0, "ids that appear twice on the page: " + string.Join(", ", twice));
+
+        var known = ids.ToHashSet();
+        var lost = FragmentLink().Matches(html).Select(m => WebUtility.HtmlDecode(m.Groups[1].Value)).Where(f => !known.Contains(f)).Distinct().ToList();
+        Assert.True(lost.Count == 0, "links to sections that are not on the page: " + string.Join(", ", lost));
+    }
+
+    [Theory]
+    [InlineData("/Foundations/Type", "design", "toolkit")]
+    [InlineData("/Identity", "design", "toolkit")]
+    [InlineData("/Shell", "toolkit", "design")]
+    [InlineData("/Components", "toolkit", "design")]
+    public async Task The_menu_has_a_switcher_and_shows_only_the_menu_of_the_current_page(string url, string shown, string hidden)
+    {
+        var (_, html) = await Get(url);
+        Assert.Contains("class=\"mat-switcher\"", html);
+        Assert.Contains("id=\"nav-switch-menu\"", html);
+        Assert.Contains($"data-nav-set=\"{shown}\"", html);
+        Assert.DoesNotContain(" hidden", Regex.Match(html, $"<nav[^>]*data-nav-panel=\"{shown}\"[^>]*>").Value);
+        Assert.Contains(" hidden", Regex.Match(html, $"<nav[^>]*data-nav-panel=\"{hidden}\"[^>]*>").Value);
+        Assert.Contains($"aria-checked=\"true\" data-nav-set=\"{shown}\"", html);
+    }
+
+    [Fact]
+    public async Task The_branch_with_the_current_page_is_open_and_the_child_is_marked()
+    {
+        var (_, html) = await Get("/Foundations/Type");
+        var branch = Regex.Match(html, "<li class=\"mat-nav__branch([^\"]*)\">");
+        Assert.True(branch.Success, "no submenu in the menu");
+        Assert.Contains("is-open", branch.Groups[1].Value);
+        Assert.Contains("is-current", branch.Groups[1].Value);
+        Assert.Contains("aria-expanded=\"true\" aria-controls=\"nav-sub-design-foundations\" data-nav-branch=\"foundations\"", html);
+        Assert.Matches(@"<a class=""mat-nav__item mat-nav__item--sub is-active"" href=""/Foundations/Type"" aria-current=""page"">", html);
+
+        // on a page of another section the branch is closed
+        var (_, other) = await Get("/Identity");
+        Assert.Contains("aria-expanded=\"false\" aria-controls=\"nav-sub-design-foundations\"", other);
+        Assert.DoesNotContain("is-open", Regex.Match(other, "<li class=\"mat-nav__branch([^\"]*)\">").Groups[1].Value);
+    }
+
+    [Fact]
+    public async Task Every_submenu_is_controlled_by_a_button_that_names_it_and_badges_are_readable()
+    {
+        foreach (var url in new[] { "/", "/Shell", "/Preview?app=matmail&view=list", "/Preview?app=matmail&view=list&area=backups" })
+        {
+            var (_, html) = await Get(url);
+            var ids = IdAttribute().Matches(html).Select(m => m.Groups[1].Value).ToHashSet();
+            foreach (Match button in Regex.Matches(html, "data-nav-branch=\"[^\"]+\""))
+            {
+                Assert.True(button.Success);
+            }
+
+            foreach (Match controls in Regex.Matches(html, "aria-controls=\"(nav-sub-[^\"]+)\""))
+            {
+                Assert.True(ids.Contains(controls.Groups[1].Value), $"{url}: {controls.Groups[1].Value} is not in the page");
+            }
+
+            // a badge that is a count or a dot says in words what it counts
+            foreach (Match badge in Regex.Matches(html, "<span class=\"mat-nav__badge[^\"]*\">(.*?)</span></span>|<span class=\"mat-nav__badge[^\"]*\">[^<]*<span class=\"mat-sr-only\">", RegexOptions.Singleline))
+            {
+                Assert.Contains("mat-sr-only", badge.Value);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task The_sample_app_has_an_administration_behind_the_switcher_with_badges_and_a_submenu()
+    {
+        var (_, work) = await Get("/Preview?app=matmail&view=list");
+        Assert.Contains("<span class=\"mat-switcher__name\">Work</span>", work);
+        Assert.Contains("mat-nav__badge mat-nav__badge--warn", work);
+
+        var (_, admin) = await Get("/Preview?app=matmail&view=list&area=users");
+        Assert.Contains("<span class=\"mat-switcher__name\">Administration</span>", admin);
+        Assert.DoesNotContain(" hidden", Regex.Match(admin, "<nav[^>]*data-nav-panel=\"admin\"[^>]*>").Value);
+        Assert.Contains("<li>Users</li>", admin.Replace("<li aria-current=\"page\">Users</li>", "<li>Users</li>"));
+
+        var (_, backups) = await Get("/Preview?app=matmail&view=dashboard&area=backups");
+        Assert.Matches(@"<li class=""mat-nav__branch is-open is-current"">\s*<button[^>]*data-nav-branch=""settings""", backups);
+        Assert.Contains("mat-nav__badge mat-nav__badge--error", backups);
+    }
+
     [Theory]
     [InlineData("/Rules/Detail?id=NOPE-99")]
-    [InlineData("/Components/Detail?id=nope")]
     [InlineData("/Patterns/Detail?id=nope")]
     [InlineData("/Identity/App?id=nope")]
     public async Task An_unknown_item_is_a_404(string url)
