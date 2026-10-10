@@ -651,6 +651,263 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- pickers
+  console.log('\nPickers');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#rich-select');
+    const panelOf = id => page.locator(`#${id}-trigger ~ .mat-picker__panel`);
+    const valueOf = id => page.$eval(`#${id}`, el => el.value);
+    const shown = async id => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
+
+    await check('a select with details shows the chosen option in the field, opens a panel with descriptions and tags, and a click chooses and closes', async () => {
+      expectTrue((await shown('pk-plan')).startsWith('Team'), 'the field does not show the chosen plan: ' + await shown('pk-plan'));
+      expect(await page.getAttribute('#pk-plan-trigger', 'aria-haspopup'), 'listbox', 'aria-haspopup');
+      await page.click('#pk-plan-trigger');
+      expectTrue(await panelOf('pk-plan').isVisible(), 'the panel is not shown');
+      expect(await page.getAttribute('#pk-plan-trigger', 'aria-expanded'), 'true', 'aria-expanded');
+      expect(await page.locator('#pk-plan-trigger ~ .mat-picker__panel .mat-picker__desc').count(), 3, 'descriptions');
+      expect(await page.locator('#pk-plan-trigger ~ .mat-picker__panel .mat-picker__option[aria-selected="true"]').count(), 1, 'chosen options');
+      await page.click('#pk-plan-trigger ~ .mat-picker__panel [data-value="business"]');
+      expect(await valueOf('pk-plan'), 'business', 'the posted value');
+      expect(await shown('pk-plan'), 'Business', 'the field after the choice');
+      expectTrue(!(await panelOf('pk-plan').isVisible()), 'the panel is still shown');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-plan-trigger', 'the focus after the choice');
+    });
+    await check('a select works with the keyboard: arrows open and move, Enter chooses, Escape closes and gives the focus back', async () => {
+      await page.focus('#pk-plan-trigger');
+      await page.keyboard.press('ArrowDown');
+      expectTrue(await panelOf('pk-plan').isVisible(), 'ArrowDown did not open the panel');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-value')), 'business', 'the focus is on the chosen option');
+      await page.keyboard.press('ArrowUp');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-value')), 'team', 'ArrowUp');
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-plan'), 'team', 'Enter chose the option');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('Escape');
+      expectTrue(!(await panelOf('pk-plan').isVisible()), 'Escape did not close the panel');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-plan-trigger', 'the focus after Escape');
+    });
+    await check('several choices stay open, are joined by the separator, are searched, counted and cleared', async () => {
+      await page.evaluate(() => document.getElementById('rich-select').scrollIntoView());
+      expect(await shown('pk-apps'), 'Mail, Files', 'the field at the start');
+      await page.click('#pk-apps-trigger');
+      expectTrue(await page.evaluate(() => document.activeElement.type === 'search'), 'the search field has no focus on a wide screen');
+      await page.click('#pk-apps-trigger ~ .mat-picker__panel [data-value="calendar"]');
+      expect(await valueOf('pk-apps'), 'mail, files, calendar', 'the value after a third choice');
+      expect(await shown('pk-apps'), '3 selected', 'the field counts above two choices');
+      expectTrue(await panelOf('pk-apps').isVisible(), 'the panel closed after a choice of several');
+      await page.fill('#pk-apps-trigger ~ .mat-picker__panel input[type=search]', 'photo');
+      expect(await page.locator('#pk-apps-trigger ~ .mat-picker__panel .mat-picker__option:not([hidden])').count(), 1, 'options after the search');
+      await page.fill('#pk-apps-trigger ~ .mat-picker__panel input[type=search]', 'zzz');
+      expectTrue(await page.locator('#pk-apps-trigger ~ .mat-picker__panel .mat-picker__empty').isVisible(), 'no message that nothing was found');
+      await page.click('#pk-apps-trigger ~ .mat-picker__panel [data-picker-action]');
+      expectTrue(!(await panelOf('pk-apps').isVisible()), 'Done did not close the panel');
+      await page.click('#pk-apps-trigger ~ .mat-picker__clear');
+      expect(await valueOf('pk-apps'), '', 'the value after Clear');
+      expect(await shown('pk-apps'), 'Choose apps', 'the placeholder after Clear');
+    });
+    await check('a required select writes its message at the field and the focus goes to its button', async () => {
+      await page.evaluate(() => document.getElementById('pk-req-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('form[action="/Components#rich-select"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#pk-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked invalid');
+      expect((await page.locator('#pk-req').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose a server.', 'the message');
+      expect(await page.getAttribute('#pk-req-trigger', 'aria-invalid'), 'true', 'aria-invalid of the button');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-req-trigger', 'the focus');
+      await page.click('#pk-req-trigger');
+      await page.click('#pk-req-trigger ~ .mat-picker__panel [data-value="vps"]');
+      expect(await page.locator('#pk-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after a choice');
+    });
+
+    await page.evaluate(() => document.getElementById('date-picker').scrollIntoView());
+    await check('a date: shown in the language of the page, posted as ISO; a click on a day chooses it; days outside the limits cannot be chosen', async () => {
+      expect(await shown('pk-date'), '10 Oct 2026', 'the field');
+      const panel = '#pk-date-trigger ~ .mat-picker__panel';
+      await page.click('#pk-date-trigger');
+      expect(await page.locator(panel + ' .mat-cal__month').count(), 1, 'months of a single date');
+      expect(await page.locator(panel + ' [data-date="2026-10-04"]').isDisabled(), true, 'a day before data-min');
+      expect(await page.locator(panel + ' [data-date="2026-10-05"]').isDisabled(), false, 'the first day of data-min');
+      expect(await page.locator(panel + ' [data-cal-nav="-1"]').isDisabled(), true, 'the arrow to the months before data-min');
+      await page.click(panel + ' [data-cal-nav="1"]');
+      expect((await page.textContent(panel + ' .mat-cal__title')).trim(), 'November 2026', 'the month after the arrow');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-cal-nav')), '1', 'the focus stays on the arrow');
+      await page.click(panel + ' [data-cal-nav="1"]');
+      expect(await page.locator(panel + ' [data-cal-nav="1"]').isDisabled(), true, 'the arrow to the months after data-max');
+      await page.click(panel + ' [data-cal-nav="-1"]');
+      await page.click(panel + ' [data-cal-nav="-1"]');
+      await page.click(panel + ' [data-date="2026-10-15"]');
+      expect(await valueOf('pk-date'), '2026-10-15', 'the posted value');
+      expect(await shown('pk-date'), '15 Oct 2026', 'the field after the choice');
+      expectTrue(!(await panelOf('pk-date').isVisible()), 'the panel is still shown');
+    });
+    await check('a calendar is a grid for the keyboard: arrows, page keys, Enter', async () => {
+      await page.focus('#pk-date-trigger');
+      await page.keyboard.press('Enter');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-date')), '2026-10-15', 'the focus is on the chosen day');
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-date')), '2026-10-23', 'a day right, a week down');
+      await page.keyboard.press('PageDown');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-date')), '2026-11-23', 'a month on');
+      expect((await page.textContent('#pk-date-trigger ~ .mat-picker__panel .mat-cal__title')).trim(), 'November 2026', 'the month shown');
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-date'), '2026-11-23', 'Enter chose the day');
+    });
+    await check('a date can be cleared and starts empty', async () => {
+      await page.click('#pk-date-trigger ~ .mat-picker__clear');
+      expect(await valueOf('pk-date'), '', 'the value');
+      expect(await shown('pk-date'), 'Choose a date', 'the placeholder');
+      expectTrue(await page.locator('#pk-birth-trigger ~ .mat-picker__clear').isHidden(), 'a field without a value has a Clear button');
+    });
+    await check('a period shows two months; the second click completes it; an earlier second click starts again', async () => {
+      await page.click('#pk-period-trigger');
+      expect(await page.locator('#pk-period-trigger ~ .mat-picker__panel .mat-cal__month').count(), 2, 'months of a period');
+      const day = d => `#pk-period-trigger ~ .mat-picker__panel [data-date="${d}"]`;
+      await page.click(day('2026-10-25'));
+      await page.hover(day('2026-10-28'));
+      expectTrue(await page.locator(day('2026-10-27')).evaluate(el => el.classList.contains('is-in-range')), 'no preview of the days up to the pointer');
+      await page.click(day('2026-10-22'));
+      expect(await valueOf('pk-period'), '2026-10-12..2026-10-16', 'a click before the start only begins again');
+      await page.click(day('2026-10-24'));
+      expect(await valueOf('pk-period'), '2026-10-22..2026-10-24', 'the period');
+      expect(await shown('pk-period'), '22 Oct 2026 – 24 Oct 2026', 'the field');
+      expectTrue(!(await panelOf('pk-period').isVisible()), 'the period did not close the panel');
+    });
+    await check('flexible dates are chosen with the period and applied with the button', async () => {
+      await page.click('#pk-flex-trigger');
+      const apply = page.locator('#pk-flex-trigger ~ .mat-picker__panel [data-picker-action="apply"]');
+      expect(await page.locator('#pk-flex-trigger ~ .mat-picker__panel [data-cal-flex][aria-checked="true"]').getAttribute('data-cal-flex'), '2', 'the chosen flexibility');
+      await page.click('#pk-flex-trigger ~ .mat-picker__panel [data-cal-flex="3"]');
+      expect(await valueOf('pk-flex'), '2026-11-02..2026-11-06~2', 'the value is not changed before Apply');
+      await apply.click();
+      expect(await valueOf('pk-flex'), '2026-11-02..2026-11-06~3', 'the value after Apply');
+      expectTrue((await shown('pk-flex')).includes('± 3 days'), 'the field does not say the flexibility: ' + await shown('pk-flex'));
+      await page.click('#pk-flex-trigger');
+      await page.click('#pk-flex-trigger ~ .mat-picker__panel [data-picker-action="cancel"]');
+      expect(await valueOf('pk-flex'), '2026-11-02..2026-11-06~3', 'Cancel keeps the value');
+    });
+
+    await page.evaluate(() => document.getElementById('time-picker').scrollIntoView());
+    await check('a time can be typed: 1445 and Enter is 14:45', async () => {
+      expect(await shown('pk-time'), '09:30', 'the field');
+      await page.click('#pk-time-trigger');
+      expectTrue(await page.evaluate(() => document.activeElement.hasAttribute('data-time-entry')), 'the field to type in has no focus on a wide screen');
+      await page.keyboard.type('1445');
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-time'), '14:45', 'the posted value');
+      expect(await shown('pk-time'), '14:45', 'the field');
+      expectTrue(!(await panelOf('pk-time').isVisible()), 'the panel is still shown');
+    });
+    await check('a time is chosen in columns and applied; Cancel keeps the old time; the minutes follow the step', async () => {
+      await page.click('#pk-time-trigger');
+      const panel = '#pk-time-trigger ~ .mat-picker__panel';
+      expect(await page.locator(`${panel} [data-time-col="m"] .mat-timecol__item`).allTextContents(), ['00', '15', '30', '45'], 'minutes of a step of 15');
+      await page.click(`${panel} [data-time-col="h"] [data-v="8"]`);
+      await page.click(`${panel} [data-time-col="m"] [data-v="15"]`);
+      expect(await page.$eval(`${panel} [data-time-entry]`, el => el.value), '08:15', 'the field to type in follows the columns');
+      expect(await valueOf('pk-time'), '14:45', 'nothing is posted before Apply');
+      await page.click(`${panel} [data-picker-action="cancel"]`);
+      expect(await valueOf('pk-time'), '14:45', 'Cancel');
+      await page.click('#pk-time-trigger');
+      await page.click(`${panel} [data-time-col="h"] [data-v="8"]`);
+      await page.click(`${panel} [data-picker-action="apply"]`);
+      expect(await valueOf('pk-time'), '08:45', 'Apply');
+    });
+    await check('with 12 hours the field shows AM and PM but posts 24 hours', async () => {
+      expectTrue((await shown('pk-time12')).includes('02:45'), 'the field: ' + await shown('pk-time12'));
+      await page.click('#pk-time12-trigger');
+      const panel = '#pk-time12-trigger ~ .mat-picker__panel';
+      expect(await page.locator(`${panel} [data-time-col="ap"] .mat-timecol__item`).allTextContents(), ['AM', 'PM'], 'the AM and PM column');
+      await page.click(`${panel} [data-time-col="ap"] [data-v="am"]`);
+      await page.click(`${panel} [data-picker-action="apply"]`);
+      expect(await valueOf('pk-time12'), '02:45', 'the posted value');
+    });
+    await check('a time range: From and To, the length is told, an end before the start is the next day', async () => {
+      expect(await shown('pk-hours'), '09:00 – 17:30', 'the field');
+      await page.click('#pk-hours-trigger');
+      const panel = '#pk-hours-trigger ~ .mat-picker__panel';
+      expect((await page.textContent(`${panel} .mat-picker__status`)).trim(), '8 h 30 min', 'the length');
+      await page.click(`${panel} [data-time-part="to"]`);
+      await page.fill(`${panel} [data-time-entry]`, '0730');
+      expectTrue((await page.textContent(`${panel} .mat-picker__status`)).includes('next day'), 'no hint that the end is the next day: ' + await page.textContent(`${panel} .mat-picker__status`));
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-hours'), '09:00..07:30', 'the range');
+    });
+
+    await page.evaluate(() => document.getElementById('colour-picker').scrollIntoView());
+    await check('a colour: a swatch is chosen with one click; the field shows the chip and the hex value', async () => {
+      expect(await shown('pk-colour'), '#B4235F', 'the field');
+      expect(await page.locator('#pk-colour-trigger .mat-picker__swatch').count(), 1, 'the chip');
+      await page.click('#pk-colour-trigger');
+      await page.click('#pk-colour-trigger ~ .mat-picker__panel [data-hex="#16a34a"]');
+      expect(await valueOf('pk-colour'), '#16a34a', 'the posted value');
+      expectTrue(!(await panelOf('pk-colour').isVisible()), 'a swatch did not close the panel');
+    });
+    await check('a free colour: the hex value is typed, the area and the hue move it, and the text colour with the best contrast is told', async () => {
+      await page.click('#pk-colour-trigger');
+      const panel = '#pk-colour-trigger ~ .mat-picker__panel';
+      await page.fill(`${panel} .mat-colour__hex`, '#112233');
+      expect(await valueOf('pk-colour'), '#16a34a', 'nothing is posted before Apply');
+      expectTrue((await page.textContent(`${panel} .mat-colour__contrast`)).includes('White text'), 'no contrast of white text on a dark colour');
+      await page.fill(`${panel} .mat-colour__hex`, '#fff');
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-colour'), '#ffffff', 'Enter takes the typed colour (three digits become six)');
+      await page.click('#pk-colour-trigger');
+      await page.focus(`${panel} .mat-colour__area`);
+      await page.keyboard.press('ArrowDown');
+      expect(await page.$eval(`${panel} .mat-colour__hex`, el => el.value), '#fcfcfc', 'the brightness one step down');
+      await page.click(`${panel} [data-picker-action="apply"]`);
+      expect(await valueOf('pk-colour'), '#fcfcfc', 'Apply');
+      await page.click('#pk-colour-trigger ~ .mat-picker__clear');
+      expect(await valueOf('pk-colour'), '', 'Clear');
+    });
+    await check('a picker in a dialog is not cut off, and Escape closes the picker first and the dialog second', async () => {
+      await page.evaluate(() => {
+        const d = document.createElement('dialog');
+        d.className = 'mat-dialog mat-dialog--sm';
+        d.id = 'pk-dlg';
+        d.setAttribute('aria-label', 'Picker in a dialog');
+        d.innerHTML = '<div class="mat-dialog__form"><div class="mat-dialog__body"><div class="mat-field"><label class="mat-label" for="pk-in-dlg">Day</label>' +
+          '<div class="mat-picker" data-picker="date"><input class="mat-picker__input" id="pk-in-dlg" name="day" value="2026-10-10"></div></div></div></div>';
+        document.body.appendChild(d);
+        window.MatUi.refresh(d);
+        window.MatUi.dialog.open(d);
+      });
+      await page.click('#pk-in-dlg-trigger');
+      const box = await page.$eval('#pk-in-dlg-trigger ~ .mat-picker__panel', el => { const r = el.getBoundingClientRect(); return { inWindow: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight, visible: r.width > 100 && r.height > 100 }; });
+      expect(box, { inWindow: true, visible: true }, 'the panel in the dialog');
+      const top = await page.evaluate(() => { const r = document.querySelector('#pk-in-dlg-trigger ~ .mat-picker__panel').getBoundingClientRect(); const el = document.elementFromPoint(r.left + r.width / 2, r.top + 40); return !!el && !!el.closest('.mat-picker__panel'); });
+      expect(top, true, 'the panel is above the dialog');
+      await page.keyboard.press('Escape');
+      expect(await page.$eval('#pk-dlg', el => el.open), true, 'the dialog is still open after the first Escape');
+      expectTrue(!(await page.locator('#pk-in-dlg-trigger ~ .mat-picker__panel').isVisible()), 'the picker is still open');
+      await page.keyboard.press('Escape');
+      expect(await page.$eval('#pk-dlg', el => el.open), false, 'the second Escape closes the dialog');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#date-picker');
+    await check('on a phone a picker is a full-screen sheet with an X; one month for a period; the X closes it', async () => {
+      await page.click('#pk-period-trigger');
+      const panel = '#pk-period-trigger ~ .mat-picker__panel';
+      const state = await page.$eval(panel, el => { const r = el.getBoundingClientRect(); return { width: Math.round(r.width) === innerWidth, height: Math.round(r.height) === innerHeight, x: getComputedStyle(el.querySelector('.mat-picker__head')).display !== 'none' }; });
+      expect(state, { width: true, height: true, x: true }, 'the sheet');
+      expect(await page.locator(`${panel} .mat-cal__month`).count(), 1, 'months on a phone');
+      expect(await page.evaluate(() => document.documentElement.classList.contains('mat-lock')), true, 'the page behind does not scroll');
+      await page.click(`${panel} [data-picker-close]`);
+      expectTrue(!(await page.locator(panel).isVisible()), 'the X did not close the sheet');
+      expect(await page.evaluate(() => document.documentElement.classList.contains('mat-lock')), false, 'the page is free again');
+    });
+    await check('on a phone the time picker does not pop up the keyboard: the chosen hour has the focus, not the field to type in', async () => {
+      await page.evaluate(() => document.getElementById('time-picker').scrollIntoView());
+      await page.click('#pk-time-trigger');
+      expect(await page.evaluate(() => document.activeElement.classList.contains('mat-timecol__item')), true, 'the focus');
+      await page.click('#pk-time-trigger ~ .mat-picker__panel [data-picker-close]');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {

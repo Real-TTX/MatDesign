@@ -6,9 +6,9 @@ namespace MatDesign.Tests;
 /// <summary>What the rulebook says about the toolkit's CSS, checked on the CSS itself.</summary>
 public partial class ToolkitCssTests
 {
-    public static TheoryData<string> Parts => new() { "tokens", "base", "shell", "controls", "forms", "lists", "dialogs", "layout", "apps" };
+    public static TheoryData<string> Parts => new() { "tokens", "base", "shell", "controls", "forms", "pickers", "lists", "dialogs", "layout", "apps" };
 
-    public static TheoryData<string> PartsWithoutColours => new() { "base", "shell", "controls", "forms", "lists", "dialogs", "layout" };
+    public static TheoryData<string> PartsWithoutColours => new() { "base", "shell", "controls", "forms", "pickers", "lists", "dialogs", "layout" };
 
     private static string Css(string part) => TestPaths.ReadToolkit($"css/matui.{part}.css");
 
@@ -62,8 +62,9 @@ public partial class ToolkitCssTests
     public void Every_colour_token_has_a_dark_value_or_is_derived_from_one_that_has()
     {
         var tokens = CssTokens.Tokens(Css("tokens"));
+        // --mat-picker-*: the white and the black of the colour picker's model (saturation and brightness); they are the same in light and dark on purpose.
         var missing = tokens
-            .Where(t => t.IsColor && t.Dark is null && !t.Light.StartsWith("color-mix", StringComparison.Ordinal) && !t.Light.StartsWith("var(", StringComparison.Ordinal))
+            .Where(t => t.IsColor && t.Dark is null && !t.Name.StartsWith("--mat-picker-", StringComparison.Ordinal) && !t.Light.StartsWith("color-mix", StringComparison.Ordinal) && !t.Light.StartsWith("var(", StringComparison.Ordinal))
             .Select(t => t.Name)
             .ToList();
         Assert.True(missing.Count == 0, "Colour tokens without a dark value: " + string.Join(", ", missing));
@@ -204,7 +205,7 @@ public partial class ToolkitCssTests
     public void The_toolkit_uses_system_fonts_only()
     {
         // TYPE-01: no web font, no @font-face, no external URL.
-        foreach (var part in new[] { "tokens", "base", "shell", "controls", "forms", "lists", "dialogs", "layout", "apps" })
+        foreach (var part in new[] { "tokens", "base", "shell", "controls", "forms", "pickers", "lists", "dialogs", "layout", "apps" })
         {
             var css = WithoutComments(Css(part));
             Assert.DoesNotContain("@font-face", css);
@@ -216,7 +217,7 @@ public partial class ToolkitCssTests
     [Fact]
     public void The_bundle_has_all_parts_in_the_order_of_the_cascade()
     {
-        Assert.Equal(["matui.tokens.css", "matui.base.css", "matui.shell.css", "matui.controls.css", "matui.forms.css", "matui.lists.css", "matui.dialogs.css", "matui.layout.css", "matui.apps.css"],
+        Assert.Equal(["matui.tokens.css", "matui.base.css", "matui.shell.css", "matui.controls.css", "matui.forms.css", "matui.pickers.css", "matui.lists.css", "matui.dialogs.css", "matui.layout.css", "matui.apps.css"],
             MatDesign.Web.Services.ToolkitFiles.CssParts);
     }
 }

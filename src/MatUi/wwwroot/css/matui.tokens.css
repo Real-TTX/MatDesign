@@ -110,6 +110,11 @@
   --mat-z-dialog: 400;                     /* Dialogs. */
   --mat-z-toast: 500;                      /* Toasts above everything. */
 
+  /* ---- Colour picker ---- */
+  --mat-picker-light: #ffffff;             /* White end of the saturation ramp: a colour model, the same in light and dark. */
+  --mat-picker-dark: #000000;              /* Black end of the brightness ramp. */
+  --mat-picker-hues: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000); /* The hue ramp of the slider. */
+
   /* ---- Device ---- */
   --mat-safe-top: env(safe-area-inset-top, 0px);       /* Notch. */
   --mat-safe-bottom: env(safe-area-inset-bottom, 0px); /* Home indicator. */

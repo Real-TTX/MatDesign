@@ -32,7 +32,7 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
 ## Map
 
 ```
-src/MatUi                  Razor class library = the toolkit. wwwroot/css (9 parts), js/matui.js + matui.boot.js, img/matui-icons.svg
+src/MatUi                  Razor class library = the toolkit. wwwroot/css (10 parts), js/matui.js + matui.boot.js, img/matui-icons.svg
 src/MatDesign.Core         no web types
   Colors.cs                  OKLab, mixing like CSS color-mix, WCAG contrast, distance
   AppRegistry.cs             the apps and their accent, AccentPresets

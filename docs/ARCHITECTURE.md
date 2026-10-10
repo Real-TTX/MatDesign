@@ -86,7 +86,7 @@ the version and the hash.
 
 ## 7. No build step, no web fonts, no icon font
 
-Plain CSS in nine parts that are bundled in the order of the cascade (`tokens`, `base`, `shell`, `controls`, `forms`, `lists`, `dialogs`, `layout`, `apps`) and one dependency-free script that wires
+Plain CSS in ten parts that are bundled in the order of the cascade (`tokens`, `base`, `shell`, `controls`, `forms`, `pickers`, `lists`, `dialogs`, `layout`, `apps`) and one dependency-free script that wires
 everything with delegated listeners and `data-` attributes, so server-rendered and dynamically added markup behave the same. System fonts only. Icons are one inline SVG sprite
 (`tools/icons.js` builds it; CI fails when it is stale).
 

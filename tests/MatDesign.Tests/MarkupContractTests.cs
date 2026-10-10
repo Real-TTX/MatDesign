@@ -10,7 +10,7 @@ namespace MatDesign.Tests;
 /// </summary>
 public partial class MarkupContractTests
 {
-    private static readonly string[] Parts = ["tokens", "base", "shell", "controls", "forms", "lists", "dialogs", "layout", "apps"];
+    private static readonly string[] Parts = ["tokens", "base", "shell", "controls", "forms", "pickers", "lists", "dialogs", "layout", "apps"];
 
     private static readonly Lazy<IReadOnlySet<string>> ToolkitClasses = new(() => ClassesIn(Parts.Select(p => TestPaths.ReadToolkit($"css/matui.{p}.css"))));
 

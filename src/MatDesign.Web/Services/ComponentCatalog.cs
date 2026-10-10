@@ -817,7 +817,7 @@ public static class ComponentCatalog
     private static readonly string[] Order =
     [
         "buttons", "button-group", "dropdown", "button-row",
-        "fields", "input-types", "selects", "checks", "choices", "range", "input-groups", "special-inputs", "floating-labels", "form-layout", "form-grid", "validation",
+        "fields", "input-types", "selects", "checks", "choices", "range", "input-groups", "special-inputs", "rich-select", "date-picker", "time-picker", "colour-picker", "floating-labels", "form-layout", "form-grid", "validation",
         "toolbar", "table", "pager", "gallery",
         "typography", "cards", "list-group", "accordion", "avatars", "stat", "pills", "kv", "meter", "empty", "code",
         "tabs", "menu", "breadcrumb", "steps", "navmenu", "switcher", "toc",
@@ -825,7 +825,7 @@ public static class ComponentCatalog
     ];
 
     /// <summary>Every component, by group and in reading order.</summary>
-    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted([.. Core.Select(Extend), .. FormComponents.All, .. ContentComponents.All]);
+    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted([.. Core.Select(Extend), .. FormComponents.All, .. PickerComponents.All, .. ContentComponents.All]);
 
     /// <summary>A component with the examples that other files add to it.</summary>
     private static ComponentDoc Extend(ComponentDoc doc)

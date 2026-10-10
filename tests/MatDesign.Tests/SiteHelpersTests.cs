@@ -312,7 +312,7 @@ public class SiteHelpersTests
     [Fact]
     public void The_toolkit_files_are_the_four_the_download_page_promises_and_the_parts()
     {
-        Assert.Equal(9, ToolkitFiles.CssParts.Count);
+        Assert.Equal(10, ToolkitFiles.CssParts.Count);
         Assert.All(ToolkitFiles.CssParts, p => Assert.True(File.Exists(TestPaths.Toolkit($"css/{p}")), p));
     }
 
