@@ -25,7 +25,8 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
 - **Release stack:** `docker-compose.yml`, image `ghcr.io/real-ttx/matdesign`, one service, no volume: keep it that simple.
 - **Real tests are end to end against the container:** Playwright with the installed Edge (see the `screenshots` skill), then look at the screenshot instead of trusting
   computed styles. `MSYS_NO_PATHCONV=1` for Git Bash arguments that start with `/`. Shell strings with backticks, apostrophes or `$$` get mangled: write files with
-  the editor tools, not with `node -e` or heredocs.
+  the editor tools, not with `node -e` or heredocs. A script that merges text into a file must use a replacer function (`text.replace(a, () => b)`): in a plain replacement string
+  `$$` becomes `$` (it turned `$$(...)` of the script into `$(...)` once).
 - **Icon sprite:** `node tools/icons.js` rebuilds `src/MatUi/wwwroot/img/matui-icons.svg` from `tools/icons.base.json` plus the extras in the script (CI fails when it is stale).
 - **Audit:** `node tools/audit.js [folder with the repositories]` rewrites `src/MatDesign.Web/Data/audit.json`, a snapshot of how close the other apps are to the rules.
 
@@ -43,10 +44,11 @@ src/MatDesign.Core         no web types
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /api/*, /health, Razor Pages
   Services/                  ToolkitFiles, Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
-                             ComponentCatalog (+ FormComponents), PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
-  Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Patterns, Builder, Download, Preview (the sample app)
+                             ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
+                             PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
+  Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
   Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (switcher, items, badges, submenus), _MenuSwitchPopup, _Head, _Toolbar, _Pager,
-                             _Toc + _Component (the components page), _AccentSwatches, _ContrastCard, _FoundationsTabs
+                             _DocSection + _Toc + _Component (the components, layout and utilities pages), _AccentSwatches, _ContrastCard, _FoundationsTabs
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons
 tests/MatDesign.Tests      unit tests + the site in memory
 tests/e2e                  run.js: the behaviour in a real browser against a running site
@@ -68,6 +70,11 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - The dark set is written twice (`:root[data-theme="dark"]` and the system media query) and the two must stay identical. `data-app` and `data-theme` belong on `<html>`.
 - Order inside a button row, a list block and the toolbar is enforced by CSS (`order`), not by the author. A selector in a later part must be more specific than a base class it
   overrides (the bundle puts `controls` after `shell`).
+- Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour"]` around the real input `mat-picker__input`, which posts one value in a fixed
+  format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone). Texts in English and German
+  (`PK_TEXT`: both languages must have every key, a test checks). A hidden element that has a `display` in the CSS needs its own `[hidden]` rule (tests list them).
+- Layout and utilities: mobile first with `sm` 600, `md` 900, `lg` 1200 px; no `!important`; values from the tokens; the grid spans by `grid-column-end`. An example in the catalogue uses
+  toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.
 - Nothing is loaded from another site; apps copy the toolkit (`CODE-03`).
 
@@ -76,7 +83,8 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   its three dialogs. A page that is not a list of items (a few fixed facts) needs no toolbar (see `LIST-02`).
 - A list: toolbar, table or gallery, pager directly under it, actions below left-aligned. CRUD = list + separate page. Buttons under the content, positive to negative.
 - Components and patterns are **data** (`ComponentCatalog`, `PatternCatalog`): add an entry, not a page. An example is a raw string: it is rendered live and shown as source from
-  the same string; the tests parse all of them (classes that exist, icons that exist, `data-label` on every `td`, typed buttons, unique ids, balanced tags).
+  the same string; the tests parse all of them (classes that exist, icons that exist, `data-label` on every `td`, typed buttons, unique ids, balanced tags). The layout classes and the
+  utilities are documented the same way (the groups Layout and Utilities); a `CatalogSection` decides which page shows which groups, so a new group needs a section.
 - Numbers and dates use the invariant culture (the site is English; a developer PC and a container must show the same text).
 - **Mobile matters:** check 390 px for every new page; secondary table columns get `mat-hide-sm`; on a phone dialogs are full screen with the X at the top right.
 - After a change to CSS, JS or cshtml the container must be rebuilt.

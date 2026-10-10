@@ -8,7 +8,8 @@
 
 Every Mat app has its own colour and the same design. MatDesign is the reference for that design: a website with the **rulebook**
 (every rule about how an app looks and behaves, with a stable ID such as `SHELL-03`), the **foundations** (colour, type, space, motion, icons),
-the **shell** (menu left, breadcrumb above the content), **24 components** with live examples and the markup to copy, the **page patterns**,
+the **shell** (menu left with submenus, badges and a switcher between menus, breadcrumb above the content), **49 components** with live examples and the markup to copy (forms, pickers, lists,
+dialogs, ...), a **layout system** (twelve columns, breakpoints) and **utility classes**, the **page patterns**,
 a **builder** that checks an accent colour, and **MatUi**, the toolkit itself: four files you copy into an app.
 
 </div>
@@ -45,6 +46,14 @@ and checked for WCAG AA, for every app, in light and dark.
 |---|---|---|
 | ![The palette](docs/images/palette.png) | ![The drawer with the logo, the user, the theme button and the version](docs/images/phone-menu.png) | ![The filter dialog on a phone](docs/images/phone-dialog.png) |
 
+| A period with flexible dates | A colour with its contrast | On a phone: a picker is a full-screen sheet |
+|---|---|---|
+| ![The period picker](docs/images/picker-period.png) | ![The colour picker](docs/images/picker-colour.png) | ![The period picker on a phone](docs/images/phone-picker.png) |
+
+| The grid of twelve columns |
+|---|
+| ![The layout page with the grid of twelve columns](docs/images/layout-grid.png) |
+
 ## What is on the site
 
 | Section | What you find |
@@ -53,7 +62,9 @@ and checked for WCAG AA, for every app, in light and dark.
 | **Rules** | The rulebook, searchable, with a page per rule. |
 | **Foundations** | Colour (light and dark side by side), type, spacing and radii, motion and layers, the icon sprite, and every design token, read from the CSS. |
 | **Shell** | Anatomy of the frame around every page (switcher, items with badges and submenus, foot), a live sample with an administration behind the switcher, the HTML skeleton. |
-| **Components** | Every control on **one page** with an index beside it that marks the section in view (and jumps there on one click): buttons, **forms** (input types and sizes, selects, checks and radios, range, input groups, search/password/counter/files, floating labels, layouts, validation with a summary), toolbar, table, pagination, menu items with badges and submenus, the menu switcher, dialogs, alerts, toasts … each live, with the markup to copy and the rules it follows. |
+| **Components** | Every control on **one page** with an index beside it that marks the section in view (and jumps there on one click): buttons, button groups, dropdowns, **forms** (input types and sizes, selects, checks and radios, range, input groups, search/password/counter/files, floating labels, layouts, validation with a summary), **pickers** (select with pictures, descriptions and tags, date and period, time and time range, colour), toolbar, table (variants, sortable, selectable rows), pagination, cards, list group, accordion, avatars, stats and timeline, menu items with badges and submenus, the menu switcher, dialogs (also from the side), popover, alerts, toasts, spinners … each live, with the markup to copy and the rules it follows. |
+| **Layout** | Breakpoints and containers, the grid of twelve columns (spans, responsive classes, offsets, order, nesting), stack, row and auto grid. |
+| **Utilities** | One class, one property: spacing, display and visibility by width, flex, text, colour and tints, borders, radius, shadow, sizing, position and overflow. |
 | **Patterns** | The page types (list, gallery, edit, settings, dashboard, sign-in) in real frames, on a desktop and on a phone, in the accent of any app. |
 | **Builder** | Try an accent: what the toolkit derives from it, contrast in both modes, the nearest app, the real screens in that colour, the snippet. |
 | **Download** | MatUi as an archive or file by file, how to use it, and the design system as JSON (`/api/rules`, `/api/tokens` …). |

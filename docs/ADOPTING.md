@@ -74,6 +74,28 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
 - The right control for the value (`FORM-12`): the type of the value (`email`, `tel`, `number`, `date`) with `autocomplete` and `inputmode`; radios up to five choices, a select above; a switch applies at once, a check is saved.
   A form with errors shows a **summary** at the top with a link to every field (`data-validation-summary`, `FORM-03`). Layouts: columns, label beside the field on a wide screen, one line, sections (`FORM-14`).
 - Every table cell has `data-label`: on a phone the rows become cards (`TABLE-02`).
+- A value that a native control cannot show well is chosen in a **picker** (`FORM-15`): an option with a picture, a description and tags, a date or a period, a time or a time range, a colour.
+  The markup is a wrapper around the real input, which posts one value in a fixed format (`2026-10-10`, `2026-10-10..2026-10-14`, `09:30`, `09:00..17:30`, `#b4235f`, the key of an option);
+  the script draws the button and the panel, which is full screen with an X on a phone. The MatCMS `richselect` and date pickers map onto `data-picker="select"` (with `data-multiple` for
+  `multiselect`) and `data-picker="daterange"`:
+
+  ```html
+  <div class="mat-field">
+    <label class="mat-label" for="due">Due date</label>
+    <div class="mat-picker" data-picker="date" data-clearable data-min="2026-10-05">
+      <input class="mat-picker__input" id="due" name="due" value="2026-10-10" />
+    </div>
+  </div>
+  ```
+
+## 4a. Layout and utilities
+
+- **Containers and the grid:** a page inside the shell is `mat-page`; one without it (sign-in, a shared link) is `mat-container`. For a layout you have decided use the twelve columns
+  (`mat-cols` with `mat-col-12 mat-col-md-6 mat-col-lg-3`); for cards that fill the row `mat-grid`; for the small cases `mat-stack` and `mat-row`. The breakpoints are the same in every app:
+  `sm` 600, `md` 900, `lg` 1200 px, mobile first. See the **Layout** page.
+- **Utilities** set one property from the scales of the toolkit: spacing on the 4 px scale (`mat-mt-4`, `mat-px-3`, `mat-gap-2`), display and visibility (`mat-d-none mat-d-md-block`), flex,
+  text, colour and tints, borders, radius, shadow, sizing. Use them on elements of your own pages, not to repair a component, and prefer `mat-stack` to a margin on every child. See the
+  **Utilities** page.
 
 ## 5. Dialogs (`DIALOG-*`)
 

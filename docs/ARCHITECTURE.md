@@ -61,10 +61,38 @@ validation summary. The catalogue of the form components is its own file (`FormC
 forms read like a manual). The script adds only what CSS cannot do: the filled part and the output of a range, a counter, the eye of a password, the names in a drop zone, an indeterminate check and the
 summary of the errors of a form; validation itself stays the browser's (`required`, `type`, `pattern`) with the messages of `data-msg-*`.
 
-### Long pages and one page for the components
+### Pickers
+
+A picker is a field whose value is chosen in a panel: a select with pictures, descriptions and tags, a date or a period, a time or a time range, a colour (`FORM-15`). They are a part of their own
+(`matui.pickers.css`) and one section of `matui.js`; the select and the calendar were taken over from MatCMS, the time and the colour were made in the same style. The markup is a wrapper
+`mat-picker[data-picker]` around the real input (`mat-picker__input`), which is what is validated, posted and reset. It holds the value in a **fixed format** (`2026-10-10`,
+`2026-10-10..2026-10-14~2`, `09:30`, `09:00..17:30`, `#b4235f`, the keys of the options), whatever the language of the page; the script adds the button that shows it in the language of the
+page (`Intl`) and the panel. The panel is `position: fixed` next to the button (below, above, or covering it when neither side has room) and full screen with an X on a phone, like every dialog.
+It lives inside the wrapper, so a picker in a dialog is not cut off by it, and Escape closes the picker first and the dialog second. The real input is invisible but lies over the button, so a
+browser message points at the right place, and whoever focuses it (a label, the validation) lands on the button. The texts are English and German (`data-pk-*` on `html` changes them; a test checks that
+both languages have every text).
+
+### Layout and utilities
+
+`matui.layout.css` is the last part before the apps: containers, a grid of twelve columns (`mat-cols`, `mat-col-N`, with `sm`, `md` and `lg` variants from 600, 900 and 1200 px, mobile first) and
+utility classes for spacing, display, flex, text, colour, borders and sizing. They come after every component, so a utility wins over a component's value of the same specificity, and none of them uses
+`!important`; every value is a token. A child of the grid spans twelve columns by its **end line** (`grid-column-end`): the shorthand would make the start line a span as well, and then no
+`mat-col-N` could win (a test pins this).
+
+The pages Layout and Utilities are made of the same catalogue as the components (the groups `Layout` and `Utilities` of `ComponentCatalog`), so everything that is tested for a component example is
+tested for them. A `CatalogSection` says which groups a page shows, and one partial (`_DocSection`) draws the three pages. An example uses only classes of the toolkit, because it is copied into other
+apps: the demo cells of the layout pages are made of the very utilities that are shown.
+
+### What is deliberately not in the toolkit
+
+Compared with a general kit such as Bootstrap there is **no navbar** (the shell replaces it, `SHELL-01`), **no carousel**, **no jumbotron or hero** (an app is not a landing page), **no off-canvas as a
+component of its own** (a dialog from the side, `mat-dialog--end`, does it), and **no theming with Sass variables** (the tokens are custom properties and an app sets one colour). What an app needs
+beyond that is a component of its own with the app's prefix (`CODE-04`).
+
+### Long pages and one page per section
 
 The components are not a list of pages to click through but one page, grouped, with an index beside it (`mat-with-toc`, `mat-toc`): a sticky column from 1100 px, a "Jump to" dialog below that
-(full screen on a phone). `data-scrollspy` marks the link of the section at the top; it computes per index from the position of the sections, so the index beside the content and the one in the dialog
+(full screen on a phone); the layout and the utilities are two more pages of the same kind. `data-scrollspy` marks the link of the section at the top; it computes per index from the position of the sections, so the index beside the content and the one in the dialog
 agree and two indexes on one page do not disturb each other. Because every example of every component is on the same page, **all ids share one page**: a test checks that no id appears twice and
 that every `#link` leads to a section that exists.
 
