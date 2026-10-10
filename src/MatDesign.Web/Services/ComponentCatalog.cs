@@ -528,7 +528,7 @@ public static class ComponentCatalog
             ["SHELL-05", "DIALOG-07", "A11Y-02"],
             [
                 new("A menu", $"""
-                    <button type="button" class="mat-btn mat-btn--secondary" data-menu-toggle="demo-menu" aria-haspopup="menu" aria-expanded="false">{I("more-horizontal")}<span>Actions</span></button>
+                    <button type="button" class="mat-btn mat-btn--secondary" data-menu-toggle="demo-menu" data-menu-place="bottom" aria-haspopup="menu" aria-expanded="false">{I("more-horizontal")}<span>Actions</span></button>
                     <div class="mat-menu" id="demo-menu" role="menu" aria-label="Actions" hidden>
                       <a class="mat-menu__item" role="menuitem" href="#">{I("edit")}<span>Rename</span></a>
                       <a class="mat-menu__item" role="menuitem" href="#">{I("copy")}<span>Duplicate</span></a>
@@ -816,11 +816,32 @@ public static class ComponentCatalog
     /// <summary>The order inside a group where it matters (the forms read like a manual); everything else keeps the order it is written in.</summary>
     private static readonly string[] Order =
     [
+        "buttons", "button-group", "dropdown", "button-row",
         "fields", "input-types", "selects", "checks", "choices", "range", "input-groups", "special-inputs", "floating-labels", "form-layout", "form-grid", "validation",
+        "toolbar", "table", "pager", "gallery",
+        "typography", "cards", "list-group", "accordion", "avatars", "stat", "pills", "kv", "meter", "empty", "code",
+        "tabs", "menu", "breadcrumb", "steps", "navmenu", "switcher", "toc",
+        "alerts", "toasts", "dialogs", "popover", "tooltip", "spinner", "skeleton",
     ];
 
     /// <summary>Every component, by group and in reading order.</summary>
-    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted([.. Core, .. FormComponents.All]);
+    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted([.. Core.Select(Extend), .. FormComponents.All, .. ContentComponents.All]);
+
+    /// <summary>A component with the examples that other files add to it.</summary>
+    private static ComponentDoc Extend(ComponentDoc doc)
+    {
+        var more = ContentComponents.Extensions.Where(e => e.Id == doc.Id).ToList();
+        return more.Count == 0
+            ? doc
+            : doc with
+            {
+                Name = more.Select(e => e.Name).LastOrDefault(n => n is not null) ?? doc.Name,
+                Summary = more.Select(e => e.Summary).LastOrDefault(s => s is not null) ?? doc.Summary,
+                Examples = [.. doc.Examples, .. more.SelectMany(e => e.Examples)],
+                Behaviour = [.. doc.Behaviour, .. more.SelectMany(e => e.Behaviour)],
+                Rules = [.. doc.Rules, .. more.SelectMany(e => e.Rules ?? [])],
+            };
+    }
 
     private static IReadOnlyList<ComponentDoc> Sorted(IEnumerable<ComponentDoc> docs)
         => docs.Select((doc, index) => (doc, index))

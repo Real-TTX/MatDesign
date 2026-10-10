@@ -55,6 +55,22 @@ dialog.mat-dialog--xl { width: min(980px, calc(100vw - 2 * var(--mat-space-4)));
 .mat-option input { accent-color: var(--mat-accent); width: 18px; height: 18px; }
 .mat-option:has(input:checked) { background: var(--mat-accent-soft-strong); color: var(--mat-accent-text); font-weight: 600; }
 
+/* A panel from the side (the off-canvas of other kits): the same dialog, fixed to the right or the left edge. On a phone it is full screen like every dialog. */
+dialog.mat-dialog--end, dialog.mat-dialog--start {
+  width: min(440px, 100vw);
+  height: 100dvh; max-height: 100dvh;
+  margin: 0;
+  border-radius: 0;
+  border-width: 0 0 0 1px;
+}
+dialog.mat-dialog--end { margin-left: auto; border-radius: var(--mat-radius-lg) 0 0 var(--mat-radius-lg); }
+dialog.mat-dialog--start { margin-right: auto; border-width: 0 1px 0 0; border-radius: 0 var(--mat-radius-lg) var(--mat-radius-lg) 0; }
+/* The [open] rule of the centred dialog sets the animation, so the panel's own animation is set on [open] as well (later, same specificity). */
+dialog.mat-dialog--end[open] { animation-name: mat-panel-in-end; }
+dialog.mat-dialog--start[open] { animation-name: mat-panel-in-start; }
+@keyframes mat-panel-in-end { from { transform: translateX(24px); opacity: 0; } }
+@keyframes mat-panel-in-start { from { transform: translateX(-24px); opacity: 0; } }
+
 /* ---- Phone: every dialog is a full-screen sheet with the X at the top right ---- */
 @media (max-width: 640px) {
   dialog.mat-dialog, dialog.mat-dialog--sm, dialog.mat-dialog--lg, dialog.mat-dialog--xl {

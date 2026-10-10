@@ -438,6 +438,8 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     public async Task The_site_formats_numbers_the_same_way_on_every_machine()
     {
         var (_, html) = await Get("/Download");
-        Assert.Matches(@"Download the archive \(\d+\.\d KB\)", html);
+        // "0.#": a size that is a whole number of kilobytes has no decimal at all, so both forms are fine; a comma never is.
+        Assert.Matches(@"Download the archive \(\d+(\.\d)? KB\)", html);
+        Assert.DoesNotMatch(@"\(\d+,\d+ KB\)", html);
     }
 }

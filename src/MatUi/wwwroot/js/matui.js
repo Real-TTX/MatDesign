@@ -16,6 +16,7 @@
      data-counter="id"                      a text field writes "length / maxlength" into the element with this id
      data-indeterminate                     a checkbox that starts in the indeterminate state
      data-password-toggle="id"              the eye button of a password field: shows and hides the password (aria-pressed)
+     data-selectable                        a table with data-select-row checks, a data-select-all check in its header and a [data-bulk-bar] with [data-bulk-count]
      data-menu-toggle="id"                  open the context menu #id next to the button; data-menu-place="top|bottom"
      data-dialog-open="id" / data-dialog-close   open / close a <dialog class="mat-dialog">
      data-confirm="Question?"               ask in a dialog before a submit button, a form or a link goes ahead
@@ -584,6 +585,7 @@
     $$('input[data-indeterminate]', scope).forEach(function (i) { i.indeterminate = true; });
     $$('input.mat-range', scope).forEach(updateRange);
     $$('[data-counter]', scope).forEach(updateCounter);
+    $$('[data-selectable]', scope).forEach(updateSelection);
   }
   doc.addEventListener('input', function (e) {
     var t = e.target;
@@ -608,6 +610,34 @@
         if (input) { input.files = e.dataTransfer.files; input.dispatchEvent(new Event('change', { bubbles: true })); }
       }
     });
+  });
+
+  // ------------------------------------------------------------------------------------------------ selectable rows of a table
+  // An element with data-selectable holds a table with a checkbox per row (data-select-row), one in the header (data-select-all) and a bulk bar
+  // ([data-bulk-bar] with [data-bulk-count]) that is shown only while rows are selected. The row of a selected check is marked (is-selected).
+  function updateSelection(box) {
+    var rows = $$('input[data-select-row]', box);
+    var all = $('input[data-select-all]', box);
+    var selected = rows.filter(function (r) { return r.checked; }).length;
+    rows.forEach(function (r) { var tr = r.closest('tr'); if (tr) { tr.classList.toggle('is-selected', r.checked); } });
+    if (all) { all.checked = rows.length > 0 && selected === rows.length; all.indeterminate = selected > 0 && selected < rows.length; }
+    var bar = $('[data-bulk-bar]', box);
+    if (bar) {
+      bar.hidden = selected === 0;
+      var count = $('[data-bulk-count]', bar);
+      if (count) { count.textContent = String(selected); }
+    }
+  }
+  doc.addEventListener('change', function (e) {
+    var t = e.target;
+    var box = t.closest && t.closest('[data-selectable]');
+    if (!box || !t.matches) { return; }
+    if (t.matches('input[data-select-all]')) {
+      $$('input[data-select-row]', box).forEach(function (r) { r.checked = t.checked; });
+      updateSelection(box);
+    } else if (t.matches('input[data-select-row]')) {
+      updateSelection(box);
+    }
   });
 
   // ------------------------------------------------------------------------------------------------------- tabs

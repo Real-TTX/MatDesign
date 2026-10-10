@@ -573,6 +573,84 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- content components
+  console.log('\nContent components');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#accordion');
+    await check('in an accordion with one name only one item is open; a single collapse opens on its own', async () => {
+      const open = () => page.$$eval('details[name="acc-faq"]', items => items.map(d => d.open));
+      expect(await open(), [true, false, false], 'items at the start');
+      await page.click('details[name="acc-faq"]:nth-of-type(2) > summary');
+      expect(await open(), [false, true, false], 'items after opening the second');
+      await page.click('.mat-collapse > summary');
+      expect(await page.$eval('.mat-collapse', d => d.open), true, 'the collapse');
+    });
+    await page.evaluate(() => document.getElementById('button-group').scrollIntoView());
+    await check('a group of radios drawn as buttons selects one and moves with the arrow keys', async () => {
+      await page.click('label[for="bg-month"]');
+      expect(await page.$eval('#bg-month', el => el.checked), true, 'month after the click');
+      await page.focus('#bg-month');
+      await page.keyboard.press('ArrowLeft');
+      expect(await page.$eval('#bg-week', el => el.checked), true, 'week after the arrow key');
+    });
+    await page.evaluate(() => document.getElementById('dropdown').scrollIntoView());
+    await check('a dropdown opens next to its button, stays on the screen and Escape returns the focus to the button', async () => {
+      await page.click('[data-menu-toggle="dd-menu"]');
+      expectTrue(await page.locator('#dd-menu').isVisible(), 'the menu is not shown');
+      expect(await page.getAttribute('[data-menu-toggle="dd-menu"]', 'aria-expanded'), 'true', 'aria-expanded');
+      const box = await page.$eval('#dd-menu', el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight; });
+      expect(box, true, 'the menu is inside the window');
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator('#dd-menu').isVisible()), 'the menu is still shown after Escape');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-menu-toggle')), 'dd-menu', 'the focus after Escape');
+    });
+    await page.evaluate(() => document.getElementById('popover').scrollIntoView());
+    await check('a popover opens on a click and closes with a click outside', async () => {
+      await page.click('[data-menu-toggle="pop-help"]');
+      expectTrue(await page.locator('#pop-help').isVisible(), 'the popover is not shown');
+      await page.click('#popover .doc-section__head, #popover h2, body', { position: { x: 5, y: 5 } });
+      expectTrue(!(await page.locator('#pop-help').isVisible()), 'the popover is still shown after a click outside');
+    });
+    await page.evaluate(() => document.getElementById('table').scrollIntoView());
+    await check('the check in the header selects every row, shows the bulk bar with the count and marks the rows', async () => {
+      expectTrue(!(await page.locator('[data-bulk-bar]').isVisible()), 'the bulk bar is shown before a row is selected');
+      await page.check('#tsel-all');
+      expect((await page.textContent('[data-bulk-count]')).trim(), '3', 'selected');
+      expectTrue(await page.locator('[data-bulk-bar]').isVisible(), 'the bulk bar');
+      expect(await page.locator('tr.is-selected').count(), 3, 'rows marked');
+      await page.uncheck('#tsel-2');
+      expect((await page.textContent('[data-bulk-count]')).trim(), '2', 'selected after one is taken away');
+      expect(await page.$eval('#tsel-all', el => el.indeterminate), true, 'the header check shows the state in between');
+      await page.uncheck('#tsel-1');
+      await page.uncheck('#tsel-3');
+      expectTrue(!(await page.locator('[data-bulk-bar]').isVisible()), 'the bulk bar is still shown with nothing selected');
+    });
+    await check('the width of a progress bar comes from data-value, and a stack shows its parts side by side', async () => {
+      const share = await page.$eval('.mat-meter--lg[aria-label="Large"] .mat-meter__fill', el => Math.round(100 * el.getBoundingClientRect().width / el.parentElement.getBoundingClientRect().width));
+      expect(share, 75, 'width of the large bar in per cent');
+    });
+    await check('a side dialog sits at the right edge and closes with its X', async () => {
+      await page.evaluate(() => document.getElementById('dialogs').scrollIntoView());
+      await page.click('[data-dialog-open="dlg-side"]');
+      expect(await page.$eval('#dlg-side', el => el.getAnimations().map(a => a.animationName)), ['mat-panel-in-end'], 'the animation of the panel (not the one of the centred dialog)');
+      await page.waitForFunction(() => document.getElementById('dlg-side').getAnimations().length === 0);
+      const state = await page.$eval('#dlg-side', el => { const r = el.getBoundingClientRect(); return { open: el.open, atRight: Math.abs(r.right - innerWidth) <= 1, height: Math.round(r.height) === innerHeight, narrow: r.width < innerWidth }; });
+      expect(state, { open: true, atRight: true, height: true, narrow: true }, 'side dialog');
+      await page.click('#dlg-side .mat-dialog__close');
+      expect(await page.$eval('#dlg-side', el => el.open), false, 'open after the X');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#dialogs');
+    await check('on a phone the side dialog is full screen, like every dialog', async () => {
+      await page.click('[data-dialog-open="dlg-side"]');
+      const state = await page.$eval('#dlg-side', el => { const r = el.getBoundingClientRect(); return { width: Math.round(r.width) === innerWidth, height: Math.round(r.height) === innerHeight }; });
+      expect(state, { width: true, height: true }, 'side dialog on a phone');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {
