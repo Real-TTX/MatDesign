@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/MatUi/MatUi.csproj" />
+    <Project Path="src/MatDesign.Core/MatDesign.Core.csproj" />
+    <Project Path="src/MatDesign.Web/MatDesign.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MatDesign.Tests/MatDesign.Tests.csproj" />
+  </Folder>
+</Solution>

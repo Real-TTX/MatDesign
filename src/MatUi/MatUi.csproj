@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <!-- MatUi is the toolkit itself: the CSS, the JavaScript, the icon sprite and the logos every Mat app uses, and (for the .NET apps)
+       the Razor helpers. Its files are static web assets, so an app that references this project gets them below /_content/MatUi/. -->
+
+  <PropertyGroup>
+    <RootNamespace>MatUi</RootNamespace>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
+    <Description>The UI toolkit of the Mat apps: tokens, shell, controls, dialogs, icons, logos.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,167 @@
+/* ==========================================================================
+   MatUi · lists
+   The list block (toolbar -> applied filters -> table or gallery -> empty state -> pagination -> actions), tabs and the
+   context menu. A list or a gallery ALWAYS has the toolbar above it, and in the toolbar SEARCH, FILTER and SORT are
+   three separate buttons that open a dialog (LIST-01, LIST-02).
+   ========================================================================== */
+
+/* ---- The list block: the order is fixed here, whatever the markup order ---- */
+.mat-list { display: flex; flex-direction: column; gap: var(--mat-space-4); min-width: 0; }
+.mat-list > .mat-toolbar { order: 0; }
+.mat-list > .mat-chips { order: 1; }
+.mat-list > .mat-table-wrap, .mat-list > .mat-gallery { order: 2; }
+.mat-list > .mat-empty { order: 3; }
+.mat-list > .mat-pager { order: 4; }
+.mat-list > .mat-actions { order: 5; }
+
+/* ---- Toolbar ---- */
+.mat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--mat-space-2);
+  padding: var(--mat-space-2);
+  background: var(--mat-surface);
+  border: 1px solid var(--mat-border);
+  border-radius: var(--mat-radius-lg);
+  box-shadow: var(--mat-shadow-1);
+}
+.mat-toolbar__btn { background: transparent; border-color: transparent; color: var(--mat-text); }
+.mat-toolbar__btn:hover { background: var(--mat-accent-soft); }
+/* A search, filter or sort that is in effect is shown on its button. */
+.mat-toolbar__btn.is-active { background: var(--mat-accent-soft-strong); color: var(--mat-accent-text); }
+.mat-toolbar__btn small { color: var(--mat-text-muted); font-weight: 500; max-width: 14ch; overflow: hidden; text-overflow: ellipsis; }
+.mat-toolbar__btn.is-active small { color: inherit; }
+.mat-toolbar__spacer { flex: 1 1 var(--mat-space-4); }
+.mat-toolbar__info { color: var(--mat-text-muted); font-size: var(--mat-fs-sm); padding: 0 var(--mat-space-3); white-space: nowrap; }
+@media (max-width: 480px) {
+  .mat-toolbar__btn small { display: none; }
+  .mat-toolbar__info { width: 100%; padding: 0 var(--mat-space-2); order: 9; }
+}
+
+/* ---- Table ---- */
+.mat-table-wrap {
+  overflow-x: auto;
+  background: var(--mat-surface);
+  border: 1px solid var(--mat-border);
+  border-radius: var(--mat-radius-lg);
+  box-shadow: var(--mat-shadow-1);
+}
+.mat-table { width: 100%; border-collapse: collapse; font-size: var(--mat-fs-sm); }
+.mat-table caption { text-align: left; padding: var(--mat-space-3) var(--mat-space-4); color: var(--mat-text-muted); }
+.mat-table th {
+  padding: var(--mat-space-3) var(--mat-space-4);
+  text-align: left;
+  font-size: var(--mat-fs-xs);
+  font-weight: 650;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--mat-text-muted);
+  background: var(--mat-surface-2);
+  white-space: nowrap;
+}
+.mat-table td { padding: var(--mat-space-3) var(--mat-space-4); border-top: 1px solid var(--mat-border); vertical-align: middle; }
+.mat-table tbody tr:hover { background: var(--mat-accent-soft); }
+.mat-table tbody tr.is-selected { background: var(--mat-accent-soft-strong); }
+.mat-table th.mat-num { text-align: right; }
+.mat-table--zebra tbody tr:nth-child(even) { background: var(--mat-surface-2); }
+.mat-table--zebra tbody tr:nth-child(even):hover { background: var(--mat-accent-soft); }
+.mat-table__name { display: flex; align-items: center; gap: var(--mat-space-3); min-width: 0; font-weight: 600; }
+.mat-table__name small { display: block; color: var(--mat-text-muted); font-weight: 400; }
+.mat-table__actions { display: flex; justify-content: flex-end; gap: var(--mat-space-1); }
+.mat-table td.mat-table__cell-actions { width: 1%; white-space: nowrap; }
+
+/* Under 720 px a row becomes a card; every <td> needs data-label for that (RULE TABLE-02). */
+@media (max-width: 720px) {
+  .mat-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .mat-table, .mat-table tbody, .mat-table tr, .mat-table td { display: block; width: 100%; }
+  .mat-table tr { padding: var(--mat-space-3) var(--mat-space-4); border-top: 1px solid var(--mat-border); }
+  .mat-table tbody tr:first-child { border-top: 0; }
+  .mat-table td { display: flex; align-items: baseline; justify-content: space-between; gap: var(--mat-space-4); padding: var(--mat-space-1) 0; border: 0; text-align: right; }
+  .mat-table td::before { content: attr(data-label); flex: none; color: var(--mat-text-muted); font-size: var(--mat-fs-xs); font-weight: 650; text-transform: uppercase; letter-spacing: .04em; text-align: left; }
+  .mat-table td:not([data-label])::before, .mat-table td[data-label=""]::before { content: none; }
+  .mat-table td.mat-table__cell-actions { width: 100%; }
+  .mat-table td .mat-table__name { text-align: left; }
+}
+
+/* ---- Pagination: directly under the table, nothing between ---- */
+.mat-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mat-space-3); }
+.mat-pager__info { color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
+.mat-pager__pages { display: flex; flex-wrap: wrap; gap: var(--mat-space-1); }
+.mat-pager__btn {
+  display: inline-grid; place-items: center;
+  min-width: var(--mat-control-h-sm); height: var(--mat-control-h-sm);
+  padding: 0 var(--mat-space-2);
+  border: 1px solid var(--mat-border); border-radius: var(--mat-radius-sm);
+  background: var(--mat-surface); color: var(--mat-text);
+  font-weight: 600; font-size: var(--mat-fs-sm); text-decoration: none;
+}
+a.mat-pager__btn:hover { background: var(--mat-accent-soft); text-decoration: none; }
+.mat-pager__btn.is-current { background: var(--mat-accent); border-color: var(--mat-accent); color: var(--mat-on-accent); }
+.mat-pager__btn.is-disabled { opacity: .45; pointer-events: none; }
+.mat-pager__gap { display: inline-grid; place-items: center; min-width: 20px; color: var(--mat-text-muted); }
+
+/* ---- Gallery ---- */
+.mat-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--mat-gap); }
+.mat-tile {
+  display: flex; flex-direction: column; min-width: 0; overflow: hidden;
+  background: var(--mat-surface); border: 1px solid var(--mat-border); border-radius: var(--mat-radius-lg); box-shadow: var(--mat-shadow-1);
+  color: inherit; text-decoration: none;
+  transition: transform var(--mat-dur) var(--mat-ease), box-shadow var(--mat-dur) var(--mat-ease), border-color var(--mat-dur) var(--mat-ease);
+}
+a.mat-tile:hover { transform: translateY(-2px); box-shadow: var(--mat-shadow-2); border-color: color-mix(in srgb, var(--mat-accent) 40%, var(--mat-border)); text-decoration: none; }
+.mat-tile.is-selected { border-color: var(--mat-accent); box-shadow: var(--mat-focus-ring); }
+.mat-tile__media { display: grid; place-items: center; aspect-ratio: 4 / 3; background: var(--mat-accent-soft); color: var(--mat-accent-text); font-size: 2.2rem; overflow: hidden; }
+.mat-tile__media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.mat-tile__body { padding: var(--mat-space-3) var(--mat-space-4); display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mat-tile__title { font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mat-tile__meta { color: var(--mat-text-muted); font-size: var(--mat-fs-xs); }
+
+/* ---- Tabs (one style app-wide: underline) ---- */
+.mat-tabs { display: flex; gap: var(--mat-space-1); border-bottom: 1px solid var(--mat-border); overflow-x: auto; }
+.mat-tab {
+  display: inline-flex; align-items: center; gap: var(--mat-space-2);
+  min-height: var(--mat-control-h); padding: 0 var(--mat-space-4);
+  margin-bottom: -1px;
+  border: 0; border-bottom: 2px solid transparent; border-radius: var(--mat-radius-sm) var(--mat-radius-sm) 0 0;
+  background: transparent; color: var(--mat-text-muted);
+  font-weight: 600; white-space: nowrap; cursor: pointer; text-decoration: none;
+  transition: color var(--mat-dur-fast) var(--mat-ease), border-color var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-tab:hover { color: var(--mat-text); text-decoration: none; }
+.mat-tab[aria-selected="true"], .mat-tab.is-active { color: var(--mat-accent-text); border-bottom-color: var(--mat-accent); }
+.mat-tabpanel { padding-top: var(--mat-space-5); }
+
+/* ---- Context menu (the user menu, row menus). Positioned by matui.js. ---- */
+.mat-menu {
+  position: fixed;
+  z-index: var(--mat-z-menu);
+  min-width: 232px;
+  max-width: min(92vw, 340px);
+  max-height: 80dvh;
+  overflow-y: auto;
+  padding: var(--mat-space-2);
+  background: var(--mat-surface);
+  border: 1px solid var(--mat-border-strong);
+  border-radius: var(--mat-radius-lg);
+  box-shadow: var(--mat-shadow-2);
+  animation: mat-menu-in var(--mat-dur) var(--mat-ease);
+  transform-origin: bottom left;
+}
+@keyframes mat-menu-in { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+.mat-menu__head { display: flex; align-items: center; gap: var(--mat-space-3); padding: var(--mat-space-3); border-bottom: 1px solid var(--mat-border); margin-bottom: var(--mat-space-2); min-width: 0; }
+.mat-menu__head strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mat-menu__head small { display: block; color: var(--mat-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mat-menu__item {
+  display: flex; align-items: center; gap: var(--mat-space-3);
+  width: 100%; min-height: var(--mat-control-h);
+  padding: 0 var(--mat-space-3);
+  border: 0; border-radius: var(--mat-radius-sm);
+  background: transparent; color: var(--mat-text);
+  font-weight: 560; text-align: left; text-decoration: none; cursor: pointer;
+}
+.mat-menu__item:hover, .mat-menu__item:focus-visible { background: var(--mat-accent-soft); text-decoration: none; }
+.mat-menu__item .mat-icon { color: var(--mat-text-muted); }
+.mat-menu__item--danger, .mat-menu__item--danger .mat-icon { color: var(--mat-danger-text); }
+.mat-menu__item--danger:hover { background: var(--mat-danger-bg); }
+.mat-menu__sep { height: 1px; background: var(--mat-border); margin: var(--mat-space-2) var(--mat-space-1); }

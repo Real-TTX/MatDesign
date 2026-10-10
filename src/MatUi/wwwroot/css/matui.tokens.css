@@ -1,0 +1,249 @@
+/* ==========================================================================
+   MatUi · tokens
+   The single source of the look of every Mat app. Components use only these custom properties, never a raw colour.
+
+   - Format: a declaration, then its description as a comment on the same line (the MatDesign site reads the descriptions
+     from here). A comment cannot contain the comment terminator, so the format is described in words.
+   - Light is the base. The dark set is written TWICE on purpose: once for an explicit `data-theme="dark"` and once for
+     "system" under `prefers-color-scheme: dark`. A unit test keeps both sets identical.
+   - An app sets ONE colour: `--mat-app-accent` (see matui.apps.css, on <html data-app="...">). Everything else (hover,
+     tint, text colour, ring, gradient) is derived from it, in both modes. The derived accent tokens are declared for
+     `:root` AND `[data-app]`, so a preview inside a page (<div data-app="matcad">) gets its own accent.
+   ========================================================================== */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---- Surfaces ---- */
+  --mat-bg: #f3f5fb;                       /* Page background behind everything. */
+  --mat-bg-2: #e9edf7;                     /* Quiet second background (menu rail, wells). */
+  --mat-surface: #ffffff;                  /* Cards, panels, tables, dialogs. */
+  --mat-surface-2: #f6f8fd;                /* Hover, zebra rows, raised inner areas. */
+  --mat-surface-3: #edf0f9;                /* Input fill, pressed state, tracks. */
+  --mat-glass: rgba(255, 255, 255, .78);   /* Translucent bar (top bar, sticky areas). */
+  --mat-nav-bg: rgba(255, 255, 255, .88);  /* Menu background. */
+  --mat-overlay: rgba(12, 16, 36, .48);    /* Dim layer behind dialogs and the mobile menu. */
+
+  /* ---- Lines ---- */
+  --mat-border: rgba(22, 30, 70, .11);     /* Hairlines, card borders, table rules. */
+  --mat-border-strong: rgba(22, 30, 70, .22); /* Input borders, dividers that must be seen. */
+
+  /* ---- Text ---- */
+  --mat-text: #161b33;                     /* Primary text. */
+  --mat-text-muted: #596183;               /* Secondary text, labels, hints (AA on every surface). */
+  --mat-text-faint: #7d85a4;               /* Placeholders and disabled text only. Never for information. */
+
+  /* ---- Status ---- */
+  --mat-danger: #d92d4a;                   /* Errors and destructive actions. */
+  --mat-danger-bg: rgba(217, 45, 74, .10); /* Tint behind danger text. */
+  --mat-danger-text: #b3203b;              /* Danger as text on a surface or tint. */
+  --mat-on-danger: #ffffff;                /* Text on a solid danger button. */
+  --mat-thumb: #ffffff;                    /* Knob of a switch. */
+  --mat-success: #0f9d58;                  /* Success, online, healthy. */
+  --mat-success-bg: rgba(15, 157, 88, .12); /* Tint behind success text. */
+  --mat-success-text: #0b7a44;             /* Success as text. */
+  --mat-warning: #c47500;                  /* Attention, degraded. */
+  --mat-warning-bg: rgba(245, 158, 11, .16); /* Tint behind warning text. */
+  --mat-warning-text: #8a5200;             /* Warning as text. */
+  --mat-info: #2563eb;                     /* Neutral information. */
+  --mat-info-bg: rgba(37, 99, 235, .10);   /* Tint behind info text. */
+  --mat-info-text: #1d4fc4;                /* Info as text. */
+
+  /* ---- Elevation ---- */
+  --mat-shadow-1: 0 1px 2px rgba(22, 30, 70, .06), 0 4px 14px rgba(22, 30, 70, .06); /* Cards, menus at rest. */
+  --mat-shadow-2: 0 8px 30px rgba(22, 30, 70, .14); /* Popovers, context menus. */
+  --mat-shadow-3: 0 18px 60px rgba(22, 30, 70, .24); /* Dialogs. */
+  --mat-scroll-thumb: rgba(22, 30, 70, .34); /* Scrollbar thumb while scrolling (hidden otherwise). */
+
+  /* ---- Shape ---- */
+  --mat-radius-xs: 6px;                    /* Tags, small chips. */
+  --mat-radius-sm: 8px;                    /* Inputs, small buttons. */
+  --mat-radius: 12px;                      /* Buttons, menu items, inner panels. */
+  --mat-radius-lg: 18px;                   /* Cards and dialogs. */
+  --mat-radius-xl: 24px;                   /* Large hero surfaces. */
+  --mat-radius-pill: 999px;                /* Pills, badges, switches. */
+
+  /* ---- Spacing (4 px scale) ---- */
+  --mat-space-1: 4px;                      /* Hairline gaps. */
+  --mat-space-2: 8px;                      /* Between an icon and its label. */
+  --mat-space-3: 12px;                     /* Inside compact controls. */
+  --mat-space-4: 16px;                     /* Standard gap between blocks. */
+  --mat-space-5: 20px;                     /* Card padding on phones. */
+  --mat-space-6: 24px;                     /* Card padding, between sections. */
+  --mat-space-8: 32px;                     /* Page padding on desktop. */
+  --mat-space-10: 40px;                    /* Large section gaps. */
+  --mat-space-12: 48px;                    /* Hero spacing. */
+  --mat-gap: var(--mat-space-4);           /* Default gap of stacks and grids. */
+
+  /* ---- Layout ---- */
+  --mat-nav-w: 264px;                      /* Width of the menu on the left. */
+  --mat-topbar-h: 56px;                    /* Height of the bar with the breadcrumb. */
+  --mat-content-max: 1240px;               /* Maximum width of page content. */
+  --mat-content-pad: clamp(16px, 3vw, 32px); /* Side padding of the page. */
+  --mat-control-h: 40px;                   /* Height of buttons and inputs. */
+  --mat-control-h-sm: 32px;                /* Compact controls (row actions, chips). */
+  --mat-control-h-lg: 48px;                /* Prominent controls. */
+
+  /* ---- Type ---- */
+  --mat-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* UI and body. System stack: no web font. */
+  --mat-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Cascadia Code", Menlo, Consolas, monospace; /* IDs, versions, ports, code. */
+  --mat-fs-xs: .75rem;                     /* Captions, badges (12 px). */
+  --mat-fs-sm: .8125rem;                   /* Table text, hints (13 px). */
+  --mat-fs-md: .9375rem;                   /* Body text (15 px). */
+  --mat-fs-lg: 1.0625rem;                  /* Lead text, card titles (17 px). */
+  --mat-fs-xl: 1.25rem;                    /* Section titles (20 px). */
+  --mat-fs-2xl: 1.625rem;                  /* Page titles (26 px). */
+  --mat-fs-3xl: 2.125rem;                  /* Hero titles (34 px). */
+  --mat-lh: 1.5;                           /* Body line height. */
+  --mat-lh-tight: 1.25;                    /* Headings. */
+
+  /* ---- Motion ---- */
+  --mat-dur-fast: 120ms;                   /* Hover, press. */
+  --mat-dur: 180ms;                        /* Menus, tabs, toggles. */
+  --mat-dur-slow: 280ms;                   /* Dialogs, the mobile menu. */
+  --mat-ease: cubic-bezier(.2, .8, .2, 1); /* The one easing curve. */
+
+  /* ---- Layers ---- */
+  --mat-z-nav: 100;                        /* Menu. */
+  --mat-z-topbar: 200;                     /* Top bar. */
+  --mat-z-menu: 300;                       /* Context menus and popovers. */
+  --mat-z-dialog: 400;                     /* Dialogs. */
+  --mat-z-toast: 500;                      /* Toasts above everything. */
+
+  /* ---- Device ---- */
+  --mat-safe-top: env(safe-area-inset-top, 0px);       /* Notch. */
+  --mat-safe-bottom: env(safe-area-inset-bottom, 0px); /* Home indicator. */
+  --mat-safe-left: env(safe-area-inset-left, 0px);     /* Landscape notch, left. */
+  --mat-safe-right: env(safe-area-inset-right, 0px);   /* Landscape notch, right. */
+}
+
+/* ---- Accent, light. Derived from --mat-app-accent; declared per scope so a nested [data-app] recomputes it. ---- */
+:root,
+[data-app] {
+  --mat-accent: var(--mat-app-accent, #5b5fe6); /* Filled surfaces: primary button, active item, switch. */
+  --mat-accent-hover: color-mix(in oklab, var(--mat-accent) 86%, black); /* Primary button on hover. */
+  --mat-accent-active: color-mix(in oklab, var(--mat-accent) 74%, black); /* Primary button pressed. */
+  --mat-accent-soft: color-mix(in srgb, var(--mat-accent) 11%, transparent); /* Tint: hover of ghost items, selected row. */
+  --mat-accent-soft-strong: color-mix(in srgb, var(--mat-accent) 19%, transparent); /* Stronger tint: active menu item. */
+  --mat-accent-text: var(--mat-app-accent-text, color-mix(in oklab, var(--mat-accent) 78%, black)); /* Accent as text or link on a surface (AA). */
+  --mat-on-accent: var(--mat-app-on-accent, #ffffff); /* Text on --mat-accent. */
+  --mat-accent-2: var(--mat-app-accent-2, color-mix(in oklab, var(--mat-accent) 62%, #22d3ee)); /* Second accent colour. */
+  --mat-accent-grad: linear-gradient(135deg, var(--mat-accent), var(--mat-accent-2)); /* Brand gradient: logo tile, hero. */
+  --mat-focus-ring: 0 0 0 3px color-mix(in srgb, var(--mat-accent) 42%, transparent); /* Keyboard focus ring. */
+  --mat-selection: color-mix(in srgb, var(--mat-accent) 28%, transparent); /* Text selection. */
+}
+
+/* Fingers need bigger targets (WCAG 2.5.5, 44 px). */
+@media (pointer: coarse) {
+  :root {
+    --mat-control-h: 44px;
+    --mat-control-h-sm: 36px;
+    --mat-control-h-lg: 52px;
+  }
+}
+
+:root[data-theme="light"] { color-scheme: light; }
+
+/* ---- Dark, explicit ---- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --mat-bg: #0b1020;
+  --mat-bg-2: #080c18;
+  --mat-surface: #131a2e;
+  --mat-surface-2: #1a2238;
+  --mat-surface-3: #222c47;
+  --mat-glass: rgba(19, 26, 46, .78);
+  --mat-nav-bg: rgba(15, 21, 38, .92);
+  --mat-overlay: rgba(2, 4, 12, .66);
+  --mat-border: rgba(255, 255, 255, .09);
+  --mat-border-strong: rgba(255, 255, 255, .19);
+  --mat-text: #e9edfb;
+  --mat-text-muted: #9ea8c9;
+  --mat-text-faint: #6f7a9c;
+  --mat-danger: #ff6f86;
+  --mat-danger-bg: rgba(255, 111, 134, .14);
+  --mat-danger-text: #ff9db0;
+  --mat-on-danger: #1b0710;
+  --mat-thumb: #ffffff;
+  --mat-success: #3ddc97;
+  --mat-success-bg: rgba(61, 220, 151, .14);
+  --mat-success-text: #72efbb;
+  --mat-warning: #fbbf24;
+  --mat-warning-bg: rgba(251, 191, 36, .14);
+  --mat-warning-text: #fcd34d;
+  --mat-info: #7aa2ff;
+  --mat-info-bg: rgba(122, 162, 255, .14);
+  --mat-info-text: #a8c1ff;
+  --mat-shadow-1: 0 1px 2px rgba(0, 0, 0, .34), 0 6px 18px rgba(0, 0, 0, .28);
+  --mat-shadow-2: 0 10px 36px rgba(0, 0, 0, .5);
+  --mat-shadow-3: 0 22px 70px rgba(0, 0, 0, .62);
+  --mat-scroll-thumb: rgba(255, 255, 255, .34);
+}
+
+/* ---- Accent, dark explicit (lighter accent, dark text on it) ---- */
+:root[data-theme="dark"],
+:root[data-theme="dark"] [data-app] {
+  --mat-accent: color-mix(in oklab, var(--mat-app-accent, #5b5fe6) 74%, white);
+  --mat-accent-hover: color-mix(in oklab, var(--mat-accent) 88%, white);
+  --mat-accent-active: color-mix(in oklab, var(--mat-accent) 76%, white);
+  --mat-accent-soft: color-mix(in srgb, var(--mat-accent) 16%, transparent);
+  --mat-accent-soft-strong: color-mix(in srgb, var(--mat-accent) 26%, transparent);
+  --mat-accent-text: color-mix(in oklab, var(--mat-accent) 78%, white);
+  --mat-on-accent: #0b1020;
+  --mat-accent-2: var(--mat-app-accent-2, color-mix(in oklab, var(--mat-accent) 62%, #22d3ee));
+  --mat-accent-grad: linear-gradient(135deg, var(--mat-accent), var(--mat-accent-2));
+  --mat-focus-ring: 0 0 0 3px color-mix(in srgb, var(--mat-accent) 50%, transparent);
+  --mat-selection: color-mix(in srgb, var(--mat-accent) 36%, transparent);
+}
+
+/* ---- Dark, from the system (same values as above) ---- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    --mat-bg: #0b1020;
+    --mat-bg-2: #080c18;
+    --mat-surface: #131a2e;
+    --mat-surface-2: #1a2238;
+    --mat-surface-3: #222c47;
+    --mat-glass: rgba(19, 26, 46, .78);
+    --mat-nav-bg: rgba(15, 21, 38, .92);
+    --mat-overlay: rgba(2, 4, 12, .66);
+    --mat-border: rgba(255, 255, 255, .09);
+    --mat-border-strong: rgba(255, 255, 255, .19);
+    --mat-text: #e9edfb;
+    --mat-text-muted: #9ea8c9;
+    --mat-text-faint: #6f7a9c;
+    --mat-danger: #ff6f86;
+    --mat-danger-bg: rgba(255, 111, 134, .14);
+    --mat-danger-text: #ff9db0;
+  --mat-on-danger: #1b0710;
+  --mat-thumb: #ffffff;
+    --mat-success: #3ddc97;
+    --mat-success-bg: rgba(61, 220, 151, .14);
+    --mat-success-text: #72efbb;
+    --mat-warning: #fbbf24;
+    --mat-warning-bg: rgba(251, 191, 36, .14);
+    --mat-warning-text: #fcd34d;
+    --mat-info: #7aa2ff;
+    --mat-info-bg: rgba(122, 162, 255, .14);
+    --mat-info-text: #a8c1ff;
+    --mat-shadow-1: 0 1px 2px rgba(0, 0, 0, .34), 0 6px 18px rgba(0, 0, 0, .28);
+    --mat-shadow-2: 0 10px 36px rgba(0, 0, 0, .5);
+    --mat-shadow-3: 0 22px 70px rgba(0, 0, 0, .62);
+    --mat-scroll-thumb: rgba(255, 255, 255, .34);
+  }
+
+  :root:not([data-theme="light"]):not([data-theme="dark"]),
+  :root:not([data-theme="light"]):not([data-theme="dark"]) [data-app] {
+    --mat-accent: color-mix(in oklab, var(--mat-app-accent, #5b5fe6) 74%, white);
+    --mat-accent-hover: color-mix(in oklab, var(--mat-accent) 88%, white);
+    --mat-accent-active: color-mix(in oklab, var(--mat-accent) 76%, white);
+    --mat-accent-soft: color-mix(in srgb, var(--mat-accent) 16%, transparent);
+    --mat-accent-soft-strong: color-mix(in srgb, var(--mat-accent) 26%, transparent);
+    --mat-accent-text: color-mix(in oklab, var(--mat-accent) 78%, white);
+    --mat-on-accent: #0b1020;
+    --mat-accent-2: var(--mat-app-accent-2, color-mix(in oklab, var(--mat-accent) 62%, #22d3ee));
+    --mat-accent-grad: linear-gradient(135deg, var(--mat-accent), var(--mat-accent-2));
+    --mat-focus-ring: 0 0 0 3px color-mix(in srgb, var(--mat-accent) 50%, transparent);
+    --mat-selection: color-mix(in srgb, var(--mat-accent) 36%, transparent);
+  }
+}
