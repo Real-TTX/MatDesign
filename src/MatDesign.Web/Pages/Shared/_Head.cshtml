@@ -1,0 +1,17 @@
+@inject ToolkitFiles Toolkit
+@model (ShellModel Shell, string Title)
+@*
+    The <head> of every page: the toolkit from one URL (the site eats its own dog food), the boot script that applies the saved theme before the
+    first paint, and the few documentation-only styles of this site.
+*@
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="@Model.Shell.App.Accent" />
+    <title>@Model.Title · @Model.Shell.App.Name</title>
+    <link rel="icon" type="image/svg+xml" href="~/favicon.svg" />
+    <script src="/ui/matui.boot.js?v=@Toolkit.Hash"></script>
+    <link rel="stylesheet" href="/ui/matui.css?v=@Toolkit.Hash" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>

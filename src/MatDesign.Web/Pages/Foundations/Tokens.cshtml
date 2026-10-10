@@ -1,0 +1,75 @@
+@page "/Foundations/Tokens"
+@model MatDesign.Web.Pages.Foundations.TokensModel
+@{
+    ViewData["Title"] = "All tokens";
+    ViewData["PageIcon"] = "code";
+    ViewData["PageSub"] = "Every custom property of the toolkit, read from matui.tokens.css. The CSS is the source; this list never goes out of date.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Foundations", "/Foundations"), ("All tokens", null));
+    ViewData["Width"] = "wide";
+}
+
+<partial name="_FoundationsTabs" model='"tokens"' />
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No token matches</div>
+            <p>Change the search or the filters, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Foundations/Tokens">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table doc-tokens">
+                <caption class="mat-sr-only">Design tokens of the toolkit</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Token</th>
+                        <th scope="col">Light</th>
+                        <th scope="col" class="mat-hide-sm">Dark</th>
+                        <th scope="col" class="mat-hide-sm">Group</th>
+                        <th scope="col" class="mat-hide-sm">Used for</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in Model.Items)
+                    {
+                        <tr>
+                            <td data-label="Token"><code>@t.Name</code></td>
+                            <td data-label="Light">
+                                <span class="mat-row mat-row--nowrap">
+                                    @if (TokensModel.Drawable(t.Light)) { @Ui.Swatch(t.Light) }
+                                    <code>@t.Light</code>
+                                </span>
+                            </td>
+                            <td data-label="Dark" class="mat-hide-sm">
+                                @if (t.Dark is null) { <span class="mat-muted">same</span> }
+                                else
+                                {
+                                    <span class="mat-row mat-row--nowrap">
+                                        @if (TokensModel.Drawable(t.Dark)) { @Ui.Swatch(t.Dark) }
+                                        <code>@t.Dark</code>
+                                    </span>
+                                }
+                            </td>
+                            <td data-label="Group" class="mat-hide-sm">@t.Group</td>
+                            <td data-label="Used for" class="mat-hide-sm">@t.Description</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="/ui/css/matui.tokens.css">@Ui.Icon("download")<span>matui.tokens.css</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/api/tokens">@Ui.Icon("code")<span>Tokens as JSON</span></a>
+    </div>
+</div>

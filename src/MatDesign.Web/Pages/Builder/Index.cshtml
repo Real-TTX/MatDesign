@@ -1,0 +1,95 @@
+@page "/Builder"
+@model MatDesign.Web.Pages.Builder.IndexModel
+@{
+    ViewData["Title"] = "Builder";
+    ViewData["PageIcon"] = "wrench";
+    ViewData["PageSub"] = "Try an accent: what the toolkit derives from it, whether the text on it is readable, whether it looks like another app, and the real screens in that colour.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Builder", null));
+    ViewData["Width"] = "wide";
+    var distance = Model.NearestDistance.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+<form class="mat-form" method="get" action="/Builder" novalidate>
+    <div class="doc-builder">
+        <div class="mat-stack">
+            <section class="mat-card" aria-labelledby="choose-title">
+                <div class="mat-card__head">@Ui.Icon("palette")<h2 class="mat-card__title" id="choose-title">The accent</h2></div>
+                <div class="mat-card__body mat-stack">
+                    <div class="mat-field">
+                        <label class="mat-label" for="b-app">Start from the app</label>
+                        <select class="mat-select" id="b-app" name="app" data-autosubmit>
+                            @foreach (var a in AppRegistry.All)
+                            {
+                                <option value="@a.Id" selected="@(a.Id == Model.BaseApp.Id)">@a.Name</option>
+                            }
+                        </select>
+                        <span class="mat-hint">Sets the name, the logo and the starting colour of the preview.</span>
+                    </div>
+                    <div class="mat-field">
+                        <label class="mat-label" for="b-accent">Accent colour</label>
+                        <input class="mat-input doc-color" id="b-accent" name="accent" type="color" value="@Model.Accent" data-autosubmit />
+                        <span class="mat-hint">Now <code>@Model.Accent</code>. Any colour works: the toolkit derives the rest and the report says what to watch.</span>
+                    </div>
+                    <div class="mat-field">
+                        <span class="mat-label">Presets a user can pick in the settings</span>
+                        <div class="mat-row">
+                            @foreach (var p in AccentPresets.All)
+                            {
+                                <a class="mat-btn mat-btn--ghost mat-btn--sm" href="@Model.PresetUrl(p.Value)">@Ui.Swatch(p.Value)<span>@p.Name</span></a>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="mat-btn-row">
+                <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("check")<span>Apply</span></button>
+                <a class="mat-btn mat-btn--secondary" href="/Builder?app=@Model.BaseApp.Id">@Ui.Icon("refresh")<span>Back to @Model.BaseApp.Name's colour</span></a>
+            </div>
+        </div>
+
+        <div class="mat-stack">
+            <section class="mat-card" aria-labelledby="derived-title">
+                <div class="mat-card__head">@Ui.Icon("sparkles")<h2 class="mat-card__title" id="derived-title">What the toolkit derives</h2></div>
+                <div class="mat-card__body">
+                    <partial name="_AccentSwatches" model="Model.Report" />
+                </div>
+            </section>
+
+            @if (Model.TooClose)
+            {
+                <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body"><strong>Close to @Model.Nearest.Name.</strong> The distance is @distance (OKLab x 10); below @PaletteAdvisor.TooClose.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) two apps are easy to mix up on a small logo or a tab (<a href="/Rules/Detail?id=IDENT-04">IDENT-04</a>).</div></div>
+            }
+            else
+            {
+                <div class="mat-alert mat-alert--success">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>Distinct.</strong> The nearest app is @Model.Nearest.Name at @distance, farther than @PaletteAdvisor.TooClose.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture).</div></div>
+            }
+
+        </div>
+    </div>
+</form>
+
+<partial name="_ContrastCard" model="Model.Report" />
+
+<section class="mat-section" aria-labelledby="preview-title">
+    <div class="mat-section__head">
+        <h2 id="preview-title">The real screens</h2>
+        <p class="mat-section__lead">The sample app of the family with this accent: a list on a desktop in light, a form on a phone in dark.</p>
+    </div>
+    <div class="doc-frames">
+        <iframe class="doc-frame" title="A list in this accent, light" loading="lazy" src="@Model.FrameUrl("list", "light")"></iframe>
+        <iframe class="doc-frame doc-frame--phone" title="A form in this accent, dark" loading="lazy" src="@Model.FrameUrl("form", "dark")"></iframe>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="snippet-title">
+    <div class="mat-section__head"><h2 id="snippet-title">The snippet</h2><p class="mat-section__lead">An app sets one colour and nothing else. Hover, tints, links, the focus ring, the brand gradient and the dark mode follow.</p></div>
+    <div class="mat-card"><div class="mat-card__body mat-stack">
+        <pre class="mat-code" id="snippet"><code>@Model.Snippet</code></pre>
+        <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-copy="#snippet">@Ui.Icon("copy")<span>Copy</span></button></div>
+    </div></div>
+</section>
+
+@section Scripts {
+    <script src="/js/doc.js"></script>
+}

@@ -1,0 +1,85 @@
+@page "/Foundations"
+@inject ToolkitFiles Toolkit
+@{
+    ViewData["Title"] = "Foundations";
+    ViewData["PageIcon"] = "layers";
+    ViewData["PageSub"] = "The values every control is made of. They are custom properties, so an app can never drift from them.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Foundations", "/Foundations"), ("Colour", null));
+
+    var me = AccentReport.For(AppRegistry.Get("matdesign")!);
+    DesignToken? Find(string name) => Toolkit.Tokens.FirstOrDefault(t => t.Name == name);
+
+    var groups = new (string Title, string Lead, string[] Names)[]
+    {
+        ("Surfaces", "What things sit on. The page is the bottom layer; cards and dialogs sit above it.", ["--mat-bg", "--mat-bg-2", "--mat-surface", "--mat-surface-2", "--mat-surface-3", "--mat-glass", "--mat-nav-bg", "--mat-overlay"]),
+        ("Lines and text", "Hairlines separate, strong lines mark controls. Muted text still passes AA; faint text is only for placeholders.", ["--mat-border", "--mat-border-strong", "--mat-text", "--mat-text-muted", "--mat-text-faint"]),
+        ("Status", "Fixed meanings in every app: green is fine, amber is attention, red is an error or destructive, blue is information. Each has a tint and a text colour.", ["--mat-success", "--mat-success-bg", "--mat-success-text", "--mat-warning", "--mat-warning-bg", "--mat-warning-text", "--mat-danger", "--mat-danger-bg", "--mat-danger-text", "--mat-info", "--mat-info-bg", "--mat-info-text"]),
+    };
+}
+
+<partial name="_FoundationsTabs" model='"colour"' />
+
+@foreach (var g in groups)
+{
+    <section class="mat-section" aria-label="@g.Title">
+        <div class="mat-section__head"><h2>@g.Title</h2><p class="mat-section__lead">@g.Lead</p></div>
+        <div class="doc-swatches">
+            @foreach (var name in g.Names)
+            {
+                var t = Find(name);
+                if (t is null) { continue; }
+                <div class="doc-swatch">
+                    <div class="doc-pair">@Ui.Swatch(t.Light, "chip")@Ui.Swatch(t.Dark ?? t.Light, "chip")</div>
+                    <div class="doc-swatch__body">
+                        <span class="doc-swatch__name">@t.Name</span>
+                        <span class="doc-swatch__value">@t.Light</span>
+                        <span class="doc-swatch__value">@(t.Dark ?? "same in dark")</span>
+                        <span class="doc-swatch__note">@t.Description</span>
+                    </div>
+                </div>
+            }
+        </div>
+        <p class="mat-hint">Left half light, right half dark.</p>
+    </section>
+}
+
+<section class="mat-section" aria-labelledby="accent-title">
+    <div class="mat-section__head">
+        <h2 id="accent-title">The accent</h2>
+        <p class="mat-section__lead">
+            An app sets one colour, <code>--mat-app-accent</code>. The toolkit derives the rest from it: hover and pressed (mixed with black in light mode, white in dark),
+            two tints, the text colour for links, the colour of text on the accent, the focus ring and the brand gradient. In dark mode the accent is lightened (74 % accent, 26 % white) and the text on it is dark.
+            Shown here for MatDesign's own accent, @me.App.Accent.
+        </p>
+    </div>
+    <div class="doc-swatches">
+        <div class="doc-swatch"><div class="doc-pair">@Ui.Swatch(me.Accent, "chip")@Ui.Swatch(me.DarkAccent, "chip")</div><div class="doc-swatch__body"><span class="doc-swatch__name">--mat-accent</span><span class="doc-swatch__value">@me.Accent.ToHex()</span><span class="doc-swatch__value">@me.DarkAccent.ToHex()</span><span class="doc-swatch__note">Filled surfaces: primary button, active item, switch.</span></div></div>
+        <div class="doc-swatch"><div class="doc-pair">@Ui.Swatch(me.Hover, "chip")@Ui.Swatch(Colors.Mix(me.DarkAccent, Rgb.White, 0.88), "chip")</div><div class="doc-swatch__body"><span class="doc-swatch__name">--mat-accent-hover</span><span class="doc-swatch__value">@me.Hover.ToHex()</span><span class="doc-swatch__value">@Colors.Mix(me.DarkAccent, Rgb.White, 0.88).ToHex()</span><span class="doc-swatch__note">Primary button on hover.</span></div></div>
+        <div class="doc-swatch"><div class="doc-pair">@Ui.Swatch(me.LinkLight, "chip")@Ui.Swatch(me.LinkDark, "chip")</div><div class="doc-swatch__body"><span class="doc-swatch__name">--mat-accent-text</span><span class="doc-swatch__value">@me.LinkLight.ToHex()</span><span class="doc-swatch__value">@me.LinkDark.ToHex()</span><span class="doc-swatch__note">Links and accent-coloured text (AA on a surface).</span></div></div>
+        <div class="doc-swatch"><div class="doc-pair">@Ui.Swatch(me.OnAccent, "chip")@Ui.Swatch(me.DarkOnAccent, "chip")</div><div class="doc-swatch__body"><span class="doc-swatch__name">--mat-on-accent</span><span class="doc-swatch__value">@me.OnAccent.ToHex()</span><span class="doc-swatch__value">@me.DarkOnAccent.ToHex()</span><span class="doc-swatch__note">Text and icons on a filled accent surface.</span></div></div>
+    </div>
+    <div class="mat-card"><div class="mat-card__body mat-stack">
+        <strong>The same controls with the accent of different apps</strong>
+        <div class="mat-row">
+            @foreach (var key in new[] { "mattiverse", "matdock", "matmail", "matpaper", "matsplit", "matdo", "matarchive" })
+            {
+                var a = AppRegistry.Get(key)!;
+                <span class="mat-row mat-row--nowrap" data-app="@a.Id">
+                    <button type="button" class="mat-btn mat-btn--primary mat-btn--sm">@a.Name</button>
+                    <span class="mat-pill mat-pill--accent">@a.Accent</span>
+                </span>
+            }
+        </div>
+    </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="rules-title">
+    <div class="mat-section__head"><h2 id="rules-title">Rules for colour</h2></div>
+    <div class="mat-grid">
+        @foreach (var id in new[] { "COLOR-01", "COLOR-02", "COLOR-03", "COLOR-04", "COLOR-05", "IDENT-02" })
+        {
+            var rule = RuleBook.Get(id)!;
+            <a class="mat-card" href="/Rules/Detail?id=@rule.Id"><div class="mat-card__body mat-stack mat-stack--sm"><div class="mat-row"><span class="doc-rule-id">@rule.Id</span></div><strong>@rule.Title</strong></div></a>
+        }
+    </div>
+</section>

@@ -1,0 +1,82 @@
+@page "/"
+@inject ToolkitFiles Toolkit
+@{
+    ViewData["Title"] = "Overview";
+    var me = AppRegistry.Get("matdesign")!;
+    var firstRules = new[] { "SHELL-01", "SHELL-03", "SHELL-07", "SHELL-08", "LIST-03", "FORM-01", "DIALOG-03", "IDENT-01" }
+        .Select(id => RuleBook.Get(id)!).ToList();
+    var apps = AppRegistry.All;
+}
+
+<section class="doc-hero" aria-labelledby="hero-title">
+    @Ui.Logo(me, "xl")
+    <div>
+        <h1 id="hero-title">One look for every Mat app</h1>
+        <p>
+            Every Mat app has its own colour and the same design. MatDesign is the reference: the rules, the tokens, the shell, every control,
+            and <code>MatUi</code>, the toolkit that all of it is built from.
+        </p>
+        <div class="mat-btn-row mat-btn-row--plain doc-hero__actions">
+            <a class="mat-btn mat-btn--primary" href="/Rules">@Ui.Icon("book")<span>Open the rulebook</span></a>
+            <a class="mat-btn mat-btn--secondary" href="/Download">@Ui.Icon("download")<span>Get the toolkit</span></a>
+        </div>
+    </div>
+</section>
+
+<section class="mat-grid mat-grid--4" aria-label="In numbers">
+    <div class="mat-card"><div class="mat-card__body"><div class="mat-muted">Rules</div><h2>@RuleBook.All.Count</h2><small class="mat-muted">in @RuleBook.Areas.Count areas</small></div></div>
+    <div class="mat-card"><div class="mat-card__body"><div class="mat-muted">Apps</div><h2>@apps.Count</h2><small class="mat-muted">each with its own colour</small></div></div>
+    <div class="mat-card"><div class="mat-card__body"><div class="mat-muted">Design tokens</div><h2>@Toolkit.Tokens.Count</h2><small class="mat-muted">light and dark</small></div></div>
+    <div class="mat-card"><div class="mat-card__body"><div class="mat-muted">Icons</div><h2>@Toolkit.IconNames.Count</h2><small class="mat-muted">one inline sprite</small></div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="first-title">
+    <div class="mat-section__head">
+        <h2 id="first-title">What you notice first</h2>
+        <p class="mat-section__lead">The frame is the same everywhere: the menu on the left with the logo above it, the theme button, the user and the version at the bottom, the breadcrumb above the content, a toolbar above every list, and the buttons under the content.</p>
+    </div>
+    <div class="mat-grid">
+        @foreach (var rule in firstRules)
+        {
+            <a class="mat-card" href="/Rules/Detail?id=@rule.Id">
+                <div class="mat-card__body mat-stack mat-stack--sm">
+                    <div class="mat-row"><span class="doc-rule-id">@rule.Id</span><span class="mat-pill @Ui.RuleLevelClass(rule.Level) mat-pill--plain">@rule.Level</span></div>
+                    <strong>@rule.Title</strong>
+                    <span class="mat-muted">@(rule.Statement.Length > 130 ? rule.Statement[..130].TrimEnd() + "..." : rule.Statement)</span>
+                </div>
+            </a>
+        }
+    </div>
+    <div class="mat-actions"><a class="mat-btn mat-btn--secondary" href="/Shell">@Ui.Icon("sidebar")<span>See the shell</span></a></div>
+</section>
+
+<section class="mat-section" aria-labelledby="family-title">
+    <div class="mat-section__head">
+        <h2 id="family-title">The family</h2>
+        <p class="mat-section__lead">Each app has one accent colour. Everything else is shared.</p>
+    </div>
+    <div class="mat-grid">
+        @foreach (var app in apps)
+        {
+            <a class="mat-card doc-app" href="/Identity/App?id=@app.Id" data-app="@app.Id">
+                @Ui.Logo(app)
+                <span class="doc-app__text">
+                    <span class="doc-app__name">@app.Name</span>
+                    <span class="doc-app__line">@app.Tagline</span>
+                </span>
+            </a>
+        }
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="inside-title">
+    <div class="mat-section__head"><h2 id="inside-title">What is inside</h2></div>
+    <div class="mat-grid">
+        <a class="mat-card" href="/Foundations"><div class="mat-card__body mat-stack mat-stack--sm"><span class="mat-page__icon">@Ui.Icon("layers")</span><strong>Foundations</strong><span class="mat-muted">Colour, type, space, shape, motion and the icons.</span></div></a>
+        <a class="mat-card" href="/Components"><div class="mat-card__body mat-stack mat-stack--sm"><span class="mat-page__icon">@Ui.Icon("toggle")</span><strong>Components</strong><span class="mat-muted">Every control, live, with its markup.</span></div></a>
+        <a class="mat-card" href="/Patterns"><div class="mat-card__body mat-stack mat-stack--sm"><span class="mat-page__icon">@Ui.Icon("template")</span><strong>Patterns</strong><span class="mat-muted">List page, edit page, sign-in, settings, on desktop and phone.</span></div></a>
+        <a class="mat-card" href="/Builder"><div class="mat-card__body mat-stack mat-stack--sm"><span class="mat-page__icon">@Ui.Icon("wrench")</span><strong>Builder</strong><span class="mat-muted">Pick an accent, see it in both modes, check the contrast.</span></div></a>
+        <a class="mat-card" href="/Identity/Audit"><div class="mat-card__body mat-stack mat-stack--sm"><span class="mat-page__icon">@Ui.Icon("check-square")</span><strong>Audit</strong><span class="mat-muted">How close each app is to the rules today.</span></div></a>
+        <a class="mat-card" href="/Download"><div class="mat-card__body mat-stack mat-stack--sm"><span class="mat-page__icon">@Ui.Icon("download")</span><strong>Download</strong><span class="mat-muted">One CSS file, one script, one sprite, and the API.</span></div></a>
+    </div>
+</section>

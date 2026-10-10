@@ -1,0 +1,79 @@
+@page "/Identity"
+@model MatDesign.Web.Pages.Identity.IndexModel
+@{
+    ViewData["Title"] = "Apps";
+    ViewData["PageIcon"] = "apps";
+    ViewData["PageSub"] = "The family. Each app has one accent colour; the toolkit uses it everywhere in that app.";
+    ViewData["Crumbs"] = Crumbs.Of(("Identity", "/Identity"), ("Apps", null));
+}
+
+<div class="mat-list" data-view-scope>
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No app matches</div>
+            <p>Change the search or the filters, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Identity">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap" data-view="list">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Apps of the Mat family</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">App</th><th scope="col">Category</th><th scope="col">Accent</th>
+                        <th scope="col" class="mat-hide-sm">In the app today</th><th scope="col" class="mat-hide-sm">Logo colour</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var app in Model.Items)
+                    {
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    @Ui.Logo(app, "sm")
+                                    <span><a href="/Identity/App?id=@app.Id">@app.Name</a><small>@app.Tagline</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">@app.Category</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap">@Ui.Swatch(app.Accent)<code>@app.Accent</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+                                @if (app.FoundAccent is null) { <span class="mat-muted">none found</span> }
+                                else { <span class="mat-row mat-row--nowrap">@Ui.Swatch(app.FoundAccent)<code>@app.FoundAccent</code>@if (!app.FoundAccent.Equals(app.Accent, StringComparison.OrdinalIgnoreCase)) { <span class="mat-pill mat-pill--warn mat-pill--plain">changed</span> }</span> }
+                            </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+                                @if (app.LogoColor is null) { <span class="mat-muted">none</span> }
+                                else { <span class="mat-row mat-row--nowrap">@Ui.Swatch(app.LogoColor)<code>@app.LogoColor</code></span> }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mat-gallery" data-view="gallery" hidden>
+            @foreach (var app in Model.Items)
+            {
+                <a class="mat-tile" href="/Identity/App?id=@app.Id" data-app="@app.Id">
+                    <span class="mat-tile__media">@Ui.Logo(app, "xl")</span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">@app.Name</span>
+                        <span class="mat-tile__meta">@app.Category · <code>@app.Accent</code></span>
+                    </span>
+                </a>
+            }
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="/Identity/Palette">@Ui.Icon("palette")<span>Check the palette</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/api/apps">@Ui.Icon("code")<span>Apps as JSON</span></a>
+    </div>
+</div>

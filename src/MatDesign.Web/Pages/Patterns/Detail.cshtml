@@ -1,0 +1,67 @@
+@page "/Patterns/Detail"
+@model MatDesign.Web.Pages.Patterns.DetailModel
+@{
+    var p = Model.Pattern;
+    ViewData["Title"] = p.Name;
+    ViewData["PageIcon"] = p.Icon;
+    ViewData["PageSub"] = p.Summary;
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Patterns", "/Patterns"), (p.Name, null));
+}
+
+<section class="mat-section" aria-labelledby="frames-title">
+    <div class="mat-section__head">
+        <h2 id="frames-title">The pattern in @Model.App.Name</h2>
+        <p class="mat-section__lead">The same page in the accent of another app: nothing but the colour changes. Desktop in light, phone in dark.</p>
+    </div>
+    <nav class="mat-chips" aria-label="Show it in the accent of">
+        @foreach (var a in Model.Apps)
+        {
+            var current = a.Id == Model.App.Id;
+            <a class="mat-btn mat-btn--sm @(current ? "mat-btn--secondary is-active" : "mat-btn--ghost")" href="/Patterns/Detail?id=@p.Id&amp;app=@a.Id" aria-current="@(current ? "true" : null)">@Ui.Swatch(a.Accent)<span>@a.Name</span></a>
+        }
+    </nav>
+    <div class="doc-frames">
+        <iframe class="doc-frame" title="@p.Name on a desktop, light" loading="lazy" src="@Model.FrameUrl("light")"></iframe>
+        <iframe class="doc-frame doc-frame--phone" title="@p.Name on a phone, dark" loading="lazy" src="@Model.FrameUrl("dark")"></iframe>
+    </div>
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="@Model.FrameUrl("light")" target="_blank" rel="noopener">@Ui.Icon("external")<span>Open it full size</span></a>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="parts-title">
+    <div class="mat-section__head"><h2 id="parts-title">What it consists of</h2></div>
+    <div class="mat-card"><div class="mat-card__body">
+        <ol class="doc-steps">
+            @foreach (var part in p.Parts)
+            {
+                <li><div><strong>@part.Title</strong><span>@part.Text @if (part.Rule is not null) { <a href="/Rules/Detail?id=@part.Rule">@part.Rule</a> }</span></div></li>
+            }
+        </ol>
+    </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="rules-title">
+    <div class="mat-section__head"><h2 id="rules-title">Rules for this page</h2></div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">Rules that apply to this pattern</caption>
+            <thead><tr><th scope="col">Rule</th><th scope="col">Level</th></tr></thead>
+            <tbody>
+                @foreach (var rule in Model.Rules)
+                {
+                    <tr>
+                        <td data-label="Rule"><div class="mat-table__name"><span class="doc-rule-id">@rule.Id</span><span><a href="/Rules/Detail?id=@rule.Id">@rule.Title</a></span></div></td>
+                        <td data-label="Level"><span class="mat-pill @Ui.RuleLevelClass(rule.Level)">@rule.Level</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="mat-btn-row">
+    <a class="mat-btn mat-btn--secondary" href="/Patterns">@Ui.Icon("back")<span>Back to the patterns</span></a>
+    @if (Model.Previous is not null) { <a class="mat-btn mat-btn--ghost" href="/Patterns/Detail?id=@Model.Previous.Id&amp;app=@Model.App.Id">@Ui.Icon("chevron-left")<span>@Model.Previous.Name</span></a> }
+    @if (Model.Next is not null) { <a class="mat-btn mat-btn--ghost" href="/Patterns/Detail?id=@Model.Next.Id&amp;app=@Model.App.Id"><span>@Model.Next.Name</span>@Ui.Icon("chevron-right")</a> }
+</div>

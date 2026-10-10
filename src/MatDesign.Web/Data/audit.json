@@ -1,0 +1,1455 @@
+{
+ "generated": "2026-10-10",
+ "checks": [
+  {
+   "id": "shell.menu-left",
+   "title": "Menu with the logo",
+   "rule": "SHELL-01",
+   "how": "The layout has a sidebar (<aside> or a sidebar class) with a brand in it."
+  },
+  {
+   "id": "shell.breadcrumb",
+   "title": "Breadcrumb",
+   "rule": "SHELL-08",
+   "how": "A breadcrumb is in the layout (yes) or only on some pages (partial)."
+  },
+  {
+   "id": "shell.theme",
+   "title": "Theme: system, light, dark",
+   "rule": "SHELL-04",
+   "how": "Dark mode exists (partial) and the choice includes \"system\" (yes)."
+  },
+  {
+   "id": "shell.user",
+   "title": "User menu",
+   "rule": "SHELL-05",
+   "how": "The layout has sign-out or account links and a dropdown or menu around them."
+  },
+  {
+   "id": "shell.version",
+   "title": "Version in the menu",
+   "rule": "SHELL-06",
+   "how": "The layout shows a version."
+  },
+  {
+   "id": "dialog.native",
+   "title": "No browser dialogs",
+   "rule": "DIALOG-01",
+   "how": "No confirm(), alert() or prompt() call in the app's scripts and pages."
+  },
+  {
+   "id": "dialog.used",
+   "title": "Dialogs of its own",
+   "rule": "DIALOG-04",
+   "how": "The app uses <dialog> or a dialog/modal class."
+  },
+  {
+   "id": "color.tokens",
+   "title": "Colours from tokens",
+   "rule": "COLOR-01",
+   "how": "Literal colours outside the variable definitions of the CSS: few (yes), some (partial), many (no)."
+  },
+  {
+   "id": "code.inline",
+   "title": "No inline styles",
+   "rule": "CODE-02",
+   "how": "style=\"...\" attributes in the pages: few (yes), some (partial), many (no)."
+  },
+  {
+   "id": "code.external",
+   "title": "No outside resources",
+   "rule": "CODE-03",
+   "how": "No link or script that loads from another site in the layout."
+  },
+  {
+   "id": "type.system",
+   "title": "System fonts",
+   "rule": "TYPE-01",
+   "how": "No @font-face and no web font link."
+  },
+  {
+   "id": "icon.inline",
+   "title": "Inline SVG icons",
+   "rule": "ICON-01",
+   "how": "An inline SVG sprite or inline icons (yes); an icon font (partial)."
+  },
+  {
+   "id": "mobile.query",
+   "title": "Phone layout",
+   "rule": "MOBILE-02",
+   "how": "The CSS has max-width media queries."
+  },
+  {
+   "id": "a11y.motion",
+   "title": "Reduced motion",
+   "rule": "A11Y-05",
+   "how": "The CSS honours prefers-reduced-motion."
+  }
+ ],
+ "apps": [
+  {
+   "id": "mattiverse",
+   "layout": "Mattiverse/src/Mattiverse.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "no",
+     "note": "None found."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "yes",
+     "note": "No browser dialogs."
+    },
+    "dialog.used": {
+     "state": "no",
+     "note": "No dialog elements found."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "21 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "59 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "unknown",
+     "note": "No icons found."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "3 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "matos",
+   "layout": "MatOS/src/MatOS.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "no",
+     "note": "No sidebar in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "partial",
+     "note": "Only on some pages (34 places)."
+    },
+    "shell.theme": {
+     "state": "partial",
+     "note": "Dark mode, but no system option found."
+    },
+    "shell.user": {
+     "state": "no",
+     "note": "No account or sign-out in the layout."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "partial",
+     "note": "3 call(s) of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "11 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "no",
+     "note": "292 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "226 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "partial",
+     "note": "Inline SVG and an icon font."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "3 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "matdesign",
+   "layout": "MatDesign/src/MatDesign.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "yes",
+     "note": "No browser dialogs."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "24 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "yes",
+     "note": "0 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "yes",
+     "note": "0 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "17 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "matdock",
+   "layout": "MatDock/src/MatDock.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "partial",
+     "note": "Only on some pages (6 places)."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "partial",
+     "note": "2 call(s) of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "no",
+     "note": "No dialog elements found."
+    },
+    "color.tokens": {
+     "state": "yes",
+     "note": "9 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "224 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "unknown",
+     "note": "No icons found."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "5 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "matcad",
+   "layout": "Matcad/src/Matcad/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "no",
+     "note": "None found."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "yes",
+     "note": "No browser dialogs."
+    },
+    "dialog.used": {
+     "state": "no",
+     "note": "No dialog elements found."
+    },
+    "color.tokens": {
+     "state": "yes",
+     "note": "13 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "46 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "partial",
+     "note": "Inline SVG and an icon font."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "3 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "matddns",
+   "layout": "Matddns/src/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "partial",
+     "note": "Only a top navigation."
+    },
+    "shell.breadcrumb": {
+     "state": "no",
+     "note": "None found."
+    },
+    "shell.theme": {
+     "state": "no",
+     "note": "No dark mode found."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "no",
+     "note": "No version in the layout."
+    },
+    "dialog.native": {
+     "state": "no",
+     "note": "9 calls of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "6 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "17 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "47 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "unknown",
+     "note": "No icons found."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "1 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "matgate",
+   "layout": "",
+   "results": {
+    "shell.menu-left": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "shell.breadcrumb": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "shell.theme": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "shell.user": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "shell.version": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "dialog.native": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "dialog.used": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "color.tokens": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "code.inline": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "code.external": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "type.system": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "icon.inline": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "mobile.query": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    },
+    "a11y.motion": {
+     "state": "unknown",
+     "note": "The repository has no UI of its own (Apache Guacamole and a browser farm)."
+    }
+   }
+  },
+  {
+   "id": "matbu",
+   "layout": "(none found)",
+   "results": {
+    "shell.menu-left": {
+     "state": "no",
+     "note": "No sidebar in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "partial",
+     "note": "Only on some pages (5 places)."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "no",
+     "note": "No account or sign-out in the layout."
+    },
+    "shell.version": {
+     "state": "no",
+     "note": "No version in the layout."
+    },
+    "dialog.native": {
+     "state": "no",
+     "note": "6 calls of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "2 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "51 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "48 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "25 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "matarchive",
+   "layout": "Matarchive/src/Matarchive.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "no",
+     "note": "None found."
+    },
+    "shell.theme": {
+     "state": "no",
+     "note": "No dark mode found."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "partial",
+     "note": "2 call(s) of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "no",
+     "note": "No dialog elements found."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "41 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "yes",
+     "note": "0 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "2 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "matmail",
+   "layout": "MatMail/src/MatMail/Pages/Shared/_Layout.cshtml, MatMail/src/MatMail/Pages/Shared/_LayoutAuth.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "yes",
+     "note": "Sign-out and a menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "partial",
+     "note": "2 call(s) of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "8 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "30 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "yes",
+     "note": "3 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "unknown",
+     "note": "No icons found."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "5 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "matpaper",
+   "layout": "MatPaper/src/MatPaper/Pages/Shared/_Layout.cshtml, MatPaper/src/MatPaper/Pages/Shared/_LayoutAuth.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "partial",
+     "note": "3 call(s) of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "27 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "98 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "58 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "31 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "matdo",
+   "layout": "Matdo/src/Matdo.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "partial",
+     "note": "Only a top navigation."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "partial",
+     "note": "Dark mode, but no system option found."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "no",
+     "note": "13 calls of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "no",
+     "note": "No dialog elements found."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "19 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "131 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "8 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "matfile",
+   "layout": "MatFile/src/MatFile.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "no",
+     "note": "No sidebar in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "partial",
+     "note": "Only on some pages (2 places)."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "partial",
+     "note": "2 call(s) of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "6 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "57 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "yes",
+     "note": "0 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "unknown",
+     "note": "No icons found."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "4 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "matcms",
+   "layout": "MatCMS/src/MatCMS/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "partial",
+     "note": "Only a top navigation."
+    },
+    "shell.breadcrumb": {
+     "state": "partial",
+     "note": "Only on some pages (3 places)."
+    },
+    "shell.theme": {
+     "state": "partial",
+     "note": "Dark mode, but no system option found."
+    },
+    "shell.user": {
+     "state": "no",
+     "note": "No account or sign-out in the layout."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "yes",
+     "note": "No browser dialogs."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "74 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "no",
+     "note": "422 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "121 inline style attributes."
+    },
+    "code.external": {
+     "state": "no",
+     "note": "3 outside resource(s) in the layout."
+    },
+    "type.system": {
+     "state": "no",
+     "note": "A web font is loaded."
+    },
+    "icon.inline": {
+     "state": "partial",
+     "note": "Inline SVG and an icon font."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "42 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "matmon",
+   "layout": "Matmon/src/Matmon.Host/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "yes",
+     "note": "Sign-out and a menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "no",
+     "note": "31 calls of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "14 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "no",
+     "note": "400 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "202 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "12 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "matstat",
+   "layout": "Matstat/src/Matstat.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "no",
+     "note": "None found."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "partial",
+     "note": "2 call(s) of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "no",
+     "note": "No dialog elements found."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "27 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "55 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "1 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "msbi",
+   "layout": "msBi/src/msBi.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "no",
+     "note": "13 calls of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "12 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "41 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "56 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "2 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "matbiz",
+   "layout": "Matbiz/src/Matbiz.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "partial",
+     "note": "Dark mode, but no system option found."
+    },
+    "shell.user": {
+     "state": "no",
+     "note": "No account or sign-out in the layout."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "no",
+     "note": "32 calls of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "10 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "no",
+     "note": "205 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "no",
+     "note": "172 inline style attributes."
+    },
+    "code.external": {
+     "state": "no",
+     "note": "3 outside resource(s) in the layout."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "partial",
+     "note": "Inline SVG and an icon font."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "1 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "matsplit",
+   "layout": "MatSplit/src/MatSplit.Web/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "no",
+     "note": "No sidebar in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "partial",
+     "note": "Only on some pages (18 places)."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "no",
+     "note": "No account or sign-out in the layout."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "partial",
+     "note": "1 call(s) of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "no",
+     "note": "No dialog elements found."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "23 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "yes",
+     "note": "3 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "8 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "mattrakr",
+   "layout": "MatTrakr/src/MatTrakr/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "partial",
+     "note": "Sidebar, but no brand found in it."
+    },
+    "shell.breadcrumb": {
+     "state": "no",
+     "note": "None found."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "no",
+     "note": "No account or sign-out in the layout."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "no",
+     "note": "7 calls of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "1 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "yes",
+     "note": "15 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "partial",
+     "note": "15 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "partial",
+     "note": "An icon font."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "3 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "matplay",
+   "layout": "MatPlay/src/MatPlay/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "no",
+     "note": "8 calls of confirm, alert or prompt."
+    },
+    "dialog.used": {
+     "state": "no",
+     "note": "No dialog elements found."
+    },
+    "color.tokens": {
+     "state": "partial",
+     "note": "41 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "yes",
+     "note": "4 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "unknown",
+     "note": "No icons found."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "3 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  },
+  {
+   "id": "matlan",
+   "layout": "Matlan/Matlan/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "no",
+     "note": "No sidebar in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "no",
+     "note": "None found."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "yes",
+     "note": "No browser dialogs."
+    },
+    "dialog.used": {
+     "state": "no",
+     "note": "No dialog elements found."
+    },
+    "color.tokens": {
+     "state": "yes",
+     "note": "10 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "yes",
+     "note": "0 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "1 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
+    }
+   }
+  }
+ ]
+}

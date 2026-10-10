@@ -1,0 +1,21 @@
+@model string
+@*
+    The sub-pages of Foundations as tabs. They are links (each is a page of its own), so they carry aria-current instead of aria-selected.
+*@
+@{
+    var tabs = new (string Key, string Title, string Href, string Icon)[]
+    {
+        ("colour", "Colour", "/Foundations", "palette"),
+        ("type", "Type", "/Foundations/Type", "type"),
+        ("space", "Space and shape", "/Foundations/Space", "layers"),
+        ("motion", "Motion", "/Foundations/Motion", "play"),
+        ("icons", "Icons", "/Foundations/Icons", "star"),
+        ("tokens", "All tokens", "/Foundations/Tokens", "code"),
+    };
+}
+<nav class="mat-tabs" aria-label="Foundations">
+    @foreach (var t in tabs)
+    {
+        <a class="mat-tab @(t.Key == Model ? "is-active" : "")" href="@t.Href" aria-current="@(t.Key == Model ? "page" : null)">@Ui.Icon(t.Icon)<span>@t.Title</span></a>
+    }
+</nav>

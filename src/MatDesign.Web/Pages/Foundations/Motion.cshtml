@@ -1,0 +1,48 @@
+@page "/Foundations/Motion"
+@inject ToolkitFiles Toolkit
+@{
+    ViewData["Title"] = "Motion and layers";
+    ViewData["PageIcon"] = "play";
+    ViewData["PageSub"] = "Short, purposeful, one easing curve. And the order of what is on top.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Foundations", "/Foundations"), ("Motion", null));
+    DesignToken T(string n) => Toolkit.Tokens.First(t => t.Name == n);
+    var durations = new (string Token, string Key)[] { ("--mat-dur-fast", "fast"), ("--mat-dur", "base"), ("--mat-dur-slow", "slow") };
+    var layers = new[] { "--mat-z-nav", "--mat-z-topbar", "--mat-z-menu", "--mat-z-dialog", "--mat-z-toast" };
+}
+
+<partial name="_FoundationsTabs" model='"motion"' />
+
+<section class="mat-section" aria-labelledby="dur-title">
+    <div class="mat-section__head"><h2 id="dur-title">Durations</h2><p class="mat-section__lead">Hover or focus a track to see it. With <code>prefers-reduced-motion</code> everything that is not needed stops (SPACE-04, A11Y-05).</p></div>
+    <div class="mat-card"><div class="mat-card__body">
+        @foreach (var (token, key) in durations)
+        {
+            var t = T(token);
+            <div class="doc-motion-row">
+                <code class="mat-nowrap">@t.Light</code>
+                <div class="doc-track" tabindex="0" aria-label="@t.Name, @t.Light"><span class="doc-motion doc-motion--@key">@Ui.Icon("arrow-right")</span></div>
+                <span class="mat-muted">@t.Description</span>
+            </div>
+        }
+        <p class="mat-hint">One curve for all of them: <code>@T("--mat-ease").Light</code>.</p>
+    </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="layers-title">
+    <div class="mat-section__head"><h2 id="layers-title">Layers</h2></div>
+    <div class="mat-card"><div class="mat-card__body"><dl class="mat-kv">
+        @foreach (var n in layers)
+        {
+            var t = T(n);
+            <dt><code>@t.Name</code></dt>
+            <dd><strong>@t.Light</strong> <span class="mat-muted">@t.Description</span></dd>
+        }
+    </dl></div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="device-title">
+    <div class="mat-section__head">
+        <h2 id="device-title">The device</h2>
+        <p class="mat-section__lead">Notches and home indicators are respected through <code>--mat-safe-top</code>, <code>-bottom</code>, <code>-left</code> and <code>-right</code>. On a touch screen controls grow from 40 to 44 px, compact ones from 32 to 36 px (BUTTON-05, MOBILE-04).</p>
+    </div>
+</section>

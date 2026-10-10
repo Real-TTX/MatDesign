@@ -1,0 +1,59 @@
+@page "/Identity/App"
+@model MatDesign.Web.Pages.Identity.AppModel
+@{
+    var app = Model.App;
+    var r = Model.Report;
+    ViewData["Title"] = app.Name;
+    ViewData["Crumbs"] = Crumbs.Of(("Identity", "/Identity"), ("Apps", "/Identity"), (app.Name, null));
+}
+
+<div class="mat-page__head">
+    @Ui.Logo(app, "lg")
+    <div class="mat-page__title">
+        <h1>@app.Name</h1>
+        <p class="mat-page__sub">@app.Tagline · @app.Category</p>
+    </div>
+</div>
+
+<section class="mat-card" aria-labelledby="colours-title">
+    <div class="mat-card__head">@Ui.Icon("palette")<h2 class="mat-card__title" id="colours-title">Colours of @app.Name</h2></div>
+    <div class="mat-card__body">
+        <p class="mat-muted">The app sets one colour, <code>--mat-app-accent: @app.Accent</code>. The rest is derived from it, in both modes.</p>
+        <partial name="_AccentSwatches" model="r" />
+    </div>
+</section>
+
+<partial name="_ContrastCard" model="r" />
+
+<section class="mat-card" aria-labelledby="found-title">
+    <div class="mat-card__head">@Ui.Icon("search")<h2 class="mat-card__title" id="found-title">As found in the app</h2></div>
+    <div class="mat-card__body">
+        <dl class="mat-kv">
+            <dt>Colour in the UI</dt>
+            <dd>@if (app.FoundAccent is null) { <span class="mat-muted">none found</span> } else { <span class="mat-row mat-row--nowrap">@Ui.Swatch(app.FoundAccent)<code>@app.FoundAccent</code>@if (!app.FoundAccent.Equals(app.Accent, StringComparison.OrdinalIgnoreCase)) { <span class="mat-muted">the toolkit uses @app.Accent so that white text passes AA, or because the logo says so</span> }</span> }</dd>
+            <dt>Colour of the logo</dt>
+            <dd>@if (app.LogoColor is null) { <span class="mat-muted">no logo file of its own</span> } else { <span class="mat-row mat-row--nowrap">@Ui.Swatch(app.LogoColor)<code>@app.LogoColor</code></span> }</dd>
+            <dt>Class prefix</dt><dd>@(string.IsNullOrEmpty(app.CssPrefix) ? "-" : app.CssPrefix)</dd>
+            <dt>Token names</dt><dd><code>@(string.IsNullOrEmpty(app.TokenScheme) ? "-" : app.TokenScheme)</code></dd>
+            <dt>Port</dt><dd>@(app.Port is { } port ? port.ToString() : "-")</dd>
+            <dt>Repository</dt><dd><code>@app.Repo</code></dd>
+            @if (!string.IsNullOrEmpty(app.Notes)) { <dt>Notes</dt><dd>@app.Notes</dd> }
+        </dl>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="preview-title">
+    <div class="mat-section__head">
+        <h2 id="preview-title">@app.Name in the toolkit</h2>
+        <p class="mat-section__lead">The same screens, with this accent. The toolbar dialogs, the menu and the form work inside the frames.</p>
+    </div>
+    <div class="doc-frames">
+        <iframe class="doc-frame" title="@app.Name, light" loading="lazy" src="/Preview?app=@app.Id&view=list&theme=light"></iframe>
+        <iframe class="doc-frame" title="@app.Name, dark" loading="lazy" src="/Preview?app=@app.Id&view=list&theme=dark"></iframe>
+    </div>
+</section>
+
+<div class="mat-btn-row">
+    <a class="mat-btn mat-btn--primary" href="/Builder?accent=@Uri.EscapeDataString(app.Accent)&app=@app.Id">@Ui.Icon("wrench")<span>Try another accent</span></a>
+    <a class="mat-btn mat-btn--secondary" href="/Identity">@Ui.Icon("back")<span>Back to the apps</span></a>
+</div>

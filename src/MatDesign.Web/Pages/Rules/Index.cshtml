@@ -1,0 +1,57 @@
+@page "/Rules"
+@model MatDesign.Web.Pages.Rules.IndexModel
+@{
+    ViewData["Title"] = "Rulebook";
+    ViewData["PageIcon"] = "book";
+    ViewData["PageSub"] = "Every rule about how a Mat app looks and behaves. Each has an id you can cite in a review, a commit or a prompt.";
+    ViewData["Crumbs"] = Crumbs.Of(("Rules", "/Rules"), ("Rulebook", null));
+}
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No rule matches</div>
+            <p>Change the search or the filters, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Rules">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Rules of the Mat family</caption>
+                <thead>
+                    <tr><th scope="col">Rule</th><th scope="col">Area</th><th scope="col">Level</th><th scope="col" class="mat-hide-sm">Source</th><th scope="col">Checked by</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var rule in Model.Items)
+                    {
+                        var area = RuleBook.Areas.First(a => a.Id == rule.Area);
+                        <tr>
+                            <td data-label="Rule">
+                                <div class="mat-table__name">
+                                    <span class="doc-rule-id">@rule.Id</span>
+                                    <span><a href="/Rules/Detail?id=@rule.Id">@rule.Title</a></span>
+                                </div>
+                            </td>
+                            <td data-label="Area">@area.Name</td>
+                            <td data-label="Level"><span class="mat-pill @Ui.RuleLevelClass(rule.Level)">@rule.Level</span></td>
+                            <td data-label="Source" class="mat-hide-sm mat-muted">@rule.Source</td>
+                            <td data-label="Checked by">@IndexModel.CheckedBy(rule)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="/api/rules">@Ui.Icon("code")<span>Rules as JSON</span></a>
+    </div>
+</div>

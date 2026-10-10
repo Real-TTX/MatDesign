@@ -1,0 +1,82 @@
+@page "/Foundations/Space"
+@inject ToolkitFiles Toolkit
+@{
+    ViewData["Title"] = "Space and shape";
+    ViewData["PageIcon"] = "layers";
+    ViewData["PageSub"] = "The 4 px scale, the radii, the elevation and the breakpoints.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Foundations", "/Foundations"), ("Space and shape", null));
+    DesignToken T(string n) => Toolkit.Tokens.First(t => t.Name == n);
+    var spacing = new[] { "1", "2", "3", "4", "5", "6", "8", "10", "12" };
+    var radii = new (string Key, string Token)[] { ("xs", "--mat-radius-xs"), ("sm", "--mat-radius-sm"), ("md", "--mat-radius"), ("lg", "--mat-radius-lg"), ("xl", "--mat-radius-xl"), ("pill", "--mat-radius-pill") };
+    var layout = new[] { "--mat-nav-w", "--mat-topbar-h", "--mat-content-max", "--mat-content-pad", "--mat-control-h", "--mat-control-h-sm", "--mat-control-h-lg" };
+    var breakpoints = new (string Width, string What)[]
+    {
+        ("900 px", "The menu becomes a drawer behind a burger button; the top bar gets the safe area."),
+        ("720 px", "Table rows become cards; columns marked mat-hide-sm disappear."),
+        ("700 px", "The two-column form grid becomes one column."),
+        ("640 px", "Every dialog is full screen, with the X at the top right."),
+        ("600 px", "Grids become one column; the breadcrumb keeps its last two items."),
+        ("480 px", "The toolbar hides the values on its buttons and puts the count on its own line."),
+    };
+}
+
+<partial name="_FoundationsTabs" model='"space"' />
+
+<section class="mat-section" aria-labelledby="spacing-title">
+    <div class="mat-section__head"><h2 id="spacing-title">Spacing, a 4 px scale</h2><p class="mat-section__lead">Gaps and paddings come from these steps and from nothing else (SPACE-01).</p></div>
+    <div class="mat-card"><div class="mat-card__body mat-stack mat-stack--sm">
+        @foreach (var s in spacing)
+        {
+            var t = T($"--mat-space-{s}");
+            <div class="doc-space"><code class="mat-nowrap">@t.Name</code><span class="doc-space__bar doc-w-@s"></span><span class="mat-muted">@t.Light · @t.Description</span></div>
+        }
+    </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="radius-title">
+    <div class="mat-section__head"><h2 id="radius-title">Radii</h2><p class="mat-section__lead">Cards and dialogs are large, buttons medium, inputs small, pills round (SPACE-02).</p></div>
+    <div class="mat-grid">
+        @foreach (var (key, token) in radii)
+        {
+            var t = T(token);
+            <div class="mat-card"><div class="mat-card__body mat-stack mat-stack--sm"><div class="doc-radius doc-r-@key"></div><code>@t.Name</code><small class="mat-muted">@t.Light · @t.Description</small></div></div>
+        }
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="elev-title">
+    <div class="mat-section__head"><h2 id="elev-title">Elevation</h2><p class="mat-section__lead">Lines and surfaces structure more than shadows do (SPACE-03).</p></div>
+    <div class="mat-grid mat-grid--3">
+        <div class="doc-elevation doc-shadow-1">--mat-shadow-1 · cards</div>
+        <div class="doc-elevation doc-shadow-2">--mat-shadow-2 · menus</div>
+        <div class="doc-elevation doc-shadow-3">--mat-shadow-3 · dialogs</div>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="layout-title">
+    <div class="mat-section__head"><h2 id="layout-title">Layout</h2></div>
+    <div class="mat-card"><div class="mat-card__body"><dl class="mat-kv">
+        @foreach (var n in layout)
+        {
+            var t = T(n);
+            <dt><code>@t.Name</code></dt>
+            <dd><strong>@t.Light</strong> <span class="mat-muted">@t.Description</span></dd>
+        }
+    </dl></div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="bp-title">
+    <div class="mat-section__head"><h2 id="bp-title">Breakpoints</h2><p class="mat-section__lead">What changes on the way down to a phone (MOBILE-02). Every page is checked at 390 px.</p></div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">Breakpoints of the toolkit</caption>
+            <thead><tr><th scope="col">Below</th><th scope="col">What changes</th></tr></thead>
+            <tbody>
+                @foreach (var b in breakpoints)
+                {
+                    <tr><td data-label="Below" class="mat-mono">@b.Width</td><td data-label="What changes">@b.What</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

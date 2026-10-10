@@ -1,0 +1,144 @@
+@inject ToolkitFiles Toolkit
+@{
+    // A page fills these in: Title, PageIcon, PageSub, Crumbs (the breadcrumb below the app name), Width ("narrow" or "wide").
+    // The shell itself comes from ViewData["Shell"]; without it the site draws itself.
+    var shell = ViewData["Shell"] as ShellModel ?? ShellModel.Site();
+    var app = shell.App;
+    var title = ViewData["Title"] as string ?? app.Name;
+    var icon = ViewData["PageIcon"] as string;
+    var sub = ViewData["PageSub"] as string;
+    var crumbs = ViewData["Crumbs"] as IReadOnlyList<(string Text, string? Url)> ?? [];
+    var width = ViewData["Width"] as string;
+    var active = shell.ActiveHref ?? Navigation.ActiveHref(Context.Request.Path.Value ?? "/");
+}
+<!DOCTYPE html>
+<html lang="en" data-app="@app.Id" @Html.Raw(shell.RootAttributes)>
+<partial name="_Head" model="(shell, title)" />
+<body>
+    <a class="mat-skip" href="#main">Skip to the content</a>
+    @Html.Raw(Toolkit.Sprite)
+
+    <div class="mat-app">
+        <aside class="mat-nav" id="mat-nav">
+            <div class="mat-nav__brand">
+                <a href="@(shell.PreviewQuery is null ? "/" : "#")" aria-label="@app.Name, start page">
+                    @Ui.Logo(app)
+                    <span>
+                        <span class="mat-nav__name">@app.Name</span>
+                        <span class="mat-nav__tagline">@shell.Tagline</span>
+                    </span>
+                </a>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-nav__close" data-nav-close aria-label="Close the menu">@Ui.Icon("x")</button>
+            </div>
+
+            <nav class="mat-nav__scroll" aria-label="Main">
+                <ul class="mat-nav__list">
+                    @foreach (var group in shell.Nav)
+                    {
+                        if (group.Title is not null)
+                        {
+                            <li class="mat-nav__group" role="presentation">@group.Title</li>
+                        }
+
+                        foreach (var item in group.Items)
+                        {
+                            var isActive = item.Href == active;
+                            <li>
+                                <a class="mat-nav__item @(isActive ? "is-active" : "")" href="@item.Href" aria-current="@(isActive ? "page" : null)">
+                                    @Ui.Icon(item.Icon)<span>@item.Title</span>
+                                </a>
+                            </li>
+                        }
+                    }
+                </ul>
+            </nav>
+
+            <div class="mat-nav__foot">
+                <div class="mat-nav__account">
+                    <button type="button" class="mat-user" data-menu-toggle="user-menu" aria-haspopup="menu" aria-expanded="false">
+                        <span class="mat-avatar" aria-hidden="true">@Ui.Initials(shell.UserName)</span>
+                        <span class="mat-user__text">
+                            <span class="mat-user__name">@shell.UserName</span>
+                            <span class="mat-user__role">@shell.UserRole</span>
+                        </span>
+                        @Ui.Icon("chevron-up", "mat-user__chev")
+                    </button>
+                    <button type="button" class="mat-theme" data-theme-toggle data-theme-state="system" aria-label="Theme: System. Click for Light." title="Theme: System. Click for Light.">
+                        <svg class="mat-icon" data-theme-icon="system" aria-hidden="true" focusable="false"><use href="#mat-i-monitor"></use></svg>
+                        <svg class="mat-icon" data-theme-icon="light" aria-hidden="true" focusable="false"><use href="#mat-i-sun"></use></svg>
+                        <svg class="mat-icon" data-theme-icon="dark" aria-hidden="true" focusable="false"><use href="#mat-i-moon"></use></svg>
+                    </button>
+                </div>
+                <div class="mat-nav__version">@shell.Version</div>
+            </div>
+        </aside>
+
+        <div class="mat-main">
+            <header class="mat-topbar">
+                <button type="button" class="mat-burger" data-nav-toggle aria-label="Open the menu" aria-controls="mat-nav" aria-expanded="false">@Ui.Icon("menu")</button>
+                <nav class="mat-crumbs" aria-label="Breadcrumb">
+                    <ol>
+                        @if (crumbs.Count == 0)
+                        {
+                            <li aria-current="page">@app.Name</li>
+                        }
+                        else
+                        {
+                            <li><a href="@(shell.PreviewQuery is null ? "/" : "#")">@app.Name</a></li>
+                            @for (var i = 0; i < crumbs.Count; i++)
+                            {
+                                var c = crumbs[i];
+                                if (i == crumbs.Count - 1 || c.Url is null)
+                                {
+                                    <li aria-current="page">@c.Text</li>
+                                }
+                                else
+                                {
+                                    <li><a href="@(shell.PreviewQuery is null ? c.Url : "#")">@c.Text</a></li>
+                                }
+                            }
+                        }
+                    </ol>
+                </nav>
+            </header>
+
+            <main class="mat-page @(width == "narrow" ? "mat-page--narrow" : width == "wide" ? "mat-page--wide" : "")" id="main">
+                @if (!string.IsNullOrEmpty(icon))
+                {
+                    <div class="mat-page__head">
+                        <span class="mat-page__icon">@Ui.Icon(icon)</span>
+                        <div class="mat-page__title">
+                            <h1>@title</h1>
+                            @if (!string.IsNullOrEmpty(sub))
+                            {
+                                <p class="mat-page__sub">@sub</p>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <div class="mat-menu" id="user-menu" role="menu" aria-label="@shell.UserName" hidden>
+        <div class="mat-menu__head">
+            <span class="mat-avatar" aria-hidden="true">@Ui.Initials(shell.UserName)</span>
+            <div><strong>@shell.UserName</strong><small>@shell.UserLine</small></div>
+        </div>
+        @foreach (var item in shell.UserMenu)
+        {
+            if (item.SeparatorBefore)
+            {
+                <div class="mat-menu__sep" role="separator"></div>
+            }
+
+            <a class="mat-menu__item @(item.Danger ? "mat-menu__item--danger" : "")" role="menuitem" href="@item.Href">@Ui.Icon(item.Icon)<span>@item.Title</span></a>
+        }
+    </div>
+
+    <script src="/ui/matui.js?v=@Toolkit.Hash"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

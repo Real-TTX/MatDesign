@@ -1,0 +1,82 @@
+@page "/Identity/Audit"
+@model MatDesign.Web.Pages.Identity.AuditModel
+@{
+    ViewData["Title"] = "Audit";
+    ViewData["PageIcon"] = "check-square";
+    ViewData["PageSub"] = "How close each app is to the rules, from a static scan of its repository.";
+    ViewData["Crumbs"] = Crumbs.Of(("Identity", "/Identity"), ("Audit", null));
+    ViewData["Width"] = "wide";
+}
+
+@if (!Model.Audit.Available)
+{
+    <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body"><strong>No scan yet.</strong> Run <code>node tools/audit.js</code> in the repository and restart.</div></div>
+}
+else
+{
+    <div class="mat-alert mat-alert--info">
+        @Ui.Icon("info")
+        <div class="mat-alert__body">
+            <strong>A static scan, @Model.Audit.Generated.</strong> It reads layouts, pages, stylesheets and scripts and records what is written there.
+            A tick means the code is there, not that the page looks right; a question mark means it could not be told. Run <code>node tools/audit.js</code> to refresh it.
+        </div>
+    </div>
+
+    <div class="mat-list">
+        <partial name="_Toolbar" model="Model.Toolbar" />
+
+        @if (Model.Rows.Count == 0)
+        {
+            <div class="mat-empty">
+                <span class="mat-empty__icon">@Ui.Icon("search")</span>
+                <div class="mat-empty__title">No app matches</div>
+                <a class="mat-btn mat-btn--primary" href="/Identity/Audit">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+            </div>
+        }
+        else
+        {
+            <div class="mat-table-wrap">
+                <table class="mat-table doc-matrix">
+                    <caption class="mat-sr-only">Audit of the apps against the rules</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">App</th>
+                            <th scope="col" class="mat-num">Score</th>
+                            @foreach (var check in Model.Audit.Checks)
+                            {
+                                <th scope="col"><a href="/Rules/Detail?id=@check.Rule" title="@check.How">@check.Title</a></th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var (app, scan, score) in Model.Rows)
+                        {
+                            <tr>
+                                <td data-label="App"><div class="mat-table__name">@Ui.Logo(app, "sm")<a href="/Identity/App?id=@app.Id">@app.Name</a></div></td>
+                                <td data-label="Score" class="mat-num mat-mono">@(score < 0 ? "-" : $"{score:0} %")</td>
+                                @foreach (var check in Model.Audit.Checks)
+                                {
+                                    var r = scan.Results[check.Id];
+                                    <td data-label="@check.Title"><span class="doc-mark doc-mark--@r.State" title="@r.Note">@Ui.Icon(AuditModel.Mark(r.State))<span class="mat-sr-only">@AuditModel.Word(r.State): @r.Note</span></span></td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    <section class="mat-section" aria-labelledby="how-title">
+        <div class="mat-section__head"><h2 id="how-title">What each column looks for</h2></div>
+        <div class="mat-card"><div class="mat-card__body">
+            <dl class="mat-kv">
+                @foreach (var check in Model.Audit.Checks)
+                {
+                    <dt>@check.Title</dt>
+                    <dd>@check.How <a href="/Rules/Detail?id=@check.Rule">@check.Rule</a></dd>
+                }
+            </dl>
+        </div></div>
+    </section>
+}

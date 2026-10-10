@@ -1,0 +1,74 @@
+@page "/Components"
+@model MatDesign.Web.Pages.Components.IndexModel
+@{
+    ViewData["Title"] = "Components";
+    ViewData["PageIcon"] = "toggle";
+    ViewData["PageSub"] = "Every control of the toolkit, live, with the markup to copy and the rules it follows.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Components", null));
+}
+
+<div class="mat-list" data-view-scope>
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No component matches</div>
+            <p>Change the search or the filter, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Components">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap" data-view="list">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Components of the toolkit</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Component</th>
+                        <th scope="col">Group</th>
+                        <th scope="col" class="mat-num mat-hide-sm">Examples</th>
+                        <th scope="col" class="mat-num mat-hide-sm">Rules</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.Items)
+                    {
+                        <tr>
+                            <td data-label="Component">
+                                <div class="mat-table__name">
+                                    <span class="mat-page__icon">@Ui.Icon(c.Icon)</span>
+                                    <span><a href="/Components/Detail?id=@c.Id">@c.Name</a><small>@c.Summary</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Group">@c.Group</td>
+                            <td data-label="Examples" class="mat-num mat-hide-sm">@c.Examples.Count</td>
+                            <td data-label="Rules" class="mat-num mat-hide-sm">@c.Rules.Count</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mat-gallery" data-view="gallery" hidden>
+            @foreach (var c in Model.Items)
+            {
+                <a class="mat-tile" href="/Components/Detail?id=@c.Id">
+                    <span class="mat-tile__media">@Ui.Icon(c.Icon)</span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">@c.Name</span>
+                        <span class="mat-tile__meta">@c.Group · @c.Examples.Count @(c.Examples.Count == 1 ? "example" : "examples")</span>
+                    </span>
+                </a>
+            }
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="/Patterns">@Ui.Icon("template")<span>See them in pages</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/Download">@Ui.Icon("download")<span>Download the toolkit</span></a>
+    </div>
+</div>

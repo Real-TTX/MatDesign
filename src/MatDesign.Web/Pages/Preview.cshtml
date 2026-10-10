@@ -1,0 +1,231 @@
+@page "/Preview"
+@model MatDesign.Web.Pages.PreviewModel
+@{
+    ViewData["Shell"] = Model.Shell;
+    var view = Model.View;
+    if (view == "auth")
+    {
+        Layout = "_Bare";
+    }
+
+    var (pageTitle, pageIcon, crumbs) = view switch
+    {
+        "dashboard" => ("Dashboard", "dashboard", Crumbs.Of(("Dashboard", null))),
+        "gallery" => ("Gallery", "grid", Crumbs.Of(("Work", Model.Query("list")), ("Gallery", null))),
+        "form" => ("Edit item", "edit", Crumbs.Of(("Work", Model.Query("list")), ("Items", Model.Query("list")), ("Quarterly report", null))),
+        "settings" => ("Settings", "settings", Crumbs.Of(("Account", Model.Query("settings")), ("Settings", null))),
+        "auth" => ("Sign in", "login", Crumbs.Of(("Sign in", null))),
+        _ => ("Items", "list", Crumbs.Of(("Work", Model.Query("list")), ("Items", null))),
+    };
+    ViewData["Title"] = pageTitle;
+    ViewData["PageIcon"] = pageIcon;
+    ViewData["Crumbs"] = crumbs;
+    ViewData["PageSub"] = view switch
+    {
+        "dashboard" => "What is going on, at a glance.",
+        "gallery" => "The same items as a gallery. The toolbar stays above.",
+        "form" => "Title, category and notification. The buttons are under the content.",
+        "settings" => "Tabs group the settings; one Save for all of them, under the content.",
+        _ => "The list with its toolbar above: search, filter and sort are dialogs.",
+    };
+}
+
+@if (view == "list")
+{
+    <div class="mat-list">
+        <partial name="_Toolbar" model="Model.Toolbar" />
+        @if (Model.Items.Count == 0)
+        {
+            <div class="mat-empty">
+                <span class="mat-empty__icon">@Ui.Icon("search")</span>
+                <div class="mat-empty__title">Nothing matches</div>
+                <p>Change the search or the filter.</p>
+            </div>
+        }
+        else
+        {
+            <div class="mat-table-wrap">
+                <table class="mat-table">
+                    <caption class="mat-sr-only">Items</caption>
+                    <thead><tr><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Status</th><th scope="col" class="mat-num">Size</th><th scope="col">Date</th><th scope="col"><span class="mat-sr-only">Actions</span></th></tr></thead>
+                    <tbody>
+                        @foreach (var s in Model.Items)
+                        {
+                            <tr>
+                                <td data-label="Name"><div class="mat-table__name"><span>@s.Name</span></div></td>
+                                <td data-label="Category">@s.Detail</td>
+                                <td data-label="Status"><span class="mat-pill mat-pill--@s.Tone">@s.Status</span></td>
+                                <td data-label="Size" class="mat-num mat-mono">@PreviewModel.Size(s.Size)</td>
+                                <td data-label="Date" class="mat-mono">@s.Date.ToString("yyyy-MM-dd")</td>
+                                <td class="mat-table__cell-actions">
+                                    <div class="mat-table__actions">
+                                        <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="@Model.Query("form")" aria-label="Edit @s.Name" data-tip="Edit">@Ui.Icon("edit")</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        <partial name="_Pager" model="Model.Pager" />
+        <div class="mat-actions">
+            <a class="mat-btn mat-btn--primary" href="@Model.Query("form")">@Ui.Icon("plus")<span>New item</span></a>
+            <a class="mat-btn mat-btn--secondary" href="@Model.Query("list")">@Ui.Icon("upload")<span>Import</span></a>
+        </div>
+    </div>
+}
+else if (view == "gallery")
+{
+    <div class="mat-list">
+        <partial name="_Toolbar" model="Model.Toolbar" />
+        <div class="mat-gallery">
+            @foreach (var s in Model.Items)
+            {
+                <a class="mat-tile" href="@Model.Query("form")">
+                    <span class="mat-tile__media">@Ui.Icon(s.Detail switch { "Finance" => "dollar", "Contracts" => "file-text", "Family" => "image", "Network" => "network", _ => "briefcase" })</span>
+                    <span class="mat-tile__body"><span class="mat-tile__title">@s.Name</span><span class="mat-tile__meta">@s.Detail · @PreviewModel.Size(s.Size)</span></span>
+                </a>
+            }
+        </div>
+        <partial name="_Pager" model="Model.Pager" />
+        <div class="mat-actions"><a class="mat-btn mat-btn--primary" href="@Model.Query("form")">@Ui.Icon("plus")<span>New item</span></a></div>
+    </div>
+}
+else if (view == "form")
+{
+    <form class="mat-form" method="get" action="/Preview" novalidate>
+        <div class="mat-card">
+            <div class="mat-card__head">@Ui.Icon("edit")<span class="mat-card__title">Item</span></div>
+            <div class="mat-card__body">
+                <div class="mat-form__grid">
+                    <div class="mat-field mat-field--full">
+                        <label class="mat-label" for="f-title">Title <span class="mat-req" aria-hidden="true">*</span></label>
+                        <input class="mat-input" id="f-title" name="title" value="Quarterly report" required data-msg-required="Please enter a title." />
+                        <span class="mat-hint">Shown in the list and in the breadcrumb.</span>
+                        <span class="mat-error" aria-live="polite"></span>
+                    </div>
+                    <div class="mat-field">
+                        <label class="mat-label" for="f-cat">Category</label>
+                        <select class="mat-select" id="f-cat" name="category"><option>Finance</option><option>Contracts</option><option>Family</option><option>Network</option></select>
+                        <span class="mat-error"></span>
+                    </div>
+                    <div class="mat-field">
+                        <label class="mat-label" for="f-date">Date</label>
+                        <input class="mat-input" id="f-date" name="date" type="date" value="2026-09-28" />
+                        <span class="mat-error"></span>
+                    </div>
+                    <div class="mat-field mat-field--full">
+                        <label class="mat-label" for="f-note">Note</label>
+                        <textarea class="mat-textarea" id="f-note" name="note" rows="3">Numbers are final after the review.</textarea>
+                        <span class="mat-error"></span>
+                    </div>
+                    <div class="mat-field mat-field--full">
+                        <label class="mat-switch"><input type="checkbox" id="f-notify" name="notify" checked /><span class="mat-switch__track"></span><span>Tell me when it changes</span></label>
+                    </div>
+                    <div class="mat-field mat-field--full" data-show-if="#f-notify" data-show-value="true">
+                        <label class="mat-label" for="f-mail">E-mail for the notification</label>
+                        <input class="mat-input" id="f-mail" name="mail" type="email" value="alex@example.com" data-msg-type="Please enter an e-mail address like name@example.com." />
+                        <span class="mat-hint">Only asked while the switch is on.</span>
+                        <span class="mat-error"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mat-btn-row">
+            <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+            <a class="mat-btn mat-btn--secondary" href="@Model.Query("list")">@Ui.Icon("back")<span>Back</span></a>
+            <span class="mat-btn-row__spacer"></span>
+            <button type="button" class="mat-btn mat-btn--danger" data-confirm="Delete “Quarterly report”? This cannot be undone." data-confirm-ok="Delete">@Ui.Icon("trash")<span>Delete</span></button>
+        </div>
+    </form>
+}
+else if (view == "settings")
+{
+    <form class="mat-form" method="get" action="/Preview" novalidate>
+        <input type="hidden" name="view" value="settings" />
+        <input type="hidden" name="app" value="@Model.App.Id" />
+        <div data-tabs>
+            <div class="mat-tabs" role="tablist" aria-label="Settings">
+                <button type="button" class="mat-tab" role="tab" id="tab-general" aria-controls="panel-general" aria-selected="true">@Ui.Icon("user")<span>General</span></button>
+                <button type="button" class="mat-tab" role="tab" id="tab-look" aria-controls="panel-look" aria-selected="false" tabindex="-1">@Ui.Icon("palette")<span>Appearance</span></button>
+                <button type="button" class="mat-tab" role="tab" id="tab-notify" aria-controls="panel-notify" aria-selected="false" tabindex="-1">@Ui.Icon("bell")<span>Notifications</span></button>
+            </div>
+
+            <div class="mat-tabpanel" role="tabpanel" id="panel-general" aria-labelledby="tab-general">
+                <div class="mat-card"><div class="mat-card__body">
+                    <div class="mat-form__grid">
+                        <div class="mat-field"><label class="mat-label" for="s-name">Display name</label><input class="mat-input" id="s-name" name="name" value="Alex Morgan" /><span class="mat-error"></span></div>
+                        <div class="mat-field"><label class="mat-label" for="s-lang">Language</label><select class="mat-select" id="s-lang" name="lang"><option>English</option><option>Deutsch</option></select></div>
+                        <div class="mat-field mat-field--full"><label class="mat-label" for="s-mail">E-mail</label><input class="mat-input" id="s-mail" name="mail" type="email" value="alex@example.com" /><span class="mat-hint">Used to sign in and for notifications.</span><span class="mat-error"></span></div>
+                    </div>
+                </div></div>
+            </div>
+
+            <div class="mat-tabpanel" role="tabpanel" id="panel-look" aria-labelledby="tab-look" hidden>
+                <div class="mat-card"><div class="mat-card__body mat-stack">
+                    <div class="mat-field">
+                        <span class="mat-label">Theme</span>
+                        <div class="mat-seg" role="group" aria-label="Theme">
+                            <button type="button" class="mat-seg__btn" data-theme-set="system" aria-pressed="true">@Ui.Icon("monitor")<span>System</span></button>
+                            <button type="button" class="mat-seg__btn" data-theme-set="light" aria-pressed="false">@Ui.Icon("sun")<span>Light</span></button>
+                            <button type="button" class="mat-seg__btn" data-theme-set="dark" aria-pressed="false">@Ui.Icon("moon")<span>Dark</span></button>
+                        </div>
+                        <span class="mat-hint">The button at the bottom of the menu does the same.</span>
+                    </div>
+                </div></div>
+            </div>
+
+            <div class="mat-tabpanel" role="tabpanel" id="panel-notify" aria-labelledby="tab-notify" hidden>
+                <div class="mat-card"><div class="mat-card__body mat-stack mat-stack--sm">
+                    <label class="mat-switch"><input type="checkbox" id="s-n1" name="n1" checked /><span class="mat-switch__track"></span><span>A backup failed</span></label>
+                    <label class="mat-switch"><input type="checkbox" id="s-n2" name="n2" /><span class="mat-switch__track"></span><span>A new version is available</span></label>
+                    <label class="mat-switch"><input type="checkbox" id="s-n3" name="n3" checked /><span class="mat-switch__track"></span><span>Weekly summary</span></label>
+                </div></div>
+            </div>
+        </div>
+
+        <div class="mat-btn-row">
+            <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+            <a class="mat-btn mat-btn--secondary" href="@Model.Query("dashboard")">@Ui.Icon("back")<span>Back</span></a>
+        </div>
+    </form>
+}
+else if (view == "dashboard")
+{
+    <div class="mat-grid mat-grid--4">
+        <div class="mat-card"><div class="mat-card__body"><div class="mat-muted">Items</div><h2>128</h2><small class="mat-muted">+6 this week</small></div></div>
+        <div class="mat-card"><div class="mat-card__body"><div class="mat-muted">To review</div><h2>7</h2><small class="mat-muted">3 older than a week</small></div></div>
+        <div class="mat-card"><div class="mat-card__body"><div class="mat-muted">Failed</div><h2>2</h2><small class="mat-muted">last: Tax return 2025</small></div></div>
+        <div class="mat-card"><div class="mat-card__body"><div class="mat-muted">Storage</div><h2>63 %</h2><div class="mat-meter" role="progressbar" aria-valuenow="63" aria-valuemin="0" aria-valuemax="100" aria-label="Storage used"><div class="mat-meter__fill" data-value="63"></div></div></div></div>
+    </div>
+    <div class="mat-card">
+        <div class="mat-card__head">@Ui.Icon("activity")<span class="mat-card__title">Status</span></div>
+        <div class="mat-card__body mat-stack mat-stack--sm">
+            <div class="mat-row mat-row--between"><span>Importer</span><span class="mat-pill mat-pill--ok">Online</span></div>
+            <div class="mat-row mat-row--between"><span>Search index</span><span class="mat-pill mat-pill--warn">Degraded</span></div>
+            <div class="mat-row mat-row--between"><span>Mail connection</span><span class="mat-pill mat-pill--error">Offline</span></div>
+            <div class="mat-row mat-row--between"><span>Backup</span><span class="mat-pill">Unknown</span></div>
+        </div>
+    </div>
+    <div class="mat-alert mat-alert--info">@Ui.Icon("info")<div class="mat-alert__body"><strong>Tip.</strong> The accent changes with the app; the status colours never do.</div></div>
+}
+else if (view == "auth")
+{
+    <div class="mat-auth__card">
+        <div class="mat-auth__brand">
+            @Ui.Logo(Model.App, "lg")
+            <h1>@Model.App.Name</h1>
+            <p class="mat-muted">@Model.App.Tagline</p>
+        </div>
+        <form class="mat-form" method="get" action="/Preview" novalidate>
+            <div class="mat-field"><label class="mat-label" for="u">E-mail</label><input class="mat-input" id="u" name="u" type="email" value="alex@example.com" autocomplete="username" /><span class="mat-error"></span></div>
+            <div class="mat-field"><label class="mat-label" for="p">Password</label><input class="mat-input" id="p" name="p" type="password" value="password" autocomplete="current-password" /><span class="mat-error"></span></div>
+            <div class="mat-btn-row mat-btn-row--plain">
+                <button type="submit" class="mat-btn mat-btn--primary mat-btn--block">Sign in</button>
+            </div>
+        </form>
+    </div>
+}
+

@@ -1,0 +1,16 @@
+@model AccentReport
+@*
+    The colours the toolkit derives from one accent, light and dark. Used by the page of an app and by the builder (one code base).
+*@
+@{
+    var r = Model;
+    var app = r.App;
+}
+<div class="doc-swatches">
+    <div class="doc-swatch"><div class="doc-swatch__chip">@Ui.Swatch(r.Accent, "chip")</div><div class="doc-swatch__body"><span class="doc-swatch__name">Accent, light</span><span class="doc-swatch__value">@r.Accent.ToHex()</span><span class="doc-swatch__note">buttons, active item, switch</span></div></div>
+    <div class="doc-swatch"><div class="doc-swatch__chip">@Ui.Swatch(r.Hover, "chip")</div><div class="doc-swatch__body"><span class="doc-swatch__name">Hover, light</span><span class="doc-swatch__value">@r.Hover.ToHex()</span><span class="doc-swatch__note">86 % accent, 14 % black</span></div></div>
+    <div class="doc-swatch"><div class="doc-swatch__chip">@Ui.Swatch(r.LinkLight, "chip")</div><div class="doc-swatch__body"><span class="doc-swatch__name">Link, light</span><span class="doc-swatch__value">@r.LinkLight.ToHex()</span><span class="doc-swatch__note">@(app.AccentText is null ? "78 % accent, 22 % black" : "set by the app")</span></div></div>
+    <div class="doc-swatch"><div class="doc-swatch__chip">@Ui.Swatch(r.DarkAccent, "chip")</div><div class="doc-swatch__body"><span class="doc-swatch__name">Accent, dark</span><span class="doc-swatch__value">@r.DarkAccent.ToHex()</span><span class="doc-swatch__note">74 % accent, 26 % white; dark text on it</span></div></div>
+    <div class="doc-swatch"><div class="doc-swatch__chip">@Ui.Swatch(r.LinkDark, "chip")</div><div class="doc-swatch__body"><span class="doc-swatch__name">Link, dark</span><span class="doc-swatch__value">@r.LinkDark.ToHex()</span><span class="doc-swatch__note">the dark accent, lightened</span></div></div>
+    <div class="doc-swatch"><div class="doc-swatch__chip">@Ui.Swatch(r.OnAccent, "chip")</div><div class="doc-swatch__body"><span class="doc-swatch__name">Text on the accent, light</span><span class="doc-swatch__value">@r.OnAccent.ToHex()</span><span class="doc-swatch__note">@(app.OnAccent is null ? "white" : "dark")</span></div></div>
+</div>

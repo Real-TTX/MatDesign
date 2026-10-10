@@ -1,0 +1,67 @@
+@page "/Rules/Detail"
+@model MatDesign.Web.Pages.Rules.DetailModel
+@{
+    var rule = Model.Rule;
+    ViewData["Title"] = rule.Id + " " + rule.Title;
+    ViewData["Crumbs"] = Crumbs.Of(("Rules", "/Rules"), ("Rulebook", "/Rules"), (rule.Id, null));
+    ViewData["Width"] = "narrow";
+}
+
+<div class="mat-page__head">
+    <span class="mat-page__icon">@Ui.Icon(Model.Area.Icon)</span>
+    <div class="mat-page__title">
+        <div class="mat-row"><span class="doc-rule-id">@rule.Id</span><span class="mat-pill @Ui.RuleLevelClass(rule.Level)">@rule.Level</span></div>
+        <h1>@rule.Title</h1>
+        <p class="mat-page__sub">@Model.Area.Name: @Model.Area.Summary</p>
+    </div>
+</div>
+
+<article class="mat-card">
+    <div class="mat-card__body doc-rule">
+        <p class="doc-rule__statement">@Ui.Inline(rule.Statement)</p>
+
+        @if (rule.Why is not null)
+        {
+            <blockquote class="doc-quote">@Ui.Inline(rule.Why)</blockquote>
+        }
+
+        @if (rule.Do is not null || rule.Dont is not null)
+        {
+            <div class="doc-dodont">
+                @if (rule.Do is not null) { <div class="doc-do"><strong>Do</strong>@("\n")@rule.Do</div> }
+                @if (rule.Dont is not null) { <div class="doc-dont"><strong>Do not</strong>@("\n")@rule.Dont</div> }
+            </div>
+        }
+
+        <dl class="mat-kv">
+            <dt>Source</dt><dd>@rule.Source</dd>
+            <dt>Checked by</dt><dd>@rule.Check</dd>
+            <dt>Cite it as</dt><dd><code>@rule.Id</code> <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-copy="@rule.Id">@Ui.Icon("copy")<span>Copy</span></button></dd>
+        </dl>
+    </div>
+</article>
+
+<section class="mat-section" aria-labelledby="area-title">
+    <div class="mat-section__head"><h2 id="area-title">More in @Model.Area.Name</h2></div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">Rules of the same area</caption>
+            <thead><tr><th scope="col">Rule</th><th scope="col">Level</th></tr></thead>
+            <tbody>
+                @foreach (var other in Model.InArea)
+                {
+                    <tr class="@(other.Id == rule.Id ? "is-selected" : "")">
+                        <td data-label="Rule"><div class="mat-table__name"><span class="doc-rule-id">@other.Id</span><span>@if (other.Id == rule.Id) { <strong>@other.Title</strong> } else { <a href="/Rules/Detail?id=@other.Id">@other.Title</a> }</span></div></td>
+                        <td data-label="Level"><span class="mat-pill @Ui.RuleLevelClass(other.Level)">@other.Level</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="mat-btn-row">
+    <a class="mat-btn mat-btn--secondary" href="/Rules">@Ui.Icon("back")<span>Back to the rulebook</span></a>
+    @if (Model.Previous is not null) { <a class="mat-btn mat-btn--ghost" href="/Rules/Detail?id=@Model.Previous.Id">@Ui.Icon("chevron-left")<span>@Model.Previous.Id</span></a> }
+    @if (Model.Next is not null) { <a class="mat-btn mat-btn--ghost" href="/Rules/Detail?id=@Model.Next.Id"><span>@Model.Next.Id</span>@Ui.Icon("chevron-right")</a> }
+</div>

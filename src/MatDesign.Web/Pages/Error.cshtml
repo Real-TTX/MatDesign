@@ -1,0 +1,14 @@
+@page "/Error"
+@{
+    ViewData["Title"] = "Not found";
+    ViewData["PageIcon"] = "alert";
+    ViewData["Crumbs"] = new List<(string, string?)> { ("Error", null) }.AsReadOnly() as IReadOnlyList<(string Text, string? Url)>;
+    var code = Request.Query["code"].ToString();
+}
+
+<div class="mat-empty">
+    <span class="mat-empty__icon">@Ui.Icon("alert")</span>
+    <div class="mat-empty__title">@(code == "404" || code == "" ? "This page does not exist" : $"Something went wrong ({code})")</div>
+    <p>The address may be wrong, or the page has moved.</p>
+    <a class="mat-btn mat-btn--primary" href="/">@Ui.Icon("home")<span>Go to the overview</span></a>
+</div>

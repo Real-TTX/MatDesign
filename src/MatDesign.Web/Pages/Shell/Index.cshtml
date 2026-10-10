@@ -1,0 +1,88 @@
+@page "/Shell"
+@{
+    ViewData["Title"] = "Shell";
+    ViewData["PageIcon"] = "sidebar";
+    ViewData["PageSub"] = "The frame around every page of every app: menu on the left, breadcrumb above the content.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Shell", null));
+
+    var parts = new (string Title, string Text, string Rule)[]
+    {
+        ("Logo and app name", "Always at the top of the menu. A click leads to the start page.", "SHELL-01"),
+        ("Menu items", "An icon and a label. The current page is marked; related items sit under small headings; a count is a badge.", "SHELL-02"),
+        ("The menu scrolls on its own", "The page itself never scrolls. Logo and foot stay in place while the items between them scroll.", "SHELL-07"),
+        ("The user and the theme button", "The user is a button that opens a context menu (account, settings, Sign out last). Beside it the 3-state button: System, Light, Dark.", "SHELL-03"),
+        ("The version", "Below the user, in mono, small and muted: the app name and its version.", "SHELL-06"),
+        ("The breadcrumb", "Above every page. The last item is the current page and not a link. On a phone the last two are shown.", "SHELL-08"),
+        ("The page head", "An icon, the title (h1) and a line of explanation. No actions here: they go under the content.", "SHELL-09"),
+        ("The content", "At most 1240 px wide; forms and reading pages 780 px. Lists have their toolbar on top.", "SHELL-10"),
+    };
+}
+
+<section class="mat-section" aria-labelledby="anatomy-title">
+    <div class="mat-section__head"><h2 id="anatomy-title">Anatomy</h2><p class="mat-section__lead">Eight parts, always in the same place. The numbers lead to the rules.</p></div>
+    <div class="doc-anatomy">
+        <div class="doc-wire" role="img" aria-label="A wireframe of the shell with eight numbered parts">
+            <div class="doc-wire__nav">
+                <div class="doc-wire__brand"><b class="doc-n">1</b><span>Logo, name</span></div>
+                <div class="doc-wire__items"><b class="doc-n">2</b><span>Menu items</span><b class="doc-n">3</b><span class="doc-wire__note">scrolls on its own</span></div>
+                <div class="doc-wire__foot">
+                    <div><b class="doc-n">4</b><span>User · theme</span></div>
+                    <div><b class="doc-n">5</b><span>Version</span></div>
+                </div>
+            </div>
+            <div class="doc-wire__main">
+                <div class="doc-wire__top"><b class="doc-n">6</b><span>Breadcrumb</span></div>
+                <div class="doc-wire__head"><b class="doc-n">7</b><span>Icon · Title · line</span></div>
+                <div class="doc-wire__body"><b class="doc-n">8</b><span>Content: toolbar, list or form, buttons under it</span></div>
+            </div>
+        </div>
+        <ol class="doc-steps">
+            @foreach (var p in parts)
+            {
+                <li><div><strong>@p.Title</strong><span>@p.Text <a href="/Rules/Detail?id=@p.Rule">@p.Rule</a></span></div></li>
+            }
+        </ol>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="live-title">
+    <div class="mat-section__head"><h2 id="live-title">The real thing</h2><p class="mat-section__lead">This is a sample app of the family drawn by the same layout as this site, here in the accent of MatMail. Use its menu, the user menu and the theme button.</p></div>
+    <div class="doc-frames">
+        <iframe class="doc-frame" title="The shell on a desktop" loading="lazy" src="/Preview?app=matmail&amp;view=list"></iframe>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="phone-title">
+    <div class="mat-section__head"><h2 id="phone-title">On a phone</h2><p class="mat-section__lead">Below 900 px the menu is a drawer behind the burger button; the breadcrumb shows its last two items; the toolbar keeps its three buttons.</p></div>
+    <div class="doc-frames">
+        <iframe class="doc-frame doc-frame--phone" title="The shell on a phone: a list" loading="lazy" src="/Preview?app=matmail&amp;view=list"></iframe>
+        <iframe class="doc-frame doc-frame--phone" title="The shell on a phone: a form" loading="lazy" src="/Preview?app=matmail&amp;view=form"></iframe>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="skeleton-title">
+    <div class="mat-section__head"><h2 id="skeleton-title">The skeleton</h2><p class="mat-section__lead">What an app puts in its layout. One stylesheet, one boot script in the head, one script at the end, the sprite inline.</p></div>
+    <div class="mat-card"><div class="mat-card__body mat-stack">
+        <pre class="mat-code doc-skeleton" id="skeleton"><code>@ShellSkeleton.Html</code></pre>
+        <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-copy="#skeleton">@Ui.Icon("copy")<span>Copy the skeleton</span></button></div>
+    </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="rules-title">
+    <div class="mat-section__head"><h2 id="rules-title">Rules for the shell</h2></div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">Rules of the shell</caption>
+            <thead><tr><th scope="col">Rule</th><th scope="col">Level</th></tr></thead>
+            <tbody>
+                @foreach (var rule in RuleBook.In("SHELL"))
+                {
+                    <tr>
+                        <td data-label="Rule"><div class="mat-table__name"><span class="doc-rule-id">@rule.Id</span><span><a href="/Rules/Detail?id=@rule.Id">@rule.Title</a></span></div></td>
+                        <td data-label="Level"><span class="mat-pill @Ui.RuleLevelClass(rule.Level)">@rule.Level</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

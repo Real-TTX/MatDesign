@@ -1,0 +1,88 @@
+@page "/Components/Detail"
+@model MatDesign.Web.Pages.Components.DetailModel
+@{
+    var c = Model.Component;
+    ViewData["Title"] = c.Name;
+    ViewData["PageIcon"] = c.Icon;
+    ViewData["PageSub"] = c.Summary;
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Components", "/Components"), (c.Name, null));
+    var n = 0;
+}
+
+@foreach (var ex in c.Examples)
+{
+    n++;
+    var sourceId = $"src-{n}";
+    <section class="doc-example" aria-labelledby="ex-@n">
+        <div class="doc-example__head">
+            <h2 id="ex-@n">@ex.Title</h2>
+            @if (ex.Note is not null) { <p>@Ui.Rich(ex.Note)</p> }
+        </div>
+
+        @if (ex.Live && ex.Html.Length > 0)
+        {
+            <div class="doc-example__live">@Html.Raw(ex.Html)</div>
+        }
+        else if (ex.Demo is not null)
+        {
+            <div class="doc-example__live">
+                <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-doc-demo="@ex.Demo">@Ui.Icon("play")<span>Try it</span></button></div>
+            </div>
+        }
+
+        <details class="doc-example__code" open="@(!ex.Live || ex.Html.Length == 0)">
+            <summary>@(ex.Js is not null ? "Script" : "Markup")</summary>
+            <div class="mat-stack mat-stack--sm">
+                <pre class="mat-code" id="@sourceId"><code>@(ex.Js ?? ex.Html)</code></pre>
+                <div class="mat-row">
+                    <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-copy="#@sourceId">@Ui.Icon("copy")<span>Copy</span></button>
+                    @if (ex.Js is not null && ex.Demo is not null && ex.Live && ex.Html.Length > 0)
+                    {
+                        <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-doc-demo="@ex.Demo">@Ui.Icon("play")<span>Try it</span></button>
+                    }
+                </div>
+            </div>
+        </details>
+    </section>
+}
+
+@if (c.Behaviour.Count > 0)
+{
+    <section class="mat-card" aria-labelledby="behaviour-title">
+        <div class="mat-card__head">@Ui.Icon("info")<h2 class="mat-card__title" id="behaviour-title">Good to know</h2></div>
+        <div class="mat-card__body">
+            <ul class="doc-list">
+                @foreach (var line in c.Behaviour) { <li>@Ui.Rich(line)</li> }
+            </ul>
+        </div>
+    </section>
+}
+
+<section class="mat-section" aria-labelledby="rules-title">
+    <div class="mat-section__head"><h2 id="rules-title">Rules for @c.Name.ToLowerInvariant()</h2><p class="mat-section__lead">The controls follow these rules; an app that uses the toolkit follows them with no extra work.</p></div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">Rules that apply to this component</caption>
+            <thead><tr><th scope="col">Rule</th><th scope="col">Level</th></tr></thead>
+            <tbody>
+                @foreach (var rule in Model.Rules)
+                {
+                    <tr>
+                        <td data-label="Rule"><div class="mat-table__name"><span class="doc-rule-id">@rule.Id</span><span><a href="/Rules/Detail?id=@rule.Id">@rule.Title</a></span></div></td>
+                        <td data-label="Level"><span class="mat-pill @Ui.RuleLevelClass(rule.Level)">@rule.Level</span></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<div class="mat-btn-row">
+    <a class="mat-btn mat-btn--secondary" href="/Components">@Ui.Icon("back")<span>Back to the components</span></a>
+    @if (Model.Previous is not null) { <a class="mat-btn mat-btn--ghost" href="/Components/Detail?id=@Model.Previous.Id">@Ui.Icon("chevron-left")<span>@Model.Previous.Name</span></a> }
+    @if (Model.Next is not null) { <a class="mat-btn mat-btn--ghost" href="/Components/Detail?id=@Model.Next.Id"><span>@Model.Next.Name</span>@Ui.Icon("chevron-right")</a> }
+</div>
+
+@section Scripts {
+    <script src="/js/doc.js"></script>
+}

@@ -1,0 +1,138 @@
+@page "/Download"
+@model MatDesign.Web.Pages.Download.IndexModel
+@{
+    ViewData["Title"] = "Download";
+    ViewData["PageIcon"] = "download";
+    ViewData["PageSub"] = "MatUi: four files and one line of colour per app.";
+    ViewData["Crumbs"] = Crumbs.Of(("Use it", "/Download"), ("Download", null));
+}
+
+<section class="mat-card mat-card--accent" aria-labelledby="zip-title">
+    <div class="mat-card__body mat-stack">
+        <div class="mat-row mat-row--between">
+            <div>
+                <h2 id="zip-title">MatUi @Model.Version</h2>
+                <p class="mat-muted">Hash <code>@Model.Hash</code>. Everything below in one archive, with a README.</p>
+            </div>
+            <a class="mat-btn mat-btn--primary" href="@Model.ZipUrl">@Ui.Icon("download")<span>Download the archive (@Ui.Kb(Model.ZipBytes))</span></a>
+        </div>
+        <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body"><strong>Copy, do not link.</strong> An app carries these files itself and never loads them from this site (<a href="/Rules/Detail?id=CODE-03">CODE-03</a>): it must work offline and as a PWA. Update by copying again; the version is in the first line of <code>matui.css</code>.</div></div>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="files-title">
+    <div class="mat-section__head"><h2 id="files-title">The four files</h2></div>
+    <div class="mat-grid">
+        @foreach (var f in Model.Main)
+        {
+            <div class="mat-card">
+                <div class="mat-card__head">@Ui.Icon(f.Name.EndsWith(".css") ? "palette" : f.Name.EndsWith(".svg") ? "star" : "code")<h3 class="mat-card__title mat-mono">@f.Name</h3><span class="mat-pill mat-pill--plain">@Ui.Kb(f.Bytes)</span></div>
+                <div class="mat-card__body"><p class="mat-muted">@f.Description</p></div>
+                <div class="mat-card__foot">
+                    <a class="mat-btn mat-btn--secondary mat-btn--sm" href="@f.Url" download>@Ui.Icon("download")<span>Download</span></a>
+                    <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-copy="@Model.Absolute(f.Url)">@Ui.Icon("copy")<span>Copy the address</span></button>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="use-title">
+    <div class="mat-section__head"><h2 id="use-title">Use it</h2></div>
+    <div data-tabs>
+        <div class="mat-tabs" role="tablist" aria-label="Ways to use the toolkit">
+            <button type="button" class="mat-tab" role="tab" id="tab-html" aria-controls="panel-html" aria-selected="true">@Ui.Icon("globe")<span>Any web app</span></button>
+            <button type="button" class="mat-tab" role="tab" id="tab-net" aria-controls="panel-net" aria-selected="false" tabindex="-1">@Ui.Icon("server")<span>ASP.NET Core</span></button>
+        </div>
+
+        <div class="mat-tabpanel" role="tabpanel" id="panel-html" aria-labelledby="tab-html">
+            <div class="mat-card"><div class="mat-card__body mat-stack">
+                <p>Put the files into the static files of the app. The layout needs one stylesheet, a boot script in the head, a script at the end and the sprite inline. The skeleton of a whole page is on the <a href="/Shell">shell</a> page.</p>
+                <pre class="mat-code" id="use-html"><code>&lt;html lang="en" data-app="yourapp"&gt;
+&lt;head&gt;
+  &lt;script src="/matui.boot.js"&gt;&lt;/script&gt;
+  &lt;link rel="stylesheet" href="/matui.css" /&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;!-- the contents of matui-icons.svg, inline, once --&gt;
+  ...
+  &lt;script src="/matui.js"&gt;&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+
+/* your own CSS: the colour of the app, nothing else */
+[data-app="yourapp"] { --mat-app-accent: #2f6feb; }</code></pre>
+                <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-copy="#use-html">@Ui.Icon("copy")<span>Copy</span></button></div>
+            </div></div>
+        </div>
+
+        <div class="mat-tabpanel" role="tabpanel" id="panel-net" aria-labelledby="tab-net" hidden>
+            <div class="mat-card"><div class="mat-card__body mat-stack">
+                <p>In a .NET solution reference the <code>MatUi</code> project (a Razor class library). Its files are served below <code>/_content/MatUi/</code>; the sprite is read and written into the layout once.</p>
+                <pre class="mat-code" id="use-net"><code>&lt;!-- App.csproj --&gt;
+&lt;ProjectReference Include="..\MatUi\MatUi.csproj" /&gt;
+
+&lt;!-- _Layout.cshtml, in the head --&gt;
+&lt;script src="~/_content/MatUi/js/matui.boot.js"&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="~/_content/MatUi/css/matui.tokens.css" /&gt;
+&lt;link rel="stylesheet" href="~/_content/MatUi/css/matui.base.css" /&gt;
+&lt;!-- ... shell, controls, lists, dialogs, apps in this order --&gt;
+
+&lt;!-- at the end of the body --&gt;
+&lt;script src="~/_content/MatUi/js/matui.js"&gt;&lt;/script&gt;</code></pre>
+                <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-copy="#use-net">@Ui.Icon("copy")<span>Copy</span></button></div>
+            </div></div>
+        </div>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="parts-title">
+    <div class="mat-section__head"><h2 id="parts-title">The parts of the stylesheet</h2><p class="mat-section__lead"><code>matui.css</code> is these seven files in this order. An app that wants only some of them loads them one by one.</p></div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">The parts of matui.css</caption>
+            <thead><tr><th scope="col">File</th><th scope="col" class="mat-hide-sm">What is in it</th><th scope="col" class="mat-num">Size</th><th scope="col"><span class="mat-sr-only">Download</span></th></tr></thead>
+            <tbody>
+                @foreach (var f in Model.Parts)
+                {
+                    <tr>
+                        <td data-label="File"><code>@f.Name</code></td>
+                        <td data-label="What is in it" class="mat-hide-sm">@PartText(f.Name)</td>
+                        <td data-label="Size" class="mat-num mat-mono">@Ui.Kb(f.Bytes)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="@f.Url" download aria-label="Download @f.Name" data-tip="Download">@Ui.Icon("download")</a></div></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="api-title">
+    <div class="mat-section__head"><h2 id="api-title">The design system as data</h2><p class="mat-section__lead">For tools, tests and other apps that want to read the rules, the accents or the tokens instead of copying them.</p></div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">Data endpoints</caption>
+            <thead><tr><th scope="col">Address</th><th scope="col">What it returns</th></tr></thead>
+            <tbody>
+                @foreach (var (url, what) in Model.Endpoints)
+                {
+                    <tr><td data-label="Address"><a class="mat-mono" href="@url">@url</a></td><td data-label="What it returns">@what</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@functions {
+    private static string PartText(string name) => name switch
+    {
+        "matui.tokens.css" => "The tokens: colours in light and dark, type, space, radii, shadows, motion, layers; the accent derivation.",
+        "matui.base.css" => "Reset, typography, focus ring, hidden scrollbars, utilities, the icon.",
+        "matui.shell.css" => "The menu, the top bar with the breadcrumb, the page, the sign-in page.",
+        "matui.controls.css" => "Buttons, fields, switches, cards, pills, alerts, toasts, key and value, meter, tooltip.",
+        "matui.lists.css" => "The toolbar, the table, pagination, the gallery, tabs, the context menu.",
+        "matui.dialogs.css" => "The dialog, full screen on a phone, and its choices.",
+        "matui.apps.css" => "The accent of every app of the family, and the presets a user can choose.",
+        _ => string.Empty,
+    };
+}

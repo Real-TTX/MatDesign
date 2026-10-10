@@ -1,0 +1,74 @@
+@page "/Patterns"
+@model MatDesign.Web.Pages.Patterns.IndexModel
+@{
+    ViewData["Title"] = "Patterns";
+    ViewData["PageIcon"] = "template";
+    ViewData["PageSub"] = "The page types of the family, in a real frame: what each consists of and which rules make it so.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Patterns", null));
+}
+
+<div class="mat-list" data-view-scope>
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No pattern matches</div>
+            <p>Change the search or the filter, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Patterns">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap" data-view="list">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Page patterns</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Pattern</th>
+                        <th scope="col">Kind</th>
+                        <th scope="col" class="mat-num mat-hide-sm">Parts</th>
+                        <th scope="col" class="mat-num mat-hide-sm">Rules</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in Model.Items)
+                    {
+                        <tr>
+                            <td data-label="Pattern">
+                                <div class="mat-table__name">
+                                    <span class="mat-page__icon">@Ui.Icon(p.Icon)</span>
+                                    <span><a href="/Patterns/Detail?id=@p.Id">@p.Name</a><small>@p.Summary</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Kind">@p.Kind</td>
+                            <td data-label="Parts" class="mat-num mat-hide-sm">@p.Parts.Count</td>
+                            <td data-label="Rules" class="mat-num mat-hide-sm">@p.Rules.Count</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mat-gallery" data-view="gallery" hidden>
+            @foreach (var p in Model.Items)
+            {
+                <a class="mat-tile" href="/Patterns/Detail?id=@p.Id">
+                    <span class="mat-tile__media">@Ui.Icon(p.Icon)</span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">@p.Name</span>
+                        <span class="mat-tile__meta">@p.Kind · @p.Parts.Count parts</span>
+                    </span>
+                </a>
+            }
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="/Components">@Ui.Icon("toggle")<span>The controls</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/Shell">@Ui.Icon("sidebar")<span>The shell</span></a>
+    </div>
+</div>

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>MatDesign.Web</RootNamespace>
+    <!-- The site is in English and formats everything with the invariant culture (Program.cs): no ICU library is needed in the image. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MatUi\MatUi.csproj" />
+    <ProjectReference Include="..\MatDesign.Core\MatDesign.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Data/audit.json (the snapshot of tools/audit.js, read at run time from <content root>/Data) is a Content item by default
+       and is copied to the output and to the publish folder. -->
+
+</Project>

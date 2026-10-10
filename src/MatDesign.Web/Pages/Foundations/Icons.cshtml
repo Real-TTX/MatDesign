@@ -1,0 +1,60 @@
+@page "/Foundations/Icons"
+@model MatDesign.Web.Pages.Foundations.IconsModel
+@{
+    ViewData["Title"] = "Icons";
+    ViewData["PageIcon"] = "star";
+    ViewData["PageSub"] = $"{Model.Count} icons in one sprite. Line icons, 24 px grid, they take the colour of the text around them.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Foundations", "/Foundations"), ("Icons", null));
+}
+
+<partial name="_FoundationsTabs" model='"icons"' />
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No icon matches</div>
+            <p>Change the search or the filter, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Foundations/Icons">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="doc-icons">
+            @foreach (var name in Model.Items)
+            {
+                <button type="button" class="doc-icon" data-copy="@IconsModel.Markup(name)" title="Copy the markup of @name">
+                    @Ui.Icon(name)
+                    <span>@name</span>
+                </button>
+            }
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+</div>
+
+<section class="mat-section" aria-labelledby="use-title">
+    <div class="mat-section__head"><h2 id="use-title">Using an icon</h2><p class="mat-section__lead">Click an icon above to copy this markup. The sprite is placed once, inline, at the top of the page; an icon never replaces the text of a button unless the button has an <code>aria-label</code> (ICON-03).</p></div>
+    <div class="mat-card"><div class="mat-card__body mat-stack">
+        <pre class="mat-code"><code>@IconsModel.Markup("star")</code></pre>
+        <div class="mat-row">
+            <span class="mat-row mat-row--nowrap">@Ui.Icon("star")<span>Inherits the text colour</span></span>
+            <button type="button" class="mat-btn mat-btn--primary">@Ui.Icon("plus")<span>With a label</span></button>
+            <button type="button" class="mat-btn mat-btn--secondary mat-btn--icon" aria-label="Edit">@Ui.Icon("edit")</button>
+        </div>
+    </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="rules-title">
+    <div class="mat-section__head"><h2 id="rules-title">Rules for icons</h2></div>
+    <div class="mat-grid">
+        @foreach (var rule in RuleBook.In("ICON"))
+        {
+            <a class="mat-card" href="/Rules/Detail?id=@rule.Id"><div class="mat-card__body mat-stack mat-stack--sm"><span class="doc-rule-id">@rule.Id</span><strong>@rule.Title</strong></div></a>
+        }
+    </div>
+</section>

@@ -1,0 +1,75 @@
+@page "/Foundations/Type"
+@inject ToolkitFiles Toolkit
+@{
+    ViewData["Title"] = "Type";
+    ViewData["PageIcon"] = "type";
+    ViewData["PageSub"] = "System fonts, one scale, mono for technical values.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Foundations"), ("Foundations", "/Foundations"), ("Type", null));
+    string Value(string name) => Toolkit.Tokens.First(t => t.Name == name).Light;
+    var sizes = new (string Key, string Name, string Px, string Use)[]
+    {
+        ("xs", "--mat-fs-xs", "12 px", "Captions, badges, hints."),
+        ("sm", "--mat-fs-sm", "13 px", "Table text, field labels, secondary lines."),
+        ("md", "--mat-fs-md", "15 px", "Body text and controls."),
+        ("lg", "--mat-fs-lg", "17 px", "Lead text, card titles, dialog titles."),
+        ("xl", "--mat-fs-xl", "20 px", "Section titles (h2)."),
+        ("2xl", "--mat-fs-2xl", "26 px", "Page titles (h1)."),
+        ("3xl", "--mat-fs-3xl", "34 px", "Hero titles only."),
+    };
+}
+
+<partial name="_FoundationsTabs" model='"type"' />
+
+<section class="mat-card" aria-labelledby="stacks-title">
+    <div class="mat-card__head">@Ui.Icon("type")<h2 class="mat-card__title" id="stacks-title">The two stacks</h2></div>
+    <div class="mat-card__body">
+        <dl class="mat-kv">
+            <dt><code>--mat-font</code></dt>
+            <dd>@Value("--mat-font")<br /><small class="mat-muted">UI and body. A system stack: no web font, so an app works offline, as a PWA and under a strict content security policy (TYPE-01).</small></dd>
+            <dt><code>--mat-mono</code></dt>
+            <dd class="mat-mono">@Value("--mat-mono")<br /><small class="mat-muted">IDs, versions, hashes, ports, paths and code (TYPE-03).</small></dd>
+        </dl>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="scale-title">
+    <div class="mat-section__head"><h2 id="scale-title">The scale</h2></div>
+    <div class="mat-card"><div class="mat-card__body">
+        <div class="doc-type">
+            @foreach (var s in sizes)
+            {
+                <code>@s.Name</code>
+                <div><span class="doc-fs-@s.Key">The quick brown fox jumps over the lazy dog</span><br /><small class="mat-muted">@s.Px · @s.Use</small></div>
+            }
+        </div>
+    </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="weights-title">
+    <div class="mat-section__head"><h2 id="weights-title">Weights and mono</h2></div>
+    <div class="mat-card"><div class="mat-card__body mat-stack mat-stack--sm">
+        <div class="mat-row"><span class="doc-fw-400">Regular 400</span><span class="doc-fw-560">Medium 560, menu items</span><span class="doc-fw-650">Semibold 650, headings and labels</span><span class="doc-fw-700">Bold 700, the app name</span></div>
+        <div class="mat-mono">mattiverse-matdock-matdock · 10.253.114.0/24 · local-20261010 · 8f3a9c1e</div>
+    </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="headings-title">
+    <div class="mat-section__head"><h2 id="headings-title">Headings</h2><p class="mat-section__lead">One h1 per page (the page title), h2 for sections, h3 for cards and dialogs. Never skip a level. (Drawn here with the same look, not as real headings: this page has its own h1.)</p></div>
+    <div class="mat-card"><div class="mat-card__body mat-stack mat-stack--sm">
+        <div class="doc-h1">Page title (h1)</div>
+        <div class="doc-h2">Section title (h2)</div>
+        <div class="doc-h3">Card or dialog title (h3)</div>
+        <div class="doc-h4">Group heading (h4)</div>
+        <p>Running text is 15 px with a line height of 1.5 and is at most about 70 characters wide. <a href="#">A link uses the accent text colour</a>, <code>code</code> sits in a quiet well, and <kbd>/</kbd> opens search.</p>
+    </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="rules-title">
+    <div class="mat-section__head"><h2 id="rules-title">Rules for type</h2></div>
+    <div class="mat-grid">
+        @foreach (var rule in RuleBook.In("TYPE"))
+        {
+            <a class="mat-card" href="/Rules/Detail?id=@rule.Id"><div class="mat-card__body mat-stack mat-stack--sm"><span class="doc-rule-id">@rule.Id</span><strong>@rule.Title</strong></div></a>
+        }
+    </div>
+</section>
