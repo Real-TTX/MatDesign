@@ -1,0 +1,26 @@
+# MatDesign – release stack: one service, no volume (the site keeps no state).
+#   docker compose up -d
+#
+# Or without Compose, a single command:
+#   docker run -d --name matdesign --restart unless-stopped -p 8060:8060 \
+#     --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true \
+#     ghcr.io/real-ttx/matdesign:latest
+#
+# Web: http://localhost:8060
+name: matdesign
+
+services:
+  matdesign:
+    image: ghcr.io/real-ttx/matdesign:latest
+    container_name: matdesign
+    restart: unless-stopped
+    ports:
+      - "${MATDESIGN_PORT:-8060}:8060"
+    # Nothing is written: the file system can be read-only, and the process needs no privileges.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true

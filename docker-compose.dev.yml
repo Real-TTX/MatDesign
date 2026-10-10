@@ -1,0 +1,36 @@
+# MatDesign – development stack: builds the image from the source in this folder.
+#   ./scripts/redeploy.ps1            (rebuilds the container and redeploys the stack)
+#   docker compose -f docker-compose.dev.yml up -d --build
+#
+# Web: http://localhost:8060      (MATDESIGN_PORT changes the host port)
+name: matdesign-dev
+
+services:
+  matdesign:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        Channel: ${MATDESIGN_CHANNEL:-local}
+        BuildNumber: ${MATDESIGN_BUILD_NUMBER:-0}
+        BuildDate: ${MATDESIGN_BUILD_DATE:-}
+    image: matdesign:dev
+    container_name: matdesign-dev
+    restart: unless-stopped
+    ports:
+      - "${MATDESIGN_PORT:-8060}:8060"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+# An explicit subnet: on a machine with many stacks Docker can run out of its default address pools
+# ("all predefined address pools have been fully subnetted"). Override with MATDESIGN_DEV_SUBNET if this range collides.
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: ${MATDESIGN_DEV_SUBNET:-10.253.60.0/24}

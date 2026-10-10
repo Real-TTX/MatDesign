@@ -1,0 +1,11 @@
+{
+  "name": "matdesign-e2e",
+  "private": true,
+  "description": "End-to-end checks of MatUi in a real browser against a running MatDesign (node run.js [base url]).",
+  "scripts": {
+    "test": "node run.js"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.50.0"
+  }
+}
