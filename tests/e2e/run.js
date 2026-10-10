@@ -975,6 +975,17 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- no page is wider than a phone
+  console.log('\nPhone width');
+  for (const url of ['/Components', '/Layout', '/Utilities', '/Download', '/Shell']) {
+    const { ctx, page } = await open(phoneOptions, url);
+    await check(`${url} does not scroll sideways on a phone (MOBILE-01)`, async () => {
+      const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+      expect(widths.page <= widths.window, true, `the page is ${widths.page} px wide in a window of ${widths.window} px`);
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {
