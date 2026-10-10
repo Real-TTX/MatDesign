@@ -42,10 +42,13 @@ public static class ComponentCatalog
 
     public static ComponentDoc? Get(string id) => All.FirstOrDefault(c => c.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
+    /// <summary>An icon of the sprite as markup, for the examples.</summary>
+    internal static string Icon(string name, string? extraClass = null) => I(name, extraClass);
+
     private static string I(string name, string? extraClass = null)
         => $"<svg class=\"mat-icon{(extraClass is null ? string.Empty : " " + extraClass)}\" aria-hidden=\"true\" focusable=\"false\"><use href=\"#mat-i-{name}\"></use></svg>";
 
-    public static IReadOnlyList<ComponentDoc> All { get; } =
+    private static readonly IReadOnlyList<ComponentDoc> Core =
     [
         new("buttons", "Buttons", "Actions", "play",
             "Four kinds, three sizes. Every button is 40 px high on a mouse and 44 px on a touch screen.",
@@ -173,13 +176,25 @@ public static class ComponentCatalog
                       <button type="button" class="mat-seg__btn" aria-pressed="false">Month</button>
                     </div>
                     """, "The pressed state is aria-pressed; the page's own script moves it. For the list and gallery switch use data-view-switch, which does it for you."),
+                new("Settings rows", """
+                    <div class="mat-card"><div class="mat-card__body">
+                      <div class="mat-setting">
+                        <label class="mat-setting__text" for="set-fail"><strong>Backup notifications</strong><small>Tell me when a backup fails.</small></label>
+                        <label class="mat-switch mat-switch--bare"><input type="checkbox" id="set-fail" name="fail" checked /><span class="mat-switch__track"></span><span class="mat-sr-only">Backup notifications</span></label>
+                      </div>
+                      <div class="mat-setting">
+                        <label class="mat-setting__text" for="set-update"><strong>Updates</strong><small>Install new versions of the apps at night.</small></label>
+                        <label class="mat-switch mat-switch--bare"><input type="checkbox" id="set-update" name="update" /><span class="mat-switch__track"></span><span class="mat-sr-only">Updates</span></label>
+                      </div>
+                    </div></div>
+                    """, "A setting: what it is and what it does on the left, the switch on the right. The whole text is a label for the switch."),
             ],
             [
                 "The knob of a switch is always white (--mat-thumb), in light and dark.",
                 "A switch is not used for something that needs a Save button.",
             ]),
 
-        new("form-layout", "Form layout", "Forms", "template",
+        new("form-layout", "Edit form", "Forms", "template",
             "A card with a two-column grid, full-width fields where needed, a dependent field and the buttons under it.",
             ["FORM-01", "FORM-04", "FORM-07", "FORM-10", "LIST-01"],
             [
@@ -797,4 +812,22 @@ public static class ComponentCatalog
             ],
             ["Set aria-busy=\"true\" on the container while it loads and remove it when the content is there."]),
     ];
+
+    /// <summary>The order inside a group where it matters (the forms read like a manual); everything else keeps the order it is written in.</summary>
+    private static readonly string[] Order =
+    [
+        "fields", "input-types", "selects", "checks", "choices", "range", "input-groups", "special-inputs", "floating-labels", "form-layout", "form-grid", "validation",
+    ];
+
+    /// <summary>Every component, by group and in reading order.</summary>
+    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted([.. Core, .. FormComponents.All]);
+
+    private static IReadOnlyList<ComponentDoc> Sorted(IEnumerable<ComponentDoc> docs)
+        => docs.Select((doc, index) => (doc, index))
+            .OrderBy(x => Groups.ToList().IndexOf(x.doc.Group))
+            .ThenBy(x => Array.IndexOf(Order, x.doc.Id) is var p and >= 0 ? p : int.MaxValue)
+            .ThenBy(x => x.index)
+            .Select(x => x.doc)
+            .ToList();
 }
+

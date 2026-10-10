@@ -215,6 +215,15 @@ public static class RuleBook
         new("FORM-11", "FORM", "Confirm what cannot be undone",
             "Anything that deletes or overwrites data asks first, in a dialog that names the thing (\"Delete backup 12 Oct?\"), with the destructive button last (DIALOG-06).",
             RuleLevel.Must, MatCms),
+        new("FORM-12", "FORM", "The right control for the value",
+            "A field has the type of its value (`email`, `tel`, `url`, `number`, `date`, `time`, `search`, `password`) and, where it helps, `inputmode` and `autocomplete`, so that a phone shows the right keyboard and a password manager works. Up to five exclusive choices are radios, more are a select; several yes-or-no choices are checks in a group with a legend; a yes-or-no that applies at once is a switch, one that is saved with the form is a check. A range is only for a value whose exact number does not matter, and it shows the number.",
+            RuleLevel.Should, Design, Do: "<input class=\"mat-input\" type=\"email\" autocomplete=\"email\">", Dont: "a text field for a date, a select with three options, a switch that needs a Save button"),
+        new("FORM-13", "FORM", "Floating labels",
+            "A floating label (the label in the field that moves up) may be used in a short form such as a sign-in, never in a long one. It is a real label with `for`; a placeholder is never the only label.",
+            RuleLevel.May, Design, Do: "<div class=\"mat-field mat-field--float\"><input class=\"mat-input\" id=\"x\" placeholder=\" \"><label class=\"mat-label\" for=\"x\">Name</label></div>"),
+        new("FORM-14", "FORM", "Form layouts",
+            "The default is labels above the fields in one or two columns (three or four on a wide screen for short fields). The label beside the field is for settings pages on a wide screen and goes back above below 700 px; an inline form is for a filter or one short action in one line. A long settings page is split into sections with a heading and a sentence on the left. The buttons are under the content in every layout (FORM-01).",
+            RuleLevel.Should, Design, Check: "Test (CSS contract)"),
 
         // ------------------------------------------------------------------------------------------------- BUTTON
         new("BUTTON-01", "BUTTON", "Four kinds",

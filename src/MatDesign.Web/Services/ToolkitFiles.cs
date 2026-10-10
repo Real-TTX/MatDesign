@@ -19,7 +19,7 @@ public sealed partial class ToolkitFiles
     /// <summary>The CSS parts in the order they are bundled.</summary>
     public static readonly IReadOnlyList<string> CssParts =
     [
-        "matui.tokens.css", "matui.base.css", "matui.shell.css", "matui.controls.css", "matui.lists.css", "matui.dialogs.css", "matui.apps.css",
+        "matui.tokens.css", "matui.base.css", "matui.shell.css", "matui.controls.css", "matui.forms.css", "matui.lists.css", "matui.dialogs.css", "matui.layout.css", "matui.apps.css",
     ];
 
     private readonly IFileProvider _files;
@@ -72,7 +72,7 @@ public sealed partial class ToolkitFiles
 
     public IReadOnlyList<ToolkitFile> Files() =>
     [
-        new("matui.css", "/ui/matui.css", "All styles in one file: tokens, base, shell, controls, lists, dialogs, apps.", Encoding.UTF8.GetByteCount(CssBundle)),
+        new("matui.css", "/ui/matui.css", "All styles in one file: tokens, base, shell, controls, forms, lists, dialogs, layout, apps.", Encoding.UTF8.GetByteCount(CssBundle)),
         new("matui.js", "/ui/matui.js", "Behaviour: theme button, menu drawer, context menus, dialogs, dependent fields, tabs, toasts.", Encoding.UTF8.GetByteCount(Script)),
         new("matui.boot.js", "/ui/matui.boot.js", "Tiny script for <head>: applies the saved theme before the first paint.", Encoding.UTF8.GetByteCount(BootScript)),
         new("matui-icons.svg", "/ui/matui-icons.svg", $"The icon sprite ({IconNames.Count} icons), to be placed inline in the page.", Encoding.UTF8.GetByteCount(Sprite)),
@@ -122,7 +122,7 @@ public sealed partial class ToolkitFiles
         "    <script src=\"/matui.js\"></script>           at the end of the body",
         string.Empty,
         "An app sets one colour:  [data-app=\"yourapp\"] { --mat-app-accent: #2f6feb; }",
-        "css/ holds the parts of matui.css (tokens, base, shell, controls, lists, dialogs, apps) for apps that load them one by one.",
+        "css/ holds the parts of matui.css (tokens, base, shell, controls, forms, lists, dialogs, layout, apps) for apps that load them one by one.",
         string.Empty);
 
     private string Read(string relative)

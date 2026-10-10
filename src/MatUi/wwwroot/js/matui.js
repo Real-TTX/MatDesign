@@ -11,6 +11,11 @@
      data-nav-set="id" / data-nav-panel="id"  the menu switcher: an entry of its menu shows the panel of items with the same id;
                                             the menu names the element with the switcher and the panels: data-nav-scope="id"
      data-scrollspy                         an index of #links to sections of the page ("On this page"): the link of the section in view is marked
+     data-validation-summary                an alert in a form that lists the fields with an error, each a link to its field (hidden while there are none)
+     data-output="id"                       a range input writes its value into the element with this id (the filled part of the track is drawn for every .mat-range)
+     data-counter="id"                      a text field writes "length / maxlength" into the element with this id
+     data-indeterminate                     a checkbox that starts in the indeterminate state
+     data-password-toggle="id"              the eye button of a password field: shows and hides the password (aria-pressed)
      data-menu-toggle="id"                  open the context menu #id next to the button; data-menu-place="top|bottom"
      data-dialog-open="id" / data-dialog-close   open / close a <dialog class="mat-dialog">
      data-confirm="Question?"               ask in a dialog before a submit button, a form or a link goes ahead
@@ -517,11 +522,38 @@
     if (v.tooShort || v.tooLong || v.rangeUnderflow || v.rangeOverflow) { return input.getAttribute('data-msg-range') || input.validationMessage; }
     return input.validationMessage;
   }
+  function labelOf(input) {
+    var l = input.id ? $('label[for="' + input.id.replace(/"/g, '\\"') + '"]', doc) : null;
+    var f = fieldOf(input);
+    var text = l ? l.textContent : (f && $('legend, .mat-label', f) ? $('legend, .mat-label', f).textContent : input.name);
+    return (text || '').replace(/\*/g, '').trim();
+  }
+  // The summary at the top of a form (FORM-03): an alert with a link to every field that has an error. Server-rendered markup of the same shape works without the script.
+  function summarize(form, bad) {
+    var box = $('[data-validation-summary]', form);
+    if (!box) { return; }
+    var list = $('.mat-alert__list', box);
+    if (list) {
+      list.textContent = '';
+      bad.forEach(function (i) {
+        var li = doc.createElement('li');
+        var a = doc.createElement('a');
+        a.href = '#' + i.id;
+        a.textContent = labelOf(i) + ': ' + messageFor(i);
+        li.appendChild(a);
+        list.appendChild(li);
+      });
+    }
+    box.hidden = bad.length === 0;
+  }
   doc.addEventListener('submit', function (e) {
     var form = e.target;
     if (!form.matches || !form.matches('form.mat-form, form[data-validate]') || e.defaultPrevented) { return; }
     var bad = $$('input, select, textarea', form).filter(function (i) { return !i.disabled && !i.checkValidity(); });
     $$('input, select, textarea', form).forEach(function (i) { if (!bad.includes(i)) { showError(i, ''); } });
+    // a group of radio buttons has one message
+    bad = bad.filter(function (i, n) { return i.type !== 'radio' || !i.name || bad.findIndex(function (o) { return o.type === 'radio' && o.name === i.name; }) === n; });
+    summarize(form, bad);
     if (bad.length) {
       e.preventDefault();
       bad.forEach(function (i) { showError(i, messageFor(i)); });
@@ -529,6 +561,54 @@
     }
   }, true);
   doc.addEventListener('input', function (e) { var i = e.target; if (i.closest && i.closest('.mat-field.is-invalid') && i.checkValidity()) { showError(i, ''); } });
+
+  // ------------------------------------------------------------------------------------------------ form helpers (matui.forms.css)
+  // range: the filled part of the track and an <output> (data-output="id"); counter: "12 / 80" (data-counter="id"); indeterminate checks;
+  // password: the eye button (data-password-toggle="id"); dropzone: dragging files onto a label that holds a file input.
+  function updateRange(input) {
+    var min = parseFloat(input.min) || 0, max = isNaN(parseFloat(input.max)) ? 100 : parseFloat(input.max);
+    input.style.setProperty('--mat-range', (max === min ? 0 : ((parseFloat(input.value) - min) / (max - min)) * 100) + '%');
+    var out = input.getAttribute('data-output') && doc.getElementById(input.getAttribute('data-output'));
+    if (out) { out.textContent = input.value; }
+  }
+  function updateCounter(input) {
+    var out = doc.getElementById(input.getAttribute('data-counter'));
+    if (out) { out.textContent = input.value.length + (input.maxLength > 0 ? ' / ' + input.maxLength : ''); }
+  }
+  function updateFiles(input) {
+    var zone = input.closest('.mat-dropzone');
+    var list = zone && $('.mat-dropzone__files', zone);
+    if (list) { list.textContent = Array.prototype.map.call(input.files || [], function (f) { return f.name; }).join(', '); }
+  }
+  function initForms(scope) {
+    $$('input[data-indeterminate]', scope).forEach(function (i) { i.indeterminate = true; });
+    $$('input.mat-range', scope).forEach(updateRange);
+    $$('[data-counter]', scope).forEach(updateCounter);
+  }
+  doc.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.matches && t.matches('input.mat-range')) { updateRange(t); }
+    if (t.matches && t.matches('[data-counter]')) { updateCounter(t); }
+  });
+  doc.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.matches && t.matches('.mat-dropzone input[type=file]')) { updateFiles(t); }
+  });
+  ['dragenter', 'dragover'].forEach(function (name) {
+    doc.addEventListener(name, function (e) { var z = e.target.closest && e.target.closest('.mat-dropzone'); if (z) { e.preventDefault(); z.classList.add('is-drag'); } });
+  });
+  ['dragleave', 'drop'].forEach(function (name) {
+    doc.addEventListener(name, function (e) {
+      var z = e.target.closest && e.target.closest('.mat-dropzone');
+      if (!z) { return; }
+      e.preventDefault();
+      z.classList.remove('is-drag');
+      if (name === 'drop' && e.dataTransfer && e.dataTransfer.files.length) {
+        var input = $('input[type=file]', z);
+        if (input) { input.files = e.dataTransfer.files; input.dispatchEvent(new Event('change', { bubbles: true })); }
+      }
+    });
+  });
 
   // ------------------------------------------------------------------------------------------------------- tabs
   function selectTab(tab, focus) {
@@ -608,6 +688,25 @@
       if (e.defaultPrevented) { return; }
     }
 
+    var pw = t.closest('[data-password-toggle]');
+    if (pw) {
+      var field = doc.getElementById(pw.getAttribute('data-password-toggle'));
+      if (field) {
+        var reveal = field.type === 'password';
+        field.type = reveal ? 'text' : 'password';
+        pw.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+      }
+      return;
+    }
+
+    // a link of the summary of a form moves the focus to the field instead of only scrolling
+    var summaryLink = t.closest('[data-validation-summary] a[href^="#"]');
+    if (summaryLink) {
+      var target = doc.getElementById(summaryLink.getAttribute('href').slice(1));
+      if (target) { e.preventDefault(); target.focus(); }
+      return;
+    }
+
     var cp = t.closest('[data-copy]');
     if (cp) {
       var spec = cp.getAttribute('data-copy');
@@ -683,6 +782,7 @@
 
   function init() {
     scheduleSpy();
+    initForms();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
     restoreBranches();
@@ -717,6 +817,6 @@
     accent: { set: setAccent, custom: customAccent },
     scrollspy: { update: updateSpy },
     nav: { set: setNavSet, branch: function (key, open) { var b = $('[data-nav-branch="' + key + '"]'); if (b) { setBranch(b, open !== false, true); } } },
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); }
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); }
   };
 })();

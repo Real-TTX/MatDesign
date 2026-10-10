@@ -32,7 +32,7 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
 ## Map
 
 ```
-src/MatUi                  Razor class library = the toolkit. wwwroot/css (7 parts), js/matui.js + matui.boot.js, img/matui-icons.svg
+src/MatUi                  Razor class library = the toolkit. wwwroot/css (9 parts), js/matui.js + matui.boot.js, img/matui-icons.svg
 src/MatDesign.Core         no web types
   Colors.cs                  OKLab, mixing like CSS color-mix, WCAG contrast, distance
   AppRegistry.cs             the apps and their accent, AccentPresets
@@ -43,7 +43,7 @@ src/MatDesign.Core         no web types
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /api/*, /health, Razor Pages
   Services/                  ToolkitFiles, Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
-                             ComponentCatalog, PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
+                             ComponentCatalog (+ FormComponents), PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Patterns, Builder, Download, Preview (the sample app)
   Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (switcher, items, badges, submenus), _MenuSwitchPopup, _Head, _Toolbar, _Pager,
                              _Toc + _Component (the components page), _AccentSwatches, _ContrastCard, _FoundationsTabs

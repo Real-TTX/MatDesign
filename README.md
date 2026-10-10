@@ -53,7 +53,7 @@ and checked for WCAG AA, for every app, in light and dark.
 | **Rules** | The rulebook, searchable, with a page per rule. |
 | **Foundations** | Colour (light and dark side by side), type, spacing and radii, motion and layers, the icon sprite, and every design token, read from the CSS. |
 | **Shell** | Anatomy of the frame around every page (switcher, items with badges and submenus, foot), a live sample with an administration behind the switcher, the HTML skeleton. |
-| **Components** | Every control on **one page** with an index beside it that marks the section in view (and jumps there on one click): buttons, fields, form layout, toolbar, table, pagination, menu items with badges and submenus, the menu switcher, dialogs, alerts, toasts … each live, with the markup to copy and the rules it follows. |
+| **Components** | Every control on **one page** with an index beside it that marks the section in view (and jumps there on one click): buttons, **forms** (input types and sizes, selects, checks and radios, range, input groups, search/password/counter/files, floating labels, layouts, validation with a summary), toolbar, table, pagination, menu items with badges and submenus, the menu switcher, dialogs, alerts, toasts … each live, with the markup to copy and the rules it follows. |
 | **Patterns** | The page types (list, gallery, edit, settings, dashboard, sign-in) in real frames, on a desktop and on a phone, in the accent of any app. |
 | **Builder** | Try an accent: what the toolkit derives from it, contrast in both modes, the nearest app, the real screens in that colour, the snippet. |
 | **Download** | MatUi as an archive or file by file, how to use it, and the design system as JSON (`/api/rules`, `/api/tokens` …). |
@@ -104,7 +104,7 @@ The **Download** page has the archive; [docs/ADOPTING.md](docs/ADOPTING.md) is t
 ## How it is built
 
 ```
-src/MatUi            Razor class library: the toolkit (CSS in seven parts, matui.js, the icon sprite). No build step.
+src/MatUi            Razor class library: the toolkit (CSS in nine parts, matui.js, the icon sprite). No build step.
 src/MatDesign.Core   Colour maths (OKLab, contrast), the app registry, the rulebook, the CSS token parser. No web types.
 src/MatDesign.Web    ASP.NET Core 10 Razor Pages: the site. It uses MatUi for itself (the same layout as the sample apps).
 tests/MatDesign.Tests  xUnit: colours, the rulebook, the CSS and the script against the rules, the catalogues, the whole site in memory.

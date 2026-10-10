@@ -495,6 +495,84 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the form controls
+  console.log('\nForm controls');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#range');
+    await check('a range writes its value next to it and fills the track up to it', async () => {
+      await page.$eval('#rng-vol', el => { el.value = 70; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      expect((await page.textContent('#rng-vol-out')).trim(), '70', 'output');
+      expect(await page.$eval('#rng-vol', el => el.style.getPropertyValue('--mat-range')), '70%', 'filled part');
+      expect(await page.$eval('#rng-days', el => el.value), '28', 'a value on the grid of the steps');
+    });
+    await check('a counter shows the length and the limit', async () => {
+      await page.fill('#spc-note', 'abc');
+      expect((await page.textContent('#spc-note-count')).trim(), '3 / 120', 'counter');
+    });
+    await check('the eye shows and hides the password and says so with aria-pressed', async () => {
+      await page.click('[data-password-toggle="spc-pw"]');
+      expect(await page.$eval('#spc-pw', el => el.type), 'text', 'type while shown');
+      expect(await page.getAttribute('[data-password-toggle="spc-pw"]', 'aria-pressed'), 'true', 'pressed');
+      expectTrue(await page.locator('[data-password-toggle="spc-pw"] .mat-toggle-off').isVisible(), 'the crossed eye is not shown while the password is shown');
+      await page.click('[data-password-toggle="spc-pw"]');
+      expect(await page.$eval('#spc-pw', el => el.type), 'password', 'type while hidden');
+    });
+    await check('a check can start in between, and a label toggles the switch of a setting', async () => {
+      expect(await page.$eval('#chk-all', el => el.indeterminate), true, 'indeterminate');
+      const before = await page.$eval('#set-update', el => el.checked);
+      await page.click('label[for="set-update"].mat-setting__text');
+      expect(await page.$eval('#set-update', el => el.checked), !before, 'the switch of the setting');
+    });
+    await check('files dropped or chosen show their names in the drop zone', async () => {
+      await page.setInputFiles('#spc-drop', { name: 'report.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4') });
+      expect((await page.textContent('.mat-dropzone__files')).trim(), 'report.pdf', 'file names');
+    });
+    await check('a floating label moves up when the field has a value and stays in the field while it is empty', async () => {
+      const label = () => page.$eval('label[for="flt-mail"]', el => getComputedStyle(el).transform);
+      await page.evaluate(() => document.getElementById('flt-mail').blur());
+      expect(await label(), 'none', 'label of an empty field');
+      await page.fill('#flt-mail', 'a@b.c');
+      await page.waitForTimeout(350);
+      expectTrue((await label()) !== 'none', 'the label did not move up');
+    });
+    await check('the summary lists every field with an error as a link; the link moves the focus to the field', async () => {
+      await page.evaluate(() => document.getElementById('validation').scrollIntoView());
+      expectTrue(!(await page.locator('#validation [data-validation-summary]').isVisible()), 'the summary is shown before anything was sent');
+      await page.click('#validation button[type=submit]');
+      await page.waitForTimeout(250);
+      expectTrue(await page.locator('#validation [data-validation-summary]').isVisible(), 'no summary');
+      const items = await page.locator('#validation .mat-alert__list a').allTextContents();
+      expect(items.length, 3, 'errors in the summary (name, e-mail, contact)');
+      expectTrue(items[0].startsWith('Name: Please enter a name.'), 'the first entry: ' + items[0]);
+      expect(await page.locator('#validation form .mat-field.is-invalid').count(), 3, 'fields of the form marked invalid');
+      await page.click('#validation .mat-alert__list a >> nth=1');
+      expect(await page.evaluate(() => document.activeElement.id), 'val-mail', 'the focus after a click on the second entry');
+    });
+    await check('a valid value takes its message away and a valid form is sent', async () => {
+      await page.fill('#val-name', 'Alex');
+      expect(await page.locator('#val-name').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'name after typing');
+      await page.fill('#val-mail', 'alex@example.com');
+      await page.check('#val-r1');
+      await Promise.all([page.waitForNavigation(), page.click('#validation button[type=submit]')]);
+      expectTrue(page.url().includes('name=Alex') && page.url().includes('mail=alex%40example.com'), 'the form was not sent: ' + page.url());
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#form-grid');
+    await check('on a phone the label of a horizontal form is above the field and the columns are one', async () => {
+      const state = await page.evaluate(() => {
+        const f = document.querySelector('#grid-h-name').closest('.mat-field');
+        const label = document.querySelector('label[for="grid-h-name"]').getBoundingClientRect();
+        const input = document.getElementById('grid-h-name').getBoundingClientRect();
+        const cols = getComputedStyle(document.querySelector('.mat-form__grid--3')).gridTemplateColumns.split(' ').length;
+        return { above: label.bottom <= input.top + 1, display: getComputedStyle(f).display, cols };
+      });
+      expect(state, { above: true, display: 'flex', cols: 1 }, 'form layout on a phone');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {

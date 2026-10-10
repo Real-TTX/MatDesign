@@ -6,9 +6,9 @@ namespace MatDesign.Tests;
 /// <summary>What the rulebook says about the toolkit's CSS, checked on the CSS itself.</summary>
 public partial class ToolkitCssTests
 {
-    public static TheoryData<string> Parts => new() { "tokens", "base", "shell", "controls", "lists", "dialogs", "apps" };
+    public static TheoryData<string> Parts => new() { "tokens", "base", "shell", "controls", "forms", "lists", "dialogs", "layout", "apps" };
 
-    public static TheoryData<string> PartsWithoutColours => new() { "base", "shell", "controls", "lists", "dialogs" };
+    public static TheoryData<string> PartsWithoutColours => new() { "base", "shell", "controls", "forms", "lists", "dialogs", "layout" };
 
     private static string Css(string part) => TestPaths.ReadToolkit($"css/matui.{part}.css");
 
@@ -162,6 +162,29 @@ public partial class ToolkitCssTests
     }
 
     [Fact]
+    public void Form_layouts_exist_and_the_label_beside_the_field_goes_back_above_on_a_phone()
+    {
+        // FORM-14
+        var css = Css("forms");
+        foreach (var layout in new[] { ".mat-form__grid--3", ".mat-form__grid--4", ".mat-form--horizontal", ".mat-form--inline", ".mat-form__section" })
+        {
+            Assert.Contains(layout, css);
+        }
+
+        var phone = css[css.IndexOf("@media (max-width: 700px) {\n  .mat-form--horizontal", StringComparison.Ordinal)..];
+        Assert.Contains("display: flex", phone[..phone.IndexOf("}\n}", StringComparison.Ordinal)]);
+    }
+
+    [Fact]
+    public void A_floating_label_needs_a_space_as_placeholder_and_no_visible_placeholder()
+    {
+        // FORM-13: the label floats when the field is not :placeholder-shown, so the placeholder is a space and is drawn transparent.
+        var css = Css("forms");
+        Assert.Contains(":not(:placeholder-shown) ~ .mat-label", css);
+        Assert.Contains(".mat-field--float > .mat-input::placeholder", css);
+    }
+
+    [Fact]
     public void Reduced_motion_is_honoured()
     {
         // A11Y-05
@@ -181,7 +204,7 @@ public partial class ToolkitCssTests
     public void The_toolkit_uses_system_fonts_only()
     {
         // TYPE-01: no web font, no @font-face, no external URL.
-        foreach (var part in new[] { "tokens", "base", "shell", "controls", "lists", "dialogs", "apps" })
+        foreach (var part in new[] { "tokens", "base", "shell", "controls", "forms", "lists", "dialogs", "layout", "apps" })
         {
             var css = WithoutComments(Css(part));
             Assert.DoesNotContain("@font-face", css);
@@ -193,7 +216,7 @@ public partial class ToolkitCssTests
     [Fact]
     public void The_bundle_has_all_parts_in_the_order_of_the_cascade()
     {
-        Assert.Equal(["matui.tokens.css", "matui.base.css", "matui.shell.css", "matui.controls.css", "matui.lists.css", "matui.dialogs.css", "matui.apps.css"],
+        Assert.Equal(["matui.tokens.css", "matui.base.css", "matui.shell.css", "matui.controls.css", "matui.forms.css", "matui.lists.css", "matui.dialogs.css", "matui.layout.css", "matui.apps.css"],
             MatDesign.Web.Services.ToolkitFiles.CssParts);
     }
 }

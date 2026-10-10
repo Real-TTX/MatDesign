@@ -54,6 +54,13 @@ choosing another one in the switcher swaps them without a request. The popup of 
 that would make it the frame of a fixed popup; it names the element that holds the panels (`data-nav-scope`) so that an example in the documentation can show a menu without touching the menu
 of the page. The choice of open and closed branches is remembered in the browser per app and never overrides the branch of the current page.
 
+### Forms are a part of their own
+
+The form controls live in `matui.forms.css`, not in `matui.controls.css`: fields and inputs, selects, checks and radios, switches, range, input groups, floating labels, the drop zone, layouts and the
+validation summary. The catalogue of the form components is its own file (`FormComponents`) and is merged into `ComponentCatalog.All`, which sorts by group and by an explicit reading order where it matters (the
+forms read like a manual). The script adds only what CSS cannot do: the filled part and the output of a range, a counter, the eye of a password, the names in a drop zone, an indeterminate check and the
+summary of the errors of a form; validation itself stays the browser's (`required`, `type`, `pattern`) with the messages of `data-msg-*`.
+
 ### Long pages and one page for the components
 
 The components are not a list of pages to click through but one page, grouped, with an index beside it (`mat-with-toc`, `mat-toc`): a sticky column from 1100 px, a "Jump to" dialog below that
@@ -79,7 +86,7 @@ the version and the hash.
 
 ## 7. No build step, no web fonts, no icon font
 
-Plain CSS in seven parts that are bundled in the order of the cascade (`tokens`, `base`, `shell`, `controls`, `lists`, `dialogs`, `apps`) and one dependency-free script that wires
+Plain CSS in nine parts that are bundled in the order of the cascade (`tokens`, `base`, `shell`, `controls`, `forms`, `lists`, `dialogs`, `layout`, `apps`) and one dependency-free script that wires
 everything with delegated listeners and `data-` attributes, so server-rendered and dynamically added markup behave the same. System fonts only. Icons are one inline SVG sprite
 (`tools/icons.js` builds it; CI fails when it is stale).
 
