@@ -1,0 +1,15 @@
+@page "/Utilities"
+@{
+    var section = ComponentCatalog.Sections.Single(s => s.Id == "utilities");
+    ViewData["Title"] = section.Title;
+    ViewData["PageIcon"] = section.Icon;
+    ViewData["PageSub"] = section.Sub;
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), (section.Title, null));
+    ViewData["Width"] = "wide";
+}
+
+<partial name="_DocSection" model="section" />
+
+@section Scripts {
+    <script src="/js/doc.js"></script>
+}

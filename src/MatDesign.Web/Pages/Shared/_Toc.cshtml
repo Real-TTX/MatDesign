@@ -1,11 +1,12 @@
+@model CatalogSection
 @*
-    The index of the components page ("On this page", SHELL-16): the groups and, below each, its components. It is drawn twice, beside the
+    The index of a documentation page ("On this page", SHELL-16): the groups of its section and, below each, its components. It is drawn twice, beside the
     content and in the dialog that small screens open, so both are marked by the scroll spy.
 *@
 <nav class="mat-toc" aria-label="On this page" data-scrollspy>
     <p class="mat-toc__title">On this page</p>
     <ul class="mat-toc__list">
-        @foreach (var group in ComponentCatalog.Groups)
+        @foreach (var group in Model.Groups)
         {
             <li>
                 <a class="mat-toc__link mat-toc__link--group" href="#@ComponentCatalog.GroupAnchor(group)">@group</a>

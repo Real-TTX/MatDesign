@@ -116,7 +116,9 @@ public static class Navigation
             new(null, [new("Shell", "/Shell", "sidebar")]),
             new("Build with it",
             [
-                new("Components", "/Components", "toggle", NavBadge.Count(ComponentCatalog.All.Count, "plain", "components")),
+                new("Components", "/Components", "toggle", NavBadge.Count(ComponentCatalog.In(ComponentCatalog.Sections[0]).Count(), "plain", "components")),
+                new("Layout", "/Layout", "grid"),
+                new("Utilities", "/Utilities", "sliders"),
                 new("Patterns", "/Patterns", "template"),
                 new("Builder", "/Builder", "wrench"),
             ]),

@@ -19,23 +19,51 @@ public sealed record ComponentDoc(
     IReadOnlyList<string> Behaviour);
 
 /// <summary>
+/// A page of the documentation that shows some groups of the catalogue, each with its index ("On this page"): the components, the layout, the utilities.
+/// </summary>
+public sealed record CatalogSection(string Id, string Title, string Path, string Icon, string Sub, IReadOnlyList<string> Groups);
+
+/// <summary>
 /// The catalogue of controls. The markup is the markup of <c>MatUi</c> as it stands in the CSS and the script; a unit test parses every example
 /// (cell labels, no inline styles, icons that exist, ids that are unique) so that the documentation cannot drift from the toolkit.
+/// The layout classes and the utilities are in the catalogue too (the groups Layout and Utilities), so every rule that holds for an example holds for them.
 /// </summary>
 public static class ComponentCatalog
 {
-    public static readonly IReadOnlyList<string> Groups = ["Actions", "Forms", "Lists and data", "Content", "Navigation", "Feedback"];
+    public static readonly IReadOnlyList<string> Groups = ["Actions", "Forms", "Lists and data", "Content", "Navigation", "Feedback", "Layout", "Utilities"];
+
+    /// <summary>The pages of the documentation of the toolkit and the groups each one shows.</summary>
+    public static readonly IReadOnlyList<CatalogSection> Sections =
+    [
+        new("components", "Components", "/Components", "toggle",
+            "Every control of the toolkit on one page: live, with the markup to copy and the rules it follows. Jump with the index.",
+            ["Actions", "Forms", "Lists and data", "Content", "Navigation", "Feedback"]),
+        new("layout", "Layout", "/Layout", "grid",
+            "Breakpoints, containers and the grid of twelve columns, and the three small layouts that most pages are built from. Live, with the markup to copy.",
+            ["Layout"]),
+        new("utilities", "Utilities", "/Utilities", "sliders",
+            "One class, one property: spacing, display, flex, text, colour, borders and sizing on the scales of the toolkit. Live, with the markup to copy.",
+            ["Utilities"]),
+    ];
 
     /// <summary>One line per group, shown above its components on the components page.</summary>
     public static readonly IReadOnlyDictionary<string, string> GroupSummaries = new Dictionary<string, string>
     {
         ["Actions"] = "Buttons, and how they are arranged under a form or a list.",
-        ["Forms"] = "Fields, choices and the layout of a form: labels above, hints below, errors at the field.",
+        ["Forms"] = "Fields, choices, pickers and the layout of a form: labels above, hints below, errors at the field.",
         ["Lists and data"] = "Everything for a list of items: the toolbar, the table, pagination, the gallery.",
-        ["Content"] = "Cards, labels, facts, meters, empty states and code.",
+        ["Content"] = "Text and pictures, cards, lists, accordions, labels, facts, meters, empty states and code.",
         ["Navigation"] = "The items of the menu with badges and submenus, switching between menus, tabs, the breadcrumb, steps and the index of a long page.",
-        ["Feedback"] = "Alerts, toasts, dialogs, tooltips and placeholders.",
+        ["Feedback"] = "Alerts, toasts, dialogs, popovers, tooltips and placeholders.",
+        ["Layout"] = "The breakpoints, the containers and the layouts a page is built from.",
+        ["Utilities"] = "Classes that set one property from the scales of the toolkit: they are for your own page, not for repairing a component.",
     };
+
+    /// <summary>The documentation of a section: its groups' components, in reading order.</summary>
+    public static IEnumerable<ComponentDoc> In(CatalogSection section) => All.Where(c => section.Groups.Contains(c.Group));
+
+    /// <summary>The section a component belongs to.</summary>
+    public static CatalogSection SectionOf(ComponentDoc doc) => Sections.First(s => s.Groups.Contains(doc.Group));
 
     /// <summary>The anchor of a group on the components page.</summary>
     public static string GroupAnchor(string group) => "group-" + System.Text.RegularExpressions.Regex.Replace(group.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
@@ -822,10 +850,12 @@ public static class ComponentCatalog
         "typography", "cards", "list-group", "accordion", "avatars", "stat", "pills", "kv", "meter", "empty", "code",
         "tabs", "menu", "breadcrumb", "steps", "navmenu", "switcher", "toc",
         "alerts", "toasts", "dialogs", "popover", "tooltip", "spinner", "skeleton",
+        "breakpoints", "grid-cols", "stack-row-grid",
+        "u-spacing", "u-display", "u-flex", "u-text", "u-colour", "u-borders", "u-sizing",
     ];
 
     /// <summary>Every component, by group and in reading order.</summary>
-    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted([.. Core.Select(Extend), .. FormComponents.All, .. PickerComponents.All, .. ContentComponents.All]);
+    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted([.. Core.Select(Extend), .. FormComponents.All, .. PickerComponents.All, .. ContentComponents.All, .. LayoutComponents.All]);
 
     /// <summary>A component with the examples that other files add to it.</summary>
     private static ComponentDoc Extend(ComponentDoc doc)

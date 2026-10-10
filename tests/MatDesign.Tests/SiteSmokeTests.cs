@@ -153,11 +153,15 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     [GeneratedRegex(@"\shref=""#([^""]+)""")]
     private static partial Regex FragmentLink();
 
-    [Fact]
-    public async Task The_components_page_has_every_component_under_its_group_and_in_the_index()
+    [Theory]
+    [InlineData("components")]
+    [InlineData("layout")]
+    [InlineData("utilities")]
+    public async Task A_documentation_page_has_every_component_under_its_group_and_in_the_index(string sectionId)
     {
         // SHELL-16: one long page, an index beside it (and in a dialog for small screens), both marked by the scroll spy.
-        var (status, html) = await Get("/Components");
+        var section = ComponentCatalog.Sections.Single(s => s.Id == sectionId);
+        var (status, html) = await Get(section.Path);
         Assert.Equal(HttpStatusCode.OK, status);
         Assert.Single(Heading().Matches(html));
         Assert.Contains("class=\"mat-toc-aside\"", html);
@@ -165,25 +169,34 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("data-dialog-open=\"toc-dialog\"", html);
         Assert.Contains("id=\"toc-dialog\"", html);
 
-        foreach (var group in ComponentCatalog.Groups)
+        foreach (var group in section.Groups)
         {
             var anchor = ComponentCatalog.GroupAnchor(group);
             Assert.Contains($"<section class=\"doc-group mat-anchor\" id=\"{anchor}\"", html);
             Assert.True(Regex.Matches(html, $"href=\"#{anchor}\"").Count >= 2, $"{group} is in the index beside the content and in the dialog");
         }
 
-        foreach (var component in ComponentCatalog.All)
+        foreach (var component in ComponentCatalog.In(section))
         {
             Assert.Contains($"<section class=\"doc-component mat-anchor\" id=\"{component.Id}\"", html);
             Assert.True(Regex.Matches(html, $"mat-toc__link( is-active)?\" href=\"#{component.Id}\"").Count >= 2, $"{component.Id} is in the index beside the content and in the dialog");
         }
+
+        // a component is on the page of its own section only
+        foreach (var other in ComponentCatalog.All.Except(ComponentCatalog.In(section)))
+        {
+            Assert.DoesNotContain($"<section class=\"doc-component mat-anchor\" id=\"{other.Id}\"", html);
+        }
     }
 
-    [Fact]
-    public async Task The_ids_of_the_components_page_are_unique_and_every_fragment_link_leads_somewhere()
+    [Theory]
+    [InlineData("/Components")]
+    [InlineData("/Layout")]
+    [InlineData("/Utilities")]
+    public async Task The_ids_of_a_documentation_page_are_unique_and_every_fragment_link_leads_somewhere(string url)
     {
         // All the examples share one page: two controls with the same id, or a link to a section that is not there, would break it.
-        var (_, html) = await Get("/Components");
+        var (_, html) = await Get(url);
         var ids = IdAttribute().Matches(html).Select(m => WebUtility.HtmlDecode(m.Groups[1].Value)).ToList();
         var twice = ids.GroupBy(i => i).Where(g => g.Count() > 1).Select(g => g.Key).ToList();
         Assert.True(twice.Count == 0, "ids that appear twice on the page: " + string.Join(", ", twice));

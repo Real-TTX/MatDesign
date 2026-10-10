@@ -220,4 +220,61 @@ public partial class ToolkitCssTests
         Assert.Equal(["matui.tokens.css", "matui.base.css", "matui.shell.css", "matui.controls.css", "matui.forms.css", "matui.pickers.css", "matui.lists.css", "matui.dialogs.css", "matui.layout.css", "matui.apps.css"],
             MatDesign.Web.Services.ToolkitFiles.CssParts);
     }
+
+    [Fact]
+    public void The_grid_spans_twelve_columns_by_its_end_line_only()
+    {
+        // "grid-column: span 12" would also make the START line "span 12": a grid item whose lines are both spans ignores the end, so no .mat-col-N would win.
+        var css = Css("layout");
+        Assert.Contains(".mat-cols > * { grid-column-end: span 12; min-width: 0; }", css);
+        Assert.DoesNotContain("grid-column: span", css);
+        for (var n = 1; n <= 12; n++)
+        {
+            Assert.Contains($".mat-col-{n} {{ grid-column-end: span {n}; }}", css);
+            Assert.Contains($".mat-col-start-{n} {{ grid-column-start: {n}; }}", css);
+        }
+    }
+
+    [Theory]
+    [InlineData("sm", 600)]
+    [InlineData("md", 900)]
+    [InlineData("lg", 1200)]
+    public void The_breakpoints_are_mobile_first_and_the_same_in_every_app(string name, int width)
+    {
+        var css = Css("layout");
+        var block = css[css.IndexOf($"@media (min-width: {width}px) {{", StringComparison.Ordinal)..];
+        Assert.Contains($".mat-col-{name}-6 {{ grid-column-end: span 6; }}", block);
+        Assert.Contains($".mat-d-{name}-none {{ display: none; }}", css);
+        Assert.Contains($".mat-flex-{name}-row {{ flex-direction: row; }}", css);
+        Assert.DoesNotContain("@media (max-width", WithoutComments(css));
+    }
+
+    [Fact]
+    public void The_utilities_use_the_scales_and_never_important()
+    {
+        var css = WithoutComments(Css("layout"));
+        Assert.DoesNotContain("!important", css);
+        var tokens = Css("tokens");
+        foreach (var n in new[] { 1, 2, 3, 4, 5, 6, 8, 10, 12 })
+        {
+            Assert.Contains($".mat-p-{n} {{ padding: var(--mat-space-{n}); }}", css);
+            Assert.Contains($".mat-mt-{n} {{ margin-top: var(--mat-space-{n}); }}", css);
+            Assert.Contains($".mat-gap-{n} {{ gap: var(--mat-space-{n}); }}", css);
+            Assert.Contains($"--mat-space-{n}:", tokens);
+        }
+
+        Assert.Contains(".mat-mx-auto { margin-inline: auto; }", css);
+        Assert.Contains(".mat-ms-auto { margin-inline-start: auto; }", css);
+    }
+
+    [Fact]
+    public void The_layout_classes_are_not_defined_a_second_time_elsewhere()
+    {
+        var names = (string css) => System.Text.RegularExpressions.Regex.Matches(WithoutComments(css), @"\.(mat-[a-z0-9_-]+)").Select(m => m.Groups[1].Value).ToHashSet();
+        var layout = names(Css("layout"));
+        foreach (var part in new[] { "tokens", "base", "shell", "controls", "forms", "pickers", "lists", "dialogs", "apps" })
+        {
+            Assert.Empty(names(Css(part)).Intersect(layout));
+        }
+    }
 }

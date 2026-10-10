@@ -908,6 +908,73 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- layout and utilities
+  console.log('\nLayout and utilities');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Layout#grid-cols');
+    const rowWidths = () => page.$$eval('#grid-cols .doc-example:first-of-type .mat-cols', rows => rows.map(r => [...r.children].map(c => c.getBoundingClientRect().width)));
+    await check('the twelve columns divide a row: halves, thirds, 8 and 4, quarters', async () => {
+      const rows = await rowWidths();
+      expect(rows.map(r => r.length), [2, 3, 2, 4], 'cells per row');
+      expectTrue(Math.abs(rows[0][0] - rows[0][1]) < 1.5, 'the two halves are not equal');
+      expectTrue(Math.abs(rows[1][0] - rows[1][2]) < 1.5, 'the thirds are not equal');
+      expectTrue(rows[2][0] / rows[2][1] > 1.8 && rows[2][0] / rows[2][1] < 2.3, `8 to 4 is not about 2 to 1: ${rows[2][0]} / ${rows[2][1]}`);
+      expectTrue(Math.abs(rows[3][0] - rows[3][3]) < 1.5, 'the quarters are not equal');
+    });
+    await check('on a wide screen the responsive cells are four in a row; an offset moves a column; the order class changes the picture', async () => {
+      const responsive = await page.$$eval('#grid-cols .doc-example:nth-of-type(2) .mat-cols > *', cells => cells.map(c => Math.round(c.getBoundingClientRect().top)));
+      expect(new Set(responsive).size, 1, 'rows of the four responsive cells');
+      const offset = await page.$eval('#grid-cols .mat-col-start-4', el => { const r = el.getBoundingClientRect(), p = el.parentElement.getBoundingClientRect(); return Math.round((r.left - p.left) / p.width * 100); });
+      expectTrue(offset > 20 && offset < 30, 'the offset column does not start a quarter in: ' + offset + ' %');
+      const order = await page.$eval('#grid-cols .mat-order-last', el => { const sibling = el.nextElementSibling || el.previousElementSibling; return el.getBoundingClientRect().left > sibling.getBoundingClientRect().left; });
+      expect(order, true, 'the cell with mat-order-last is on the right');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Utilities');
+    await check('utilities set their property from the scale: padding, an auto margin that centres, a gap, truncation', async () => {
+      expect(await page.$eval('#u-spacing .mat-p-4', el => getComputedStyle(el).paddingLeft), '16px', 'mat-p-4');
+      const centred = await page.$eval('#u-spacing .mat-mx-auto', el => { const r = el.getBoundingClientRect(), p = el.parentElement.getBoundingClientRect(); return Math.abs((r.left - p.left) - (p.right - r.right)) < 1.5; });
+      expect(centred, true, 'mat-mx-auto mat-w-50 is centred');
+      expect(await page.$eval('#u-spacing .mat-gap-6', el => getComputedStyle(el).columnGap), '24px', 'mat-gap-6');
+      const cut = await page.$eval('#u-text .mat-text-truncate', el => ({ ellipsis: getComputedStyle(el).textOverflow, cut: el.scrollWidth > el.clientWidth }));
+      expect(cut, { ellipsis: 'ellipsis', cut: true }, 'mat-text-truncate');
+    });
+    await check('the width classes show and hide: below 900 px only, from 900 px, and a column that becomes a row', async () => {
+      expect(await page.$eval('#u-display .mat-d-md-none', el => getComputedStyle(el).display), 'none', 'mat-d-md-none on a wide screen');
+      expect(await page.$eval('#u-display .mat-d-md-block', el => getComputedStyle(el).display), 'block', 'mat-d-md-block on a wide screen');
+      expect(await page.$eval('#u-flex .mat-flex-md-row', el => getComputedStyle(el).flexDirection), 'row', 'mat-flex-md-row on a wide screen');
+      await page.setViewportSize({ width: 700, height: 900 });
+      expect(await page.$eval('#u-display .mat-d-md-none', el => getComputedStyle(el).display), 'block', 'mat-d-md-none on a narrow screen');
+      expect(await page.$eval('#u-display .mat-d-md-block', el => getComputedStyle(el).display), 'none', 'mat-d-md-block on a narrow screen');
+      expect(await page.$eval('#u-flex .mat-flex-md-row', el => getComputedStyle(el).flexDirection), 'column', 'the same box on a narrow screen');
+    });
+    await check('tints bring a readable text colour; the text colours are the status colours', async () => {
+      await page.setViewportSize({ width: 1360, height: 900 });
+      const same = await page.$eval('#u-colour .mat-tint-danger', el => getComputedStyle(el).color !== getComputedStyle(document.body).color && getComputedStyle(el).backgroundColor !== 'rgba(0, 0, 0, 0)');
+      expect(same, true, 'mat-tint-danger sets background and colour');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Layout#grid-cols');
+    const share = sel => page.$$eval(sel, rs => rs.map(r => [...r.children].map(c => Math.round(c.getBoundingClientRect().width / r.getBoundingClientRect().width * 100))));
+    await check('on a phone mat-col-12 mat-col-sm-6 mat-col-lg-3 is one column, and a class without a breakpoint keeps its share', async () => {
+      const responsive = await share('#grid-cols .doc-example:nth-of-type(2) .mat-cols');
+      expect(responsive.flat().every(w => w >= 99), true, 'the cells that change with the screen: ' + JSON.stringify(responsive));
+      const fixed = await share('#grid-cols .doc-example:first-of-type .mat-cols');
+      expectTrue(fixed[0][0] < 55, 'mat-col-6 is not half of the row on a phone: ' + JSON.stringify(fixed[0]));
+    });
+    await check('on a phone the index of the page is a button that opens a dialog', async () => {
+      await page.click('.mat-toc-bar button');
+      expectTrue(await page.locator('#toc-dialog[open]').count() === 1, 'the index dialog is not open');
+      expect(await page.locator('#toc-dialog a.mat-toc__link').count() >= 3, true, 'links in the dialog');
+      await page.click('#toc-dialog [data-dialog-close]');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {
