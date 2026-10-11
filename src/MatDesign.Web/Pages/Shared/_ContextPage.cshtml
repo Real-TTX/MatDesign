@@ -1,0 +1,31 @@
+@model ContextPage
+@inject MatDesign.Web.Studio.DesignData Design
+@*
+    "In a page": a real page of the sample app (/Preview) that uses the components of one group, shown in a frame under the group's title and opened on demand.
+    The buttons name the components that the page uses; one press outlines them in the page. doc.js loads the frame when the panel is opened.
+*@
+@{
+    var anchor = ComponentCatalog.GroupAnchor(Model.Group);
+}
+<details class="doc-context" id="context-@anchor" data-context data-context-view="@Model.View">
+    <summary>@Ui.Icon("monitor")<span>See the @Model.Group.ToLowerInvariant() in a page</span></summary>
+    <div class="doc-context__body">
+        <p class="mat-muted"><strong>@Model.Title.</strong> @Model.Text</p>
+        <div class="doc-context__bar">
+            <div class="mat-seg" role="group" aria-label="Size of the window">
+                <button type="button" class="mat-seg__btn" data-context-size="desktop" aria-pressed="true">@Ui.Icon("monitor")<span>Desktop</span></button>
+                <button type="button" class="mat-seg__btn" data-context-size="phone" aria-pressed="false">@Ui.Icon("smartphone")<span>Phone</span></button>
+            </div>
+            <div class="mat-row doc-context__marks" role="group" aria-label="Outline a component in the page">
+                @foreach (var mark in Model.Marks)
+                {
+                    <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-context-mark="@mark.Selector" data-context-component="@mark.Component" data-context-view="@(mark.View ?? Model.View)" data-context-open="@mark.Open" aria-pressed="false">@(Design.Component(mark.Component)?.Name ?? mark.Component)</button>
+                }
+            </div>
+            <a class="mat-btn mat-btn--ghost mat-btn--sm" data-context-open-page href="@ContextPages.Url(Model.View)" target="_blank" rel="noopener">@Ui.Icon("external")<span>Open the page</span></a>
+        </div>
+        <div class="doc-context__stage">
+            <iframe class="doc-frame" title="@Model.Title: the @Model.Group.ToLowerInvariant() in a page of the sample app" data-src="@ContextPages.Url(Model.View)"></iframe>
+        </div>
+    </div>
+</details>

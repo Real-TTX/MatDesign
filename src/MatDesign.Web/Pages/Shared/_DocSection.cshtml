@@ -11,7 +11,7 @@
 <div class="mat-with-toc">
     <div class="mat-with-toc__main">
         <p class="mat-muted">
-            Every example is live. <em>Markup</em> under it has the HTML (or the script) to copy.
+            Every example is live and shows its code with it, to copy: beside the example on a wide window, below it on a narrow one.
             Ids such as <a href="/Rules/Detail?id=FORM-01">FORM-01</a> are the rules from the rulebook that the example follows.
             @if (isComponents)
             {
@@ -23,6 +23,14 @@
             }
         </p>
 
+        <div class="doc-view" role="group" aria-label="Where the code is shown">
+            <span class="doc-view__label">Code</span>
+            <div class="mat-seg">
+                <button type="button" class="mat-seg__btn" data-doc-code="beside" aria-pressed="true"><span>Beside the example</span></button>
+                <button type="button" class="mat-seg__btn" data-doc-code="below" aria-pressed="false"><span>Below it</span></button>
+            </div>
+        </div>
+
         @foreach (var group in Model.Groups)
         {
             var anchor = ComponentCatalog.GroupAnchor(group);
@@ -31,6 +39,10 @@
                     <h2 id="h-@anchor">@group</h2>
                     <p class="mat-section__lead">@ComponentCatalog.GroupSummaries[group]</p>
                 </div>
+                @if (ContextPages.For(group) is { } context)
+                {
+                    <partial name="_ContextPage" model="context" />
+                }
                 <div class="doc-components">
                     @foreach (var component in Design.ComponentsOf(group))
                     {

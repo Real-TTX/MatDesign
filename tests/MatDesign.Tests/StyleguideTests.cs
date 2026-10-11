@@ -69,7 +69,7 @@ public sealed partial class StyleguideTests(WebApplicationFactory<Program> facto
                 Assert.Contains(Styleguide.Live(ex.Html), html);
             }
 
-            Assert.Contains(System.Net.WebUtility.HtmlEncode(ex.Js ?? ex.Html), html);
+            Assert.Contains(MatDesign.Web.Studio.CodeHighlighter.Of(ex.Js ?? ex.Html, ex.Js is not null), html);
         }
     }
 

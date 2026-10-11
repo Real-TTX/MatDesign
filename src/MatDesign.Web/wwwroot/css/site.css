@@ -65,9 +65,44 @@
 .doc-example__live--bar .mat-topbar { position: static; }
 .doc-example__head p { flex: 1 1 100%; margin: 0; color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
 .doc-example__live { padding: var(--mat-space-6); display: flex; flex-direction: column; gap: var(--mat-space-4); min-width: 0; background: var(--mat-bg); margin: var(--mat-space-4) var(--mat-space-4) 0; border-radius: var(--mat-radius); border: 1px solid var(--mat-border); }
-.doc-example__code { margin: var(--mat-space-3) var(--mat-space-4) var(--mat-space-4); }
-.doc-example__code summary { cursor: pointer; color: var(--mat-accent-text); font-weight: 600; font-size: var(--mat-fs-sm); padding: var(--mat-space-1) 0 var(--mat-space-2); }
-.doc-example__code .mat-code { max-height: 340px; }
+/* An example: its live area and its code, both always shown. The code is beside the example where the window is wide (the page has its index beside it from
+   1100 px, so there is room from about 1600 px), below it otherwise, and below for an example that needs the whole width (--stack). */
+.doc-example__body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--mat-space-3); padding: var(--mat-space-4); }
+.doc-example__body > .doc-example__live { margin: 0; }
+.doc-example__body--alone { padding-top: 0; }
+.doc-code { display: flex; flex-direction: column; min-width: 0; background: var(--mat-surface-3); border: 1px solid var(--mat-border); border-radius: var(--mat-radius); overflow: hidden; }
+.doc-code__bar { display: flex; align-items: center; justify-content: space-between; gap: var(--mat-space-3); padding: var(--mat-space-1) var(--mat-space-2) var(--mat-space-1) var(--mat-space-4); border-bottom: 1px solid var(--mat-border); }
+.doc-code__lang { font-size: var(--mat-fs-xs); font-weight: 650; color: var(--mat-text-muted); }
+.doc-code .mat-code { flex: 1 1 auto; max-height: 26rem; margin: 0; background: transparent; border: 0; border-radius: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.doc-code .mat-code:focus-visible { outline: 2px solid var(--mat-accent); outline-offset: -2px; }
+@media (min-width: 1600px) {
+  :root:not([data-doc-code="below"]) .doc-example__body:not(.doc-example__body--stack):not(.doc-example__body--alone) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+  :root:not([data-doc-code="below"]) .doc-example__body:not(.doc-example__body--stack):not(.doc-example__body--alone) > .doc-example__live { justify-content: center; }
+}
+/* where the code is shown: only offered where it can be beside */
+.doc-view { display: none; align-items: center; gap: var(--mat-space-3); }
+.doc-view__label { font-size: var(--mat-fs-sm); font-weight: 600; color: var(--mat-text-muted); }
+@media (min-width: 1600px) { .doc-view { display: flex; } }
+/* "In a page": a real page of the sample app under the title of a group, opened on demand */
+.doc-component__head > .doc-show { margin-left: auto; flex: none; }
+.doc-context { background: var(--mat-surface); border: 1px solid var(--mat-border); border-radius: var(--mat-radius-lg); }
+.doc-context > summary { display: flex; align-items: center; gap: var(--mat-space-2); padding: var(--mat-space-3) var(--mat-space-4); color: var(--mat-accent-text); font-weight: 600; cursor: pointer; }
+.doc-context[open] > summary { border-bottom: 1px solid var(--mat-border); }
+.doc-context__body { display: flex; flex-direction: column; gap: var(--mat-space-3); padding: var(--mat-space-4); }
+.doc-context__bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-3); }
+.doc-context__marks { flex: 1 1 14rem; gap: var(--mat-space-1); }
+.doc-context__marks .mat-btn[aria-pressed="true"] { background: var(--mat-accent-soft-strong); color: var(--mat-accent-text); }
+.doc-context__stage { padding: var(--mat-space-3); background: var(--mat-surface-3); border-radius: var(--mat-radius); }
+.doc-context .doc-frame { height: 640px; margin-inline: auto; }
+.doc-context .doc-frame--phone { height: 720px; }
+/* the classes and the attributes that the examples of a component use */
+.doc-api { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--mat-space-1) var(--mat-space-3); align-items: baseline; margin: 0; font-size: var(--mat-fs-xs); }
+.doc-api dt { color: var(--mat-text-muted); font-weight: 600; }
+.doc-api dd { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; min-width: 0; }
+.doc-api code { padding: 1px 6px; border-radius: var(--mat-radius-xs); background: var(--mat-surface-3); overflow-wrap: anywhere; }
+.doc-api dd:not(.is-open) .doc-api__extra { display: none; }
+.doc-api__more { padding: 1px 6px; border: 0; background: transparent; color: var(--mat-accent-text); font: inherit; font-weight: 600; cursor: pointer; }
+@media (max-width: 700px) { .doc-api { display: none; } }
 
 /* ---- Rules ---- */
 .doc-rule-id { font-family: var(--mat-mono); font-weight: 650; font-size: var(--mat-fs-xs); background: var(--mat-surface-3); border-radius: var(--mat-radius-xs); padding: 2px 8px; white-space: nowrap; }

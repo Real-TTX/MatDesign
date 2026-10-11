@@ -5,7 +5,22 @@ namespace MatDesign.Web.Services;
 /// differ. <see cref="Js"/> is the script call that does the same (for dialogs and toasts); <see cref="Demo"/> adds a "Try it" button.
 /// <see cref="Frame"/> names a look of the live area that is not part of the markup (a menu is shown in a box as wide as the menu).
 /// </summary>
-public sealed record ComponentExample(string Title, string Html, string? Note = null, string? Js = null, string? Demo = null, bool Live = true, string? Frame = null);
+public sealed record ComponentExample(string Title, string Html, string? Note = null, string? Js = null, string? Demo = null, bool Live = true, string? Frame = null)
+{
+    /// <summary>The classes of the toolkit whose examples need the whole width: with them the code is shown below the example, not beside it.</summary>
+    private static readonly string[] WideClasses =
+    [
+        "mat-table-wrap", "mat-toolbar", "mat-topbar", "mat-footer", "mat-with-toc", "mat-gallery", "mat-cols", "mat-grid", "mat-form__grid", "mat-auth", "mat-pager",
+        "mat-tabs--vertical", "mat-nav ", "mat-switcher",
+    ];
+
+    /// <summary>
+    /// True when the example is better with the code below it than beside it: it has a frame of its own that is wider than half a page (the bars), or it is a
+    /// table, a bar, a grid or a page layout. The code is always shown; this only decides where.
+    /// </summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool Wide => Frame == "bar" || WideClasses.Any(c => Html.Contains(c, StringComparison.Ordinal));
+}
 
 /// <summary>A control of the toolkit as the component pages document it.</summary>
 public sealed record ComponentDoc(
@@ -561,8 +576,16 @@ public static class ComponentCatalog
                         ports: ["8060:8060"]</code></pre>
                     </div>
                     """),
+                new("Code with colours", """
+                    <div class="mat-stack mat-stack--sm">
+                      <pre class="mat-code"><code><span class="mat-code__com">&lt;!-- one save button --&gt;</span>
+                    <span class="mat-code__pun">&lt;</span><span class="mat-code__tag">button</span> <span class="mat-code__attr">type</span><span class="mat-code__pun">=</span><span class="mat-code__str">"submit"</span> <span class="mat-code__attr">class</span><span class="mat-code__pun">=</span><span class="mat-code__str">"mat-btn mat-btn--primary"</span><span class="mat-code__pun">&gt;</span>Save<span class="mat-code__pun">&lt;/</span><span class="mat-code__tag">button</span><span class="mat-code__pun">&gt;</span></code></pre>
+                      <pre class="mat-code"><code><span class="mat-code__com">// ask first</span>
+                    <span class="mat-code__kw">const</span> ok = <span class="mat-code__kw">await</span> MatUi.confirm(<span class="mat-code__str">'Restart?'</span>, { ok: <span class="mat-code__str">'Restart'</span>, delay: <span class="mat-code__num">250</span> });</code></pre>
+                    </div>
+                    """, "The parts are spans: tag and keyword (mat-code__tag, mat-code__kw), attribute and number (__attr, __num), string (__str), comment (__com) and punctuation (__pun). The component pages of this site colour their code with them."),
             ],
-            ["A block scrolls sideways instead of wrapping; it never breaks the layout on a phone."]),
+            ["A block scrolls sideways instead of wrapping; it never breaks the layout on a phone.", "Colouring is optional: a block without the spans is plain mono text. The colours are the status text colours, so they hold in both modes."]),
 
         new("tabs", "Tabs", "Navigation", "layers",
             "Several panels of one page, or several pages that belong together. Both look the same.",

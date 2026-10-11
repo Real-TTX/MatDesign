@@ -1197,6 +1197,123 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the code of the examples, the group in a page
+  console.log('\nCode beside the examples, the group in a page');
+  {
+    const { ctx, page } = await open({ viewport: { width: 1920, height: 1000 } }, '/Components#buttons');
+    await check('on a wide window the code is beside the example, coloured, and an example that needs the width has it below', async () => {
+      const live = await page.locator('#ex-buttons-1').locator('xpath=ancestor::div[@role="group"][1]').locator('.doc-example__live').boundingBox();
+      const code = await page.locator('#src-buttons-1').locator('xpath=..').boundingBox();
+      expectTrue(code.x >= live.x + live.width - 2, 'the code is not beside the example: ' + code.x + ' / ' + (live.x + live.width));
+      expectTrue(Math.abs(code.y - live.y) < 4, 'the code is not level with the example: ' + code.y + ' / ' + live.y);
+      expectTrue(code.height > 40, 'the code has no height');
+      const colours = await page.evaluate(() => {
+        const tag = document.querySelector('#src-buttons-1 .mat-code__tag');
+        return [getComputedStyle(tag).color, getComputedStyle(document.querySelector('#src-buttons-1')).color];
+      });
+      expectTrue(colours[0] !== colours[1], 'the tag has the colour of the text');
+      const wideLive = await page.locator('#ex-toolbar-1').locator('xpath=ancestor::div[@role="group"][1]').locator('.doc-example__live').boundingBox();
+      const wideCode = await page.locator('#src-toolbar-1').boundingBox();
+      expectTrue(wideCode.y >= wideLive.y + wideLive.height - 2, 'the code of a toolbar is not below it');
+    });
+    await check('the code is never behind a click: there is no disclosure for it, and Copy puts exactly the code on the clipboard', async () => {
+      expect(await page.locator('.doc-example__code, .doc-code details').count(), 0, 'disclosures around the code');
+      await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
+      await page.click('[data-copy="#src-buttons-1"]');
+      await page.waitForTimeout(200);
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      const shown = await page.evaluate(() => document.getElementById('src-buttons-1').textContent.trim());
+      expect(copied.split('\r').join('').trim(), shown, 'the clipboard');
+      expectTrue(copied.startsWith('<div class="mat-row">') && !copied.includes('mat-code__'), 'the copy is not the plain markup');
+    });
+    await check('"Below it" puts every code under its example and is kept after a reload', async () => {
+      expectTrue(await page.locator('.doc-view').isVisible(), 'the choice is not offered on a wide window');
+      await page.click('button[data-doc-code="below"]');
+      const live = await page.locator('#ex-buttons-1').locator('xpath=ancestor::div[@role="group"][1]').locator('.doc-example__live').boundingBox();
+      const code = await page.locator('#src-buttons-1').boundingBox();
+      expectTrue(code.y >= live.y + live.height - 2, 'the code is not below the example');
+      await page.reload({ waitUntil: 'networkidle' });
+      expect(await page.getAttribute('button[data-doc-code="below"]', 'aria-pressed'), 'true', 'the choice after a reload');
+      await page.click('button[data-doc-code="beside"]');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#buttons');
+    await check('on a laptop window the code is below the example and the choice is not offered', async () => {
+      const live = await page.locator('#ex-buttons-1').locator('xpath=ancestor::div[@role="group"][1]').locator('.doc-example__live').boundingBox();
+      const code = await page.locator('#src-buttons-1').boundingBox();
+      expectTrue(code.y >= live.y + live.height - 2, 'the code is not below the example');
+      expectTrue(!(await page.locator('.doc-view').isVisible()), 'the choice is offered where it does nothing');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open({ viewport: { width: 1920, height: 1000 } }, '/Components#group-forms');
+    const frameOf = async (group = 'group-forms') => (await page.locator('#context-' + group + ' iframe').elementHandle()).contentFrame();
+    await check('the page of a group is not loaded until its panel is opened, then it is a real page with the shell', async () => {
+      expect(await page.locator('#context-group-forms iframe').getAttribute('src'), null, 'the frame before it is opened');
+      await page.click('#context-group-forms > summary');
+      await page.waitForFunction(() => { const f = document.querySelector('#context-group-forms iframe'); return f && f.getAttribute('data-loaded') === 'true'; });
+      const inside = await (await frameOf()).evaluate(() => ({ nav: !!document.querySelector('.mat-nav'), field: !!document.querySelector('.mat-field'), footer: !!document.querySelector('.mat-footer'), title: document.querySelector('h1').textContent }));
+      expect(inside, { nav: true, field: true, footer: true, title: 'Edit item' }, 'the page in the frame');
+    });
+    await check('a press on a component outlines it in the page and a second press takes the outline away', async () => {
+      await page.click('#context-group-forms [data-context-component="fields"]');
+      const outlined = async () => (await frameOf()).evaluate(() => getComputedStyle(document.querySelector('.mat-field')).outlineStyle);
+      expect(await outlined(), 'solid', 'the outline of a field');
+      expect(await page.getAttribute('#context-group-forms [data-context-component="fields"]', 'aria-pressed'), 'true', 'pressed');
+      await page.click('#context-group-forms [data-context-component="fields"]');
+      expect(await outlined(), 'none', 'the outline after the second press');
+    });
+    await check('the window of the page can be a phone: the frame is 390 px wide and the page in it is the phone layout', async () => {
+      await page.click('#context-group-forms [data-context-size="phone"]');
+      const box = await page.locator('#context-group-forms iframe').boundingBox();
+      expect(Math.round(box.width), 390, 'the width of the frame');
+      expectTrue(await (await frameOf()).evaluate(() => innerWidth) <= 390, 'the page in the frame is wider than a phone');
+      await page.click('#context-group-forms [data-context-size="desktop"]');
+    });
+    await check('"Show in a page" at a component opens the panel of its group and outlines the component there', async () => {
+      await page.goto(BASE + '/Components#group-lists-and-data', { waitUntil: 'networkidle' });
+      await page.click('#toolbar [data-context-show]');
+      await page.waitForFunction(() => { const f = document.querySelector('#context-group-lists-and-data iframe'); return f && f.getAttribute('data-loaded') === 'true'; });
+      await page.waitForTimeout(300);
+      expectTrue(await page.evaluate(() => document.getElementById('context-group-lists-and-data').open), 'the panel is not open');
+      expect(await page.getAttribute('#context-group-lists-and-data [data-context-component="toolbar"]', 'aria-pressed'), 'true', 'the mark of the toolbar');
+      expect(await (await frameOf('group-lists-and-data')).evaluate(() => getComputedStyle(document.querySelector('.mat-toolbar')).outlineStyle), 'solid', 'the outline of the toolbar');
+    });
+    await check('a component of another page loads that page first: the gallery is shown in the gallery view, a dialog opens before it is outlined', async () => {
+      await page.click('#context-group-lists-and-data [data-context-component="gallery"]');
+      await page.waitForFunction(() => document.querySelector('#context-group-lists-and-data iframe').getAttribute('data-view') === 'gallery' && document.querySelector('#context-group-lists-and-data iframe').getAttribute('data-loaded') === 'true');
+      await page.waitForTimeout(300);
+      expect(await (await frameOf('group-lists-and-data')).evaluate(() => getComputedStyle(document.querySelector('.mat-gallery')).outlineStyle), 'solid', 'the outline of the gallery');
+      expectTrue((await page.getAttribute('#context-group-lists-and-data [data-context-open-page]', 'href')).includes('view=gallery'), 'the link to the page is still the table');
+      await page.goto(BASE + '/Components#group-feedback', { waitUntil: 'networkidle' });
+      await page.click('#dialogs [data-context-show]');
+      await page.waitForFunction(() => { const f = document.querySelector('#context-group-feedback iframe'); return f && f.getAttribute('data-loaded') === 'true'; });
+      await page.waitForTimeout(500);
+      expect(await (await frameOf('group-feedback')).evaluate(() => { const d = document.querySelector('dialog.mat-dialog[open]'); return d ? getComputedStyle(d).outlineStyle : 'no dialog'; }), 'solid', 'the dialog that was opened');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components');
+    await check('on a phone the code is below the example, the classes are left out, and the page of a group fits the screen', async () => {
+      const live = await page.locator('#ex-buttons-1').locator('xpath=ancestor::div[@role="group"][1]').locator('.doc-example__live').boundingBox();
+      const code = await page.locator('#src-buttons-1').boundingBox();
+      expectTrue(code.y >= live.y + live.height - 2, 'the code is not below the example');
+      expectTrue(!(await page.locator('#buttons .doc-api').isVisible()), 'the classes take room on a phone');
+      await page.evaluate(() => document.getElementById('context-group-actions').scrollIntoView());
+      await page.click('#context-group-actions > summary');
+      await page.waitForTimeout(600);
+      const frame = await page.locator('#context-group-actions iframe').boundingBox();
+      expectTrue(frame.width <= 390 && frame.x >= 0, 'the frame is wider than the screen: ' + frame.width);
+      const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+      expectTrue(widths.page <= widths.window, 'the page scrolls sideways');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the Studio
   // It needs the administrator password (STUDIO_PASSWORD, the development stack uses studio-dev). A site with the Studio off is not a failure here.
   console.log('\nStudio');

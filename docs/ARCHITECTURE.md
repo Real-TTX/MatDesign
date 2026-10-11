@@ -116,7 +116,10 @@ that every `#link` leads to a section that exists.
 
 ## 5. The documentation cannot drift from the toolkit
 
-- **Components** are data (`ComponentCatalog`): each example is one raw string, rendered live and shown as source. A test checks every one: the classes exist in the toolkit's CSS,
+- **Components** are data (`ComponentCatalog`): each example is one raw string, rendered live and shown as source, **beside the example on a wide window and below it otherwise, always visible and coloured**
+  (`CodeHighlighter` wraps tags, attributes, strings and comments in spans on the server; the text stays the code, so Copy copies it; `ComponentExample.Wide` puts the code below for tables, bars and grids).
+  Under the title of a component the classes and `data-` attributes of its examples are listed (`ComponentApi`, read from the markup). Each group also has a panel "See … in a page"
+  (`ContextPages`, `_ContextPage`): a frame of a view of the sample app (`/Preview`), loaded when the panel is opened, with marks that outline a component in it. A test checks every one: the classes exist in the toolkit's CSS,
   the icons exist in the sprite, every `td` has `data-label`, every button has a type, every control has an id, ids are unique and references resolve, tags are balanced, and
   there is no inline style.
 - **Pages** are scanned by a test for classes that no stylesheet defines, inline styles, inline scripts, outside resources and icons that are not in the sprite.

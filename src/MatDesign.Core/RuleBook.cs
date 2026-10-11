@@ -421,6 +421,12 @@ public static class RuleBook
         new("CODE-06", "CODE", "Controls render nothing when there is nothing to show",
             "A pagination with one page, an empty alert, a toolbar without tools render no markup at all.",
             RuleLevel.Should, MatSplit),
+        new("CODE-07", "CODE", "The documentation shows the code with the example",
+            "Every example of the documentation (the components, the layout, the utilities and the styleguide of a release) shows its code with it, never behind a click: beside the example where the window is wide, below it otherwise, and below it for an example that needs the whole width (a table, a bar, a grid). The code is the markup that is drawn, from one source, coloured, with a Copy button; under the title the classes and the data attributes that the examples use are named.",
+            RuleLevel.Should, Design, Why: "A developer copies what they see. Code that is one click away is not looked at, and code that is typed next to a picture drifts from it.", Do: "<div class=\"doc-example__body\"><div class=\"doc-example__live\">the example</div><div class=\"doc-code\">HTML | Copy, the code</div></div>", Dont: "a Markup disclosure, a screenshot instead of a live example, code that is written by hand next to the picture", Check: "Test (the page of the code is the code of the example) and browser"),
+        new("CODE-08", "CODE", "A group of components is shown in a real page",
+            "Beside its components the documentation shows each group in a real page of a sample app, opened when it is wanted: the controls are judged where they are used and not only on their own. The page can be a desktop window or a phone, can be opened by itself, and a component that the page uses can be outlined in it.",
+            RuleLevel.Should, Design, Why: "A button that looks right alone can be wrong in a form; seeing the group in a page is how the spacing, the order and the neighbours are judged.", Do: "<details class=\"doc-context\"> a frame of /Preview with the marks of the components in it </details>", Dont: "a mock-up that is drawn by hand and can differ from the toolkit, a frame that loads before it is opened", Check: "Test (every mark finds its component in the page) and browser"),
     ];
 
     public static Rule? Get(string id) => All.FirstOrDefault(r => r.Id.Equals(id, StringComparison.OrdinalIgnoreCase));

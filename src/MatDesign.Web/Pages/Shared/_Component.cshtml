@@ -1,12 +1,16 @@
 @model ComponentDoc
 @inject MatDesign.Web.Studio.DesignData Design
 @*
-    One component on the components page: what it is, the rules it follows, each example live with its markup (or script) to copy, and what is good to know.
+    One component on the components page: what it is, the rules it follows, the classes and attributes it uses, each example live with its code beside it
+    (below on a narrow window, and for examples that need the width), and what is good to know. The code is always shown, highlighted, with a Copy button.
     The ids of the elements are prefixed with the id of the component: all components share one page.
 *@
 @{
     var c = Model;
     var n = 0;
+    const int ApiShown = 14; // the classes that are listed at once; the rest opens with "+n more"
+    var classes = ComponentApi.Classes(c);
+    var attributes = ComponentApi.Attributes(c);
 }
 <section class="doc-component mat-anchor" id="@c.Id" aria-labelledby="h-@c.Id">
     <header class="doc-component__head">
@@ -19,43 +23,76 @@
                     <a class="doc-rule-id" href="/Rules/Detail?id=@rule" title="@Design.Rule(rule)?.Title">@rule</a>
                 }
             </div>
+            @if (classes.Count > 0 || attributes.Count > 0)
+            {
+                <dl class="doc-api">
+                    @if (classes.Count > 0)
+                    {
+                        <dt>Classes</dt>
+                        <dd>
+                            @for (var i = 0; i < classes.Count; i++)
+                            {
+                                <code class="@(i >= ApiShown ? "doc-api__extra" : null)">@classes[i]</code>
+                            }
+                            @if (classes.Count > ApiShown)
+                            {
+                                <button type="button" class="doc-api__more" data-doc-api-more aria-expanded="false" data-more="+@(classes.Count - ApiShown) more">+@(classes.Count - ApiShown) more</button>
+                            }
+                        </dd>
+                    }
+                    @if (attributes.Count > 0)
+                    {
+                        <dt>Attributes</dt>
+                        <dd>@foreach (var a in attributes) { <code>@a</code> }</dd>
+                    }
+                </dl>
+            }
         </div>
+        @if (ContextPages.Of(c.Id) is not null)
+        {
+            <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm doc-show" data-context-show="@ComponentCatalog.GroupAnchor(c.Group)" data-context-component="@c.Id">@Ui.Icon("monitor")<span>Show in a page</span></button>
+        }
     </header>
 
     @foreach (var ex in c.Examples)
     {
         n++;
         var sourceId = $"src-{c.Id}-{n}";
+        var live = ex.Live && ex.Html.Length > 0;
+        var script = ex.Js is not null;
+        var alone = !live && ex.Demo is null;
         <div class="doc-example" role="group" aria-labelledby="ex-@c.Id-@n">
             <div class="doc-example__head">
                 <h4 id="ex-@c.Id-@n">@ex.Title</h4>
                 @if (ex.Note is not null) { <p>@Ui.Rich(ex.Note)</p> }
             </div>
 
-            @if (ex.Live && ex.Html.Length > 0)
-            {
-                <div class="doc-example__live@(ex.Frame is null ? string.Empty : " doc-example__live--" + ex.Frame)">@Html.Raw(ex.Html)</div>
-            }
-            else if (ex.Demo is not null)
-            {
-                <div class="doc-example__live">
-                    <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-doc-demo="@ex.Demo">@Ui.Icon("play")<span>Try it</span></button></div>
-                </div>
-            }
-
-            <details class="doc-example__code" open="@(!ex.Live || ex.Html.Length == 0)">
-                <summary>@(ex.Js is not null ? "Script" : "Markup")</summary>
-                <div class="mat-stack mat-stack--sm">
-                    <pre class="mat-code" id="@sourceId"><code>@(ex.Js ?? ex.Html)</code></pre>
-                    <div class="mat-row">
-                        <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-copy="#@sourceId">@Ui.Icon("copy")<span>Copy</span></button>
-                        @if (ex.Js is not null && ex.Demo is not null && ex.Live && ex.Html.Length > 0)
-                        {
-                            <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-doc-demo="@ex.Demo">@Ui.Icon("play")<span>Try it</span></button>
-                        }
+            <div class="doc-example__body@(ex.Wide ? " doc-example__body--stack" : string.Empty)@(alone ? " doc-example__body--alone" : string.Empty)">
+                @if (live)
+                {
+                    <div class="doc-example__live@(ex.Frame is null ? string.Empty : " doc-example__live--" + ex.Frame)">@Html.Raw(ex.Html)</div>
+                }
+                else if (ex.Demo is not null)
+                {
+                    <div class="doc-example__live">
+                        <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-doc-demo="@ex.Demo">@Ui.Icon("play")<span>Try it</span></button></div>
                     </div>
+                }
+
+                <div class="doc-code">
+                    <div class="doc-code__bar">
+                        <span class="doc-code__lang">@(script ? "Script" : "HTML")</span>
+                        <span class="mat-row">
+                            @if (script && ex.Demo is not null && live)
+                            {
+                                <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-doc-demo="@ex.Demo">@Ui.Icon("play")<span>Try it</span></button>
+                            }
+                            <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-copy="#@sourceId">@Ui.Icon("copy")<span>Copy</span></button>
+                        </span>
+                    </div>
+                    <pre class="mat-code" id="@sourceId" tabindex="0"><code>@Html.Raw(MatDesign.Web.Studio.CodeHighlighter.Of(ex.Js ?? ex.Html, script))</code></pre>
                 </div>
-            </details>
+            </div>
         </div>
     }
 

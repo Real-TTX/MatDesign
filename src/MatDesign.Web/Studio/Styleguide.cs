@@ -39,7 +39,7 @@ public static class Styleguide
     /// <summary>The few rules of the page itself; everything inside an example is styled by <c>matui.css</c>.</summary>
     public static string Css() => """
         /* The styleguide of a release of MatUi. Only the frame around the examples is here; the examples are styled by matui.css. */
-        .sg { max-width: 1100px; margin: 0 auto; padding: var(--mat-space-6) var(--mat-space-4) var(--mat-space-12); display: flex; flex-direction: column; gap: var(--mat-space-10); }
+        .sg { max-width: 1560px; margin: 0 auto; padding: var(--mat-space-6) var(--mat-space-4) var(--mat-space-12); display: flex; flex-direction: column; gap: var(--mat-space-10); }
         .sg h1 { font-size: var(--mat-fs-2xl); }
         .sg h2 { font-size: var(--mat-fs-xl); padding-bottom: var(--mat-space-2); border-bottom: 1px solid var(--mat-border-strong); }
         .sg h3 { font-size: var(--mat-fs-lg); }
@@ -60,9 +60,19 @@ public static class Styleguide
         .sg__live--menu .mat-nav__switch { padding: 0 0 var(--mat-space-2); }
         .sg__live--bar { padding: 0; gap: 0; overflow: hidden; }
         .sg__live--bar .mat-topbar { position: static; }
-        .sg__code { margin: var(--mat-space-3) var(--mat-space-4) var(--mat-space-4); }
-        .sg__code summary { cursor: pointer; color: var(--mat-accent-text); font-weight: 600; font-size: var(--mat-fs-sm); padding: var(--mat-space-1) 0 var(--mat-space-2); }
-        .sg__code .mat-code { max-height: 340px; }
+        .sg__example-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--mat-space-3); padding: var(--mat-space-4); }
+        .sg__example-body > .sg__live { margin: 0; }
+        .sg__example-body--alone { padding-top: 0; }
+        .sg__code { display: flex; flex-direction: column; min-width: 0; background: var(--mat-surface-3); border: 1px solid var(--mat-border); border-radius: var(--mat-radius); overflow: hidden; }
+        .sg__code-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--mat-space-3); padding: var(--mat-space-1) var(--mat-space-2) var(--mat-space-1) var(--mat-space-4); border-bottom: 1px solid var(--mat-border); }
+        .sg__lang { font-size: var(--mat-fs-xs); font-weight: 650; color: var(--mat-text-muted); }
+        .sg__code .mat-code { flex: 1 1 auto; max-height: 26rem; margin: 0; background: transparent; border: 0; border-radius: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .sg__api { margin: 0; font-size: var(--mat-fs-xs); color: var(--mat-text-muted); }
+        .sg__api code { display: inline-block; margin: 2px 2px 2px 0; padding: 1px 6px; border-radius: var(--mat-radius-xs); background: var(--mat-surface-3); }
+        @media (min-width: 1100px) {
+          .sg__example-body:not(.sg__example-body--stack):not(.sg__example-body--alone) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+          .sg__example-body:not(.sg__example-body--stack):not(.sg__example-body--alone) > .sg__live { justify-content: center; }
+        }
         .sg__know { display: flex; flex-direction: column; gap: var(--mat-space-2); padding: var(--mat-space-4) var(--mat-space-6); border: 1px solid var(--mat-border); border-radius: var(--mat-radius); background: var(--mat-surface-2); }
         .sg__know ul { display: flex; flex-direction: column; gap: var(--mat-space-2); margin: 0; padding-left: 1.2em; }
         .sg__apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--mat-space-3); padding: 0; list-style: none; }
@@ -184,20 +194,33 @@ public static class Styleguide
             line("<div class=\"sg__rules\">" + string.Concat(c.Rules.Select(r => $"<a class=\"sg__rule-id\" href=\"#rule-{Encode(r)}\">{Encode(r)}</a>")) + "</div>");
         }
 
+        var classes = ComponentApi.Classes(c);
+        if (classes.Count > 0)
+        {
+            line("<p class=\"sg__api\"><strong>Classes</strong> " + string.Concat(classes.Select(k => $"<code>{Encode(k)}</code> ")) + "</p>");
+        }
+
         var n = 0;
         foreach (var ex in c.Examples)
         {
             n++;
             var live = ex.Live && ex.Html.Length > 0;
+            var script = ex.Js is not null;
+            var sourceId = $"src-{Encode(c.Id)}-{n}";
             line($"<div class=\"sg__example\" role=\"group\" aria-labelledby=\"ex-{Encode(c.Id)}-{n}\">");
             line($"<div class=\"sg__example-head\"><h5 id=\"ex-{Encode(c.Id)}-{n}\">{Encode(ex.Title)}</h5>{(ex.Note is null ? string.Empty : $"<p>{Rich(ex.Note)}</p>")}</div>");
+            line($"<div class=\"sg__example-body{(ex.Wide ? " sg__example-body--stack" : string.Empty)}{(live ? string.Empty : " sg__example-body--alone")}\">");
             if (live)
             {
                 line($"<div class=\"sg__live{(ex.Frame is null ? string.Empty : " sg__live--" + Encode(ex.Frame))}\">{Live(ex.Html)}</div>");
             }
 
-            line($"<details class=\"sg__code\"{(live ? string.Empty : " open")}><summary>{(ex.Js is not null ? "Script" : "Markup")}</summary>");
-            line($"<pre class=\"mat-code\"><code>{Encode(ex.Js ?? ex.Html)}</code></pre></details>");
+            // the code is always shown: beside the example where the window is wide, below it otherwise
+            line("<div class=\"sg__code\">");
+            line($"<div class=\"sg__code-bar\"><span class=\"sg__lang\">{(script ? "Script" : "HTML")}</span><button type=\"button\" class=\"mat-btn mat-btn--ghost mat-btn--sm\" data-copy=\"#{sourceId}\">{ComponentCatalog.Icon("copy")}<span>Copy</span></button></div>");
+            line($"<pre class=\"mat-code\" id=\"{sourceId}\" tabindex=\"0\"><code>{CodeHighlighter.Of(ex.Js ?? ex.Html, script)}</code></pre>");
+            line("</div>");
+            line("</div>");
             line("</div>");
         }
 

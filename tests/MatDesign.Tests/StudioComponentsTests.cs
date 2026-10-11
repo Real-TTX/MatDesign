@@ -234,7 +234,8 @@ public sealed partial class StudioComponentsTests : IClassFixture<WebApplication
         Assert.False(stored.Examples[0].Live);
         var page = await _studio.Get("/Components");
         Assert.DoesNotContain($"doc-example__live\">{Pill}", page);
-        Assert.Contains("Markup", page);
+        Assert.Contains("doc-example__body doc-example__body--alone", page);
+        Assert.Contains("<span class=\"doc-code__lang\">HTML</span>", page);
     }
 
     [Fact]
