@@ -1,51 +1,82 @@
 @model ToolbarModel
 @*
     The toolbar of a list or a gallery (rules LIST-02, LIST-03, DIALOG-02): Search, Filter and Sort are three buttons, each opens a dialog.
+    With Model.SearchField the search is a field in the toolbar instead, and Filter and Sort stand together at its right end.
     All fields belong to the one GET form below (the inputs point to it with form="..."), so every dialog sends the complete state.
     Use it as the first child of <div class="mat-list">.
 *@
 @{
     var id = Model.Id;
     var form = id + "-form";
-    var hasChips = Model.SearchActive || Model.ActiveFilters > 0;
+    // With the search in a field the field shows what is searched: no chip for it.
+    var hasChips = (!Model.SearchField && Model.SearchActive) || Model.ActiveFilters > 0;
+    var count = Model.Matching == Model.Total ? $"{Model.Total} {Model.Noun}" : $"{Model.Matching} of {Model.Total} {Model.Noun}";
+
+    void FilterAndSort()
+    {
+        if (Model.Filters.Count > 0)
+        {
+            <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn @(Model.ActiveFilters > 0 ? "is-active" : "")" data-dialog-open="@id-filter" aria-haspopup="dialog">
+                @Ui.Icon("sliders")<span>Filter</span>@if (Model.ActiveFilters > 0) { <span class="mat-badge">@Model.ActiveFilters</span> }
+            </button>
+        }
+
+        if (Model.SortOptions.Count > 0)
+        {
+            <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn @(Model.SortActive ? "is-active" : "")" data-dialog-open="@id-sort" aria-haspopup="dialog">
+                @Ui.Icon("sort")<span>Sort</span>@if (Model.SortActive) { <small>@Model.SortLabel @(Model.Descending ? "↓" : "↑")</small> }
+            </button>
+        }
+    }
+
+    void ViewSwitch()
+    {
+        if (Model.Views.Count > 0)
+        {
+            <div class="mat-seg" role="group" aria-label="View">
+                @foreach (var v in Model.Views)
+                {
+                    <button type="button" class="mat-seg__btn" data-view-switch="@v.Value" data-view-key="@id" aria-pressed="@((Model.View ?? Model.Views[0].Value) == v.Value ? "true" : "false")" aria-label="@v.Label" data-tip="@v.Label">@Ui.Icon(v.Icon)</button>
+                }
+            </div>
+        }
+    }
 }
 
 <div class="mat-toolbar" role="toolbar" aria-label="@Model.Label tools">
-    <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn @(Model.SearchActive ? "is-active" : "")" data-dialog-open="@id-search" data-shortcut="/" aria-haspopup="dialog">
-        @Ui.Icon("search")<span>Search</span>@if (Model.SearchActive) { <small>“@Model.Search”</small> }
-    </button>
-    @if (Model.Filters.Count > 0)
+    @if (Model.SearchField)
     {
-        <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn @(Model.ActiveFilters > 0 ? "is-active" : "")" data-dialog-open="@id-filter" aria-haspopup="dialog">
-            @Ui.Icon("sliders")<span>Filter</span>@if (Model.ActiveFilters > 0) { <span class="mat-badge">@Model.ActiveFilters</span> }
-        </button>
-    }
-    @if (Model.SortOptions.Count > 0)
-    {
-        <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn @(Model.SortActive ? "is-active" : "")" data-dialog-open="@id-sort" aria-haspopup="dialog">
-            @Ui.Icon("sort")<span>Sort</span>@if (Model.SortActive) { <small>@Model.SortLabel @(Model.Descending ? "↓" : "↑")</small> }
-        </button>
-    }
+        <div class="mat-input-icon mat-toolbar__search">
+            @Ui.Icon("search")
+            <input class="mat-input" type="search" id="@id-q" name="q" form="@form" value="@Model.Search" placeholder="@Model.SearchPlaceholder" aria-label="@Model.Label: search" autocomplete="off" enterkeyhint="search" data-shortcut="/" />
+        </div>
 
-    <span class="mat-toolbar__spacer"></span>
-
-    @if (Model.Views.Count > 0)
-    {
-        <div class="mat-seg" role="group" aria-label="View">
-            @foreach (var v in Model.Views)
-            {
-                <button type="button" class="mat-seg__btn" data-view-switch="@v.Value" data-view-key="@id" aria-pressed="@((Model.View ?? Model.Views[0].Value) == v.Value ? "true" : "false")" aria-label="@v.Label" data-tip="@v.Label">@Ui.Icon(v.Icon)</button>
-            }
+        <span class="mat-toolbar__spacer"></span>
+        <span class="mat-toolbar__info" aria-live="polite">@count</span>
+        <div class="mat-toolbar__end">
+            @{ FilterAndSort(); }
+            @{ ViewSwitch(); }
         </div>
     }
+    else
+    {
+        <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn @(Model.SearchActive ? "is-active" : "")" data-dialog-open="@id-search" data-shortcut="/" aria-haspopup="dialog">
+            @Ui.Icon("search")<span>Search</span>@if (Model.SearchActive) { <small>“@Model.Search”</small> }
+        </button>
+        FilterAndSort();
 
-    <span class="mat-toolbar__info" aria-live="polite">@(Model.Matching == Model.Total ? $"{Model.Total} {Model.Noun}" : $"{Model.Matching} of {Model.Total} {Model.Noun}")</span>
+        <span class="mat-toolbar__spacer"></span>
+
+        ViewSwitch();
+
+        <span class="mat-toolbar__info" aria-live="polite">@count</span>
+    }
 </div>
 
 @if (hasChips)
 {
     <div class="mat-chips" role="group" aria-label="Applied tools">
-        @if (Model.SearchActive)
+        @if (!Model.SearchField && Model.SearchActive)
         {
             <span class="mat-chip">Search: @Model.Search<a class="mat-chip__x" href="@Model.UrlWithout("q")" aria-label="Remove the search">@Ui.Icon("x")</a></span>
         }
@@ -67,30 +98,33 @@
     }
 </form>
 
-<dialog class="mat-dialog mat-dialog--sm" id="@id-search" aria-labelledby="@id-search-title">
-    <div class="mat-dialog__form">
-        <div class="mat-dialog__head">
-            @Ui.Icon("search")
-            <h2 class="mat-dialog__title" id="@id-search-title">Search</h2>
-            <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">@Ui.Icon("x")</button>
-        </div>
-        <div class="mat-dialog__body">
-            <div class="mat-field">
-                <label class="mat-label" for="@id-q">Search for</label>
-                <input class="mat-input" type="search" id="@id-q" name="q" form="@form" value="@Model.Search" placeholder="@Model.SearchPlaceholder" autocomplete="off" />
-                <span class="mat-hint">Press <kbd>/</kbd> on the page to open this dialog.</span>
+@if (!Model.SearchField)
+{
+    <dialog class="mat-dialog mat-dialog--sm" id="@id-search" aria-labelledby="@id-search-title">
+        <div class="mat-dialog__form">
+            <div class="mat-dialog__head">
+                @Ui.Icon("search")
+                <h2 class="mat-dialog__title" id="@id-search-title">Search</h2>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">@Ui.Icon("x")</button>
+            </div>
+            <div class="mat-dialog__body">
+                <div class="mat-field">
+                    <label class="mat-label" for="@id-q">Search for</label>
+                    <input class="mat-input" type="search" id="@id-q" name="q" form="@form" value="@Model.Search" placeholder="@Model.SearchPlaceholder" autocomplete="off" />
+                    <span class="mat-hint">Press <kbd>/</kbd> on the page to open this dialog.</span>
+                </div>
+            </div>
+            <div class="mat-dialog__foot">
+                <div class="mat-btn-row mat-btn-row--plain">
+                    <button type="submit" form="@form" class="mat-btn mat-btn--primary">@Ui.Icon("search")<span>Apply</span></button>
+                    <button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button>
+                    <span class="mat-btn-row__spacer"></span>
+                    <a class="mat-btn mat-btn--ghost mat-btn--end" href="@Model.UrlWithout("q")">Clear search</a>
+                </div>
             </div>
         </div>
-        <div class="mat-dialog__foot">
-            <div class="mat-btn-row mat-btn-row--plain">
-                <button type="submit" form="@form" class="mat-btn mat-btn--primary">@Ui.Icon("search")<span>Apply</span></button>
-                <button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button>
-                <span class="mat-btn-row__spacer"></span>
-                <a class="mat-btn mat-btn--ghost mat-btn--end" href="@Model.UrlWithout("q")">Clear search</a>
-            </div>
-        </div>
-    </div>
-</dialog>
+    </dialog>
+}
 
 @if (Model.Filters.Count > 0)
 {

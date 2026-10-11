@@ -12,7 +12,8 @@ public sealed record SortOption(string Value, string Label);
 public sealed record ViewOption(string Value, string Label, string Icon);
 
 /// <summary>
-/// Everything the toolbar partial needs. Search, filter and sort are three buttons; each opens a dialog (rule LIST-03). All their fields
+/// Everything the toolbar partial needs. Filter and sort are buttons that open a dialog, and so is the search, unless <see cref="SearchField"/> puts
+/// the search into the toolbar as a field with the dialog buttons at the right end (rule LIST-03). All their fields
 /// belong to ONE GET form, so every dialog sends the complete state and nothing the user set in another dialog is lost.
 /// </summary>
 public sealed class ToolbarModel
@@ -27,6 +28,9 @@ public sealed class ToolbarModel
     public string? Search { get; init; }
 
     public string SearchPlaceholder { get; init; } = "Search";
+
+    /// <summary>The search is a field right in the toolbar (at its left) and Filter and Sort stand at its right end; without it the search is a button that opens a dialog.</summary>
+    public bool SearchField { get; init; }
 
     public IReadOnlyList<FilterField> Filters { get; init; } = [];
 

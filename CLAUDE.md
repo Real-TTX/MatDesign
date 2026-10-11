@@ -92,13 +92,15 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 
 **The site**
 - Every page has exactly one `h1`, the shell (menu, logo, breadcrumb, theme button, user, version) and no inline style; every list page has its toolbar above the list and
-  its three dialogs. A page that is not a list of items (a few fixed facts) needs no toolbar (see `LIST-02`).
+  its dialogs (Search, Filter, Sort), or, with `ToolbarModel.SearchField`, the search as a field in the bar and Filter and Sort at its right end (`LIST-03`; the rulebook page does it).
+  A page that is not a list of items (a few fixed facts) needs no toolbar (see `LIST-02`). A long page sets `ViewData["IndexDialog"]` and gets the index icon in the header bar (`SHELL-16`).
 - A list: toolbar, table or gallery, pager directly under it, actions below left-aligned. CRUD = list + separate page. Buttons under the content, positive to negative.
 - Components and patterns are **data** (`ComponentCatalog`, `PatternCatalog`): add an entry, not a page. An example is a raw string: it is rendered live and shown as source from
   the same string; the tests parse all of them (classes that exist, icons that exist, `data-label` on every `td`, typed buttons, unique ids, balanced tags). The layout classes and the
   utilities are documented the same way (the groups Layout and Utilities); a `CatalogSection` decides which page shows which groups, so a new group needs a section.
 - **The look is flat on purpose** (docs/ARCHITECTURE.md, "A flat look"): no gradients, glow or blur, borders instead of shadows, nothing lifts on hover, small radii, sentence-case
-  labels, no icon tile next to a title, explanations as text instead of alert boxes. Do not bring any of it back to make something "look nicer"; `ToolkitCssTests` pins part of it.
+  labels, no icon tile next to a title, explanations as text instead of alert boxes, **what is selected is a tint behind the whole item, never a bar at one side of a rounded item**
+  (`COLOR-08`). Do not bring any of it back to make something "look nicer"; `ToolkitCssTests` and `OneSidedAccentTests` pin part of it.
 - Numbers and dates use the invariant culture (the site is English; a developer PC and a container must show the same text).
 - **Mobile matters:** check 390 px for every new page; secondary table columns get `mat-hide-sm`; on a phone dialogs are full screen with the X at the top right.
 - After a change to CSS, JS or cshtml the container must be rebuilt.

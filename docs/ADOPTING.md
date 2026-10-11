@@ -57,7 +57,7 @@ Replace the app's own frame with the shell:
 | Badges at the right end of an item: a count (`99+` above 99) or a dot, in the tone of the meaning, with a text for screen readers | `SHELL-14` |
 | Submenus: a parent is a button that opens its children, one level deep; the branch with the current page is open | `SHELL-13` |
 | More than one menu (for example Administration): one panel of items per menu and the switcher under the logo | `SHELL-15` |
-| A long page has an index beside it ("On this page"), a "Jump to" dialog on small screens | `SHELL-16` |
+| A long page has an index beside it ("On this page"), an icon in the header bar that opens it in a dialog on small screens | `SHELL-16` |
 | Sign-in, setup and error pages without a menu: a centred card (`mat-auth`) | `SHELL-11` |
 
 Saving the theme: `data-theme-save-url` on the theme button posts the choice (`theme=system|light|dark`) so it can be kept per user; without it the choice stays in the browser.
@@ -65,7 +65,7 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
 ## 4. Lists and forms (`LIST-*`, `FORM-*`)
 
 - **CRUD is a list and a separate page** for create and edit (`LIST-01`). No inline editing, no modal for create or edit.
-- **A toolbar above every list and every gallery** (`LIST-02`), with **Search, Filter and Sort as three buttons that open dialogs** (`LIST-03`). Use the pattern of the **Toolbar**
+- **A toolbar above every list and every gallery** (`LIST-02`), with **Filter and Sort as buttons that open dialogs, and the search as a button or, for a list that is searched all the time, as a field in the toolbar with the dialog buttons at its right end** (`LIST-03`). Use the pattern of the **Toolbar**
   component: one GET form, every dialog sends the whole state, tools in effect are shown as chips (`LIST-04`).
 - Pagination directly under the table (`LIST-06`), the list actions below it, left-aligned (`LIST-07`); *Delete* lives on the edit page (`LIST-08`).
 - **Buttons are always under the content** of a create or edit page, positive to negative: *Save*, *Back*, a space, *Delete* (`FORM-01`). Put them in `mat-btn-row`; the order is enforced.

@@ -94,7 +94,7 @@ information, and together it makes every app look like every other app that was 
 - **Lines, not shadows.** A card is a surface with a border. Only what floats (a menu, a popover, a dialog) has a shadow (`SPACE-03`). Nothing moves on hover; a link card darkens its border.
 - **Small corners.** 8 px for cards and dialogs, 6 px for buttons, inputs and menu items, 3 to 4 px for small marks; only badges, status pills and switches are round (`SPACE-02`).
 - **Neutral greys.** The page and the surfaces are warm greys in light and neutral dark greys in dark, not a tint of the accent. The accent is for what is actionable or current:
-  a button, a link, the mark at the edge of the current menu item and its icon (`SHELL-02`).
+  a button, a link, the tint behind the current menu item and its icon (`SHELL-02`). What is selected is never marked by a bar at one side of a rounded item (`COLOR-08`).
 - **Words instead of decoration.** Group labels and table headings are sentence case, not upper case with letter spacing; a page starts with its title, without an icon tile (`SHELL-09`);
   an explanation is a paragraph, not an alert box; a coloured edge on a toast is the icon's colour instead.
 
@@ -109,7 +109,7 @@ beyond that is a component of its own with the app's prefix (`CODE-04`).
 
 ### Long pages and one page per section
 
-The components are not a list of pages to click through but one page, grouped, with an index beside it (`mat-with-toc`, `mat-toc`): a sticky column from 1100 px, a "Jump to" dialog below that
+The components are not a list of pages to click through but one page, grouped, with an index beside it (`mat-with-toc`, `mat-toc`): a sticky column from 1100 px, an icon in the header bar that opens it in a dialog below that
 (full screen on a phone); the layout and the utilities are two more pages of the same kind. `data-scrollspy` marks the link of the section at the top; it computes per index from the position of the sections, so the index beside the content and the one in the dialog
 agree and two indexes on one page do not disturb each other. Because every example of every component is on the same page, **all ids share one page**: a test checks that no id appears twice and
 that every `#link` leads to a section that exists.

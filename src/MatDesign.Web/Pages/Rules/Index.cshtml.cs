@@ -83,6 +83,7 @@ public class IndexModel(DesignData design) : PageModel
             Label = "Rules",
             Search = q,
             SearchPlaceholder = "Id, title or text, like SHELL or toolbar",
+            SearchField = true,
             Noun = "rules",
             Total = design.Rules.Count,
             Matching = matching.Count,

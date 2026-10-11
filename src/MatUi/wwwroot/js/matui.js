@@ -30,7 +30,7 @@
      data-tabs                              a tab group (role=tablist buttons + role=tabpanel panels)
      data-dismiss                           close the alert around it
      data-view-switch="list|gallery"        switch between the two views of a list (remembered per data-view-key)
-     data-shortcut="/"                      key that triggers the element (not while typing)
+     data-shortcut="/"                      key that clicks the element, or focuses it when it is a text field (not while typing)
    ========================================================================== */
 (function () {
   'use strict';
@@ -807,7 +807,10 @@
     var tag = (e.target.tagName || '').toLowerCase();
     if (e.ctrlKey || e.metaKey || e.altKey || tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) { return; }
     var sc = $$('[data-shortcut]').filter(function (el) { return el.getAttribute('data-shortcut') === e.key; })[0];
-    if (sc && !sc.disabled) { e.preventDefault(); sc.click(); }
+    if (sc && !sc.disabled) {
+      e.preventDefault();
+      if (sc.matches('input, textarea')) { sc.focus(); sc.select(); } else { sc.click(); }
+    }
   });
 
   window.addEventListener('resize', function () { closeMenu(); scheduleSpy(); });

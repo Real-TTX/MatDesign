@@ -5,6 +5,7 @@
     ViewData["PageSub"] = section.Sub;
     ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), (section.Title, null));
     ViewData["Width"] = "wide";
+    ViewData["IndexDialog"] = "toc-dialog";
 }
 
 <partial name="_DocSection" model="section" />

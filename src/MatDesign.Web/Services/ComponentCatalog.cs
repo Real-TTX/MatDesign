@@ -272,7 +272,7 @@ public static class ComponentCatalog
             ]),
 
         new("toolbar", "Toolbar", "Lists and data", "sliders",
-            "Search, Filter and Sort are three buttons, each opens a dialog. The toolbar is always above the list or the gallery.",
+            "Filter and Sort are buttons that open a dialog, and the search is a button too or a field right in the bar. The toolbar is always above the list or the gallery.",
             ["LIST-02", "LIST-03", "LIST-04", "LIST-05", "DIALOG-02", "DIALOG-03"],
             [
                 new("The toolbar with its three dialogs", $"""
@@ -318,10 +318,49 @@ public static class ComponentCatalog
                       </dialog>
                     </div>
                     """, "In Razor the partial _Toolbar draws this from a ToolbarModel. Every field of every dialog belongs to the one GET form (the form attribute), so each dialog sends the complete state."),
+                new("The search as a field, Filter and Sort at the right end", $"""
+                    <div class="mat-list">
+                      <div class="mat-toolbar" role="toolbar" aria-label="Documents tools">
+                        <div class="mat-input-icon mat-toolbar__search">
+                          {I("search")}
+                          <input class="mat-input" type="search" id="tb2-q" name="q" form="tb2-form" placeholder="Search documents" aria-label="Documents: search" autocomplete="off" enterkeyhint="search" data-shortcut="/" />
+                        </div>
+                        <span class="mat-toolbar__spacer"></span>
+                        <span class="mat-toolbar__info" aria-live="polite">12 documents</span>
+                        <div class="mat-toolbar__end">
+                          <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn" data-dialog-open="tb2-filter" aria-haspopup="dialog">{I("sliders")}<span>Filter</span></button>
+                          <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn is-active" data-dialog-open="tb2-sort" aria-haspopup="dialog">{I("sort")}<span>Sort</span><small>Date ↓</small></button>
+                        </div>
+                      </div>
+
+                      <form id="tb2-form" method="get" action="/Components#toolbar" hidden></form>
+
+                      <dialog class="mat-dialog mat-dialog--sm" id="tb2-filter" aria-labelledby="tb2-filter-title">
+                        <div class="mat-dialog__form">
+                          <div class="mat-dialog__head">{I("sliders")}<h2 class="mat-dialog__title" id="tb2-filter-title">Filter</h2><button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">{I("x")}</button></div>
+                          <div class="mat-dialog__body mat-form"><div class="mat-field"><label class="mat-label" for="tb2-cat">Category</label><select class="mat-select" id="tb2-cat" name="category" form="tb2-form"><option value="">All</option><option>Finance</option><option>Contracts</option></select></div></div>
+                          <div class="mat-dialog__foot"><div class="mat-btn-row mat-btn-row--plain"><button type="submit" form="tb2-form" class="mat-btn mat-btn--primary">{I("sliders")}<span>Apply</span></button><button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button><span class="mat-btn-row__spacer"></span><a class="mat-btn mat-btn--ghost mat-btn--end" href="#">Reset everything</a></div></div>
+                        </div>
+                      </dialog>
+
+                      <dialog class="mat-dialog mat-dialog--sm" id="tb2-sort" aria-labelledby="tb2-sort-title">
+                        <div class="mat-dialog__form">
+                          <div class="mat-dialog__head">{I("sort")}<h2 class="mat-dialog__title" id="tb2-sort-title">Sort</h2><button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">{I("x")}</button></div>
+                          <div class="mat-dialog__body mat-form">
+                            <fieldset class="mat-field mat-fieldset"><legend class="mat-label">Sort by</legend><div class="mat-options"><label class="mat-option"><input type="radio" id="tb2-sort-date" name="sort" value="date" form="tb2-form" checked /><span>Date</span></label><label class="mat-option"><input type="radio" id="tb2-sort-name" name="sort" value="name" form="tb2-form" /><span>Name</span></label></div></fieldset>
+                            <fieldset class="mat-field mat-fieldset"><legend class="mat-label">Order</legend><div class="mat-options"><label class="mat-option"><input type="radio" id="tb2-dir-asc" name="dir" value="asc" form="tb2-form" /><span>Ascending</span></label><label class="mat-option"><input type="radio" id="tb2-dir-desc" name="dir" value="desc" form="tb2-form" checked /><span>Descending</span></label></div></fieldset>
+                          </div>
+                          <div class="mat-dialog__foot"><div class="mat-btn-row mat-btn-row--plain"><button type="submit" form="tb2-form" class="mat-btn mat-btn--primary">{I("sort")}<span>Apply</span></button><button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button><span class="mat-btn-row__spacer"></span><a class="mat-btn mat-btn--ghost mat-btn--end" href="#">Default order</a></div></div>
+                        </div>
+                      </dialog>
+                    </div>
+                    """, "For a list that is searched all the time: the field sits at the left, the count and the dialog buttons at the right end. Enter sends the search with the filter and the sort in effect (they share the one GET form). In Razor: SearchField = true on the ToolbarModel."),
             ],
             [
                 "A tool in effect is visible: the button is highlighted, the filter shows its count, the search and the sort show their value, and a chip with an X removes each one.",
-                "Press / on the page to open the search dialog (data-shortcut=\"/\"); it is not triggered while typing in a field.",
+                "Press / on the page to open the search dialog, or to put the cursor in the search field (data-shortcut=\"/\"); it is not triggered while typing in a field.",
+                "Use the field when searching is the main thing to do with the list; use the button when the toolbar should stay short. Never both, and never selects or date ranges in the bar itself (they go in the Filter dialog).",
+                "mat-toolbar__end keeps its buttons together at the right end, whatever the width; on a phone the field takes the first row and the buttons stand right-aligned in the next.",
                 "On a phone every dialog is full screen with the X at the top right (DIALOG-03).",
                 "The toolbar is the first child of mat-list; the table or gallery, the pager and the actions follow in that order, whatever the source order is.",
             ]),
@@ -780,9 +819,6 @@ public static class ComponentCatalog
                 new("The layout with the index beside the content", """
                     <div class="mat-with-toc">
                       <div class="mat-with-toc__main">
-                        <div class="mat-toc-bar">
-                          <button type="button" class="mat-btn mat-btn--secondary mat-btn--sm" data-dialog-open="toc-dialog">Jump to a section</button>
-                        </div>
                         <section id="intro" class="mat-anchor"><h2>Introduction</h2>...</section>
                         <section id="usage" class="mat-anchor"><h2>Usage</h2>...</section>
                       </div>
@@ -796,7 +832,7 @@ public static class ComponentCatalog
                         </nav>
                       </aside>
                     </div>
-                    <!-- below 1100 px the aside is hidden and the button opens the same index in a dialog (full screen on a phone) -->
+                    <!-- below 1100 px the aside is hidden and an icon button in the header bar (class mat-topbar__index, with a name and a tooltip) opens the same index in a dialog (full screen on a phone); it is the last thing of the mat-topbar__actions after the breadcrumb -->
                     <dialog class="mat-dialog mat-dialog--sm" id="toc-dialog" aria-labelledby="toc-dialog-title">
                       <div class="mat-dialog__form">
                         <div class="mat-dialog__head"><h2 class="mat-dialog__title" id="toc-dialog-title">On this page</h2><button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">...</button></div>
@@ -810,7 +846,7 @@ public static class ComponentCatalog
                         </div>
                       </div>
                     </dialog>
-                    """, "From 1100 px the index is a sticky column beside the content. Below that, the \"Jump to\" button opens the same list in a dialog, which closes when a link is chosen.", Live: false),
+                    """, "From 1100 px the index is a sticky column beside the content. Below that, an icon at the right end of the header bar (SHELL-17) opens the same list in a dialog, which closes when a link is chosen.", Live: false),
             ],
             [
                 "`data-scrollspy` on the index marks the link of the section that is at the top of the screen; it works for the index beside the content and the one in the dialog at the same time.",

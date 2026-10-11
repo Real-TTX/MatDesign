@@ -123,10 +123,16 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
             var toolbar = html.IndexOf("class=\"mat-toolbar\"", StringComparison.Ordinal);
             Assert.True(toolbar > 0, $"{url}: no toolbar (LIST-02)");
             Assert.True(toolbar < html.IndexOf("<table class=\"mat-table", StringComparison.Ordinal) || !html.Contains("<table class=\"mat-table"), $"{url}: the table is above the toolbar");
-            foreach (var dialog in new[] { "-search\"", "-filter\"", "-sort\"" })
+            // The rulebook is searched all the time: its search is a field in the toolbar, Filter and Sort stand at the right end (LIST-03).
+            var searchField = url == "/Rules";
+            foreach (var dialog in new[] { "-search\"", "-filter\"", "-sort\"" }.Where(d => !searchField || d != "-search\""))
             {
                 Assert.True(Regex.IsMatch(html, "<dialog class=\"mat-dialog[^\"]*\" id=\"[a-z]+" + dialog), $"{url}: no {dialog.Trim('-', '"')} dialog (LIST-03)");
             }
+
+            Assert.Equal(searchField, html.Contains("class=\"mat-input-icon mat-toolbar__search\"", StringComparison.Ordinal));
+            Assert.Equal(searchField, html.Contains("class=\"mat-toolbar__end\"", StringComparison.Ordinal));
+            Assert.Equal(!searchField, Regex.IsMatch(html, "<dialog class=\"mat-dialog[^\"]*\" id=\"[a-z]+-search\""));
         }
     }
 

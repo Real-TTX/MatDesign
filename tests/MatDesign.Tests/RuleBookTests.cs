@@ -91,7 +91,7 @@ public partial class RuleBookTests
         Assert.Contains("logo", RuleBook.Get("SHELL-01")!.Statement);
         Assert.Contains("System, Light, Dark", RuleBook.Get("SHELL-04")!.Statement);
         Assert.Contains("breadcrumb", RuleBook.Get("SHELL-08")!.Statement, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("three buttons", RuleBook.Get("LIST-03")!.Title);
+        Assert.Contains("filter and sort are buttons that open dialogs", RuleBook.Get("LIST-03")!.Title);
         Assert.Contains("full screen", RuleBook.Get("DIALOG-03")!.Title);
         Assert.Contains("under the content", RuleBook.Get("FORM-01")!.Title);
     }

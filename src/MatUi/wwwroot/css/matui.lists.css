@@ -1,8 +1,8 @@
 /* ==========================================================================
    MatUi · lists
    The list block (toolbar -> applied filters -> table or gallery -> empty state -> pagination -> actions), tabs and the
-   context menu. A list or a gallery ALWAYS has the toolbar above it, and in the toolbar SEARCH, FILTER and SORT are
-   three separate buttons that open a dialog (LIST-01, LIST-02).
+   context menu. A list or a gallery ALWAYS has the toolbar above it. FILTER and SORT are buttons that open a dialog, and so
+   is SEARCH, unless the search is a field right in the toolbar with the dialog buttons at its right end (LIST-01 to LIST-03).
    ========================================================================== */
 
 /* ---- The list block: the order is fixed here, whatever the markup order ---- */
@@ -34,9 +34,14 @@
 .mat-toolbar__btn.is-active small { color: inherit; }
 .mat-toolbar__spacer { flex: 1 1 var(--mat-space-4); }
 .mat-toolbar__info { color: var(--mat-text-muted); font-size: var(--mat-fs-sm); padding: 0 var(--mat-space-3); white-space: nowrap; }
+/* The search can be a field right in the toolbar, at its left (mat-input-icon puts the icon inside it), and the dialog buttons (Filter, Sort) and the
+   switch of the views sit together at the right end (mat-toolbar__end). Without a field the search is a button like the others (LIST-03). */
+.mat-toolbar__search { flex: 1 1 16rem; min-width: 0; max-width: 28rem; }
+.mat-toolbar__end { display: flex; align-items: center; gap: var(--mat-space-2); margin-left: auto; flex: none; }
 @media (max-width: 480px) {
   .mat-toolbar__btn small { display: none; }
   .mat-toolbar__info { width: 100%; padding: 0 var(--mat-space-2); order: 9; }
+  .mat-toolbar__search { flex-basis: 100%; max-width: none; }
 }
 
 /* ---- Table ---- */
@@ -125,7 +130,7 @@ a.mat-tile:hover { border-color: var(--mat-text-faint); background: var(--mat-su
   display: inline-flex; align-items: center; gap: var(--mat-space-2);
   min-height: var(--mat-control-h); padding: 0 var(--mat-space-4);
   margin-bottom: -1px;
-  border: 0; border-bottom: 2px solid transparent; border-radius: var(--mat-radius-sm) var(--mat-radius-sm) 0 0;
+  border: 0; border-bottom: 2px solid transparent; border-radius: 0;
   background: transparent; color: var(--mat-text-muted);
   font-weight: 600; white-space: nowrap; cursor: pointer; text-decoration: none;
   transition: color var(--mat-dur-fast) var(--mat-ease), border-color var(--mat-dur-fast) var(--mat-ease);
@@ -169,12 +174,12 @@ a.mat-tile:hover { border-color: var(--mat-text-faint); background: var(--mat-su
 .mat-menu__sep { height: 1px; background: var(--mat-border); margin: var(--mat-space-2) var(--mat-space-1); }
 
 /* ---- On this page (SHELL-16): a long page with an index beside it, like the one of Bootstrap's documentation ----
-   Below 1100 px the index is not drawn beside the content: a "Jump to" button opens it in a dialog (full screen on a phone). */
+   Below 1100 px the index is not drawn beside the content: an icon at the right end of the header bar (mat-topbar__index) opens it in a dialog (full screen on a phone). */
 .mat-with-toc { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--mat-space-6); align-items: start; }
 .mat-with-toc__main { min-width: 0; display: flex; flex-direction: column; gap: var(--mat-space-8); }
 .mat-toc-aside { display: none; }
-.mat-toc-bar { display: flex; }
 @media (min-width: 1100px) {
+  .mat-topbar__actions .mat-topbar__index { display: none; }
   .mat-with-toc { grid-template-columns: minmax(0, 1fr) 15rem; }
   .mat-toc-aside {
     display: block;
@@ -186,10 +191,10 @@ a.mat-tile:hover { border-color: var(--mat-text-faint); background: var(--mat-su
     overscroll-behavior: contain;
     padding-bottom: var(--mat-space-4);
   }
-  .mat-toc-bar { display: none; }
 }
 .mat-toc { display: flex; flex-direction: column; gap: var(--mat-space-1); font-size: var(--mat-fs-sm); }
 .mat-toc__title { font-size: var(--mat-fs-sm); font-weight: 600; color: var(--mat-text-muted); padding: 0 var(--mat-space-3) var(--mat-space-2); }
+.mat-dialog .mat-toc__title { display: none; } /* the dialog has the title already */
 .mat-toc__list { list-style: none; display: flex; flex-direction: column; gap: 1px; }
 .mat-toc__list .mat-toc__list { margin: 0 0 var(--mat-space-2) var(--mat-space-3); padding-left: var(--mat-space-2); border-left: 1px solid var(--mat-border); }
 .mat-toc__link {
@@ -202,7 +207,7 @@ a.mat-tile:hover { border-color: var(--mat-text-faint); background: var(--mat-su
   transition: background var(--mat-dur-fast) var(--mat-ease), color var(--mat-dur-fast) var(--mat-ease);
 }
 .mat-toc__link:hover { background: var(--mat-surface-3); color: var(--mat-text); text-decoration: none; }
-.mat-toc__link.is-active { background: var(--mat-surface-3); color: var(--mat-text); font-weight: 600; box-shadow: inset 2px 0 0 var(--mat-accent); }
+.mat-toc__link.is-active { background: var(--mat-accent-soft-strong); color: var(--mat-text); font-weight: 600; }
 .mat-toc__link--group { margin-top: var(--mat-space-3); font-weight: 600; color: var(--mat-text); }
 .mat-toc__link .mat-nav__badge { margin-left: auto; }
 /* a section that is a target of the index stays clear of the sticky top bar */
@@ -231,9 +236,10 @@ th[aria-sort="descending"] .mat-icon { transform: rotate(180deg); }
 .mat-tabs--pills .mat-tab { margin-bottom: 0; border-bottom: 0; border-radius: var(--mat-radius-pill); min-height: var(--mat-control-h-sm); padding-inline: var(--mat-space-4); }
 .mat-tabs--pills .mat-tab:hover { background: var(--mat-accent-soft); }
 .mat-tabs--pills .mat-tab[aria-selected="true"], .mat-tabs--pills .mat-tab.is-active { background: var(--mat-accent-soft-strong); }
-.mat-tabs--vertical { flex-direction: column; gap: 2px; border-bottom: 0; border-right: 1px solid var(--mat-border); overflow: visible; }
-.mat-tabs--vertical .mat-tab { margin-bottom: 0; margin-right: -1px; justify-content: flex-start; border-bottom: 0; border-right: 2px solid transparent; border-radius: var(--mat-radius-sm) 0 0 var(--mat-radius-sm); }
-.mat-tabs--vertical .mat-tab[aria-selected="true"], .mat-tabs--vertical .mat-tab.is-active { border-right-color: var(--mat-accent); background: var(--mat-accent-soft); }
+.mat-tabs--vertical { flex-direction: column; gap: 2px; border-bottom: 0; border-right: 1px solid var(--mat-border); padding-right: var(--mat-space-3); overflow: visible; }
+.mat-tabs--vertical .mat-tab { margin-bottom: 0; justify-content: flex-start; border-bottom: 0; border-radius: var(--mat-radius-sm); }
+.mat-tabs--vertical .mat-tab:hover { background: var(--mat-surface-3); }
+.mat-tabs--vertical .mat-tab[aria-selected="true"], .mat-tabs--vertical .mat-tab.is-active { background: var(--mat-accent-soft-strong); }
 .mat-tabs--fill .mat-tab { flex: 1 1 0; justify-content: center; }
 
 /* ---- A popover: more than a tooltip, drawn like a menu next to its button (data-menu-toggle) ---- */

@@ -30,7 +30,7 @@ These are the rules that make a Mat app look like a Mat app. They are in the rul
   children (one level, the branch with the current page is open); an app with distinct areas such as an *Administration* has one menu per area and a **switcher under the logo**.
 - **The header bar can carry icons at its right end** (search, notifications, help; icons only, at most four) **and a page can end with a footer** (name and legal links).
 - **The content always has a breadcrumb above it.** A long page has an index beside it ("On this page") so that one click jumps to a section.
-- **Every list and every gallery has a toolbar above it.** *Search*, *Filter* and *Sort* are three buttons, and each opens a **dialog**.
+- **Every list and every gallery has a toolbar above it.** *Filter* and *Sort* are buttons that open a **dialog**, and so is *Search*, or it is a field right in the toolbar with the dialog buttons at its right end.
 - **Buttons are always under the content** (create, edit, settings), from positive to negative: *Save*, *Back*, a space, *Delete*. The control enforces the order.
 - **Confirmations, alerts and inputs are always dialogs**, never `window.confirm`. **On a phone every dialog is full screen with the X at the top right.**
 - CRUD is a list plus a separate page for create and edit; list actions sit below the table, left-aligned; delete is spaced apart; pagination directly under the table;

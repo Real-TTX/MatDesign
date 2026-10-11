@@ -480,9 +480,9 @@ function expectTrue(value, what) {
   }
   {
     const { ctx, page } = await open(phoneOptions, '/Components');
-    await check('on a phone there is no index beside the content: a button opens it in a full-screen dialog and a link closes it', async () => {
+    await check('on a phone there is no index beside the content: the icon in the header bar opens it in a full-screen dialog and a link closes it', async () => {
       expectTrue(!(await page.locator('.mat-toc-aside').isVisible()), 'the index is shown beside the content on a phone');
-      await page.click('.mat-toc-bar button');
+      await page.click('.mat-topbar__index');
       await page.waitForTimeout(350);
       const box = await page.locator('#toc-dialog').boundingBox();
       expect([Math.round(box.width), Math.round(box.height)], [390, 844], 'size');
@@ -966,8 +966,8 @@ function expectTrue(value, what) {
       const fixed = await share('#grid-cols .doc-example:first-of-type .mat-cols');
       expectTrue(fixed[0][0] < 55, 'mat-col-6 is not half of the row on a phone: ' + JSON.stringify(fixed[0]));
     });
-    await check('on a phone the index of the page is a button that opens a dialog', async () => {
-      await page.click('.mat-toc-bar button');
+    await check('on a phone the index of the page is an icon in the header bar that opens a dialog', async () => {
+      await page.click('.mat-topbar__index');
       expectTrue(await page.locator('#toc-dialog[open]').count() === 1, 'the index dialog is not open');
       expect(await page.locator('#toc-dialog a.mat-toc__link').count() >= 3, true, 'links in the dialog');
       await page.click('#toc-dialog [data-dialog-close]');
@@ -1059,6 +1059,140 @@ function expectTrue(value, what) {
       const links = await footer.locator('.mat-footer__links').boundingBox();
       expectTrue(f.x >= 0 && f.x + f.width <= 391, 'the footer is wider than the window');
       expectTrue(links.y >= text.y + text.height - 1, 'the links did not wrap below the text');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- the toolbar with a search field, the index icon, the selected states
+  console.log('\nToolbar field, index icon, selected states');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Rules');
+    await check('the search is a field in the toolbar at its left, Filter and Sort stand together at its right end (LIST-03)', async () => {
+      const bar = await page.locator('.mat-toolbar').boundingBox();
+      const field = await page.locator('.mat-toolbar__search input').boundingBox();
+      const end = await page.locator('.mat-toolbar__end').boundingBox();
+      expectTrue(field.x - bar.x < 20, 'the field is not at the left of the toolbar: ' + (field.x - bar.x) + ' px');
+      expectTrue(bar.x + bar.width - (end.x + end.width) < 20, 'the buttons are not at the right end: ' + (bar.x + bar.width - (end.x + end.width)) + ' px');
+      expect((await page.locator('.mat-toolbar__end .mat-toolbar__btn').allTextContents()).map(t => t.trim().split(/\s+/)[0]), ['Filter', 'Sort'], 'the buttons at the right end');
+      expect(await page.locator('[data-dialog-open$="-search"]').count(), 0, 'a search button as well as the field');
+      expect(await page.locator('.mat-toolbar__search .mat-icon').count(), 1, 'the icon in the field');
+      expectTrue(Math.abs(field.height - end.height) < 3, 'the field and the buttons differ in height: ' + field.height + ' / ' + end.height);
+    });
+    await check('Enter sends the search as a GET together with the filter in effect, the field keeps its term and only the filter is a chip', async () => {
+      await page.click('[data-dialog-open="rules-filter"]');
+      await page.selectOption('#rules-f-area', 'LIST');
+      await Promise.all([page.waitForNavigation(), page.click('#rules-filter button[type=submit]')]);
+      await page.fill('.mat-toolbar__search input', 'toolbar');
+      await Promise.all([page.waitForNavigation(), page.press('.mat-toolbar__search input', 'Enter')]);
+      const url = new URL(page.url());
+      expect(url.searchParams.get('q'), 'toolbar', 'the search in the address');
+      expect(url.searchParams.get('area'), 'LIST', 'the filter in the address');
+      expect(await page.inputValue('.mat-toolbar__search input'), 'toolbar', 'the term in the field');
+      expect(await page.locator('.mat-chip').count(), 1, 'chips');
+    });
+    await check('the slash puts the cursor in the search field, and is a character while one is typing', async () => {
+      await page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
+      await page.keyboard.press('/');
+      expect(await page.evaluate(() => document.activeElement.id), 'rules-q', 'the focused element');
+      expect(await page.inputValue('#rules-q'), '', 'the slash was typed into the field');
+      await page.keyboard.type('a/b');
+      expect(await page.inputValue('#rules-q'), 'a/b', 'the text');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#toolbar');
+    await check('the toolbar example with the field is live: Filter and Sort sit at the right end and open their dialogs', async () => {
+      const field = page.locator('#tb2-q');
+      await field.scrollIntoViewIfNeeded();
+      expect(await field.evaluate(el => !!el.closest('.mat-toolbar__search') && !!el.closest('.mat-toolbar')), true, 'the field is in the toolbar');
+      const bar = await page.locator('#tb2-q').locator('xpath=ancestor::div[contains(@class,"mat-toolbar")][1]').boundingBox();
+      const end = await page.locator('.mat-toolbar__end').boundingBox();
+      expectTrue(bar.x + bar.width - (end.x + end.width) < 20, 'the buttons are not at the right end');
+      await page.click('[data-dialog-open="tb2-sort"]');
+      expectTrue(await page.locator('#tb2-sort').evaluate(d => d.open), 'the sort dialog did not open');
+      await page.click('#tb2-sort [data-dialog-close]');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Rules');
+    await check('on a phone the search field takes the first row and Filter and Sort stand right-aligned in the next, nothing scrolls sideways', async () => {
+      const field = await page.locator('.mat-toolbar__search input').boundingBox();
+      const end = await page.locator('.mat-toolbar__end').boundingBox();
+      const bar = await page.locator('.mat-toolbar').boundingBox();
+      expectTrue(field.width > 390 - 60, 'the field is narrow: ' + field.width);
+      expectTrue(end.y >= field.y + field.height - 1, 'the buttons are not below the field');
+      expectTrue(bar.x + bar.width - (end.x + end.width) < 20, 'the buttons are not at the right end of the toolbar: ' + (bar.x + bar.width - (end.x + end.width)));
+      const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+      expectTrue(widths.page <= widths.window, 'the page scrolls sideways');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components');
+    await check('from 1100 px the index is beside the content and there is no icon for it in the header bar', async () => {
+      expectTrue(await page.locator('.mat-toc-aside').isVisible(), 'the index is not beside the content');
+      expectTrue(!(await page.locator('.mat-topbar__index').isVisible()), 'the index icon is drawn next to the index');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open({ viewport: { width: 1000, height: 800 } }, '/Components');
+    await check('below 1100 px the icon sits at the right end of the header bar, stays in reach when the page is scrolled and opens the index in a dialog', async () => {
+      expectTrue(!(await page.locator('.mat-toc-aside').isVisible()), 'the index is beside the content');
+      const icon = page.locator('.mat-topbar__index');
+      expectTrue(await icon.isVisible(), 'no index icon');
+      expect(await icon.getAttribute('aria-label'), 'On this page, jump to a section', 'the name');
+      expect(await icon.getAttribute('data-tip'), 'On this page', 'the tooltip');
+      expect(await page.locator('.mat-main .mat-topbar .mat-toc-bar, .mat-page .mat-toc-bar').count(), 0, 'a button in the content');
+      const bar = await page.locator('.mat-main > .mat-topbar').boundingBox();
+      const box = await icon.boundingBox();
+      expectTrue(bar.x + bar.width - (box.x + box.width) < 40, 'the icon is not at the right end of the bar');
+      await page.evaluate(() => document.getElementById('toolbar').scrollIntoView());
+      await page.waitForTimeout(300);
+      const after = await icon.boundingBox();
+      expectTrue(after.y >= 0 && after.y < 60, 'the icon scrolled away: ' + after.y);
+      await icon.click();
+      await page.waitForTimeout(350);
+      expectTrue(await page.locator('#toc-dialog').evaluate(d => d.open), 'the dialog did not open');
+      await page.click('#toc-dialog a[href="#table"]');
+      await page.waitForTimeout(500);
+      expect(await page.evaluate(() => document.getElementById('toc-dialog').open), false, 'the dialog after the jump');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components');
+    const clear = 'rgba(0, 0, 0, 0)';
+    await check('the current item of the menu is a tint behind the whole item: no bar at one edge (COLOR-08)', async () => {
+      const nav = await page.evaluate(() => {
+        const el = document.querySelector('.mat-nav__item[aria-current="page"], .mat-nav__item.is-active');
+        const cs = getComputedStyle(el);
+        const before = getComputedStyle(el, '::before');
+        return { bg: cs.backgroundColor, shadow: cs.boxShadow, radius: cs.borderTopLeftRadius, before: before.content };
+      });
+      expectTrue(nav.bg !== clear, 'the current item has no tint');
+      expect(nav.shadow, 'none', 'a shadow at the current item');
+      expectTrue(nav.before === 'none' || nav.before === 'normal', 'a bar is drawn for the current item: ' + nav.before);
+      expectTrue(parseFloat(nav.radius) > 0, 'the current item is not rounded');
+    });
+    await check('the entry of the index in view is a tint too, and so is a selected vertical tab; the tabs of a row are square under a line', async () => {
+      await page.evaluate(() => document.getElementById('toolbar').scrollIntoView());
+      await page.waitForTimeout(400);
+      const toc = await page.evaluate(() => { const el = document.querySelector('.mat-toc-aside .mat-toc__link.is-active'); const cs = getComputedStyle(el); return { bg: cs.backgroundColor, shadow: cs.boxShadow }; });
+      expectTrue(toc.bg !== clear, 'the entry in view has no tint');
+      expect(toc.shadow, 'none', 'a shadow at the entry in view');
+      const tab = await page.evaluate(() => {
+        const el = document.querySelector('.mat-tabs--vertical .mat-tab[aria-selected="true"], .mat-tabs--vertical .mat-tab.is-active');
+        const cs = getComputedStyle(el);
+        return { bg: cs.backgroundColor, right: cs.borderRightWidth, radius: cs.borderTopRightRadius };
+      });
+      expectTrue(tab.bg !== clear, 'the selected vertical tab has no tint');
+      expect(tab.right, '0px', 'a border at one side of the vertical tab');
+      expectTrue(parseFloat(tab.radius) > 0, 'the vertical tab is not rounded');
+      const row = await page.evaluate(() => { const el = document.querySelector('.mat-tabs:not(.mat-tabs--pills):not(.mat-tabs--vertical) .mat-tab'); return getComputedStyle(el).borderTopLeftRadius; });
+      expect(row, '0px', 'the corner of a tab in a row with an underline');
     });
     await ctx.close();
   }

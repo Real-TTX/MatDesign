@@ -33,7 +33,7 @@ public static class PatternCatalog
             "list",
             [
                 new("Breadcrumb and page head", "Where the page is, then an icon, the title and one line.", "SHELL-08"),
-                new("Toolbar", "Search, Filter and Sort are three buttons; each opens a dialog. The count is on the right.", "LIST-03"),
+                new("Toolbar", "Filter and Sort are buttons that open a dialog, the search is a button or a field in the bar. The count is on the right.", "LIST-03"),
                 new("Tools in effect", "A highlighted button and a chip with an X for every search and filter that is on.", "LIST-04"),
                 new("Table", "A name column, pills for states, numbers right-aligned in mono; one icon button per row to edit.", "TABLE-03"),
                 new("Pagination", "Directly under the table, nothing in between.", "LIST-06"),

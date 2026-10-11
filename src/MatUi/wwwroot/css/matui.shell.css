@@ -89,11 +89,9 @@
 }
 .mat-nav__item .mat-icon { font-size: 1.2rem; color: var(--mat-text-muted); }
 .mat-nav__item:hover { background: var(--mat-surface-3); text-decoration: none; }
-/* The current page: a plain fill, the accent only in the mark at the edge and in the icon. */
+/* The current page: a tint of the accent behind the whole item and the accent on its icon. Never a bar at one edge of a rounded item (SHELL-02). */
 .mat-nav__item.is-active,
-.mat-nav__item[aria-current="page"] { background: var(--mat-surface); font-weight: 600; box-shadow: inset 0 0 0 1px var(--mat-border); }
-.mat-nav__item.is-active::before,
-.mat-nav__item[aria-current="page"]::before { content: ""; position: absolute; left: -1px; top: 9px; bottom: 9px; width: 3px; border-radius: 0 2px 2px 0; background: var(--mat-accent); }
+.mat-nav__item[aria-current="page"] { background: var(--mat-accent-soft-strong); font-weight: 600; }
 .mat-nav__item.is-active .mat-icon,
 .mat-nav__item[aria-current="page"] .mat-icon { color: var(--mat-accent-text); }
 /* Keyboard focus: inside the menu the ring is drawn inward (the submenu clips what is outside its box). */
