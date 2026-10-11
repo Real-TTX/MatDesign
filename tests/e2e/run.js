@@ -1315,13 +1315,50 @@ function expectTrue(value, what) {
   }
 
   // ---------------------------------------------------------------------------------------------------- the Studio
-  // It needs the administrator password (STUDIO_PASSWORD, the development stack uses studio-dev). A site with the Studio off is not a failure here.
+  // It needs the administrator (STUDIO_NAME, default admin, and STUDIO_PASSWORD, default studio-dev: the password has to be 10 characters or more). A Studio that has no
+  // administrator yet is set up here, through the setup assistant, which is checked on the way. A site with the Studio off is not a failure here.
   console.log('\nStudio');
   {
+    const name = process.env.STUDIO_NAME || 'admin';
     const password = process.env.STUDIO_PASSWORD || 'studio-dev';
     const { ctx, page } = await open(desktopOptions, '/Studio/Login');
+    if (page.url().includes('/Studio/Setup')) {
+      await check('a Studio without an administrator leads to the setup assistant: a card without a menu, a name and a password typed twice', async () => {
+        expect(await page.textContent('.mat-auth__card h1'), 'Set up the Studio', 'the title');
+        expect(await page.locator('.mat-nav').count(), 0, 'menus on the setup page');
+        expect(await page.locator('.mat-auth__card input[type="password"]').count(), 2, 'password fields');
+        expect(await page.inputValue('#Name'), 'admin', 'the suggested name');
+      });
+      await check('a password that is too short, or typed differently the second time, is refused at its field and leads nowhere', async () => {
+        await page.fill('#Name', name);
+        await page.fill('#Password', 'short');
+        await page.fill('#Repeat', 'short');
+        await page.click('.mat-auth__card button[type="submit"]');
+        expectTrue((await page.locator('.mat-field.is-invalid').count()) > 0, 'the short password is not marked');
+        expectTrue(page.url().includes('/Studio/Setup'), 'left the setup: ' + page.url());
+        await page.fill('#Password', 'a first long password');
+        await page.fill('#Repeat', 'a second long password');
+        await page.click('.mat-auth__card button[type="submit"]');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await page.textContent('.mat-auth__card')).includes('The two passwords are not the same.'), 'no message about the two passwords');
+        expectTrue(page.url().includes('/Studio/Setup'), 'left the setup: ' + page.url());
+      });
+      await check('the right input creates the administrator, signs them in and leads into the Studio; afterwards the assistant is gone', async () => {
+        await page.fill('#Name', name);
+        await page.fill('#Password', password);
+        await page.fill('#Repeat', password);
+        await page.click('.mat-auth__card button[type="submit"]');
+        await page.waitForURL('**/Studio');
+        expectTrue((await page.textContent('body')).includes('You are signed in as ' + name), 'no welcome after the setup');
+        await ctx.clearCookies();
+        await page.goto(BASE + '/Studio/Setup', { waitUntil: 'networkidle' });
+        expectTrue(page.url().includes('/Studio/Login'), 'the assistant is still there: ' + page.url());
+      });
+      await page.goto(BASE + '/Studio/Login', { waitUntil: 'networkidle' });
+    }
+
     if (await page.locator('input[type="password"]').count() === 0) {
-      console.log('  --    the Studio is off on this site (no MATDESIGN_ADMIN_PASSWORD): its checks are skipped');
+      console.log('  --    the Studio is off on this site (no data directory): its checks are skipped');
       await ctx.close();
     } else {
       await check('a visitor is led from a Studio page to the sign-in, which is a card without a menu', async () => {
@@ -1330,11 +1367,13 @@ function expectTrue(value, what) {
         expect(await page.locator('.mat-nav').count(), 0, 'menus on the sign-in page');
         expect(await page.locator('.mat-auth__card input[type="password"]').count(), 1, 'password fields');
       });
-      await check('a wrong password stays on the page and says so; the right one leads to where the visitor wanted to go', async () => {
+      await check('a wrong password stays on the page and says so; the right name and password lead to where the visitor wanted to go', async () => {
+        await page.fill('#Name', name);
         await page.fill('#Password', 'not the password');
         await page.click('.mat-auth__card button[type="submit"]');
         await page.waitForLoadState('networkidle');
-        expectTrue((await page.textContent('.mat-auth__card')).includes('The password is not right.'), 'no message');
+        expectTrue((await page.textContent('.mat-auth__card')).includes('The name or the password is not right.'), 'no message');
+        await page.fill('#Name', name);
         await page.fill('#Password', password);
         await page.click('.mat-auth__card button[type="submit"]');
         await page.waitForURL('**/Studio/Activity');
@@ -1659,6 +1698,7 @@ function expectTrue(value, what) {
       await check('on a phone the sign-in and the Studio do not scroll sideways', async () => {
         const wide = () => phone.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
         expectTrue(await wide(), 'the sign-in page is wider than the window');
+        await phone.page.fill('#Name', name);
         await phone.page.fill('#Password', password);
         await phone.page.click('.mat-auth__card button[type="submit"]');
         await phone.page.waitForURL('**/Studio');

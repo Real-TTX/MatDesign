@@ -1,44 +1,54 @@
 using System.Collections.Concurrent;
-using System.Security.Cryptography;
-using System.Text;
 using MatDesign.Core.Studio;
 
 namespace MatDesign.Web.Studio;
 
+/// <summary>The outcome of the setup assistant: done, or what is wrong by field (<c>Name</c>, <c>Password</c>, <c>Repeat</c>, <c>Form</c>).</summary>
+public sealed record SetupResult(bool Done, IReadOnlyDictionary<string, string> Errors);
+
 /// <summary>
-/// Whether the Studio is on, and what it needs to be: a writable data directory (<c>MATDESIGN_DATA</c>, default <c>/data</c>) and the password of the one
-/// administrator (<c>MATDESIGN_ADMIN_PASSWORD</c>). Without both the site works as before and the Studio pages say what is missing. The password is read
-/// from the environment, so there is no account to register and nothing for the first visitor to claim.
+/// Whether the Studio is on, and who the administrator is. The Studio is on when it has a data directory it can write (<c>MATDESIGN_DATA</c>; the image sets
+/// <c>/data</c>, so a container needs no setting at all). The first visitor of a Studio without an administrator meets the setup assistant and creates the account
+/// (a name and a password, kept as a salted hash in <c>admin.json</c>); after that the assistant is gone. <c>MATDESIGN_ADMIN_PASSWORD</c> is an optional way to
+/// skip the assistant for automation (CI, a development stack): when it is set, it is the password of the administrator <c>admin</c> and nothing is written.
+/// Without a data directory the Studio is off and the site is what it always was.
 /// </summary>
 public sealed class StudioService
 {
     private const int MaxFailures = 5;
+    private const string DefaultName = "admin";
     private static readonly TimeSpan Lock = TimeSpan.FromMinutes(1);
 
-    private readonly byte[]? _password;
     private readonly ConcurrentDictionary<string, (int Failures, DateTimeOffset Until)> _failures = new();
     private readonly StudioStore? _store;
+    private readonly object _gate = new();
+    private volatile AdminAccount? _account;
 
     public StudioService(IConfiguration configuration)
     {
         var directory = configuration["MATDESIGN_DATA"];
-        DataDirectory = string.IsNullOrWhiteSpace(directory) ? "/data" : directory;
+        DataDirectory = string.IsNullOrWhiteSpace(directory) ? string.Empty : directory.Trim();
 
-        var password = configuration["MATDESIGN_ADMIN_PASSWORD"];
-        if (!string.IsNullOrEmpty(password))
+        if (DataDirectory.Length == 0)
         {
-            _password = Hash(password);
-        }
-
-        if (_password is null)
-        {
-            DisabledReason = "No administrator password is set. Set MATDESIGN_ADMIN_PASSWORD.";
+            DisabledReason = "No data directory is set. Set MATDESIGN_DATA to a directory that can be written (the image sets /data).";
             return;
         }
 
         if (!IsWritable(DataDirectory))
         {
             DisabledReason = $"The data directory {DataDirectory} is not writable. Mount a volume there, or set MATDESIGN_DATA.";
+            return;
+        }
+
+        try
+        {
+            var password = configuration["MATDESIGN_ADMIN_PASSWORD"];
+            _account = string.IsNullOrEmpty(password) ? AdminAccount.Read(DataDirectory) : AdminAccount.Create(DefaultName, password);
+        }
+        catch (InvalidDataException ex)
+        {
+            DisabledReason = ex.Message;
             return;
         }
 
@@ -52,8 +62,11 @@ public sealed class StudioService
 
     public bool Enabled => _store is not null;
 
+    /// <summary>The Studio is on but has no administrator yet: the setup assistant is what a visitor meets.</summary>
+    public bool NeedsSetup => Enabled && _account is null;
+
     /// <summary>A value that changes with the password: a session that was started with another password is not valid any more.</summary>
-    public string Stamp => _password is null ? string.Empty : Convert.ToHexString(SHA256.HashData([.. _password, .. "stamp"u8.ToArray()]))[..16];
+    public string Stamp => _account?.Stamp ?? string.Empty;
 
     /// <summary>Why the Studio is off, in words for the page; null when it is on.</summary>
     public string? DisabledReason { get; }
@@ -61,9 +74,7 @@ public sealed class StudioService
     public StudioStore Store => _store ?? throw new InvalidOperationException("The Studio is off: " + DisabledReason);
 
     /// <summary>The name of the administrator in revisions and in the shell.</summary>
-    public string Administrator => "admin";
-
-    private static byte[] Hash(string text) => SHA256.HashData(Encoding.UTF8.GetBytes(text));
+    public string Administrator => _account?.Name ?? DefaultName;
 
     private static bool IsWritable(string directory)
     {
@@ -81,9 +92,51 @@ public sealed class StudioService
         }
     }
 
-    /// <summary>Compares the hashes, so neither the length of the password nor where it differs shows in the time it takes.</summary>
-    public bool CheckPassword(string? attempt)
-        => _password is not null && !string.IsNullOrEmpty(attempt) && CryptographicOperations.FixedTimeEquals(_password, Hash(attempt));
+    public bool SignsIn(string? name, string? password) => _account is { } account && account.SignsInWith(name, password);
+
+    /// <summary>
+    /// Creates the first administrator. Only possible while there is none; two visitors at the same moment cannot both succeed. The password is checked
+    /// (length, not the name, repeated), and what is saved is a salted hash.
+    /// </summary>
+    public SetupResult Setup(string? name, string? password, string? repeat)
+    {
+        var already = new SetupResult(false, new Dictionary<string, string> { ["Form"] = "The Studio is set up already." });
+        if (!NeedsSetup)
+        {
+            return already;
+        }
+
+        var errors = AdminAccount.Validate(name, password, repeat);
+        if (errors.Count > 0)
+        {
+            return new SetupResult(false, errors);
+        }
+
+        lock (_gate)
+        {
+            if (_account is not null)
+            {
+                return already;
+            }
+
+            var account = AdminAccount.Create(name!.Trim(), password!);
+            try
+            {
+                if (!account.TryWrite(DataDirectory))
+                {
+                    _account = AdminAccount.Read(DataDirectory);
+                    return already;
+                }
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return new SetupResult(false, new Dictionary<string, string> { ["Form"] = $"The administrator could not be saved: {ex.Message}" });
+            }
+
+            _account = account;
+            return new SetupResult(true, new Dictionary<string, string>());
+        }
+    }
 
     /// <summary>How long a client is locked out after repeated failures; null when it may try.</summary>
     public TimeSpan? LockedFor(string client)

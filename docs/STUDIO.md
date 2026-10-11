@@ -7,15 +7,21 @@ before apps can take it. It is what makes MatDesign a CI/CD studio *for the desi
 
 ## How it fits
 
-- **The site stays what it is** and works without the Studio: no volume, no password, read-only file system. The Studio is **off** until a data
-  directory (`MATDESIGN_DATA`, default `/data`) is writable **and** `MATDESIGN_ADMIN_PASSWORD` is set. With the default release stack it is off, and the
-  Studio pages say how to switch it on.
+- **The site stays what it is** and works without the Studio: no volume, no password, read-only file system. The Studio is **on** when it has a writable data
+  directory (`MATDESIGN_DATA`; the image sets `/data`, so the release compose file needs no setting at all). Without `MATDESIGN_DATA` (a plain `dotnet run`) it is off,
+  and the Studio pages say what is missing.
 - **Built-in data stays in code** (the registry, the rulebook, the catalogue). What the Studio saves are **items** in the data directory, and an item with
   the id of a built-in entry **replaces** it, the same way a file in `/data/catalog` replaces a built-in entry of Mattiverse. Deleting such an item brings the built-in one back.
 - **Storage is an append-only log per item**: `studio/<kind>/<id>/<revision>.json` holds who, when, why and the whole item (or a deletion mark). The current
   state is the newest revision; history, diff and restore need nothing else. Writes go to a temporary file and are renamed.
-- **One administrator.** The password comes from the environment, so there is no account to register and nothing to claim on a first visit. A cookie
-  session, a short delay and a lock after repeated failures protect the sign-in.
+- **One administrator, created by the setup assistant.** A Studio that has none leads every visitor to `/Studio/Setup`: a name and a password (at least 10 characters, typed twice).
+  The account is a name and a salted PBKDF2 hash in `<data>/admin.json`, written once and never overwritten (two visitors at the same moment cannot both win), and the new
+  administrator is signed in at once. **Whoever opens the page first becomes the administrator**, so it is done right after the start; that is the price of needing no password
+  in the compose file. A file that cannot be read switches the Studio off with the reason instead of offering the assistant to a stranger. A cookie session, a short delay and a
+  lock after repeated failures protect the sign-in; the page does not say whether the name or the password was wrong.
+  If the password is lost: delete `admin.json` in the volume and restart the container, and the assistant shows again.
+  `MATDESIGN_ADMIN_PASSWORD` is an optional shortcut for automation (CI, a throwaway stack): when it is set it is the password of the administrator `admin`, the assistant is skipped,
+  nothing is written, and it wins over the account in the volume.
 - **The checks of the pipeline are the checks of the tests** (classes that exist, icons that exist, labelled cells, unique ids, contrast of every accent,
   rules that exist). They live in one place and are used by both.
 
@@ -89,6 +95,7 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 6 | **Checks:** one page runs every check and lists what fails and where, with a link to the item | **done** |
 | 7 | **Releases:** the pipeline, versions, changelog, stored archives, `/releases/...` and `/api/releases/latest` | **done** |
 | 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | **done** |
+| 9 | **Setup assistant:** the first visit creates the administrator (name and password, kept as a hash in the volume), so the release compose file has no password and no variables | **done** |
 
 ### Versions
 
@@ -117,7 +124,7 @@ against the hashes of the manifest. The changelog says what changed.
 The unit tests cover each piece (the store, the sign-in, the validators, the shared markup checks, the diff, the restore, the checks, the pipeline, the versions) and the pages with a Studio switched on in memory
 (`StudioHarness`). `StudioPagesTests` signs in with something in every list and holds **every page of the Studio** to the shell rules (one title, the menu with the Studio in it, the breadcrumb, the user,
 the version, no inline style, no id twice, a label on every table cell), crawls the Studio for links that lead nowhere, and checks that every page of the menu marks itself as the open one. `tests/e2e/run.js`
-drives a real browser through the Studio: sign-in and lock, creating, refusing, saving and deleting an app, a rule and a component, the history and a restore, the checks, a release and the files it serves, the
+drives a real browser through the Studio: the setup assistant (when the site has no administrator yet, it creates one with `STUDIO_NAME` / `STUDIO_PASSWORD`, default `admin` / `studio-dev`), sign-in and lock, creating, refusing, saving and deleting an app, a rule and a component, the history and a restore, the checks, a release and the files it serves, the
 versions, and every page at the width of a phone. **Each run of the browser checks makes one release** (they never change), so the development volume grows by one release per run;
 `docker compose -f docker-compose.dev.yml down -v` followed by `up -d --build` starts it clean.
 
@@ -125,4 +132,4 @@ versions, and every page at the width of a phone. **Each run of the browser chec
 
 - It does not build, test or deploy the apps (that is their repositories' workflow). Its release is the design system: the CSS, the script, the sprite and the rules.
 - It is not an editor for the toolkit's CSS and script: those are files in the repository, reviewed and tested there. The Studio edits **data**: apps, rules, components, examples.
-- It has no users beyond the one administrator, and no roles.
+- It has no users beyond the one administrator, and no roles. It has no page to change the password either: to start over, delete `admin.json` (see above).

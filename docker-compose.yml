@@ -1,40 +1,14 @@
-# MatDesign – release stack: one service and one volume.
-#   docker compose up -d
-#
-# The site itself keeps no state. The volume is for the Studio (docs/STUDIO.md), where the apps, rules and components are maintained: the Studio is off
-# until MATDESIGN_ADMIN_PASSWORD is set (in the environment, or in an .env file next to this file).
-#   MATDESIGN_ADMIN_PASSWORD=a-long-password docker compose up -d
-#
-# Or without Compose, a single command (leave out the volume and the password for the plain site):
-#   docker run -d --name matdesign --restart unless-stopped -p 8060:8060 \
-#     -v matdesign-data:/data -e MATDESIGN_ADMIN_PASSWORD=a-long-password \
-#     --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true \
-#     ghcr.io/real-ttx/matdesign:latest
-#
-# Web: http://localhost:8060
-name: matdesign
-
+# MatDesign - start it with:  docker compose up -d
+# Then open http://localhost:8060. On the first visit the Studio asks you to create the administrator.
 services:
   matdesign:
     image: ghcr.io/real-ttx/matdesign:latest
     container_name: matdesign
     restart: unless-stopped
     ports:
-      - "${MATDESIGN_PORT:-8060}:8060"
-    environment:
-      # Empty: the Studio is off. A password switches it on.
-      MATDESIGN_ADMIN_PASSWORD: ${MATDESIGN_ADMIN_PASSWORD:-}
+      - "8060:8060"
     volumes:
-      - data:/data
-    # Only /data is written: the file system can be read-only, and the process needs no privileges.
-    read_only: true
-    tmpfs:
-      - /tmp
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
+      - matdesign-data:/data
 
 volumes:
-  data:
-    name: matdesign-data
+  matdesign-data:

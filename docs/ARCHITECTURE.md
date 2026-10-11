@@ -156,9 +156,11 @@ show the same text (a German PC printed `46,9 KB`, the container `46.9 KB`).
 ## 10. Security and operation
 
 The site is stateless unless the Studio is on (docs/STUDIO.md): no database, no secrets in the image, no Docker socket. Without the Studio there is no cookie either. The Studio is the one thing that
-writes: into `/data` (a volume), and only when `MATDESIGN_ADMIN_PASSWORD` is set; its session is a cookie that is HttpOnly, SameSite Lax and ends after eight hours or when the password changes, a sign-in
-that fails costs half a second and five of them lock the client out for a minute, and signing out is a POST with an anti-forgery token. The image runs as the unprivileged user of the base image, the
-file system is read-only (a tmpfs for `/tmp`, the volume for `/data`), all capabilities are dropped and `no-new-privileges` is set. `Preview` and `Builder` take an app id, a theme and an accent from the query string and accept only known ids, `light`/`dark`
+writes: into `/data` (a volume), and only where a data directory is set (the image sets it). Its one account is created by the setup assistant on the first visit and kept as a salted PBKDF2 hash
+(`admin.json`, created once and never overwritten); whoever opens the assistant first becomes the administrator, which is the price of a compose file without a password. Its session is a cookie that is
+HttpOnly, SameSite Lax and ends after eight hours or when the password changes, a sign-in that fails costs half a second and five of them lock the client out for a minute, and signing out is a POST with an
+anti-forgery token. The image runs as the unprivileged user of the base image and needs nothing else; the file system can be made read-only (a tmpfs for `/tmp`, the volume for `/data`) and the capabilities
+dropped (`read_only`, `cap_drop: [ALL]`, `no-new-privileges`) by whoever wants that, but the compose file leaves it out to stay simple. `Preview` and `Builder` take an app id, a theme and an accent from the query string and accept only known ids, `light`/`dark`
 and a `#rrggbb` value; everything else is ignored. A preview frame never saves its theme choice for the whole site (`data-preview`).
 
 ## 11. Versions and delivery
@@ -172,8 +174,9 @@ arm64 image needs no emulation for the compile.
 The design data used to be written in C# (the registry, the rulebook, the catalogue of components) and a change was a commit. The **Studio** ([STUDIO.md](STUDIO.md)) lets a person maintain it in the browser and
 turns the data into releases, without giving up what the site is: the decisions are these.
 
-- **Opt-in state.** The site stays stateless and read-only. The Studio is off until a data directory is writable (`/data`, a volume) and `MATDESIGN_ADMIN_PASSWORD` is set. One administrator whose password is in the
-  environment: nothing to register, nothing for a first visitor to claim.
+- **State only where a data directory is set.** The site itself stays stateless. The Studio is on when a data directory is writable (the image sets `/data`, a volume), so the release compose file has no
+  variable at all. One administrator, created by the setup assistant on the first visit (a name and a password, kept as a salted hash in the volume): the price is that whoever opens the assistant first
+  becomes the administrator, and the answer to that is to do it right after the start. `MATDESIGN_ADMIN_PASSWORD` remains as an optional shortcut for automation.
 - **The code stays the base, the Studio puts items on top.** An item with the id of a built-in app, rule or component replaces it; deleting the item brings the built-in one back. `DesignData` is the one place every
   page reads from, and `ToolkitFiles` rebuilds what depends on it (the colours of the apps, the bundle, its hash) when its version moves.
 - **An append-only log per item.** A save writes a file with who, when, why and the whole item, atomically; the newest is the current state. History, diff and restore need nothing else, and a restore is a new revision

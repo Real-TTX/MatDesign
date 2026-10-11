@@ -81,9 +81,10 @@ public sealed class ShellModel
 
     /// <summary>
     /// The site as a visitor sees it, or as the administrator of the Studio does (<paramref name="signedIn"/>: a third menu, a user menu with the Studio and Sign out).
-    /// <paramref name="studioOn"/> says whether there is a Studio to sign in to; <paramref name="design"/> is the data as the Studio left it (the built-in data when empty).
+    /// <paramref name="studioOn"/> says whether there is a Studio to sign in to, <paramref name="needsSetup"/> that it has no administrator yet (the way in is the setup assistant);
+    /// <paramref name="design"/> is the data as the Studio left it (the built-in data when empty).
     /// </summary>
-    public static ShellModel Site(bool studioOn = false, bool signedIn = false, MatDesign.Web.Studio.DesignData? design = null, MatDesign.Web.Studio.DesignChecks? checks = null)
+    public static ShellModel Site(bool studioOn = false, bool signedIn = false, MatDesign.Web.Studio.DesignData? design = null, MatDesign.Web.Studio.DesignChecks? checks = null, bool needsSetup = false)
     {
         var facts = design?.NavFacts ?? NavFacts.BuiltIn;
         if (signedIn && checks is not null)
@@ -98,17 +99,17 @@ public sealed class ShellModel
             Menus = Navigation.For(facts, signedIn),
             UserName = signedIn ? "Admin" : "Visitor",
             UserRole = signedIn ? "Studio" : "Guest",
-            UserLine = signedIn ? "Signed in to the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",
-            UserMenu = SiteUserMenu(signedIn),
+            UserLine = signedIn ? "Signed in to the Studio" : needsSetup ? "Set up the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",
+            UserMenu = SiteUserMenu(signedIn, needsSetup),
             Version = $"MatDesign {AppVersion.Current}",
         };
     }
 
-    private static List<UserMenuItem> SiteUserMenu(bool signedIn)
+    private static List<UserMenuItem> SiteUserMenu(bool signedIn, bool needsSetup)
     {
         var items = new List<UserMenuItem>
         {
-            signedIn ? new("Studio", "/Studio", "wrench") : new("Studio: sign in", "/Studio/Login", "login"),
+            signedIn ? new("Studio", "/Studio", "wrench") : needsSetup ? new("Studio: set up", "/Studio/Setup", "key") : new("Studio: sign in", "/Studio/Login", "login"),
             new("Download the toolkit", "/Download", "download"),
             new("Rulebook", "/Rules", "book"),
             new("API: version", "/api/version", "code"),

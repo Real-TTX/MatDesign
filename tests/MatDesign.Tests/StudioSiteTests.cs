@@ -58,12 +58,13 @@ public sealed partial class StudioSiteTests : IClassFixture<WebApplicationFactor
         return await response.Content.ReadAsStringAsync();
     }
 
-    private static async Task<HttpResponseMessage> SignIn(HttpClient client, string password = Password, string returnUrl = "")
+    private static async Task<HttpResponseMessage> SignIn(HttpClient client, string password = Password, string returnUrl = "", string name = "admin")
     {
         var page = await Html(client, "/Studio/Login");
         var token = Token().Match(page).Groups[1].Value;
         return await client.PostAsync("/Studio/Login", new FormUrlEncodedContent(new Dictionary<string, string>
         {
+            ["Name"] = name,
             ["Password"] = password,
             ["ReturnUrl"] = returnUrl,
             ["__RequestVerificationToken"] = token,
@@ -71,16 +72,20 @@ public sealed partial class StudioSiteTests : IClassFixture<WebApplicationFactor
     }
 
     [Fact]
-    public async Task Without_a_password_the_studio_is_off_and_the_sign_in_page_says_what_is_missing()
+    public async Task Without_a_data_directory_the_studio_is_off_and_the_sign_in_page_says_what_is_missing()
     {
-        var client = Client(StudioOn(password: null));
+        var client = Client(_plain);
 
         var login = await client.GetAsync("/Studio/Login");
         var html = await login.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         Assert.Contains("The Studio is off", html);
-        Assert.Contains("MATDESIGN_ADMIN_PASSWORD", html);
+        Assert.Contains("MATDESIGN_DATA", html);
         Assert.DoesNotContain("type=\"password\"", html);
+
+        var setup = await Html(client, "/Studio/Setup");
+        Assert.Contains("The Studio is off", setup);
+        Assert.DoesNotContain("type=\"password\"", setup);
 
         var studio = await client.GetAsync("/Studio");
         Assert.Equal(HttpStatusCode.Redirect, studio.StatusCode);
@@ -129,6 +134,7 @@ public sealed partial class StudioSiteTests : IClassFixture<WebApplicationFactor
         var token = Token().Match(page).Groups[1].Value;
         var signedIn = await client.PostAsync(location, new FormUrlEncodedContent(new Dictionary<string, string>
         {
+            ["Name"] = "admin",
             ["Password"] = Password,
             ["ReturnUrl"] = "/Studio/Activity",
             ["__RequestVerificationToken"] = token,
@@ -145,7 +151,7 @@ public sealed partial class StudioSiteTests : IClassFixture<WebApplicationFactor
         var response = await SignIn(client, "not the password");
         var html = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("The password is not right.", html);
+        Assert.Contains("The name or the password is not right.", html);
         Assert.False(response.Headers.TryGetValues("Set-Cookie", out var cookies) && cookies.Any(c => c.StartsWith("matdesign.studio=", StringComparison.Ordinal)));
         Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/Studio")).StatusCode);
     }
@@ -243,10 +249,11 @@ public sealed partial class StudioSiteTests : IClassFixture<WebApplicationFactor
         var two = Service("two");
 
         Assert.NotEqual(one.Stamp, two.Stamp);
-        Assert.True(one.CheckPassword("one"));
-        Assert.False(one.CheckPassword("two"));
-        Assert.False(one.CheckPassword(null));
-        Assert.False(one.CheckPassword(string.Empty));
+        Assert.True(one.SignsIn("admin", "one"));
+        Assert.False(one.SignsIn("admin", "two"));
+        Assert.False(one.SignsIn("someone", "one"));
+        Assert.False(one.SignsIn("admin", null));
+        Assert.False(one.SignsIn("admin", string.Empty));
     }
 
     [Fact]

@@ -1,0 +1,58 @@
+@page "/Studio/Setup"
+@model MatDesign.Web.Pages.Studio.SetupModel
+@inject MatDesign.Web.Studio.DesignData Design
+@{
+    ViewData["Title"] = "Set up the Studio";
+    Layout = "_Bare";
+    var app = Design.App("matdesign")!;
+    string Invalid(string field) => Model.ErrorFor(field) is null ? string.Empty : " is-invalid";
+}
+
+<div class="mat-auth__card">
+    <div class="mat-auth__brand">
+        @Ui.Logo(app, "lg")
+        <h1>Set up the Studio</h1>
+        <p class="mat-muted">You are the first one here. Create the administrator, and the Studio is yours.</p>
+    </div>
+
+    @if (!Model.Enabled)
+    {
+        <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body"><strong>The Studio is off.</strong> @Model.Reason</div></div>
+        <div class="mat-btn-row mat-btn-row--plain">
+            <a class="mat-btn mat-btn--secondary mat-btn--block" href="/">@Ui.Icon("back")<span>Back to the site</span></a>
+        </div>
+    }
+    else
+    {
+        <form class="mat-form" method="post" novalidate>
+            @if (Model.ErrorFor("Form") is { } formError)
+            {
+                <div class="mat-alert mat-alert--danger" role="alert">@Ui.Icon("alert")<div class="mat-alert__body">@formError</div></div>
+            }
+            <div class="mat-field@(Invalid("Name"))">
+                <label class="mat-label" for="Name">Name <span class="mat-req" aria-hidden="true">*</span></label>
+                <input class="mat-input" id="Name" name="Name" value="@Model.Name" maxlength="32" autocomplete="username" required data-msg-required="Please give the administrator a name." />
+                <span class="mat-error" aria-live="polite">@Model.ErrorFor("Name")</span>
+                <span class="mat-hint">You sign in with it, and the history of the Studio shows it.</span>
+            </div>
+            <div class="mat-field@(Invalid("Password"))">
+                <label class="mat-label" for="Password">Password <span class="mat-req" aria-hidden="true">*</span></label>
+                <input class="mat-input" id="Password" name="Password" type="password" minlength="@Model.MinLength" autocomplete="new-password" required data-msg-required="Please choose a password." data-msg-range="At least @Model.MinLength characters." />
+                <span class="mat-error" aria-live="polite">@Model.ErrorFor("Password")</span>
+                <span class="mat-hint">At least @Model.MinLength characters.</span>
+            </div>
+            <div class="mat-field@(Invalid("Repeat"))">
+                <label class="mat-label" for="Repeat">Password again <span class="mat-req" aria-hidden="true">*</span></label>
+                <input class="mat-input" id="Repeat" name="Repeat" type="password" autocomplete="new-password" required data-msg-required="Please type the password again." />
+                <span class="mat-error" aria-live="polite">@Model.ErrorFor("Repeat")</span>
+            </div>
+            <div class="mat-btn-row mat-btn-row--plain">
+                <button type="submit" class="mat-btn mat-btn--primary mat-btn--block">@Ui.Icon("check")<span>Create the administrator</span></button>
+            </div>
+            <p class="mat-muted">
+                Whoever opens this page first becomes the administrator, so do it right after the start. The password is kept as a salted hash
+                in <code>admin.json</code> in the data volume; if you ever lose it, delete that file, restart the container, and this page shows again.
+            </p>
+        </form>
+    }
+</div>

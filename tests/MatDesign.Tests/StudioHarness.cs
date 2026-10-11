@@ -63,6 +63,7 @@ public sealed partial class StudioHarness : IDisposable
         var page = await Html("/Studio/Login");
         var response = await Client.PostAsync("/Studio/Login", new FormUrlEncodedContent(new Dictionary<string, string>
         {
+            ["Name"] = "admin",
             ["Password"] = Password,
             ["__RequestVerificationToken"] = Token().Match(page).Groups[1].Value,
         }));

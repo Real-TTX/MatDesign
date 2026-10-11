@@ -23,8 +23,8 @@ CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// The Studio (docs/STUDIO.md) is on only with a writable data directory and the administrator's password; otherwise the site is what it always was.
-// It is created when first needed, so it sees the final configuration (the tests set it after this code has run).
+// The Studio (docs/STUDIO.md) is on when it has a writable data directory (the image sets /data); the first visitor creates the administrator in the setup assistant.
+// Without a data directory the site is what it always was. The service is created when first needed, so it sees the final configuration (the tests set it after this code has run).
 builder.Services.AddSingleton(provider => new StudioService(provider.GetRequiredService<IConfiguration>()));
 builder.Services.AddDataProtection().SetApplicationName("MatDesign");
 builder.Services.AddOptions<KeyManagementOptions>().Configure<StudioService, ILoggerFactory>((options, studio, logs) =>
@@ -64,6 +64,7 @@ builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizeFolder("/Studio");
     options.Conventions.AllowAnonymousToPage("/Studio/Login");
+    options.Conventions.AllowAnonymousToPage("/Studio/Setup");
     options.Conventions.AllowAnonymousToPage("/Studio/Logout");
 });
 builder.Services.AddMemoryCache();

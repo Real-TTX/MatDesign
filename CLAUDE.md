@@ -10,8 +10,10 @@ stable IDs), the foundations (tokens, type, icons), the shell, every control wit
 itself (CSS, one script, an icon sprite) that the apps copy. It is the place to look before building or changing any UI in the family.
 
 Stack: ASP.NET Core on **.NET 10**, C#, **Razor Pages**, plain CSS and plain JavaScript (no build step), Docker-first. Web port **8060**. The site keeps no state
-(no database, no secrets); the image runs as an unprivileged user on a read-only file system. The one exception is the **Studio** (docs/STUDIO.md, built stage by stage): it writes to `/data`
-and is on only when `MATDESIGN_ADMIN_PASSWORD` is set. The development stack has it on (`studio-dev`); the browser checks use `STUDIO_PASSWORD` for it.
+(no database, no secrets); the image runs as an unprivileged user. The one exception is the **Studio** (docs/STUDIO.md, built stage by stage): it writes to `/data` and is on when
+`MATDESIGN_DATA` is set (the image sets it). Its first administrator is created by the **setup assistant** on the first visit (`/Studio/Setup`; a name and a password, kept as a hash in `admin.json`),
+so **the release `docker-compose.yml` has no variables and no `.env` file: keep it that way, do not bring a password or a port variable back**. `MATDESIGN_ADMIN_PASSWORD` is only an optional shortcut for
+automation. The browser checks create the administrator when they find none (`STUDIO_NAME` / `STUDIO_PASSWORD`, default `admin` / `studio-dev`).
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and [docs/ADOPTING.md](docs/ADOPTING.md) for what an app has to do to use MatUi.
 
@@ -43,6 +45,7 @@ src/MatDesign.Core         no web types
   CssTokens.cs               parser for matui.tokens.css (tokens, description from the comment, group from the heading)
   RuleBook.cs                the rules (id, area, level, source, text)
   Studio/StudioStore.cs      what the Studio saves: an append-only log per item (studio/<kind>/<id>/<revision>.json), history, restore, activity
+  Studio/AdminAccount.cs     the administrator: a name and a salted PBKDF2 hash in admin.json (created once, never overwritten), what the setup assistant accepts, Verify
   Studio/AppValidator.cs     what an app has to be (id, name, glyph, port, contrast), Normalize, IsSafe
   Studio/RuleValidator.cs    what a rule has to be (an id of its area, title, statement, level, source), Normalize, IsSafe, NextId
   Studio/Diff.cs             what changed between two revisions: the fields (Flatten, Changes) and the lines (Lines)
@@ -52,9 +55,9 @@ src/MatDesign.Web          the site
   Studio/VersionTracker.cs   which release of MatUi each app uses (written down by hand) and where that stands against the releases
   Studio/Styleguide.cs       the static styleguide page of a release (rules, components with live examples, apps), its stylesheet and the sample picture
   Studio/Releases.cs         the release pipeline (Check, Version, Build, Publish, Notify), the run records, the releases on the volume and the files they serve
-  Studio/                    StudioService (on or off, the password, the lock-out), DesignData (built-in + Studio items: the apps, rules and components every page reads; Version), ComponentValidator, StudioHistory (restore checks),
+  Studio/                    StudioService (on or off, the administrator and the setup, the lock-out), StudioSession (what the session cookie carries), DesignData (built-in + Studio items: the apps, rules and components every page reads; Version), ComponentValidator, StudioHistory (restore checks),
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
-  Pages/Studio/              Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
+  Pages/Studio/              Setup (the assistant of the first administrator), Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
                              ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
@@ -105,7 +108,7 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - Numbers and dates use the invariant culture (the site is English; a developer PC and a container must show the same text).
 - **Mobile matters:** check 390 px for every new page; secondary table columns get `mat-hide-sm`; on a phone dialogs are full screen with the X at the top right.
 - After a change to CSS, JS or cshtml the container must be rebuilt.
-- **The browser checks make one release per run** (a release never changes): the development volume grows; `docker compose -f docker-compose.dev.yml down -v` then `up -d --build` starts it clean.
+- **The browser checks make one release per run** (a release never changes): the development volume grows; `docker compose -f docker-compose.dev.yml down -v` then `up -d --build` starts it clean (with the setup assistant again; the checks create the administrator).
 
 **Code**
 - Microsoft C# guidelines, file-scoped namespaces, `.editorconfig`. Few nested types; several functions per class are fine. Code, identifiers and comments are English.

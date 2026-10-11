@@ -30,8 +30,13 @@
                 <div class="mat-alert mat-alert--danger" role="alert">@Ui.Icon("alert")<div class="mat-alert__body">@Model.Error</div></div>
             }
             <div class="mat-field">
+                <label class="mat-label" for="Name">Name</label>
+                <input class="mat-input" id="Name" name="Name" value="@Model.Name" autocomplete="username" autofocus required />
+                <span class="mat-error"></span>
+            </div>
+            <div class="mat-field">
                 <label class="mat-label" for="Password">Password</label>
-                <input class="mat-input" id="Password" name="Password" type="password" autocomplete="current-password" autofocus required />
+                <input class="mat-input" id="Password" name="Password" type="password" autocomplete="current-password" required />
                 <span class="mat-error"></span>
             </div>
             <div class="mat-btn-row mat-btn-row--plain">

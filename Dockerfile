@@ -41,7 +41,7 @@ EXPOSE 8060
 COPY --from=build /app/publish .
 
 # The site keeps no state of its own. Only the Studio (docs/STUDIO.md) writes, and only into /data, which is a volume the unprivileged user may write to.
-# No socket, no secrets in the image: the administrator password of the Studio comes from the environment.
+# No socket, no secrets in the image: the administrator is created in the setup assistant on the first visit and kept, as a salted hash, in the volume.
 RUN mkdir -p /data && chown $APP_UID:$APP_UID /data
 ENV MATDESIGN_DATA=/data
 USER $APP_UID

@@ -159,7 +159,7 @@ The sample app is built from nothing but MatUi, in the accent of one of the apps
 | **Patterns** | The page types (list, gallery, edit, settings, dashboard, sign-in) in real frames, on a desktop and a phone. |
 | **Builder** | Try an accent: what the toolkit derives from it, contrast in both modes, the real screens in that colour. |
 | **Download** | MatUi as an archive or file by file, and the design system as JSON (`/api/rules`, `/api/tokens` …). |
-| **Studio** | Behind a sign-in, off until a password is set – see [docs/STUDIO.md](docs/STUDIO.md). |
+| **Studio** | Behind a sign-in; the first visit creates the administrator in a setup assistant – see [docs/STUDIO.md](docs/STUDIO.md). |
 
 ## Quick start
 
@@ -182,19 +182,8 @@ services:
     restart: unless-stopped
     ports:
       - "8060:8060"
-    environment:
-      # Empty: the plain site. A password switches the Studio on.
-      MATDESIGN_ADMIN_PASSWORD: ${MATDESIGN_ADMIN_PASSWORD:-}
     volumes:
       - matdesign-data:/data
-    # Only /data is written: the file system can be read-only, and the process needs no privileges.
-    read_only: true
-    tmpfs:
-      - /tmp
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
 
 volumes:
   matdesign-data:
@@ -204,29 +193,30 @@ volumes:
 docker compose up -d
 ```
 
-Open **http://localhost:8060** (health check: `/health`). Without a password this is the plain site: it keeps no
-state, has no database, no secrets and no Docker socket. The image runs as an unprivileged user.
+Open **http://localhost:8060** (health check: `/health`). No variables, no `.env` file. The image runs as an unprivileged user,
+needs no Docker socket and holds no secrets.
 
 Without Compose:
 
 ```bash
 docker run -d --name matdesign --restart unless-stopped -p 8060:8060 \
-  -v matdesign-data:/data --read-only --tmpfs /tmp --cap-drop ALL \
-  --security-opt no-new-privileges:true ghcr.io/real-ttx/matdesign:latest
+  -v matdesign-data:/data ghcr.io/real-ttx/matdesign:latest
 ```
 
-### 2. With the Studio
+### 2. The first visit: the setup assistant
 
-Set a password and the **Studio** is on – apps, rules and components can be maintained, and a change becomes a release:
+The **Studio** is where apps, rules and components are maintained and a change becomes a release. Open
+**http://localhost:8060/Studio** right after the start: the **setup assistant** asks for the first administrator – a name
+and a password (at least 10 characters, typed twice) – signs you in and leads into the Studio. From then on the Studio asks
+for that name and password (repeated failures lock the client out for a while).
 
-```bash
-MATDESIGN_ADMIN_PASSWORD=a-long-password docker compose up -d
-```
+![The setup assistant: a name and a password typed twice](docs/images/studio-setup.png)
 
-Sign in at **http://localhost:8060/Studio** with that password (one administrator; repeated failures lock the client
-out for a while). The `matdesign-data` volume keeps everything the Studio saves, so an update is just
-`docker compose pull && docker compose up -d`. [docs/STUDIO.md](docs/STUDIO.md) describes what the Studio does and
-what it deliberately does not.
+Whoever opens the page first becomes the administrator, so do it right after the start. The password is kept as a salted hash
+in the `matdesign-data` volume, which also keeps everything the Studio saves; an update is just
+`docker compose pull && docker compose up -d`. If you lose the password, delete `admin.json` in the volume and restart
+(`docker exec matdesign rm /data/admin.json && docker restart matdesign`): the assistant shows again.
+[docs/STUDIO.md](docs/STUDIO.md) describes what the Studio does and what it deliberately does not.
 
 ### 3. Use the toolkit in an app
 
@@ -260,26 +250,29 @@ under `/releases/<version>/`, and [docs/ADOPTING.md](docs/ADOPTING.md) is the ch
 docker compose -f docker-compose.dev.yml up -d --build    # the same without the script
 ```
 
-The development stack runs on **http://localhost:8060** with the Studio on (password `studio-dev`).
-Without Docker:
+The development stack runs on **http://localhost:8060**; a fresh volume starts with the setup assistant like the release does
+(the browser checks create the administrator `admin` with the password `studio-dev` when they find none).
+Without Docker (the Studio needs a data directory):
 
 ```bash
-ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/MatDesign.Web --urls http://localhost:8060
+MATDESIGN_DATA=./data ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/MatDesign.Web --urls http://localhost:8060
 ```
 
 ### Settings that matter
 
+None of them is needed to run it – the image has the right defaults.
+
 | Variable | Default | Meaning |
 |---|---|---|
-| `MATDESIGN_ADMIN_PASSWORD` | – | Password of the one Studio administrator. Empty: the Studio is off |
-| `MATDESIGN_DATA` | `/data` | Data directory of the Studio; it must be writable |
-| `MATDESIGN_PORT` | `8060` | Host port in the compose files |
+| `MATDESIGN_DATA` | `/data` (in the image) | Data directory of the Studio; it must be writable. Without it the Studio is off and the site is read-only |
+| `MATDESIGN_ADMIN_PASSWORD` | – | Optional, for automation (CI, a throwaway stack): the password of the administrator `admin`, which skips the setup assistant. It wins over the account in the volume |
 | `ASPNETCORE_URLS` | `http://+:8060` | Address inside the container |
 
 ### The `/data` volume
 
 ```
 /data
+├─ admin.json     the administrator: a name and a salted hash of the password (written by the setup assistant)
 ├─ studio/        what the Studio saves: one append-only log of revisions per item
 │                 (apps, rules, components, releases, runs, versions in use)
 ├─ releases/      one directory per release: the toolkit, design.json, the styleguide, manifest.json
@@ -301,6 +294,7 @@ place that could.
 | Studio 3–4 | **Rules** and **components** with live examples | ✅ |
 | Studio 5–6 | **History** (diff, restore) and **checks** | ✅ |
 | Studio 7–8 | **Releases** through a pipeline, served for the apps; **versions** per app | ✅ |
+| Setup | The **setup assistant** creates the first administrator; the release compose has no variables and no `.env` file | ✅ |
 | Documentation | **Code beside every example**, a real page per group, a styleguide in every release | ✅ |
 | Releases | The real sample pages in a release (today: code and live examples only) | open |
 | Components | CSS variables per component, accessibility notes, a search across components | open |

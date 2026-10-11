@@ -19,9 +19,8 @@ services:
     restart: unless-stopped
     ports:
       - "${MATDESIGN_PORT:-8060}:8060"
-    environment:
-      # The Studio is on in development; this password is only for this stack (MATDESIGN_ADMIN_PASSWORD overrides it).
-      MATDESIGN_ADMIN_PASSWORD: ${MATDESIGN_ADMIN_PASSWORD:-studio-dev}
+    # No password here: like the release stack, a fresh volume starts with the setup assistant (the browser checks in tests/e2e create the
+    # administrator `admin` with the password `studio-dev` when they find none; STUDIO_NAME and STUDIO_PASSWORD change that).
     volumes:
       - data:/data
     read_only: true
