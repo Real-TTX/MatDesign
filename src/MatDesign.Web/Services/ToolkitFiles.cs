@@ -83,7 +83,7 @@ public sealed partial class ToolkitFiles
         string Part(string name) => name == AppsPart ? appsCss : _css[name];
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Concat(CssParts.Select(Part)) + Script + BootScript + Sprite)))[..10].ToLowerInvariant();
         var bundle = $"/* MatUi {AppVersion.Current} ({hash}) - bundled from {string.Join(", ", CssParts)} */\n" + string.Join("\n", CssParts.Select(Part));
-        return new State(version, appsCss, hash, bundle, new Lazy<byte[]>(() => BuildZip(bundle, appsCss, hash)));
+        return new State(version, appsCss, hash, bundle, new Lazy<byte[]>(() => BuildZip(bundle, appsCss, hash, AppVersion.Current)));
     }
 
     /// <summary>The colours of the apps that were added or changed in the Studio, written like the built-in ones and placed after them, so they win.</summary>
@@ -113,6 +113,20 @@ public sealed partial class ToolkitFiles
     public byte[] Zip => Current.Zip.Value;
 
     public string ZipName => $"matui-{AppVersion.Current}.zip";
+
+    /// <summary>The bundle as a release names it: the same CSS, with the version of the release in the first line instead of the one of this build.</summary>
+    public string ReleaseBundle(string version)
+    {
+        var state = Current;
+        return state.CssBundle.Replace($"MatUi {AppVersion.Current} ({state.Hash})", $"MatUi {version} ({state.Hash})", StringComparison.Ordinal);
+    }
+
+    /// <summary>The archive as a release names it: the files as the site serves them now, and a README that names the version of the release.</summary>
+    public byte[] ReleaseZip(string version)
+    {
+        var state = Current;
+        return BuildZip(ReleaseBundle(version), state.AppsCss, state.Hash, version);
+    }
 
     public string Hash => Current.Hash;
 
@@ -149,7 +163,7 @@ public sealed partial class ToolkitFiles
         ];
     }
 
-    private byte[] BuildZip(string bundle, string appsCss, string hash)
+    private byte[] BuildZip(string bundle, string appsCss, string hash, string label)
     {
         using var stream = new MemoryStream();
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
@@ -170,14 +184,14 @@ public sealed partial class ToolkitFiles
                 Add($"css/{part}", part == AppsPart ? appsCss : _css[part]);
             }
 
-            Add("README.txt", Readme(hash));
+            Add("README.txt", Readme(hash, label));
         }
 
         return stream.ToArray();
     }
 
-    private string Readme(string hash) => string.Join('\n',
-        $"MatUi {AppVersion.Current} ({hash})",
+    private string Readme(string hash, string label) => string.Join('\n',
+        $"MatUi {label} ({hash})",
         "The UI toolkit of the Mat apps. Rules, documentation and live examples: the MatDesign site.",
         string.Empty,
         "Copy these files into the app's static files. An app never loads them from another site (rule CODE-03); update by copying again.",

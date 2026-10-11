@@ -114,6 +114,12 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
 - **Fonts:** the system stack, no web font (`TYPE-01`). **Icons:** the sprite, no icon font, no emoji (`ICON-01`).
 - **Classes:** the toolkit's `mat-*` for what it ships; the app's own classes keep the app's prefix (`CODE-02`, `CODE-04`).
 
+## 6a. Keep up with the releases
+
+When the Studio is on, MatDesign publishes **releases**: the toolkit files of one moment under a version, with their hashes. An app that wants to follow them asks `/releases/latest.json`, compares its `version`
+with the one it carries, and when the release is newer copies `/releases/<version>/matui.css`, `matui.js`, `matui.boot.js` and `matui-icons.svg` into its static files (or the archive `matui-<version>.zip`),
+checking each file against the SHA-256 of the manifest. The app still carries its own copy (`CODE-03`): the release is where the copy comes from, not something it loads at run time.
+
 ## 7. Check it
 
 1. Run the app, look at **every page in light and dark, and at 390 px** (`MOBILE-01`). Take screenshots and look at them.

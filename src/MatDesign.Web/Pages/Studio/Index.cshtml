@@ -3,6 +3,7 @@
 @inject ToolkitFiles Toolkit
 @inject DesignData Design
 @inject DesignChecks Checks
+@inject ReleaseService Releases
 @using MatDesign.Web.Studio
 @{
     ViewData["Title"] = "Studio";
@@ -31,6 +32,11 @@
             <dd>
                 <a href="/Studio/Checks">@(Checks.Report.Passed ? "All pass" : StudioFormat.Count(Checks.Report.Errors, "error"))@(Checks.Report.Advice > 0 ? ", " + StudioFormat.Count(Checks.Report.Advice, "piece") + " of advice" : string.Empty)</a>
             </dd>
+            <dt>Latest release</dt>
+            <dd>
+                @if (Releases.Latest is { } latest) { <a href="/Studio/Releases">@latest.Version</a><span class="mat-muted">, @StudioFormat.When(latest.At)</span> }
+                else { <a href="/Studio/Releases">None yet</a> }
+            </dd>
             <dt>Data directory</dt>
             <dd><code>@Model.DataDirectory</code></dd>
             <dt>Version</dt>
@@ -46,6 +52,12 @@
             <a class="doc-index__row" href="/Studio/Apps">
                 <span class="doc-index__key"><strong class="doc-index__title">Apps</strong></span>
                 <span class="doc-index__body"><span class="mat-muted">Create and change the apps of the family: name, colour, icon and port. The contrast of the colour is checked before it is saved.</span></span>
+            </a>
+        </li>
+        <li>
+            <a class="doc-index__row" href="/Studio/Releases">
+                <span class="doc-index__key"><strong class="doc-index__title">Releases</strong></span>
+                <span class="doc-index__body"><span class="mat-muted">Turn the data of the Studio into a release of the design system: every check, a new version, the toolkit files, publishing. Apps copy a release and learn about the next from latest.json.</span></span>
             </a>
         </li>
         <li>

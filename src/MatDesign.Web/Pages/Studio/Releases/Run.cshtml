@@ -1,0 +1,49 @@
+@page "/Studio/Releases/Run"
+@model MatDesign.Web.Pages.Studio.Releases.RunModel
+@using MatDesign.Web.Studio
+@{
+    var run = Model.Run;
+    ViewData["Title"] = $"Run {run.Id}";
+    ViewData["PageSub"] = $"The pipeline for version {run.Version}, started by {run.By} at {StudioFormat.When(run.At)}.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Releases", "/Studio/Releases"), (run.Id, null));
+    ViewData["ActiveHref"] = "/Studio/Releases";
+    ViewData["Width"] = "narrow";
+    var failedStage = run.Stages.FirstOrDefault(s => s.Status == StageStatus.Failed);
+}
+
+@if (run.Succeeded)
+{
+    <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>Version @run.Version is released.</strong> It is served at <a href="/releases/@run.Version/manifest.json">/releases/@run.Version/</a> and cannot change any more.</div></div>
+}
+else
+{
+    <div class="mat-alert mat-alert--danger" role="alert">@Ui.Icon("x-circle")<div class="mat-alert__body"><strong>The run stopped at @(failedStage?.Name ?? "a stage").</strong> Nothing was published. Fix what the log says and run the pipeline again.</div></div>
+}
+
+@if (run.Note.Length > 0)
+{
+    <p class="doc-quote">@run.Note</p>
+}
+
+@foreach (var stage in run.Stages)
+{
+    <section class="mat-card" aria-labelledby="stage-@stage.Name">
+        <div class="mat-card__head">
+            <h2 class="mat-card__title" id="stage-@stage.Name">@stage.Name</h2>
+            <span class="mat-pill @RunModel.Pill(stage.Status)">@stage.Status</span>
+            @if (stage.Status != StageStatus.Skipped) { <span class="mat-muted">@stage.Milliseconds ms</span> }
+        </div>
+        <div class="mat-card__body">
+            <pre class="mat-code">@string.Join('\n', stage.Log)</pre>
+        </div>
+    </section>
+}
+
+<div class="mat-btn-row">
+    <a class="mat-btn mat-btn--secondary" href="/Studio/Releases">@Ui.Icon("back")<span>Back</span></a>
+    @if (!run.Succeeded)
+    {
+        <a class="mat-btn mat-btn--ghost" href="/Studio/Checks">@Ui.Icon("check-square")<span>Open the checks</span></a>
+        <a class="mat-btn mat-btn--ghost" href="/Studio/Releases/New">@Ui.Icon("rocket")<span>Run it again</span></a>
+    }
+</div>

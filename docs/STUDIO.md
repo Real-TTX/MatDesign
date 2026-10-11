@@ -87,8 +87,23 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 4 | **Components:** create components with examples (title, note, markup, live or not) and the rules they follow; preview next to the editor; the contract checks of the tests run on save | **done** |
 | 5 | **History:** per item the revisions, a diff between two, restore; the activity list filters by kind, item and person | **done** |
 | 6 | **Checks:** one page runs every check and lists what fails and where, with a link to the item | **done** |
-| 7 | **Releases:** the pipeline, versions, changelog, stored archives, `/releases/...` and `/api/releases/latest` | open |
+| 7 | **Releases:** the pipeline, versions, changelog, stored archives, `/releases/...` and `/api/releases/latest` | **done** |
 | 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | open |
+
+## Releases in practice
+
+**Making one:** Studio → Releases → New release. The form suggests the next patch number (0.1.0 for the first), checks the version before anything runs (three numbers, not released yet, higher than the last
+release), shows how the checks stand and what the Studio changed since the last release, and asks before it runs. The pipeline runs in the request (it takes milliseconds) and leads to the run, which is kept
+whatever happened: five stages with their log, a failed stage (the checks, a version that is taken) stopping the run and skipping the rest. Only one run at a time.
+
+**What a release is:** a directory `<data>/releases/<version>/` with `matui.css` (the bundle, naming the version in its first line, with the colours of the apps as the Studio left them), `matui.js`,
+`matui.boot.js`, `matui-icons.svg`, the CSS parts under `css/`, `matui-<version>.zip`, `design.json` (apps, rules, component summaries) and `manifest.json` (version, date, who, note, run, the hash of the
+toolkit, errors and advice at that moment, counts, the changelog, and every file with its size and SHA-256). The release is also saved as an item of the kind `releases`. It is published by moving the finished
+directory into place, so a release is whole or not there. The site offers no way to change or delete one: apps may depend on it, so the volume is the only place that could.
+
+**Taking one:** `GET /releases/<version>/<file>` (public, read-only, any origin, cached for good because it never changes), `GET /releases/latest.json` (the manifest of the highest version, never cached),
+`GET /api/releases` (the list) and `GET /api/releases/latest`. An app compares the `version` of `latest.json` with what it carries, and copies the files of that release if it is newer; it checks them
+against the hashes of the manifest. The changelog says what changed.
 
 ## What it does not do
 

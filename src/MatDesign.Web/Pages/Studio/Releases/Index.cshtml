@@ -1,0 +1,97 @@
+@page "/Studio/Releases"
+@model MatDesign.Web.Pages.Studio.Releases.IndexModel
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "Releases";
+    ViewData["PageSub"] = "A release is the toolkit and the design data of one moment under a version. An app copies a release, and learns from latest.json that there is a newer one.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Releases", null));
+}
+
+<section class="mat-section" aria-labelledby="releases-title">
+    <div class="mat-section__head"><h2 id="releases-title">Releases</h2></div>
+    <div class="mat-list">
+        <partial name="_Toolbar" model="Model.Toolbar" />
+
+        @if (Model.Toolbar.Total == 0)
+        {
+            <div class="mat-empty">
+                <span class="mat-empty__icon">@Ui.Icon("rocket")</span>
+                <div class="mat-empty__title">Nothing has been released yet</div>
+                <p>A release runs every check, numbers the data of the Studio, builds the toolkit files and publishes them.</p>
+                <a class="mat-btn mat-btn--primary" href="/Studio/Releases/New">@Ui.Icon("rocket")<span>Make the first release</span></a>
+            </div>
+        }
+        else if (Model.Items.Count == 0)
+        {
+            <div class="mat-empty">
+                <span class="mat-empty__icon">@Ui.Icon("search")</span>
+                <div class="mat-empty__title">No release matches</div>
+                <p>Change the search, or reset it.</p>
+                <a class="mat-btn mat-btn--primary" href="/Studio/Releases">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+            </div>
+        }
+        else
+        {
+            <div class="mat-table-wrap">
+                <table class="mat-table">
+                    <caption class="mat-sr-only">Releases of the design system</caption>
+                    <thead><tr><th scope="col">Version</th><th scope="col">Released</th><th scope="col" class="mat-hide-sm">Note</th><th scope="col" class="mat-hide-sm">Hash</th><th scope="col"><span class="mat-sr-only">Actions</span></th></tr></thead>
+                    <tbody>
+                        @foreach (var release in Model.Items)
+                        {
+                            <tr>
+                                <td data-label="Version"><span class="mat-row mat-row--nowrap"><strong>@release.Version</strong>@if (release.Version == Model.Newest) { <span class="mat-pill mat-pill--ok mat-pill--plain">Latest</span> }</span></td>
+                                <td data-label="Released">@StudioFormat.When(release.At)<small class="mat-muted"> by @release.By</small></td>
+                                <td data-label="Note" class="mat-hide-sm mat-muted">@(release.Note.Length > 0 ? release.Note : StudioFormat.Count(release.Changelog.Count, "change"))</td>
+                                <td data-label="Hash" class="mat-hide-sm"><code>@release.Hash</code></td>
+                                <td data-label="Actions" class="mat-table__cell-actions">
+                                    <div class="mat-table__actions">
+                                        <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Studio/Releases/Run?id=@release.Run" aria-label="The run of @release.Version" data-tip="The run">@Ui.Icon("activity")</a>
+                                        <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/releases/@release.Version/matui-@(release.Version).zip" aria-label="Download @release.Version as an archive" data-tip="Download the archive">@Ui.Icon("download")</a>
+                                        <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/releases/@release.Version/manifest.json" aria-label="The manifest of @release.Version" data-tip="The manifest">@Ui.Icon("file-text")</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <partial name="_Pager" model="Model.Pager" />
+
+        <div class="mat-actions">
+            <a class="mat-btn mat-btn--primary" href="/Studio/Releases/New">@Ui.Icon("rocket")<span>New release</span></a>
+            <a class="mat-btn mat-btn--secondary" href="/releases/latest.json">@Ui.Icon("code")<span>latest.json</span></a>
+        </div>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="runs-title">
+    <div class="mat-section__head"><h2 id="runs-title">The last runs</h2><p class="mat-section__lead">Every run is kept, the ones that stopped at a check too.</p></div>
+    @if (Model.Runs.Count == 0)
+    {
+        <p class="mat-muted">No run yet.</p>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">The last runs of the pipeline</caption>
+                <thead><tr><th scope="col">Run</th><th scope="col">Version</th><th scope="col">Result</th><th scope="col" class="mat-hide-sm">When</th><th scope="col" class="mat-hide-sm">By</th></tr></thead>
+                <tbody>
+                    @foreach (var run in Model.Runs)
+                    {
+                        <tr>
+                            <td data-label="Run"><a href="/Studio/Releases/Run?id=@run.Id"><code>@run.Id</code></a></td>
+                            <td data-label="Version">@run.Version</td>
+                            <td data-label="Result">@if (run.Succeeded) { <span class="mat-pill mat-pill--ok">Released</span> } else { <span class="mat-pill mat-pill--error">Stopped at @(run.Stages.FirstOrDefault(s => s.Status == StageStatus.Failed)?.Name ?? "a stage")</span> }</td>
+                            <td data-label="When" class="mat-hide-sm">@StudioFormat.When(run.At)</td>
+                            <td data-label="By" class="mat-hide-sm">@run.By</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>

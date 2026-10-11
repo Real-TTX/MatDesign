@@ -21,6 +21,8 @@ public static class StudioFormat
         "apps" => "App",
         "rules" => "Rule",
         "components" => "Component",
+        "releases" => "Release",
+        "runs" => "Run",
         _ => char.ToUpperInvariant(kind[0]) + kind[1..],
     };
 }

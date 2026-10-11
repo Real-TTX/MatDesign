@@ -155,13 +155,17 @@ public static class Navigation
             new("Apps", "/Studio/Apps", "apps"),
             new("Rules", "/Studio/Rules", "book"),
             new("Components", "/Studio/Components", "toggle"),
+            new("Activity", "/Studio/Activity", "activity"),
+        ]),
+        new("Release",
+        [
             new("Checks", "/Studio/Checks", "check-square", facts.CheckErrors switch
             {
                 < 0 => null,
                 0 => NavBadge.Dot("ok", "all checks pass"),
                 var n => NavBadge.Count(n, "error", "checks find errors"),
             }),
-            new("Activity", "/Studio/Activity", "activity"),
+            new("Releases", "/Studio/Releases", "rocket"),
         ]),
     ]);
 

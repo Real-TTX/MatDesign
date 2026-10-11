@@ -1007,7 +1007,7 @@ function expectTrue(value, what) {
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
         const names = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').evaluateAll(els => els.map(e => { const c = e.cloneNode(true); c.querySelectorAll('.mat-nav__badge').forEach(b => b.remove()); return c.textContent.trim(); }));
-        expect(names, ['Overview', 'Apps', 'Rules', 'Components', 'Checks', 'Activity'], 'items of the Studio menu');
+        expect(names, ['Overview', 'Apps', 'Rules', 'Components', 'Activity', 'Checks', 'Releases'], 'items of the Studio menu');
       });
       await check('the activity list has its toolbar above it and the sort dialog opens', async () => {
         const bar = await page.locator('.mat-toolbar').boundingBox();
@@ -1240,6 +1240,48 @@ function expectTrue(value, what) {
         await page.click('dialog[open] button[value="ok"]');
         await page.waitForURL('**/Studio/Apps');
         expect((await page.request.get(BASE + '/Identity/App?id=' + histId)).status(), 404, 'the page of the deleted app');
+      });
+      // a release: the form refuses a version that is not three numbers; the pipeline runs through, the run shows its five stages, and the release is served
+      // (the release stays: a release never changes, so the development volume grows by one release for each run of these checks)
+      await check('the releases page has its toolbar above the list and the form refuses a version that is not three numbers', async () => {
+        await page.goto(BASE + '/Studio/Releases', { waitUntil: 'networkidle' });
+        const bar = await page.locator('.mat-toolbar').boundingBox();
+        const below = await page.locator('section[aria-labelledby="releases-title"] .mat-table-wrap, section[aria-labelledby="releases-title"] .mat-empty').first().boundingBox();
+        expectTrue(bar.y < below.y, 'the toolbar is not above the list');
+        await page.click('a.mat-btn--primary:has-text("New release")');
+        await page.waitForURL('**/Studio/Releases/New');
+        expectTrue(/^\d+\.\d+\.\d+$/.test(await page.inputValue('#Version')), 'the suggested version: ' + await page.inputValue('#Version'));
+        expect(await page.locator('#stages-title').count(), 1, 'the list of what the pipeline does');
+        await page.fill('#Version', 'abc');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForLoadState('networkidle');
+        expectTrue(/three numbers/i.test(await page.textContent('main')), 'no reason for the version (the toolkit says it in the browser, the server in the same words)');
+        expect(await page.inputValue('#Version'), 'abc', 'the version that was typed');
+      });
+      await check('the pipeline asks first, runs the five stages, publishes, and the release is served with its files', async () => {
+        await page.goto(BASE + '/Studio/Releases/New', { waitUntil: 'networkidle' });
+        const version = await page.inputValue('#Version');
+        await page.fill('#Note', 'Made by the browser check.');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        expect(await page.locator('dialog[open]').count(), 1, 'the confirmation dialog');
+        await page.click('dialog[open] [data-dialog-close]');
+        expectTrue(page.url().endsWith('/Studio/Releases/New'), 'Cancel left the page');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForURL('**/Studio/Releases/Run?id=*');
+        expectTrue((await page.textContent('main .mat-alert--success')).includes('Version ' + version + ' is released.'), 'the run did not release ' + version + ': ' + (await page.textContent('main')).slice(0, 200));
+        expect(await page.locator('section[aria-labelledby^="stage-"]').count(), 5, 'stages');
+        expect(await page.locator('section[aria-labelledby^="stage-"] .mat-pill--ok').count(), 5, 'stages that succeeded');
+        const css = await page.request.get(BASE + '/releases/' + version + '/matui.css');
+        expect(css.status(), 200, 'matui.css of the release');
+        expectTrue((await css.text()).startsWith('/* MatUi ' + version + ' ('), 'the bundle names the release');
+        const latest = await (await page.request.get(BASE + '/releases/latest.json')).json();
+        expect(latest.version, version, 'latest.json');
+        expectTrue(latest.files.some(f => f.path === 'matui-' + version + '.zip' && f.sha256.length === 64), 'the archive with its hash in the manifest');
+        await page.goto(BASE + '/Studio/Releases', { waitUntil: 'networkidle' });
+        expectTrue((await page.textContent('section[aria-labelledby="releases-title"] tbody tr')).includes(version), 'the release is first in the list');
+        expect(await page.locator('section[aria-labelledby="releases-title"] .mat-pill:has-text("Latest")').count(), 1, 'the latest release');
       });
       await check('Sign out is the last entry of the user menu, ends the session and leads back to the site', async () => {
         await page.click('.mat-user');

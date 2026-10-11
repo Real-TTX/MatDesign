@@ -70,6 +70,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<DesignData>();
 builder.Services.AddSingleton<StudioHistory>();
 builder.Services.AddSingleton<DesignChecks>();
+builder.Services.AddSingleton<ReleaseService>();
 builder.Services.AddSingleton<ToolkitFiles>();
 builder.Services.AddSingleton<AuditData>();
 
@@ -120,6 +121,33 @@ api.MapGet("/rules", (DesignData design) => design.Rules.Select(r => new { r.Id,
 api.MapGet("/tokens", (ToolkitFiles files) => files.Tokens.Select(t => new { t.Name, t.Light, t.Dark, t.Description, t.Group }));
 api.MapGet("/icons", (ToolkitFiles files) => files.IconNames);
 api.MapGet("/version", (ToolkitFiles files) => new { toolkit = AppVersion.Current, hash = files.Hash });
+
+// ---- The releases of the design system (the Studio makes them): what an app copies from, and how it learns that there is a newer one. Public and read-only, like /ui. ----
+api.MapGet("/releases", (ReleaseService service) => service.Releases().Select(m => new { m.Version, m.At, m.Hash, m.Note, files = m.Files.Count, url = $"/releases/{m.Version}/" }));
+api.MapGet("/releases/latest", (ReleaseService service) => service.Latest is { } latest ? Results.Json(latest) : Results.NotFound());
+
+var releases = app.MapGroup("/releases");
+releases.AddEndpointFilter(async (context, next) =>
+{
+    context.HttpContext.Response.Headers.AccessControlAllowOrigin = "*";
+    return await next(context);
+});
+releases.MapGet("/latest.json", (ReleaseService service, HttpContext http) =>
+{
+    http.Response.Headers.CacheControl = "no-cache";
+    return service.Latest is { } latest ? Results.Json(latest) : Results.NotFound();
+});
+releases.MapGet("/{version}/{**file}", (string version, string file, ReleaseService service, HttpContext http) =>
+{
+    if (service.FileOf(version, file) is not { } found)
+    {
+        return Results.NotFound();
+    }
+
+    // a release never changes, so a copy of it never goes out of date
+    http.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+    return Results.File(found.Path, found.ContentType);
+});
 
 app.MapGet("/health", () => Results.Text("ok"));
 app.MapRazorPages();

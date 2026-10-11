@@ -1,0 +1,89 @@
+@page "/Studio/Releases/New"
+@model MatDesign.Web.Pages.Studio.Releases.NewModel
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "New release";
+    ViewData["PageSub"] = "Run the pipeline: every check, a new version, the toolkit files, publishing. The run is kept, whatever happens.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Releases", "/Studio/Releases"), ("New release", null));
+    ViewData["Width"] = "narrow";
+    var report = Model.Report;
+    var pending = Model.Pending;
+    string Invalid(string? problem) => problem is null ? string.Empty : " is-invalid";
+}
+
+<form class="mat-form" method="post" action="/Studio/Releases/New" novalidate>
+    @* The action is written out; a form with an action gets no token by itself. *@
+    @Html.AntiForgeryToken()
+
+    @if (Model.Busy is not null)
+    {
+        <div class="mat-alert mat-alert--warning" role="alert">@Ui.Icon("alert")<div class="mat-alert__body">@Model.Busy</div></div>
+    }
+
+    <section class="mat-card" aria-labelledby="state-title">
+        <div class="mat-card__head">@Ui.Icon("check-square")<h2 class="mat-card__title" id="state-title">Where the data stands</h2></div>
+        <div class="mat-card__body">
+            <dl class="mat-kv">
+                <dt>Checks</dt>
+                <dd>
+                    @if (report.Passed) { <span class="mat-pill mat-pill--ok">All pass</span> }
+                    else { <span class="mat-pill mat-pill--error">@StudioFormat.Count(report.Errors, "error")</span> }
+                    <a href="/Studio/Checks">Open the checks</a>
+                    @if (!report.Passed) { <span class="mat-muted"> A run with errors stops at Check.</span> }
+                </dd>
+                <dt>Last release</dt>
+                <dd>@(Model.Latest is null ? "None yet." : $"{Model.Latest.Version}, {StudioFormat.When(Model.Latest.At)}")</dd>
+                <dt>Changed since</dt>
+                <dd>
+                    @if (pending.Count == 0) { <span class="mat-muted">Nothing in the Studio.</span> }
+                    else
+                    {
+                        <span>@StudioFormat.Count(pending.Count, "change")</span>
+                        <ul class="doc-list">
+                            @foreach (var line in pending.Take(10)) { <li>@line</li> }
+                            @if (pending.Count > 10) { <li class="mat-muted">and @(pending.Count - 10) more</li> }
+                        </ul>
+                    }
+                </dd>
+            </dl>
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="release-title">
+        <div class="mat-card__head">@Ui.Icon("rocket")<h2 class="mat-card__title" id="release-title">The release</h2></div>
+        <div class="mat-card__body">
+            <div class="mat-form__grid">
+                <div class="mat-field@(Invalid(Model.VersionProblem))">
+                    <label class="mat-label" for="Version">Version <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input mat-mono" id="Version" name="Version" value="@Model.Version" maxlength="14" required pattern="\d{1,4}\.\d{1,4}\.\d{1,4}" data-msg-required="Please give the version." data-msg-pattern="Three numbers with dots, like 1.4.0." autocomplete="off" />
+                    <span class="mat-error" aria-live="polite">@Model.VersionProblem</span>
+                    <span class="mat-hint">Three numbers, higher than the last release. The next patch is filled in.</span>
+                </div>
+                <div class="mat-field mat-field--full@(Invalid(Model.NoteProblem))">
+                    <label class="mat-label" for="Note">Note <span class="mat-opt">(optional)</span></label>
+                    <textarea class="mat-textarea" id="Note" name="Note" rows="3" maxlength="500">@Model.Note</textarea>
+                    <span class="mat-error" aria-live="polite">@Model.NoteProblem</span>
+                    <span class="mat-hint">What this release is about. The changelog lists the changes of the Studio on its own.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="stages-title">
+        <div class="mat-card__head">@Ui.Icon("list")<h2 class="mat-card__title" id="stages-title">What the pipeline does</h2></div>
+        <div class="mat-card__body">
+            <ol class="doc-list">
+                <li><strong>Check</strong>: every check of the design system must pass.</li>
+                <li><strong>Version</strong>: the number must be new and higher; the changelog is what the Studio changed since the last release.</li>
+                <li><strong>Build</strong>: the toolkit files, the archive and the design data are written with their hashes.</li>
+                <li><strong>Publish</strong>: the release is stored under its version and served at <code>/releases/&lt;version&gt;/</code>. It never changes after that.</li>
+                <li><strong>Notify</strong>: the published files are read back and checked; apps learn about the release from <code>/releases/latest.json</code>.</li>
+            </ol>
+        </div>
+    </section>
+
+    <div class="mat-btn-row">
+        <button type="submit" class="mat-btn mat-btn--primary" data-confirm="Run the pipeline? If every stage works, the release is published and cannot be changed or deleted." data-confirm-ok="Run it" data-confirm-danger>@Ui.Icon("rocket")<span>Run the pipeline</span></button>
+        <a class="mat-btn mat-btn--secondary" href="/Studio/Releases">@Ui.Icon("back")<span>Back</span></a>
+    </div>
+</form>
