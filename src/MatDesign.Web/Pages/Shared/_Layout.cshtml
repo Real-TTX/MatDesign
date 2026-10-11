@@ -102,6 +102,14 @@
 
                 @RenderBody()
             </main>
+
+            <footer class="mat-footer">
+                <p class="mat-footer__text">MatDesign · the design and identity of the Mat apps</p>
+                <ul class="mat-footer__links">
+                    <li><a href="@(shell.PreviewQuery is null ? "/Rules" : "#")">Rules</a></li>
+                    <li><a href="@(shell.PreviewQuery is null ? "/Download" : "#")">Download MatUi</a></li>
+                </ul>
+            </footer>
         </div>
     </div>
 

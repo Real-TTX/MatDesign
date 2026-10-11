@@ -118,7 +118,7 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
 
 When the Studio is on, MatDesign publishes **releases**: the toolkit files of one moment under a version, with their hashes. An app that wants to follow them asks `/releases/latest.json`, compares its `version`
 with the one it carries, and when the release is newer copies `/releases/<version>/matui.css`, `matui.js`, `matui.boot.js` and `matui-icons.svg` into its static files (or the archive `matui-<version>.zip`),
-checking each file against the SHA-256 of the manifest. The app still carries its own copy (`CODE-03`): the release is where the copy comes from, not something it loads at run time. The Studio's **Versions** page is where it is written down which release each app has,
+checking each file against the SHA-256 of the manifest. Every release also carries `styleguide.html`, the rules and every component with its examples as one static page (`/releases/<version>/styleguide.html`), and `design.json` with the same as data. The app still carries its own copy (`CODE-03`): the release is where the copy comes from, not something it loads at run time. The Studio's **Versions** page is where it is written down which release each app has,
 and which apps are behind.
 
 ## 7. Check it

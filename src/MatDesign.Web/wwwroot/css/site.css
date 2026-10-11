@@ -61,6 +61,8 @@
 .doc-example__live--menu { width: min(calc(100% - 2 * var(--mat-space-4)), 300px); align-items: stretch; gap: 0; padding: var(--mat-space-3); background: var(--mat-nav-bg); border-style: solid; border-color: var(--mat-border); }
 .doc-example__live--menu .mat-nav__scroll { flex: none; overflow: visible; padding: 0; }
 .doc-example__live--menu .mat-nav__switch { padding: 0 0 var(--mat-space-2); }
+.doc-example__live.doc-example__live--bar { padding: 0; gap: 0; overflow: hidden; }
+.doc-example__live--bar .mat-topbar { position: static; }
 .doc-example__head p { flex: 1 1 100%; margin: 0; color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
 .doc-example__live { padding: var(--mat-space-6); display: flex; flex-direction: column; gap: var(--mat-space-4); min-width: 0; background: var(--mat-bg); margin: var(--mat-space-4) var(--mat-space-4) 0; border-radius: var(--mat-radius); border: 1px solid var(--mat-border); }
 .doc-example__code { margin: var(--mat-space-3) var(--mat-space-4) var(--mat-space-4); }

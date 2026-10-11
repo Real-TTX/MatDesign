@@ -587,6 +587,66 @@ public static class ComponentCatalog
             ],
             ["Every page of every app has one (SHELL-08), including the start page, where it is only the app name."]),
 
+        new("topbar", "Header bar", "Navigation", "template",
+            "The bar above every page: the breadcrumb on the left and, on the right, icons for the things of the whole app.",
+            ["SHELL-17", "SHELL-08", "ICON-03", "MOBILE-02"],
+            [
+                new("Breadcrumb and icons", $"""
+                    <header class="mat-topbar">
+                      <nav class="mat-crumbs" aria-label="Breadcrumb">
+                        <ol><li><a href="#">MatMail</a></li><li><a href="#">Settings</a></li><li aria-current="page">Accounts</li></ol>
+                      </nav>
+                      <div class="mat-topbar__actions">
+                        <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" aria-label="Search" data-tip="Search">{I("search")}</button>
+                        <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" aria-label="Help" data-tip="Help">{I("help-circle")}</button>
+                      </div>
+                    </header>
+                    """, "The icons sit at the right end, after the breadcrumb. Each is a ghost icon button with a name for screen readers and a tooltip.", Frame: "bar"),
+                new("With a count and a dot", $"""
+                    <header class="mat-topbar">
+                      <nav class="mat-crumbs" aria-label="Breadcrumb">
+                        <ol><li><a href="#">MatMail</a></li><li aria-current="page">Inbox</li></ol>
+                      </nav>
+                      <div class="mat-topbar__actions">
+                        <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" aria-label="Notifications, 3 new" data-tip="Notifications">{I("bell")}<span class="mat-topbar__badge" aria-hidden="true">3</span></button>
+                        <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" aria-label="Sync, one account needs attention" data-tip="Sync">{I("refresh")}<span class="mat-topbar__badge mat-topbar__badge--dot mat-topbar__badge--warn" aria-hidden="true"></span></button>
+                        <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" aria-label="More" data-tip="More">{I("more-vertical")}</button>
+                      </div>
+                    </header>
+                    """, "A count or a dot goes in a badge on the icon; the name of the button says what the badge says, because the badge itself is hidden from screen readers. Tones: accent (default), warn, error.", Frame: "bar"),
+            ],
+            ["At most four icons; more go behind one icon that opens a context menu (the `menu` component).",
+             "Only things of the whole app belong here. Page actions stay with their content (FORM-01, LIST-07); the theme button and the user stay at the foot of the menu (SHELL-03).",
+             "On a phone the icons stay and the breadcrumb shows only its last two items (MOBILE-02)."]),
+
+        new("footer", "Footer", "Navigation", "minus",
+            "The end of a page: what the app is on one side, the links that belong to every page on the other.",
+            ["SHELL-18", "SHELL-11", "A11Y-03", "MOBILE-02"],
+            [
+                new("Name and links", """
+                    <footer class="mat-footer">
+                      <p class="mat-footer__text">MatMail · © 2026 Example GmbH</p>
+                      <ul class="mat-footer__links">
+                        <li><a href="#">Imprint</a></li>
+                        <li><a href="#">Privacy</a></li>
+                        <li><a href="#">Help</a></li>
+                      </ul>
+                    </footer>
+                    """, "It comes after the content, inside the scrolling area, and lines up with the width of the content. It is never fixed over the page.", Frame: "bar"),
+                new("Centred, for a page without a menu", """
+                    <footer class="mat-footer mat-footer--center mat-footer--plain">
+                      <ul class="mat-footer__links">
+                        <li><a href="#">Imprint</a></li>
+                        <li><a href="#">Privacy</a></li>
+                        <li><a href="#">Contact</a></li>
+                      </ul>
+                    </footer>
+                    """, "On a sign-in page (`mat-auth`) it is the last child, under the card: the card stays centred and the footer sits at the bottom. `mat-footer--plain` leaves out the line above.", Frame: "bar"),
+            ],
+            ["In the shell it is a `footer` element after the `main` of the page, so screen readers find it as the information about the page. On a page without a menu the page itself is the `main`, and the footer sits inside it.",
+             "The version of the app stays in the menu (SHELL-06), not in the footer.",
+             "On a phone the two sides wrap: the text above, the links below."]),
+
         new("steps", "Steps", "Navigation", "route",
             "Progress through a wizard: finished, current, to come.",
             ["A11Y-03", "COLOR-04"],
@@ -848,7 +908,7 @@ public static class ComponentCatalog
         "fields", "input-types", "selects", "checks", "choices", "range", "input-groups", "special-inputs", "rich-select", "date-picker", "time-picker", "colour-picker", "floating-labels", "form-layout", "form-grid", "validation",
         "toolbar", "table", "pager", "gallery",
         "typography", "cards", "list-group", "accordion", "avatars", "stat", "pills", "kv", "meter", "empty", "code",
-        "tabs", "menu", "breadcrumb", "steps", "navmenu", "switcher", "toc",
+        "tabs", "menu", "breadcrumb", "topbar", "steps", "navmenu", "switcher", "toc", "footer",
         "alerts", "toasts", "dialogs", "popover", "tooltip", "spinner", "skeleton",
         "breakpoints", "grid-cols", "stack-row-grid",
         "u-spacing", "u-display", "u-flex", "u-text", "u-colour", "u-borders", "u-sizing",

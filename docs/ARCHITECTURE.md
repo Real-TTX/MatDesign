@@ -177,7 +177,7 @@ turns the data into releases, without giving up what the site is: the decisions 
   that has to pass the same validator as a save, so an old state that is wrong today is refused with the reason.
 - **One code for the contract.** The checks that hold the built-in examples in the unit tests (`MarkupChecks`) are the checks that hold a typed example in the Studio; markup that could harm a page is never drawn.
   The validators, the checks page and the release pipeline all call the same code, so a release cannot pass what the page fails.
-- **Releases are immutable.** A release is a directory with its files, their hashes and a manifest, moved into place whole. The site offers no way to change or delete one: apps may depend on it. Apps learn of the
+- **Releases are immutable.** A release is a directory with its files (the toolkit, the design data with every example, and a static styleguide that draws the components with the release's own files), their hashes and a manifest, moved into place whole. The site offers no way to change or delete one: apps may depend on it. Apps learn of the
   newest from `/releases/latest.json` and copy the files; the Studio records by hand which release each app has.
 - **It edits data, not the toolkit.** The CSS and the script are files of the repository, reviewed and tested there; the Studio never writes them. It is also not a CI system for the apps: its release is the design system.
 

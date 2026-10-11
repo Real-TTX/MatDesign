@@ -8,7 +8,7 @@
 
 Every Mat app has its own colour and the same design. MatDesign is the reference for that design: a website with the **rulebook**
 (every rule about how an app looks and behaves, with a stable ID such as `SHELL-03`), the **foundations** (colour, type, space, motion, icons),
-the **shell** (menu left with submenus, badges and a switcher between menus, breadcrumb above the content), **49 components** with live examples and the markup to copy (forms, pickers, lists,
+the **shell** (menu left with submenus, badges and a switcher between menus, breadcrumb above the content with icons at its right end, an optional footer), **51 components** with live examples and the markup to copy (forms, pickers, lists,
 dialogs, ...), a **layout system** (twelve columns, breakpoints) and **utility classes**, the **page patterns**,
 a **builder** that checks an accent colour, and **MatUi**, the toolkit itself: four files you copy into an app.
 And a **Studio**, where all of it is maintained and released: create and change apps, rules and components with live examples, see what changed and go back, run the checks, make a **release** of
@@ -28,6 +28,7 @@ These are the rules that make a Mat app look like a Mat app. They are in the rul
   **3-state theme button** (System / Light / Dark), and below them the **version**. The menu scrolls on its own, separately from the content.
 - **The menu can have badges, submenus and more than one menu.** A badge at the right end of an item carries a count or a dot in the tone of its meaning; a parent opens its
   children (one level, the branch with the current page is open); an app with distinct areas such as an *Administration* has one menu per area and a **switcher under the logo**.
+- **The header bar can carry icons at its right end** (search, notifications, help; icons only, at most four) **and a page can end with a footer** (name and legal links).
 - **The content always has a breadcrumb above it.** A long page has an index beside it ("On this page") so that one click jumps to a section.
 - **Every list and every gallery has a toolbar above it.** *Search*, *Filter* and *Sort* are three buttons, and each opens a **dialog**.
 - **Buttons are always under the content** (create, edit, settings), from positive to negative: *Save*, *Back*, a space, *Delete*. The control enforces the order.
@@ -66,6 +67,10 @@ and checked for WCAG AA, for every app, in light and dark.
 |---|---|---|
 | ![The history of an app with a diff](docs/images/studio-history.png) | ![The checks](docs/images/studio-checks.png) | ![The releases](docs/images/studio-releases.png) |
 
+| The styleguide that every release carries, opened from the release directory |
+|---|
+| ![The styleguide of a release](docs/images/studio-styleguide.png) |
+
 | One run of the pipeline | Which app is behind | On a phone |
 |---|---|---|
 | ![A run with its five stages](docs/images/studio-run.png) | ![The versions of the apps](docs/images/studio-versions.png) | ![The versions on a phone](docs/images/studio-phone.png) |
@@ -84,7 +89,7 @@ and checked for WCAG AA, for every app, in light and dark.
 | **Patterns** | The page types (list, gallery, edit, settings, dashboard, sign-in) in real frames, on a desktop and on a phone, in the accent of any app. |
 | **Builder** | Try an accent: what the toolkit derives from it, contrast in both modes, the nearest app, the real screens in that colour, the snippet. |
 | **Download** | MatUi as an archive or file by file, how to use it, and the design system as JSON (`/api/rules`, `/api/tokens` …). |
-| **Studio** | Behind a sign-in, off until `MATDESIGN_ADMIN_PASSWORD` is set ([docs/STUDIO.md](docs/STUDIO.md)). **Apps**, **Rules** and **Components** (with examples shown live and held to the same checks as the built-in ones) are created and changed; every change is a revision with a **history**, a diff and a restore; **Checks** runs everything the design system holds itself to; **Releases** turns the data into a numbered, immutable release (check, version, build, publish, notify) that apps copy from `/releases/<version>/` and learn about from `/releases/latest.json`; **Versions** records which release each app uses. |
+| **Studio** | Behind a sign-in, off until `MATDESIGN_ADMIN_PASSWORD` is set ([docs/STUDIO.md](docs/STUDIO.md)). **Apps**, **Rules** and **Components** (with examples shown live and held to the same checks as the built-in ones) are created and changed; every change is a revision with a **history**, a diff and a restore; **Checks** runs everything the design system holds itself to; **Releases** turns the data into a numbered, immutable release (check, version, build, publish, notify) with the toolkit files, the design data and a **styleguide with every component and its examples**, that apps copy from `/releases/<version>/` and learn about from `/releases/latest.json`; **Versions** records which release each app uses. |
 
 ## Run it
 

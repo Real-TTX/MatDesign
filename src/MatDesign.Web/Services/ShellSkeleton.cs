@@ -81,6 +81,9 @@ public static class ShellSkeleton
                 <nav class="mat-crumbs" aria-label="Breadcrumb">
                   <ol><li><a href="/">MatMail</a></li><li><a href="/accounts">Settings</a></li><li aria-current="page">Accounts</li></ol>
                 </nav>
+                <div class="mat-topbar__actions">
+                  <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" aria-label="Help" data-tip="Help"><svg class="mat-icon"><use href="#mat-i-help-circle"></use></svg></button>
+                </div>
               </header>
 
               <main class="mat-page" id="main">
@@ -89,6 +92,11 @@ public static class ShellSkeleton
                 </div>
                 <!-- the content: a list with its toolbar, a form, a dashboard ... -->
               </main>
+
+              <footer class="mat-footer">
+                <p class="mat-footer__text">MatMail · © 2026 Example GmbH</p>
+                <ul class="mat-footer__links"><li><a href="/imprint">Imprint</a></li><li><a href="/privacy">Privacy</a></li></ul>
+              </footer>
             </div>
           </div>
 

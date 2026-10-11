@@ -195,6 +195,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
             ".js" => "text/javascript; charset=utf-8",
             ".svg" => "image/svg+xml; charset=utf-8",
             ".json" => "application/json; charset=utf-8",
+            ".html" => "text/html; charset=utf-8",
             ".zip" => "application/zip",
             ".txt" => "text/plain; charset=utf-8",
             _ => null,
@@ -308,6 +309,9 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
 
                 Write($"matui-{version}.zip", toolkit.ReleaseZip(version));
                 Write("design.json", Text(DesignJson()));
+                Write(Styleguide.CssName, Text(Styleguide.Css()));
+                Write(Styleguide.SampleName, Text(Styleguide.SampleImage()));
+                Write(Styleguide.HtmlName, Text(Styleguide.Html(design, toolkit, version, toolkit.Hash)));
                 return true;
             });
 
@@ -384,7 +388,11 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
     private string DesignJson() => JsonSerializer.Serialize(new
     {
         apps = design.Apps.Select(a => new { a.Id, a.Name, a.Tagline, a.Category, a.Accent, onAccent = a.OnAccent ?? "#ffffff", a.AccentText, a.Glyph, a.Port }),
-        rules = design.Rules.Select(r => new { r.Id, r.Area, r.Title, r.Statement, level = r.Level.ToString(), r.Source, r.Check }),
-        components = design.Components.Select(c => new { c.Id, c.Name, c.Group, c.Summary, c.Rules }),
+        rules = design.Rules.Select(r => new { r.Id, r.Area, r.Title, r.Statement, level = r.Level.ToString(), r.Source, r.Why, r.Do, r.Dont, r.Check }),
+        components = design.Components.Select(c => new
+        {
+            c.Id, c.Name, c.Group, c.Summary, c.Rules, c.Behaviour,
+            examples = c.Examples.Select(e => new { e.Title, e.Html, e.Note, e.Js, e.Live, e.Frame }),
+        }),
     }, Json);
 }

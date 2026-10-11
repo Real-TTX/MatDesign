@@ -104,7 +104,7 @@ release), shows how the checks stand and what the Studio changed since the last 
 whatever happened: five stages with their log, a failed stage (the checks, a version that is taken) stopping the run and skipping the rest. Only one run at a time.
 
 **What a release is:** a directory `<data>/releases/<version>/` with `matui.css` (the bundle, naming the version in its first line, with the colours of the apps as the Studio left them), `matui.js`,
-`matui.boot.js`, `matui-icons.svg`, the CSS parts under `css/`, `matui-<version>.zip`, `design.json` (apps, rules, component summaries) and `manifest.json` (version, date, who, note, run, the hash of the
+`matui.boot.js`, `matui-icons.svg`, the CSS parts under `css/`, `matui-<version>.zip`, `design.json` (apps, rules with their reasons, every component with its examples, the markup and the notes, and what is good to know), the **styleguide** (`styleguide.html` with `styleguide.css` and `sample.svg`: one static page with the rules, every component with its examples drawn live by the files of the release and the markup to copy, and the apps; it needs nothing from the site, so it opens from the directory) and `manifest.json` (version, date, who, note, run, the hash of the
 toolkit, errors and advice at that moment, counts, the changelog, and every file with its size and SHA-256). The release is also saved as an item of the kind `releases`. It is published by moving the finished
 directory into place, so a release is whole or not there. The site offers no way to change or delete one: apps may depend on it, so the volume is the only place that could.
 

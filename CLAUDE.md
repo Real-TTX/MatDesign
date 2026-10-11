@@ -50,6 +50,7 @@ src/MatDesign.Core         no web types
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /releases/* (the releases of the Studio), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
   Studio/VersionTracker.cs   which release of MatUi each app uses (written down by hand) and where that stands against the releases
+  Studio/Styleguide.cs       the static styleguide page of a release (rules, components with live examples, apps), its stylesheet and the sample picture
   Studio/Releases.cs         the release pipeline (Check, Version, Build, Publish, Notify), the run records, the releases on the volume and the files they serve
   Studio/                    StudioService (on or off, the password, the lock-out), DesignData (built-in + Studio items: the apps, rules and components every page reads; Version), ComponentValidator, StudioHistory (restore checks),
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat

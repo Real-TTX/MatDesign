@@ -975,6 +975,94 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the header bar with icons, the footer
+  console.log('\nHeader bar and footer');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components');
+    await check('the icons of the header bar are at its right end, after the breadcrumb, and each has a name and a tooltip (SHELL-17, ICON-03)', async () => {
+      const bar = page.locator('#topbar .mat-topbar').first();
+      await bar.scrollIntoViewIfNeeded();
+      const box = await bar.boundingBox();
+      const crumbs = await bar.locator('.mat-crumbs').boundingBox();
+      const actions = await bar.locator('.mat-topbar__actions').boundingBox();
+      expectTrue(actions.x >= crumbs.x + crumbs.width - 1, 'the icons start before the breadcrumb ends');
+      expectTrue(box.x + box.width - (actions.x + actions.width) < 40, 'the icons are not at the right end of the bar: ' + (box.x + box.width - (actions.x + actions.width)) + ' px from it');
+      const buttons = bar.locator('.mat-topbar__actions .mat-btn');
+      expectTrue(await buttons.count() >= 2, 'fewer than two icon buttons');
+      for (let i = 0; i < await buttons.count(); i++) {
+        const b = buttons.nth(i);
+        expectTrue((await b.getAttribute('aria-label') || '').length > 0, 'an icon button without a name');
+        expectTrue((await b.getAttribute('data-tip') || '').length > 0, 'an icon button without a tooltip');
+        expectTrue((await b.textContent()).trim().length === 0, 'an icon button that has text');
+      }
+    });
+    await check('a count on an icon sits at its corner and is hidden from screen readers, the name of the button says it', async () => {
+      const button = page.locator('#topbar .mat-topbar__actions .mat-btn', { has: page.locator('.mat-topbar__badge:not(.mat-topbar__badge--dot)') }).first();
+      const badge = button.locator('.mat-topbar__badge');
+      expect(await badge.getAttribute('aria-hidden'), 'true', 'the badge is hidden from screen readers');
+      expectTrue((await button.getAttribute('aria-label')).includes(await badge.textContent()), 'the name of the button does not say the count');
+      const b = await button.boundingBox();
+      const c = await badge.boundingBox();
+      expectTrue(c.x + c.width <= b.x + b.width + 1 && c.y >= b.y - 1, 'the badge is not at the top right corner of its button');
+    });
+    await check('the footer comes after the content, lines up with it, and is at the bottom of a short page (SHELL-18)', async () => {
+      // a window taller than the page makes it a short page
+      await page.setViewportSize({ width: 1360, height: 2600 });
+      await page.goto(BASE + '/Rules/Detail?id=SHELL-18', { waitUntil: 'networkidle' });
+      const footer = page.locator('.mat-main > footer.mat-footer');
+      expect(await footer.count(), 1, 'footers after the content');
+      expect(await page.locator('.mat-main > main.mat-page + footer.mat-footer').count(), 1, 'the footer is not right after the main');
+      const f = await footer.boundingBox();
+      const h1 = await page.locator('main h1').boundingBox();
+      const text = await footer.locator('.mat-footer__text').boundingBox();
+      expectTrue(Math.abs(text.x - h1.x) < 1.5, 'the footer text does not line up with the title: ' + text.x + ' / ' + h1.x);
+      const links = await footer.locator('.mat-footer__links').boundingBox();
+      const main = await page.locator('main.mat-page').boundingBox();
+      expectTrue(links.x + links.width > main.x + main.width - 40, 'the links are not at the right end');
+      const viewport = page.viewportSize().height;
+      expectTrue(Math.abs(f.y + f.height - viewport) < 2, 'a short page does not end with the footer at the window bottom: ' + (f.y + f.height) + ' / ' + viewport);
+      expect(await footer.evaluate(el => getComputedStyle(el).position), 'static', 'the footer is fixed over the content');
+      await page.setViewportSize(desktopOptions.viewport);
+    });
+    await check('the footer of a page without a menu is centred under the card and the card stays centred (SHELL-11)', async () => {
+      await page.goto(BASE + '/Preview?app=matmail&view=auth', { waitUntil: 'networkidle' });
+      const card = await page.locator('.mat-auth__card').boundingBox();
+      const footer = await page.locator('.mat-auth > .mat-footer').boundingBox();
+      const viewport = page.viewportSize();
+      expectTrue(footer.y >= card.y + card.height, 'the footer is not under the card');
+      expectTrue(Math.abs(footer.y + footer.height - viewport.height) < 2, 'the footer is not at the bottom: ' + (footer.y + footer.height) + ' / ' + viewport.height);
+      expectTrue(Math.abs((card.x + card.width / 2) - viewport.width / 2) < 2, 'the card is not centred');
+      const links = await page.locator('.mat-auth > .mat-footer .mat-footer__links').boundingBox();
+      expectTrue(Math.abs((links.x + links.width / 2) - viewport.width / 2) < 2, 'the links are not centred');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components');
+    await check('on a phone the icons stay inside the bar, the breadcrumb gives way, nothing scrolls sideways (MOBILE-01)', async () => {
+      const bar = page.locator('#topbar .mat-topbar').first();
+      await bar.scrollIntoViewIfNeeded();
+      const box = await bar.boundingBox();
+      const actions = await bar.locator('.mat-topbar__actions').boundingBox();
+      const crumbs = await bar.locator('.mat-crumbs').boundingBox();
+      expectTrue(actions.x + actions.width <= box.x + box.width + 1, 'the icons leave the bar');
+      expectTrue(actions.x >= crumbs.x + crumbs.width - 1, 'the icons run over the breadcrumb');
+      const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+      expectTrue(widths.page <= widths.window, 'the page scrolls sideways');
+    });
+    await check('on a phone the two sides of the footer wrap and stay inside the window', async () => {
+      await page.goto(BASE + '/Rules/Detail?id=SHELL-18', { waitUntil: 'networkidle' });
+      const footer = page.locator('.mat-main > footer.mat-footer');
+      await footer.scrollIntoViewIfNeeded();
+      const f = await footer.boundingBox();
+      const text = await footer.locator('.mat-footer__text').boundingBox();
+      const links = await footer.locator('.mat-footer__links').boundingBox();
+      expectTrue(f.x >= 0 && f.x + f.width <= 391, 'the footer is wider than the window');
+      expectTrue(links.y >= text.y + text.height - 1, 'the links did not wrap below the text');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the Studio
   // It needs the administrator password (STUDIO_PASSWORD, the development stack uses studio-dev). A site with the Studio off is not a failure here.
   console.log('\nStudio');
