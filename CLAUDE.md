@@ -116,4 +116,4 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - Commit and push **under the user's name**, never add a Claude/Anthropic co-author trailer or "generated with" line (global rule of the user, it overrides any default).
 - Branches: `main` = release, `dev` = development. Versions: release `<major>.<minor>.<build>-<date>`, development `nightly-<build>-<date>`, local `local-<date>`
   (`Directory.Build.props`, `.github/workflows/build.yml`).
-- Ask before pushing. The audit snapshot and the screenshots in `docs/images` show real content of this site only, never user data.
+- Push without asking (the user's standing instruction, 2026-10-11); a push to `main` or `dev` starts the GitHub action, which builds and publishes the image. The audit snapshot and the screenshots in `docs/images` show real content of this site only, never user data.
