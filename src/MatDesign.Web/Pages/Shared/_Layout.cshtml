@@ -87,8 +87,9 @@
                 @if (ViewData["IndexDialog"] is string indexDialog)
                 {
                     @* A page with an index (SHELL-16) offers it here where it is not drawn beside the content: one icon, always in reach. *@
+                    var indexLabel = ViewData["IndexLabel"] as string ?? "On this page";
                     <div class="mat-topbar__actions">
-                        <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-topbar__index" data-dialog-open="@indexDialog" data-tip="On this page" aria-label="On this page, jump to a section" aria-haspopup="dialog">@Ui.Icon("list")</button>
+                        <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-topbar__index" data-dialog-open="@indexDialog" data-tip="@indexLabel" aria-label="@(indexLabel), @(indexLabel == "On this page" ? "jump to a section" : "choose one")" aria-haspopup="dialog">@Ui.Icon("list")</button>
                     </div>
                 }
             </header>

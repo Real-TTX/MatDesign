@@ -130,4 +130,53 @@
       try { localStorage.setItem(KEY, where.getAttribute('data-doc-code')); } catch (err) { /* private mode: the choice just is not kept */ }
     }
   });
+
+  // The icon library: a press on an icon opens the dialog (matui.js does that through data-dialog-open); here it is filled with what belongs to that icon.
+  // The page carries the symbols of the icons it shows, so the preview is a <use> of the one in the page, and the file is fetched when the dialog opens.
+  var UNIT = ' xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+  document.addEventListener('click', function (e) {
+    var cell = e.target.closest && e.target.closest('[data-iconlib]');
+    var dialog = document.getElementById('iconlib-dialog');
+    if (!cell || !dialog) { return; }
+
+    var name = cell.getAttribute('data-iconlib');
+    var ref = '#mat-il-' + name;
+    dialog.querySelector('#iconlib-dialog-title').textContent = name;
+    dialog.querySelectorAll('use[data-iconlib-big], use[data-iconlib-size]').forEach(function (u) { u.setAttribute('href', ref); });
+
+    var cats = dialog.querySelector('[data-iconlib-cats]');
+    cats.textContent = '';
+    var list = [];
+    try { list = JSON.parse(cell.getAttribute('data-iconlib-categories') || '[]'); } catch (err) { list = []; }
+    list.forEach(function (pair, i) {
+      if (i > 0) { cats.appendChild(document.createTextNode(', ')); }
+      var a = document.createElement('a');
+      a.href = '/Foundations/IconLibrary?category=' + encodeURIComponent(pair[0]);
+      a.textContent = pair[1];
+      cats.appendChild(a);
+    });
+
+    dialog.querySelector('[data-iconlib-tags]').textContent = cell.getAttribute('data-iconlib-tags') || 'none';
+    dialog.querySelector('[data-iconlib-origin]').textContent = cell.getAttribute('data-iconlib-origin') === 'lucide' ? 'Lucide (ISC licence)' : 'Drawn for MatDesign';
+
+    var usage = '<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="' + ref + '"></use></svg>';
+    var use = dialog.querySelector('[data-iconlib-use]');
+    use.setAttribute('data-copy', usage);
+    use.querySelector('code').textContent = usage;
+
+    var file = dialog.querySelector('[data-iconlib-file]');
+    var symbol = document.getElementById('mat-il-' + name);
+    var fallback = '<svg' + UNIT + '>' + (symbol ? symbol.innerHTML : '') + '</svg>';
+    file.setAttribute('data-copy', fallback);
+    file.querySelector('code').textContent = fallback;
+    fetch('/ui/iconlib/svg/' + encodeURIComponent(name) + '.svg').then(function (r) { return r.ok ? r.text() : fallback; }).then(function (text) {
+      if (dialog.querySelector('#iconlib-dialog-title').textContent !== name) { return; }
+      file.setAttribute('data-copy', text.trim());
+      file.querySelector('code').textContent = text.trim();
+    }).catch(function () { /* the markup built from the page stays */ });
+
+    var download = dialog.querySelector('[data-iconlib-download]');
+    download.setAttribute('href', '/ui/iconlib/svg/' + encodeURIComponent(name) + '.svg');
+    download.setAttribute('download', name + '.svg');
+  });
 })();

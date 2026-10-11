@@ -170,6 +170,14 @@
 .doc-icon .mat-icon { font-size: 1.6rem; }
 .doc-icon span { font-family: var(--mat-mono); font-size: var(--mat-fs-xs); color: var(--mat-text-muted); overflow-wrap: anywhere; text-align: center; }
 
+/* ---- Icon library: the categories beside the gallery, and the dialog of one icon ---- */
+.doc-iconlib__group { margin: var(--mat-space-4) 0 var(--mat-space-1); padding: 0 var(--mat-space-3); font-size: var(--mat-fs-xs); font-weight: 600; color: var(--mat-text-muted); }
+.doc-iconlib__intro h2 { margin-bottom: var(--mat-space-1); }
+.doc-iconlib__preview { display: flex; align-items: center; justify-content: center; gap: var(--mat-space-6); padding: var(--mat-space-5); border: 1px solid var(--mat-border); border-radius: var(--mat-radius); background: var(--mat-surface-2); }
+.doc-iconlib__big { font-size: 4.5rem; }
+.doc-iconlib__sizes { display: flex; align-items: center; gap: var(--mat-space-4); }
+.doc-iconlib__small { font-size: 1rem; }
+
 /* ---- Type specimen ---- */
 .doc-type { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: var(--mat-space-3) var(--mat-space-5); align-items: baseline; }
 .doc-type > code { justify-self: start; }

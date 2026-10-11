@@ -8,10 +8,12 @@ namespace MatDesign.Web.Pages.Download;
 public class IndexModel : PageModel
 {
     private readonly ToolkitFiles _toolkit;
+    private readonly IconLibrary _iconLibrary;
 
-    public IndexModel(ToolkitFiles toolkit)
+    public IndexModel(ToolkitFiles toolkit, IconLibrary iconLibrary)
     {
         _toolkit = toolkit;
+        _iconLibrary = iconLibrary;
     }
 
     public string Version => AppVersion.Current;
@@ -28,6 +30,13 @@ public class IndexModel : PageModel
     /// <summary>The CSS parts of the bundle, for apps that load them one by one.</summary>
     public IReadOnlyList<ToolkitFile> Parts => _toolkit.Files().Skip(4).ToList();
 
+    /// <summary>The optional icon library: its own files, not part of the four.</summary>
+    public IReadOnlyList<ToolkitFile> IconLibraryFiles => _iconLibrary.Files();
+
+    public int IconLibraryIcons => _iconLibrary.Icons.Count;
+
+    public int IconLibraryCategories => _iconLibrary.Categories.Count;
+
     public IReadOnlyList<(string Url, string What)> Endpoints { get; } =
     [
         ("/api/apps", "The apps: id, name, category, accent, text colour on it, glyph, port."),
@@ -35,6 +44,7 @@ public class IndexModel : PageModel
         ("/api/rules", "The whole rulebook: id, area, title, statement, level, source."),
         ("/api/tokens", "Every design token with its light and dark value."),
         ("/api/icons", "The names of the icons in the sprite."),
+        ("/api/iconlib", "The icon library: its categories, and every icon with its categories and tags."),
         ("/api/version", "The version and the hash of the toolkit."),
     ];
 

@@ -31,6 +31,9 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
   the editor tools, not with `node -e` or heredocs. A script that merges text into a file must use a replacer function (`text.replace(a, () => b)`): in a plain replacement string
   `$$` becomes `$` (it turned `$$(...)` of the script into `$(...)` once).
 - **Icon sprite:** `node tools/icons.js` rebuilds `src/MatUi/wwwroot/img/matui-icons.svg` from `tools/icons.base.json` plus the extras in the script (CI fails when it is stale).
+- **Icon library (optional, ICON-05):** `node tools/iconlib.js` builds `src/MatUi/wwwroot/iconlib/` (sprite `mat-il-*`, catalogue, licence, README) from `tools/iconlib/`: `lucide.json` (vendored Lucide, written by
+  `import-lucide.js <checkout>` when Lucide is updated), `custom.json` (icons drawn for MatDesign: one line each, with tags and categories; look at them on a contact sheet before keeping one) and `categories.json`
+  (General, Home automation and its areas as curated lists). An icon can be in any number of categories. Nothing in `matui.css`/`matui.js` may refer to the library (a test checks); CI fails when the committed files are stale.
 - **Audit:** `node tools/audit.js [folder with the repositories]` rewrites `src/MatDesign.Web/Data/audit.json`, a snapshot of how close the other apps are to the rules.
 
 ## Map
@@ -58,7 +61,7 @@ src/MatDesign.Web          the site
   Studio/                    StudioService (on or off, the administrator and the setup, the lock-out), StudioSession (what the session cookie carries), DesignData (built-in + Studio items: the apps, rules and components every page reads; Version), ComponentValidator, StudioHistory (restore checks),
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
   Pages/Studio/              Setup (the assistant of the first administrator), Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
-  Services/                  ToolkitFiles, Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
+  Services/                  ToolkitFiles, IconLibrary (the optional icon library: sprite, catalogue, single icons, archive, served under /ui/iconlib/), Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
                              ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
@@ -68,7 +71,7 @@ src/MatDesign.Web          the site
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
 tests/e2e                  run.js: the behaviour in a real browser against a running site
-tools/                     icons.js, audit.js
+tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js
 ```
 
 ## Conventions

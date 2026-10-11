@@ -1314,6 +1314,75 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the icon library (optional files of their own)
+  console.log('\nIcon library');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Foundations/IconLibrary');
+    await check('the library is a gallery with a search field in the toolbar, the categories beside it and the icons drawn from the sprite of the page', async () => {
+      expect(await page.locator('.doc-icons .doc-icon').count(), 96, 'icons on the first page');
+      expect(await page.locator('.mat-toolbar .mat-toolbar__search input').count(), 1, 'search field in the toolbar');
+      expectTrue(await page.locator('.mat-toc-aside').isVisible(), 'the categories are not beside the list');
+      expectTrue(!(await page.locator('.mat-topbar__index').isVisible()), 'the index icon is shown although the categories are beside the list');
+      const sizes = await page.locator('.doc-icons .doc-icon .mat-icon').first().boundingBox();
+      expectTrue(sizes.width > 16 && sizes.height > 16, 'the icon has no size: ' + JSON.stringify(sizes));
+      const painted = await page.evaluate(() => { const s = document.querySelector('.doc-icons .doc-icon svg'); return getComputedStyle(s).stroke; });
+      expectTrue(painted !== 'none', 'the icon is not drawn with a stroke');
+    });
+    await check('a category narrows the list, an icon can be in several, and the search finds by name and by what the icon is for', async () => {
+      await page.click('.mat-toc-aside a:has-text("Lighting")');
+      await page.waitForLoadState('networkidle');
+      expectTrue(page.url().includes('category=lighting'), 'url: ' + page.url());
+      expect(await page.textContent('.doc-iconlib__intro h2'), 'Lighting', 'the title of the category');
+      expectTrue((await page.locator('.doc-icons .doc-icon').count()) > 20, 'too few lighting icons');
+      expectTrue((await page.locator('.mat-toc-aside a.is-active').textContent()).includes('Lighting'), 'the category is not marked');
+      await page.goto(BASE + '/Foundations/IconLibrary?q=heating', { waitUntil: 'networkidle' });
+      expectTrue((await page.locator('.doc-icon[data-iconlib="radiator"]').count()) === 1, 'the radiator is not found by "heating"');
+      await page.goto(BASE + '/Foundations/IconLibrary?q=thermometer&category=sensors', { waitUntil: 'networkidle' });
+      expectTrue((await page.locator('.doc-icon[data-iconlib="thermometer"]').count()) === 1, 'the thermometer is not in the sensors');
+    });
+    await check('an icon opens a dialog with its categories, the markup and the file to copy, and a file to download', async () => {
+      await page.goto(BASE + '/Foundations/IconLibrary?q=radiator', { waitUntil: 'networkidle' });
+      await page.click('.doc-icon[data-iconlib="radiator"]');
+      await page.waitForSelector('#iconlib-dialog[open]');
+      expect(await page.textContent('#iconlib-dialog-title'), 'radiator', 'the title of the dialog');
+      expect(await page.getAttribute('#iconlib-dialog use[data-iconlib-big]', 'href'), '#mat-il-radiator', 'the big preview');
+      const big = await page.locator('#iconlib-dialog .doc-iconlib__big').boundingBox();
+      expectTrue(big.width > 48, 'the preview is small: ' + big.width);
+      expectTrue((await page.locator('#iconlib-dialog [data-iconlib-cats] a').count()) >= 2, 'the categories of the icon are not listed');
+      expectTrue((await page.textContent('#iconlib-dialog [data-iconlib-tags]')).includes('heating'), 'the tags are not shown');
+      expectTrue((await page.textContent('#iconlib-dialog [data-iconlib-origin]')).includes('MatDesign'), 'the origin is not shown');
+      expectTrue((await page.getAttribute('#iconlib-dialog [data-iconlib-use]', 'data-copy')).includes('#mat-il-radiator'), 'the markup to copy');
+      await page.waitForFunction(() => document.querySelector('#iconlib-dialog [data-iconlib-file]').getAttribute('data-copy').includes('xmlns'));
+      const file = await page.getAttribute('#iconlib-dialog [data-iconlib-file]', 'data-copy');
+      expectTrue(file.startsWith('<svg') && file.includes('stroke="currentColor"') && file.includes('<rect'), 'the file to copy: ' + file.slice(0, 80));
+      expect(await page.getAttribute('#iconlib-dialog [data-iconlib-download]', 'href'), '/ui/iconlib/svg/radiator.svg', 'the download');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(200);
+      // another icon replaces what the dialog showed
+      await page.goto(BASE + '/Foundations/IconLibrary?q=lamp', { waitUntil: 'networkidle' });
+      await page.click('.doc-icon[data-iconlib="lamp"]');
+      await page.waitForSelector('#iconlib-dialog[open]');
+      expect(await page.textContent('#iconlib-dialog-title'), 'lamp', 'the next icon');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Foundations/IconLibrary?category=climate');
+    await check('on a phone the categories are an icon in the header bar that opens a dialog, and nothing scrolls sideways', async () => {
+      expectTrue(!(await page.locator('.mat-toc-aside').isVisible()), 'the categories take room beside the list');
+      expectTrue(await page.locator('.mat-topbar__index').isVisible(), 'no index icon in the header bar');
+      expect(await page.getAttribute('.mat-topbar__index', 'aria-label'), 'Categories, choose one', 'the name of the icon');
+      const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+      expectTrue(widths.page <= widths.window, 'the page scrolls sideways');
+      await page.click('.mat-topbar__index');
+      await page.waitForSelector('#iconlib-cats-dialog[open]');
+      await page.click('#iconlib-cats-dialog a:has-text("Garden & outdoor")');
+      await page.waitForLoadState('networkidle');
+      expectTrue(page.url().includes('category=outdoor'), 'url: ' + page.url());
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the Studio
   // It needs the administrator (STUDIO_NAME, default admin, and STUDIO_PASSWORD, default studio-dev: the password has to be 10 characters or more). A Studio that has no
   // administrator yet is set up here, through the setup assistant, which is checked on the way. A site with the Studio off is not a failure here.

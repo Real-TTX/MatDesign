@@ -367,6 +367,9 @@ public static class RuleBook
         new("ICON-04", "ICON", "App logos",
             "Every app has a logo for the menu (a tile with a glyph, IDENT-03), a favicon (SVG) and the PWA icons (192, 512 and a maskable 512).",
             RuleLevel.Should, Design),
+        new("ICON-05", "ICON", "More icons are optional",
+            "The sprite of the toolkit stays small: the icons the apps use. An app that needs more takes them from the icon library, which is made of files of its own (`matui-iconlib.svg`, `iconlib.json` and each icon as a single .svg), sorted into categories where an icon can be in several. The library is not part of `matui.css` and nothing in the toolkit depends on it, so an app can do without it, and it never becomes part of the sprite as a whole. Its icons follow ICON-01 to ICON-03 like the others, and one that gets a meaning in the interface is moved into the sprite (ICON-02: one meaning, one icon).",
+            RuleLevel.Should, Owner, Why: "A smart home needs two hundred icons and most apps twenty: an app takes what it needs and the toolkit stays small.", Check: "Test (library)"),
 
         // -------------------------------------------------------------------------------------------------- MOBILE
         new("MOBILE-01", "MOBILE", "Phones are first-class",

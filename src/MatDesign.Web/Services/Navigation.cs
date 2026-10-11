@@ -121,6 +121,7 @@ public static class Navigation
                     new("Space and shape", "/Foundations/Space", null),
                     new("Motion", "/Foundations/Motion", null),
                     new("Icons", "/Foundations/Icons", null),
+                    new("Icon library", "/Foundations/IconLibrary", null),
                     new("All tokens", "/Foundations/Tokens", null),
                 ]),
             ]),

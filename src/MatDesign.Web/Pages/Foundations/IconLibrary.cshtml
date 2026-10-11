@@ -1,0 +1,161 @@
+@page "/Foundations/IconLibrary"
+@model MatDesign.Web.Pages.Foundations.IconLibraryModel
+@inject MatDesign.Web.Services.IconLibrary Library
+@{
+    ViewData["Title"] = "Icon library";
+    ViewData["PageSub"] = $"{Model.Total:N0} icons in {Model.CategoryCount} categories, in files of their own. Optional: MatUi works without them.";
+    ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Foundations", "/Foundations"), ("Icon library", null));
+    ViewData["IndexDialog"] = "iconlib-cats-dialog";
+    ViewData["IndexLabel"] = "Categories";
+}
+
+<partial name="_FoundationsTabs" model='"iconlib"' />
+
+@* The symbols of the icons on this page, inline: the page does not carry the whole library. *@
+@Html.Raw(Model.PageSprite)
+
+<div class="mat-with-toc">
+    <div class="mat-with-toc__main">
+        @if (Model.Category is { } category)
+        {
+            <div class="doc-iconlib__intro">
+                <h2>@category.Title</h2>
+                <p class="mat-muted">@category.Description</p>
+            </div>
+        }
+        else
+        {
+            <p class="mat-muted">
+                Icons for all kinds of things, sorted into categories – an icon can be in several. <strong>Home automation</strong> has all of them for a smart home
+                (@Model.HomeAutomationCount icons: lighting, climate, doors and windows, alarm, appliances, energy, sensors, rooms, garden, scenes), <strong>General</strong> the ones
+                every interface needs. Click an icon for its markup and its file. The small sprite of the toolkit (<a href="/Foundations/Icons">Icons</a>) stays what the apps use by default.
+            </p>
+        }
+
+        <div class="mat-list">
+            <partial name="_Toolbar" model="Model.Toolbar" />
+
+            @if (Model.Items.Count == 0)
+            {
+                <div class="mat-empty">
+                    <span class="mat-empty__icon">@Ui.Icon("search")</span>
+                    <div class="mat-empty__title">No icon matches</div>
+                    <p>Try another word (a name such as <code>lamp</code>, or what it is for: <code>heating</code>, <code>security</code>), or reset the tools.</p>
+                    <a class="mat-btn mat-btn--primary" href="/Foundations/IconLibrary">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+                </div>
+            }
+            else
+            {
+                <div class="doc-icons">
+                    @foreach (var icon in Model.Items)
+                    {
+                        <button type="button" class="doc-icon" data-dialog-open="iconlib-dialog" data-iconlib="@icon.Name" data-iconlib-categories="@Model.CategoriesJson(icon)"
+                                data-iconlib-tags="@string.Join(", ", icon.Tags)" data-iconlib-origin="@icon.Origin" title="@icon.Name">
+                            @Html.Raw(IconLibraryModel.Markup(icon.Name))
+                            <span>@icon.Name</span>
+                        </button>
+                    }
+                </div>
+            }
+
+            <partial name="_Pager" model="Model.Pager" />
+        </div>
+
+        <section class="mat-section" aria-labelledby="files-title">
+            <div class="mat-section__head">
+                <h2 id="files-title">Take the library</h2>
+                <p class="mat-section__lead">
+                    The library is optional and separate from MatUi: its own files, not part of <code>matui.css</code> or <code>matui.js</code>. An app takes the whole sprite, or only the
+                    icons it needs. Nothing is loaded from another site (<a href="/Rules/Detail?id=CODE-03">CODE-03</a>): copy the files.
+                </p>
+            </div>
+            <div class="mat-card"><div class="mat-card__body mat-stack">
+                <dl class="mat-kv">
+                    @foreach (var file in Library.Files())
+                    {
+                        <dt><a class="mat-mono" href="@file.Url" download>@file.Name</a></dt>
+                        <dd>@file.Description <span class="mat-muted">(@Ui.Kb(file.Bytes))</span></dd>
+                    }
+                </dl>
+                <p class="mat-muted">Put the sprite inline once per page and refer to an icon like the toolkit does (the id is <code>mat-il-NAME</code>), or refer to the file, on the same origin:</p>
+                <pre class="mat-code" data-copy="@IconLibraryModel.Markup("lamp")"><code>@IconLibraryModel.Markup("lamp")</code></pre>
+                <pre class="mat-code" data-copy='<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="/matui-iconlib.svg#mat-il-lamp"></use></svg>'><code>&lt;svg class="mat-icon" aria-hidden="true" focusable="false"&gt;&lt;use href="/matui-iconlib.svg#mat-il-lamp"&gt;&lt;/use&gt;&lt;/svg&gt;</code></pre>
+                <p class="mat-muted">
+                    The icons are drawn on the same grid as the toolkit's (24 px, 2 px stroke, round caps, <code>currentColor</code>), so they sit next to each other without a seam, and the rules for icons apply to them as well.
+                    @Library.Icons.Count(i => i.Origin == "lucide") are from Lucide (lucide.dev, ISC licence), @Library.Icons.Count(i => i.Origin == "matdesign") were drawn for MatDesign where Lucide has none
+                    (radiator, curtains, motion sensor …); <a href="/ui/iconlib/LICENSE.txt">LICENSE.txt</a> goes with the files.
+                </p>
+            </div></div>
+        </section>
+
+        <section class="mat-section" aria-labelledby="rules-title">
+            <div class="mat-section__head"><h2 id="rules-title">Rules for icons</h2></div>
+            <div class="mat-grid">
+                @foreach (var rule in RuleBook.In("ICON"))
+                {
+                    <a class="mat-card" href="/Rules/Detail?id=@rule.Id"><div class="mat-card__body mat-stack mat-stack--sm"><span class="doc-rule-id">@rule.Id</span><strong>@rule.Title</strong></div></a>
+                }
+            </div>
+        </section>
+    </div>
+
+    <aside class="mat-toc-aside" aria-label="Categories">
+        <partial name="_IconCategories" model="Model" />
+    </aside>
+</div>
+
+<dialog class="mat-dialog mat-dialog--sm" id="iconlib-cats-dialog" aria-labelledby="iconlib-cats-title">
+    <div class="mat-dialog__form">
+        <div class="mat-dialog__head">
+            @Ui.Icon("list")
+            <h2 class="mat-dialog__title" id="iconlib-cats-title">Categories</h2>
+            <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">@Ui.Icon("x")</button>
+        </div>
+        <div class="mat-dialog__body"><partial name="_IconCategories" model="Model" /></div>
+    </div>
+</dialog>
+
+@section Scripts {
+    <script src="/js/doc.js"></script>
+}
+
+<dialog class="mat-dialog" id="iconlib-dialog" aria-labelledby="iconlib-dialog-title">
+    <div class="mat-dialog__form">
+        <div class="mat-dialog__head">
+            @Ui.Icon("star")
+            <h2 class="mat-dialog__title mat-mono" id="iconlib-dialog-title">Icon</h2>
+            <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">@Ui.Icon("x")</button>
+        </div>
+        <div class="mat-dialog__body mat-stack">
+            <div class="doc-iconlib__preview" aria-hidden="true">
+                <svg class="mat-icon doc-iconlib__big" focusable="false"><use href="" data-iconlib-big></use></svg>
+                <span class="doc-iconlib__sizes">
+                    <svg class="mat-icon" focusable="false"><use href="" data-iconlib-size></use></svg>
+                    <svg class="mat-icon doc-iconlib__small" focusable="false"><use href="" data-iconlib-size></use></svg>
+                </span>
+            </div>
+            <dl class="mat-kv">
+                <dt>Categories</dt>
+                <dd data-iconlib-cats></dd>
+                <dt>Also found as</dt>
+                <dd data-iconlib-tags></dd>
+                <dt>Origin</dt>
+                <dd data-iconlib-origin></dd>
+            </dl>
+            <div class="mat-field">
+                <span class="mat-label">In a page that has the sprite inline <span class="mat-hint">(click to copy)</span></span>
+                <pre class="mat-code" data-copy="" data-iconlib-use><code></code></pre>
+            </div>
+            <div class="mat-field">
+                <span class="mat-label">As a file of its own <span class="mat-hint">(click to copy)</span></span>
+                <pre class="mat-code" data-copy="" data-iconlib-file><code></code></pre>
+            </div>
+        </div>
+        <div class="mat-dialog__foot">
+            <div class="mat-btn-row mat-btn-row--plain">
+                <a class="mat-btn mat-btn--primary" href="/ui/iconlib/matui-iconlib.svg" download data-iconlib-download>@Ui.Icon("download")<span>Download the .svg</span></a>
+                <button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Close</button>
+            </div>
+        </div>
+    </div>
+</dialog>

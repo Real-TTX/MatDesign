@@ -1,0 +1,72 @@
+{
+ "groups": [
+  { "id": "start", "title": "Start here" },
+  { "id": "home-automation", "title": "Home automation, by area" },
+  { "id": "topics", "title": "All topics" }
+ ],
+ "categories": {
+  "general": {
+   "title": "General", "group": "start", "icon": "house",
+   "description": "The icons almost every interface needs: actions, status, navigation, files, people, time, media and the usual objects.",
+   "icons": ["house", "user", "users", "user-round", "user-plus", "user-check", "circle-user-round", "settings", "sliders-horizontal", "search", "plus", "minus", "x", "check", "circle-check", "circle-x", "circle-alert", "triangle-alert", "octagon-alert", "info", "circle-question-mark", "menu", "ellipsis", "ellipsis-vertical", "chevron-up", "chevron-down", "chevron-left", "chevron-right", "chevrons-up-down", "arrow-up", "arrow-down", "arrow-left", "arrow-right", "arrow-up-right", "arrow-up-down", "move", "refresh-cw", "rotate-ccw", "rotate-cw", "undo-2", "redo-2", "download", "upload", "share-2", "link", "external-link", "copy", "clipboard", "clipboard-check", "save", "pencil", "pen-line", "trash", "eraser", "funnel", "list", "list-checks", "layout-grid", "layout-list", "table", "columns-3", "calendar", "calendar-days", "clock", "timer", "rotate-ccw-clock","bell", "bell-off", "mail", "message-circle", "message-square", "phone", "send", "bookmark", "flag", "tag", "star", "heart", "thumbs-up", "thumbs-down", "eye", "eye-off", "lock", "lock-open", "key-round", "shield", "shield-check", "log-in", "log-out", "power", "wifi", "wifi-off", "bluetooth", "battery-full", "battery-low", "sun", "moon", "cloud", "zap", "lightbulb", "map-pin", "map", "compass", "globe", "image", "camera", "video", "mic", "volume-2", "volume-off", "music", "play", "pause", "square", "skip-forward", "skip-back", "file", "file-text", "folder", "folder-open", "paperclip", "printer", "archive", "inbox", "package", "shopping-cart", "shopping-bag", "credit-card", "wallet", "banknote", "gift", "award", "trophy", "face-slightly-smiling","wrench", "hammer", "rocket", "database", "server", "cpu", "terminal", "code", "bug", "layers", "maximize", "minimize", "zoom-in", "zoom-out", "loader-circle", "cloud-download", "cloud-upload", "qr-code", "scan", "fingerprint-pattern", "bot", "sparkles", "flame", "droplet", "thermometer", "umbrella", "car", "plane", "truck", "bike", "building", "store", "graduation-cap", "book", "book-open", "newspaper", "calculator", "chart-column", "chart-pie", "chart-line", "trending-up", "trending-down", "percent", "hash", "at-sign", "languages", "accessibility", "palette", "crop", "scissors", "ruler", "toggle-left", "toggle-right"]
+  },
+  "home-automation": {
+   "title": "Home automation", "group": "start", "icon": "house-wifi",
+   "description": "Everything for a smart home in one place: lighting, climate, doors and windows, alarm, appliances, energy, sensors, rooms, garden and scenes.",
+   "includes": ["lighting", "climate", "access", "alarm", "appliances", "energy", "sensors", "rooms", "outdoor", "automation"]
+  },
+  "lighting": {
+   "title": "Lighting", "group": "home-automation", "icon": "lightbulb",
+   "description": "Lamps, bulbs, spots and strips, switches and dimmers, daylight and night.",
+   "icons": ["lightbulb", "lightbulb-off", "lamp", "lamp-ceiling", "lamp-desk", "lamp-floor", "lamp-wall-down", "lamp-wall-up", "spotlight", "flashlight", "flashlight-off", "sun", "sun-dim", "sun-medium", "moon", "moon-star", "sunrise", "sunset", "toggle-left", "toggle-right", "sliders-horizontal", "sliders-vertical", "power", "circle-power", "palette", "sparkles"]
+  },
+  "climate": {
+   "title": "Climate & heating", "group": "home-automation", "icon": "thermometer",
+   "description": "Heating, cooling, ventilation, humidity and the devices that control them.",
+   "icons": ["thermometer", "thermometer-snowflake", "thermometer-sun", "snowflake", "flame", "flame-kindling", "fan", "air-vent", "wind", "heater", "droplet", "droplets", "droplet-off", "sun-snow", "haze", "gauge", "circle-gauge", "cloud-fog"]
+  },
+  "access": {
+   "title": "Doors, windows & shading", "group": "home-automation", "icon": "door-open",
+   "description": "Doors, locks and keys, windows, gates and garage doors, blinds and curtains, bells and entry panels.",
+   "icons": ["door-open", "door-closed", "door-closed-locked", "door-closed-cog", "door-closed-package", "door-stairwell", "blinds", "lock", "lock-open", "lock-keyhole", "lock-keyhole-open", "key", "key-round", "key-square", "fence", "warehouse", "bell-electric", "mailbox", "fingerprint-pattern", "scan-face", "vault", "square-asterisk", "id-card", "smartphone-nfc", "house", "house-wifi"]
+  },
+  "alarm": {
+   "title": "Alarm & cameras", "group": "home-automation", "icon": "siren",
+   "description": "Sirens, smoke and leak detectors, motion sensors, cameras and everything that watches over the house.",
+   "icons": ["siren", "bell-ring", "bell", "bell-off", "alarm-smoke", "cctv", "cctv-off", "camera", "camera-off", "video", "video-off", "webcam", "shield", "shield-alert", "shield-check", "shield-house", "shield-off", "eye", "eye-off", "radar", "scan-eye", "fire-extinguisher", "triangle-alert", "octagon-alert", "megaphone", "flame"]
+  },
+  "appliances": {
+   "title": "Appliances", "group": "home-automation", "icon": "washing-machine",
+   "description": "Kitchen and laundry appliances, TV and sound, the robot vacuum and other devices around the house.",
+   "icons": ["washing-machine", "microwave", "refrigerator", "robot-vacuum", "blender", "cooking-pot", "coffee", "utensils", "tv", "tv-minimal", "speaker", "radio", "monitor", "projector", "airplay", "cast", "fan", "heater", "faucet", "shower-head", "plug", "plug-zap", "usb", "turntable", "shredder", "printer", "gamepad-2", "headphones"]
+  },
+  "energy": {
+   "title": "Energy & power", "group": "home-automation", "icon": "zap",
+   "description": "Electricity, batteries, solar and wind, charging, meters and the grid.",
+   "icons": ["zap", "zap-off", "plug", "plug-2", "plug-zap", "unplug", "power", "power-off", "circle-power", "battery", "battery-charging", "battery-full", "battery-low", "battery-medium", "battery-warning", "battery-plus", "solar-panel", "sun", "wind", "ev-charger", "truck-electric", "car-battery", "cable", "utility-pole", "house-plug", "gauge", "circle-gauge", "activity", "chart-line", "trending-up", "leaf", "recycle"]
+  },
+  "sensors": {
+   "title": "Sensors, hubs & network", "group": "home-automation", "icon": "router",
+   "description": "Sensors, switches, hubs, routers, radio and wireless links.",
+   "icons": ["wifi", "wifi-off", "wifi-low", "wifi-high", "wifi-cog", "wifi-sync", "wifi-lock", "router", "house-wifi", "bluetooth", "bluetooth-connected", "bluetooth-searching", "radio-tower", "antenna", "signal", "signal-high", "signal-low", "signal-medium", "signal-zero", "satellite", "satellite-dish", "cpu", "microchip", "circuit-board", "server", "network", "hard-drive", "database", "activity", "gauge", "radar", "scan", "usb", "cast", "rss", "thermometer", "droplet", "sun", "wind", "cloud-rain", "flame", "workflow", "toggle-left", "toggle-right", "nfc"]
+  },
+  "rooms": {
+   "title": "Rooms & furniture", "group": "home-automation", "icon": "sofa",
+   "description": "Rooms of the house and what is in them: living, sleeping, cooking, bathing, working.",
+   "icons": ["sofa", "armchair", "bed", "bed-double", "bed-single", "bath", "toilet", "shower-head", "cooking-pot", "utensils", "refrigerator", "tv", "door-open", "house", "houses", "warehouse", "baby", "rocking-chair", "lamp-floor", "shelving-unit", "mirror-rectangular", "mirror-round", "towel-rack", "plant-pot", "brick-wall", "paint-roller", "monitor", "book-open", "dumbbell", "washing-machine", "car", "clapperboard", "piano", "library", "blinds"]
+  },
+  "outdoor": {
+   "title": "Garden & outdoor", "group": "home-automation", "icon": "sprout",
+   "description": "Garden, terrace, driveway and weather: plants, water, fences, sun and wind.",
+   "icons": ["sprout", "flower", "flower-2", "trees", "tree-deciduous", "tree-pine", "tree-palm", "leaf", "shrub", "plant-pot", "umbrella", "parasol", "tent", "tent-tree", "fence", "mailbox", "birdhouse", "droplets", "cloud-rain", "sun", "wind", "snowflake", "thermometer-sun", "waves-ladder", "car", "ev-charger", "shovel", "tractor", "recycle", "trash", "bike", "mountain"]
+  },
+  "automation": {
+   "title": "Scenes & automations", "group": "home-automation", "icon": "wand-sparkles",
+   "description": "Scenes, schedules, rules, presence and modes: what the house does by itself.",
+   "icons": ["wand-sparkles", "sparkles", "clapperboard", "party-popper", "workflow", "calendar-clock", "calendar-check", "clock", "timer", "alarm-clock", "alarm-clock-check", "sunrise", "sunset", "moon-star", "house-heart", "house-plus", "map-pin-house", "map-pin", "log-in", "log-out", "user-check", "users", "bed", "coffee", "popcorn", "film", "music", "play", "pause", "power", "toggle-left", "bell-ring", "smartphone", "mic", "bot", "brain", "cpu", "zap", "repeat", "refresh-cw", "route", "list-checks", "shuffle", "git-branch", "timer-reset"]
+  }
+ },
+ "lucide": {
+  "home": { "title": "Home & household", "description": "Furniture, appliances, utilities, cleaning and home safety (from Lucide's own sorting)." }
+ }
+}

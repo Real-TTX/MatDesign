@@ -30,6 +30,12 @@ jobs:
         with:
           node-version: '22'
 
+      # The icon library is generated from tools/iconlib/ (Lucide, our own drawings, the categories): hand-edited or stale files are a build error.
+      - name: Icon library is up to date
+        run: |
+          node tools/iconlib.js
+          git diff --exit-code -- src/MatUi/wwwroot/iconlib
+
       # The sprite is generated from tools/icons.base.json: a hand-edited or stale matui-icons.svg is a build error.
       - name: Icon sprite is up to date
         run: |

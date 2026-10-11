@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **108 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **109 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -41,6 +41,9 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 - **90 design tokens**, read from the CSS itself, so the documentation cannot go out of date
 - A **flat look on purpose**: borders instead of shadows, no gradients, and what is selected is a tint behind
   the whole item, never a bar at one side
+- An optional **icon library** in files of its own: **1,925 icons in 54 categories** – an icon can be in several –
+  with *General* and **Home automation** (302 icons: lighting, climate, doors and windows, alarm, appliances,
+  energy, sensors, rooms, garden, scenes) first. SVG, as one sprite, as single files or as an archive; MatUi works without it
 
 **The documentation**
 - **51 components with 118 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
@@ -101,6 +104,18 @@ the markup of the examples.
 Each group has a panel with a real page of the sample app. It loads when opened, switches between desktop and phone,
 and outlines the component you pick.
 
+### The icon library
+
+![The icon library: Home automation, 302 icons, the categories beside the gallery](docs/images/icon-library.png)
+
+| One icon: its categories, markup and file | On a phone | The categories on a phone |
+|---|---|---|
+| ![The dialog of an icon](docs/images/icon-library-dialog.png) | ![The gallery on a phone](docs/images/phone-icon-library.png) | ![The categories as a dialog](docs/images/phone-icon-categories.png) |
+
+Search by name or by what an icon is for (`heating` finds the radiator), narrow by category, click an icon for its
+markup and its `.svg`. The files – sprite, catalogue, each icon, an archive – are under `/ui/iconlib/`; the icons are
+Lucide's (ISC licence) plus 51 drawn for MatDesign where a smart home needs one that Lucide has not.
+
 ### Pickers, the builder and the grid
 
 | A period with flexible dates | A colour with its contrast | The grid of twelve columns |
@@ -151,7 +166,7 @@ The sample app is built from nothing but MatUi, in the accent of one of the apps
 |---|---|
 | **Identity** | The apps of the family and their accent, a contrast report per app, the palette check and the audit. |
 | **Rules** | The rulebook, searchable, with a page per rule. |
-| **Foundations** | Colour (light and dark side by side), type, spacing, motion, the icon sprite, and every design token. |
+| **Foundations** | Colour (light and dark side by side), type, spacing, motion, the icon sprite, the optional **icon library**, and every design token. |
 | **Shell** | The frame around every page: switcher, items with badges and submenus, foot, header bar, footer – with a live sample and the HTML skeleton. |
 | **Components** | Buttons, forms, pickers, toolbar, table, pagination, cards, tabs, dialogs, alerts and more – live, with code beside, classes, rules and a real page per group. |
 | **Layout** | Breakpoints and containers, the grid of twelve columns, stack, row and auto grid. |
@@ -295,6 +310,7 @@ place that could.
 | Studio 5–6 | **History** (diff, restore) and **checks** | ✅ |
 | Studio 7–8 | **Releases** through a pipeline, served for the apps; **versions** per app | ✅ |
 | Setup | The **setup assistant** creates the first administrator; the release compose has no variables and no `.env` file | ✅ |
+| Icon library | 1,925 icons in 54 categories, **Home automation** with its areas, search, single files, archive, in a release | ✅ |
 | Documentation | **Code beside every example**, a real page per group, a styleguide in every release | ✅ |
 | Releases | The real sample pages in a release (today: code and live examples only) | open |
 | Components | CSS variables per component, accessibility notes, a search across components | open |
@@ -323,7 +339,8 @@ cd tests/e2e && npm install && node run.js http://localhost:8060
 Each run of the browser checks makes one release (a release never changes), so the dev volume grows;
 `docker compose -f docker-compose.dev.yml down -v` followed by `up -d --build` starts it clean.
 
-Other tools: `node tools/icons.js` rebuilds the icon sprite from `tools/icons.base.json` (CI fails when it is stale),
+Other tools: `node tools/icons.js` rebuilds the icon sprite from `tools/icons.base.json` and `node tools/iconlib.js` the icon library from `tools/iconlib/`
+(CI fails when either is stale),
 `node tools/audit.js` rescans the other repositories for the audit snapshot.
 
 **What the tests hold the site to**, among other things:
@@ -346,7 +363,7 @@ src/MatDesign.Core     Colour maths (OKLab, contrast), the app registry, the rul
 src/MatDesign.Web      ASP.NET Core 10 Razor Pages: the site, drawn with MatUi itself. Studio/ and Pages/Studio/ are the Studio.
 tests/MatDesign.Tests  xUnit: colours, the rulebook, the CSS and the script against the rules, the catalogues, the whole site in memory.
 tests/e2e              The behaviour in a real browser against a running site (Playwright).
-tools/                 icons.js (builds the sprite), audit.js (scans the other repositories).
+tools/                 icons.js (builds the sprite), iconlib.js (builds the icon library from tools/iconlib/), audit.js (scans the other repositories).
 docs/                  ARCHITECTURE.md, ADOPTING.md, STUDIO.md
 ```
 

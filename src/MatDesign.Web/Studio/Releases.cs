@@ -52,7 +52,7 @@ public sealed record ReleaseManifest(
 /// (the release is stored under its version and served) → <c>Notify</c> (the published files are read back and checked, and the addresses an app takes the release from are named). A stage that
 /// fails stops the run and the later stages are skipped; nothing is published unless Publish ran. A release is never changed or deleted by the site: apps may depend on it.
 /// </summary>
-public sealed partial class ReleaseService(StudioService studio, DesignData design, DesignChecks checks, ToolkitFiles toolkit)
+public sealed partial class ReleaseService(StudioService studio, DesignData design, DesignChecks checks, ToolkitFiles toolkit, IconLibrary iconLibrary)
 {
     public static readonly IReadOnlyList<string> StageNames = ["Check", "Version", "Build", "Publish", "Notify"];
 
@@ -308,6 +308,11 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
                 }
 
                 Write($"matui-{version}.zip", toolkit.ReleaseZip(version));
+
+                // the optional icon library, in a folder of its own: an app that does not need it never has to look there
+                Write("iconlib/matui-iconlib.svg", Text(iconLibrary.Sprite));
+                Write("iconlib/iconlib.json", Text(iconLibrary.Catalogue));
+                Write("iconlib/LICENSE.txt", Text(iconLibrary.License));
                 Write("design.json", Text(DesignJson()));
                 Write(Styleguide.CssName, Text(Styleguide.Css()));
                 Write(Styleguide.SampleName, Text(Styleguide.SampleImage()));

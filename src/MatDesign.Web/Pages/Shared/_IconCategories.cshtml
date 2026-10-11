@@ -1,0 +1,25 @@
+@model MatDesign.Web.Pages.Foundations.IconLibraryModel
+@*
+    The categories of the icon library as an index: drawn beside the list and in the dialog that the icon in the header bar opens on a small window (SHELL-16).
+    Home automation comes first among the groups, then its areas, then all the other topics; an icon can be in more than one.
+*@
+<nav class="mat-toc" aria-label="Categories">
+    <p class="mat-toc__title">Categories</p>
+    <ul class="mat-toc__list">
+        <li>
+            <a class="mat-toc__link @(Model.Category is null ? "is-active" : "")" href="@Model.AllUrl" aria-current="@(Model.Category is null ? "page" : null)">All icons<span class="mat-nav__badge mat-nav__badge--plain">@Model.Total</span></a>
+        </li>
+    </ul>
+    @foreach (var group in Model.CategoryGroups)
+    {
+        <p class="doc-iconlib__group">@group.Group.Title</p>
+        <ul class="mat-toc__list">
+            @foreach (var link in group.Categories)
+            {
+                <li>
+                    <a class="mat-toc__link @(link.Active ? "is-active" : "")" href="@link.Url" aria-current="@(link.Active ? "page" : null)">@link.Category.Title<span class="mat-nav__badge mat-nav__badge--plain">@link.Category.Count</span></a>
+                </li>
+            }
+        </ul>
+    }
+</nav>

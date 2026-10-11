@@ -97,6 +97,15 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
   text, colour and tints, borders, radius, shadow, sizing. Use them on elements of your own pages, not to repair a component, and prefer `mat-stack` to a margin on every child. See the
   **Utilities** page.
 
+## 4b. More icons: the optional library (`ICON-05`)
+
+The sprite of the toolkit has the icons the apps share. If an app needs more (a smart-home app needs a lot), it takes the **icon library** from the Foundations → *Icon library* page: 1,900 icons in
+categories, an icon can be in several, with *General* and *Home automation* first. It is made of files of its own and the toolkit does not depend on it, so skip this section if you do not need it.
+
+- Take what you need: the sprite `matui-iconlib.svg` (inline once per page, ids `mat-il-NAME`, next to the toolkit sprite), or single icons (`/ui/iconlib/svg/NAME.svg`, or the markup from the dialog of an icon), and `LICENSE.txt` with them.
+- Use it like the others: `<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-il-lamp"></use></svg>`. An icon without a visible label needs an `aria-label` (`ICON-03`).
+- An icon that gets a meaning in your interface (save, delete, filter …) belongs in the sprite of the toolkit (`ICON-02`: one meaning, one icon everywhere), not only in the library.
+
 ## 5. Dialogs (`DIALOG-*`)
 
 - **Every confirmation, alert and input is a dialog** of the toolkit: `data-confirm="…"` on a button, link or form; `MatUi.confirm`, `MatUi.alert`, `MatUi.prompt` from a script. Remove

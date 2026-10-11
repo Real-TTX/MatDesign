@@ -74,6 +74,7 @@ builder.Services.AddSingleton<DesignChecks>();
 builder.Services.AddSingleton<ReleaseService>();
 builder.Services.AddSingleton<VersionTracker>();
 builder.Services.AddSingleton<ToolkitFiles>();
+builder.Services.AddSingleton<IconLibrary>();
 builder.Services.AddSingleton<AuditData>();
 
 // Behind a TLS-terminating reverse proxy (Matcad) the scheme and host come from the X-Forwarded-* headers.
@@ -115,6 +116,15 @@ ui.MapGet("/matui.zip", (ToolkitFiles files) => Results.File(files.Zip, "applica
 ui.MapGet("/css/{name}", (string name, ToolkitFiles files, HttpContext http) =>
     files.Css(name) is { } css ? ToolkitFiles.Result(http, css, "text/css; charset=utf-8", files.Hash) : Results.NotFound());
 
+// The optional icon library: its own files, nothing in matui.css or matui.js depends on them.
+ui.MapGet("/iconlib/matui-iconlib.svg", (IconLibrary library, HttpContext http) => ToolkitFiles.Result(http, library.Sprite, "image/svg+xml; charset=utf-8", library.Hash));
+ui.MapGet("/iconlib/iconlib.json", (IconLibrary library, HttpContext http) => ToolkitFiles.Result(http, library.Catalogue, "application/json; charset=utf-8", library.Hash));
+ui.MapGet("/iconlib/LICENSE.txt", (IconLibrary library, HttpContext http) => ToolkitFiles.Result(http, library.License, "text/plain; charset=utf-8", library.Hash));
+ui.MapGet("/iconlib/README.txt", (IconLibrary library, HttpContext http) => ToolkitFiles.Result(http, library.Readme, "text/plain; charset=utf-8", library.Hash));
+ui.MapGet("/iconlib/matui-iconlib.zip", (IconLibrary library) => Results.File(library.Zip, "application/zip", "matui-iconlib.zip"));
+ui.MapGet("/iconlib/svg/{name}.svg", (string name, IconLibrary library, HttpContext http) =>
+    library.Find(name) is null ? Results.NotFound() : ToolkitFiles.Result(http, library.Svg(name), "image/svg+xml; charset=utf-8", library.Hash));
+
 // ---- The design system as data: what a tool, a test or another app can read. ----
 var api = app.MapGroup("/api");
 api.MapGet("/apps", (DesignData design) => design.Apps.Select(a => new { a.Id, a.Name, a.Tagline, a.Category, a.Accent, onAccent = a.OnAccent ?? "#ffffff", a.AccentText, a.Glyph, a.Port }));
@@ -122,6 +132,7 @@ api.MapGet("/accents", () => AccentPresets.All);
 api.MapGet("/rules", (DesignData design) => design.Rules.Select(r => new { r.Id, r.Area, r.Title, r.Statement, level = r.Level.ToString(), r.Source, r.Check }));
 api.MapGet("/tokens", (ToolkitFiles files) => files.Tokens.Select(t => new { t.Name, t.Light, t.Dark, t.Description, t.Group }));
 api.MapGet("/icons", (ToolkitFiles files) => files.IconNames);
+api.MapGet("/iconlib", (IconLibrary library) => Results.Content(library.Catalogue, "application/json; charset=utf-8"));
 api.MapGet("/version", (ToolkitFiles files) => new { toolkit = AppVersion.Current, hash = files.Hash });
 
 // ---- The releases of the design system (the Studio makes them): what an app copies from, and how it learns that there is a newer one. Public and read-only, like /ui. ----

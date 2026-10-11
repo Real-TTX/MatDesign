@@ -137,7 +137,17 @@ the version and the hash.
 
 Plain CSS in ten parts that are bundled in the order of the cascade (`tokens`, `base`, `shell`, `controls`, `forms`, `pickers`, `lists`, `dialogs`, `layout`, `apps`) and one dependency-free script that wires
 everything with delegated listeners and `data-` attributes, so server-rendered and dynamically added markup behave the same. System fonts only. Icons are one inline SVG sprite
-(`tools/icons.js` builds it; CI fails when it is stale).
+(`tools/icons.js` builds it; CI fails when it is stale). SVG and not an icon font (`ICON-01`): the icons are strokes, a font would need them turned into outlines, and an icon in a page is a `<use>` of
+a symbol that takes its colour from the text.
+
+**The icon library** is the optional second set (`ICON-05`): `src/MatUi/wwwroot/iconlib/` holds a sprite of its own (`matui-iconlib.svg`, ids `mat-il-NAME`, so both sprites can be on one page), a
+catalogue (`iconlib.json`: categories, and every icon with its categories, tags and origin) and the licence. Nothing in `matui.css` or `matui.js` knows it (a test checks), so an app can do without it, and an
+app that wants it takes the whole sprite or single icons (the site serves each as a file of its own and all of them as an archive under `/ui/iconlib/`; a release carries the sprite, the catalogue and the
+licence in `iconlib/`). The icons are Lucide's (ISC; no brand logos) plus the ones drawn for MatDesign in the same style where a smart home needs one that Lucide has not (radiator, curtains, motion sensor …).
+**An icon can be in any number of categories**: Lucide gives each icon its categories, `tools/iconlib/categories.json` adds *General* and *Home automation* with its ten areas as curated lists (and
+*Home automation* is the union of its areas), and `custom.json` names the categories of the drawn ones. `tools/iconlib/import-lucide.js` takes a checkout of Lucide into `lucide.json` (run when Lucide is updated,
+the result is committed), and `node tools/iconlib.js` builds the files from the three sources without a network and checks them (valid names, only shapes and `currentColor`, known categories, none empty); CI
+fails when what is committed is stale. The page *Icon library* (Foundations) carries only the symbols of the icons it shows, not the whole sprite.
 
 A later part must be more specific than a base class it overrides, because the bundle puts `controls` after `shell` (the drawer's close button had to be `.mat-nav__brand > .mat-nav__close`
 to stay hidden on a desktop).

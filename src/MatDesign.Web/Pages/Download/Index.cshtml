@@ -36,6 +36,29 @@
     </div>
 </section>
 
+<section class="mat-section" aria-labelledby="iconlib-title">
+    <div class="mat-section__head">
+        <h2 id="iconlib-title">More icons, if you need them</h2>
+        <p class="mat-section__lead">
+            The icon library is optional: @Model.IconLibraryIcons.ToString("N0") icons in @Model.IconLibraryCategories categories, in files of their own. It is not part of the four files above, and MatUi works without it.
+            <a href="/Foundations/IconLibrary">Browse the library</a> to see every icon and take a single one.
+        </p>
+    </div>
+    <div class="mat-grid">
+        @foreach (var f in Model.IconLibraryFiles)
+        {
+            <div class="mat-card">
+                <div class="mat-card__head">@Ui.Icon(f.Name.EndsWith(".json") ? "code" : f.Name.EndsWith(".zip") ? "archive" : f.Name.EndsWith(".txt") ? "file-text" : "star")<h3 class="mat-card__title mat-mono">@f.Name</h3><span class="mat-pill mat-pill--plain">@Ui.Kb(f.Bytes)</span></div>
+                <div class="mat-card__body"><p class="mat-muted">@f.Description</p></div>
+                <div class="mat-card__foot">
+                    <a class="mat-btn mat-btn--secondary mat-btn--sm" href="@f.Url" download>@Ui.Icon("download")<span>Download</span></a>
+                    <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-copy="@Model.Absolute(f.Url)">@Ui.Icon("copy")<span>Copy the address</span></button>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
 <section class="mat-section" aria-labelledby="use-title">
     <div class="mat-section__head"><h2 id="use-title">Use it</h2></div>
     <div data-tabs>

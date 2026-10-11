@@ -109,7 +109,7 @@ public sealed class ReleasesTests : IClassFixture<WebApplicationFactory<Program>
         Assert.Equal(0, manifest.Errors);
         Assert.Equal(_studio.Design.Apps.Count, manifest.Apps);
         Assert.Equal(run.Id, manifest.Run);
-        foreach (var file in new[] { "matui.css", "matui.js", "matui.boot.js", "matui-icons.svg", "matui-0.1.0.zip", "design.json", "styleguide.html", "styleguide.css", "sample.svg", "css/matui.tokens.css", "css/matui.apps.css" })
+        foreach (var file in new[] { "matui.css", "matui.js", "matui.boot.js", "matui-icons.svg", "matui-0.1.0.zip", "design.json", "styleguide.html", "styleguide.css", "sample.svg", "css/matui.tokens.css", "css/matui.apps.css", "iconlib/matui-iconlib.svg", "iconlib/iconlib.json", "iconlib/LICENSE.txt" })
         {
             var entry = manifest.Files.Single(f => f.Path == file);
             Assert.Equal(entry.Sha256, Hash(Path.Combine(directory, file)));
