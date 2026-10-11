@@ -51,6 +51,15 @@ is left out. `ComponentValidator` adds the rest: an id the page does not use its
 the page has (all examples share one page; an example shown as markup only puts no id on it). `DesignData` merges the built-in catalogue with the items, placing an added component after the last
 component of its group, and `NavFacts` carries the counts of the menu. A rule that a component of the Studio names cannot be deleted before the component lets go of it.
 
+### History
+
+Every item has a history page (`/Studio/History?kind=apps|rules|components&id=...`), reached from its edit page (the History button, once the Studio has saved a revision of it) and from the item
+in the activity list. It lists the revisions (who, when, why, the current one marked), compares any two (the fields that differ, read field by field, and for each the lines that differ: `-` gone,
+`+` new, and the sign is in the text, not only in the colour) and restores one. **A restore is a new revision** that copies the old one, so nothing is lost and a restore can itself be undone. It goes
+through only when the old revision would be accepted as it is today: `StudioHistory.CanRestore` runs the same validator as a save on it, with the other items as they are now (a port that another app
+has taken since, a rule that is gone, a name somebody else has), and says why when it refuses. A deletion can be restored (the item is deleted again) while the item lives, and a rule that a component of
+the Studio names is not deleted that way either. The activity list filters by kind, change and person.
+
 ## The pipeline
 
 `Check` (everything above, on the built-in data plus the items) -> `Version` (the next number, the changelog text from the revisions since the last release)
@@ -67,7 +76,7 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 2 | **Apps:** create, edit, delete apps (name, id, accent, glyph, port, tagline, category), live contrast check; they appear in the registry, the palette, the apps CSS and the API | **done** |
 | 3 | **Rules:** create, edit, delete rules (area, title, statement, level, source, why, do, don't); validation; they appear in the rulebook and the API | **done** |
 | 4 | **Components:** create components with examples (title, note, markup, live or not) and the rules they follow; preview next to the editor; the contract checks of the tests run on save | **done** |
-| 5 | **History:** per item the revisions, a diff between two, restore; the activity list filters by kind, item and person | open |
+| 5 | **History:** per item the revisions, a diff between two, restore; the activity list filters by kind, item and person | **done** |
 | 6 | **Checks:** one page runs every check and lists what fails and where, with a link to the item | open |
 | 7 | **Releases:** the pipeline, versions, changelog, stored archives, `/releases/...` and `/api/releases/latest` | open |
 | 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | open |

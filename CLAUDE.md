@@ -45,11 +45,12 @@ src/MatDesign.Core         no web types
   Studio/StudioStore.cs      what the Studio saves: an append-only log per item (studio/<kind>/<id>/<revision>.json), history, restore, activity
   Studio/AppValidator.cs     what an app has to be (id, name, glyph, port, contrast), Normalize, IsSafe
   Studio/RuleValidator.cs    what a rule has to be (an id of its area, title, statement, level, source), Normalize, IsSafe, NextId
+  Studio/Diff.cs             what changed between two revisions: the fields (Flatten, Changes) and the lines (Lines)
   Studio/MarkupChecks.cs     the contract of the markup of an example (classes, icons, no inline/outside/script, labels, ids ...): the unit tests and the Studio use this one code
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
-  Studio/                    StudioService (on or off, the password, the lock-out), DesignData (built-in + Studio items: the apps, rules and components every page reads; Version), ComponentValidator, StudioFormat
-  Pages/Studio/              Login, Logout, Index, Activity, Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
+  Studio/                    StudioService (on or off, the password, the lock-out), DesignData (built-in + Studio items: the apps, rules and components every page reads; Version), ComponentValidator, StudioHistory (restore checks), StudioFormat
+  Pages/Studio/              Login, Logout, Index, Activity, History, Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
                              ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)

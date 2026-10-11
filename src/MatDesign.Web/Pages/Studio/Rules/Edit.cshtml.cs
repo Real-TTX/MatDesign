@@ -130,7 +130,7 @@ public class EditModel(StudioService studio, DesignData design) : StudioPageMode
         // a rule that a component of the Studio names cannot go before the component lets go of it (a changed built-in rule only goes back to the built-in one, which keeps its id)
         if (source == ItemSource.Added)
         {
-            var users = design.Components.Where(c => design.ComponentSourceOf(c.Id) != ItemSource.BuiltIn && c.Rules.Contains(rule.Id, StringComparer.OrdinalIgnoreCase)).Select(c => c.Name).ToList();
+            var users = design.ComponentsNaming(rule.Id);
             if (users.Count > 0)
             {
                 Source = source;

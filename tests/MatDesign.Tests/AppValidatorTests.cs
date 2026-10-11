@@ -30,6 +30,15 @@ public class AppValidatorTests
         Assert.Equal("MatX", app.Repo);
     }
 
+    [Fact]
+    public void An_app_with_a_space_in_its_name_gets_a_repository_without_one()
+    {
+        var app = AppValidator.Normalize(Good() with { Name = "My Mat App", Repo = "" });
+
+        Assert.Equal("My-Mat-App", app.Repo);
+        Assert.Empty(AppValidator.Validate(app, AppRegistry.All, Glyphs));
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("m")]

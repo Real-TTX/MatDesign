@@ -165,6 +165,13 @@
   .doc-tokens td code { white-space: nowrap; }
 }
 
+/* ---- A diff: the lines of a change, what is new and what is gone ---- */
+.doc-diff { display: flex; flex-direction: column; gap: 1px; font-family: var(--mat-mono); font-size: var(--mat-fs-sm); }
+.doc-diff__line { display: flex; gap: var(--mat-space-2); padding: 0 var(--mat-space-2); border-radius: var(--mat-radius-xs); white-space: pre-wrap; overflow-wrap: anywhere; }
+.doc-diff__line--add { background: var(--mat-success-bg); color: var(--mat-success-text); }
+.doc-diff__line--del { background: var(--mat-danger-bg); color: var(--mat-danger-text); }
+.doc-diff__op { flex: none; width: 1ch; text-align: center; user-select: none; }
+
 .doc-list { display: flex; flex-direction: column; gap: var(--mat-space-2); padding-left: 1.2em; }
 
 /* ---- Specimens: classes that point at the tokens, so a page needs no inline style ---- */

@@ -33,7 +33,10 @@ public static partial class AppValidator
             && (app.OnAccent is null || HexPattern().IsMatch(app.OnAccent)) && (app.AccentText is null || HexPattern().IsMatch(app.AccentText))
             && !string.IsNullOrWhiteSpace(app.Name);
 
-    /// <summary>The app as it is stored: trimmed, colours in lower case, an empty optional value as null, the repository named like the app when it was left empty.</summary>
+    /// <summary>The name of a repository made from the name of an app: what a repository name may not contain becomes a dash ("My App" is "My-App").</summary>
+    private static string RepoOf(string name) => Regex.Replace(name, @"[^A-Za-z0-9._-]+", "-").Trim('-');
+
+    /// <summary>The app as it is stored: trimmed, colours in lower case, an empty optional value as null, the repository named like the app when it was left empty (spaces become dashes).</summary>
     public static MatApp Normalize(MatApp app)
     {
         static string? Optional(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();
@@ -48,7 +51,7 @@ public static partial class AppValidator
             Category = (app.Category ?? string.Empty).Trim(),
             Accent = (app.Accent ?? string.Empty).Trim().ToLowerInvariant(),
             Glyph = (app.Glyph ?? string.Empty).Trim(),
-            Repo = Optional(app.Repo) ?? name,
+            Repo = Optional(app.Repo) ?? RepoOf(name),
             FoundAccent = Colour(app.FoundAccent),
             LogoColor = Colour(app.LogoColor),
             OnAccent = Colour(app.OnAccent),

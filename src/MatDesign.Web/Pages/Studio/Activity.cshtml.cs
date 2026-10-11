@@ -22,6 +22,7 @@ public class ActivityModel(StudioService studio) : StudioPageModel(studio)
         var q = ListQuery.Text(Request, "q");
         var kind = ListQuery.Text(Request, "kind");
         var change = ListQuery.Text(Request, "change");
+        var by = ListQuery.Text(Request, "by");
         var sort = ListQuery.Text(Request, "sort") ?? "when";
         var descending = ListQuery.Descending(Request);
 
@@ -43,6 +44,11 @@ public class ActivityModel(StudioService studio) : StudioPageModel(studio)
         if (change is not null)
         {
             rows = rows.Where(r => StudioFormat.What(r.Revision) == change);
+        }
+
+        if (by is not null)
+        {
+            rows = rows.Where(r => r.Revision.By == by);
         }
 
         var matching = rows.ToList();
@@ -83,6 +89,7 @@ public class ActivityModel(StudioService studio) : StudioPageModel(studio)
             [
                 new("kind", "Kind", store.Kinds().Select(k => new FilterOption(k, StudioFormat.KindName(k))).ToList(), kind),
                 new("change", "Change", Changes.Select(c => new FilterOption(c, c)).ToList(), change),
+                new("by", "By", everything.Select(r => r.Revision.By).Distinct().Order(StringComparer.Ordinal).Select(b => new FilterOption(b, b)).ToList(), by),
             ],
         };
 

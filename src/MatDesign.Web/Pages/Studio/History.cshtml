@@ -1,0 +1,157 @@
+@page "/Studio/History"
+@model MatDesign.Web.Pages.Studio.HistoryModel
+@using MatDesign.Web.Studio
+@{
+    var kind = Model.Kind!;
+    var id = Model.Id!;
+    ViewData["Title"] = "History of " + Model.Title;
+    ViewData["PageSub"] = $"Every revision of the {StudioHistory.Singular(kind).ToLowerInvariant()} {id}: who changed it, when and why, what changed, and a way back.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), (StudioHistory.Plural(kind), StudioHistory.ListUrl(kind)), (Model.Title, Model.ItemExists ? StudioHistory.EditUrl(kind, id) : null), ("History", null));
+    ViewData["ActiveHref"] = StudioHistory.ListUrl(kind);
+    ViewData["Width"] = "wide";
+    var newest = Model.Revisions[0].Number;
+}
+
+@if (Model.Problems.Count > 0)
+{
+    <div class="mat-alert mat-alert--danger" role="alert">
+        @Ui.Icon("x-circle")
+        <div class="mat-alert__body">
+            <strong>Revision @Model.RestoreFailed cannot be restored as it is today.</strong>
+            <ul class="mat-alert__list">
+                @foreach (var problem in Model.Problems)
+                {
+                    <li>@problem.Message</li>
+                }
+            </ul>
+        </div>
+    </div>
+}
+
+<section class="mat-section" aria-labelledby="revisions-title">
+    <div class="mat-section__head"><h2 id="revisions-title">Revisions</h2></div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">Revisions of @Model.Title</caption>
+            <thead>
+                <tr><th scope="col">Revision</th><th scope="col">Change</th><th scope="col">When</th><th scope="col" class="mat-hide-sm">By</th><th scope="col" class="mat-hide-sm">Note</th><th scope="col"><span class="mat-sr-only">Actions</span></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var revision in Model.Revisions)
+                {
+                    var older = Model.Revisions.FirstOrDefault(r => r.Number < revision.Number);
+                    <tr>
+                        <td data-label="Revision">
+                            <span class="mat-row mat-row--nowrap"><span class="doc-rule-id">@revision.Number</span>@if (revision.Number == newest) { <span class="mat-pill mat-pill--ok mat-pill--plain">Current</span> }</span>
+                        </td>
+                        <td data-label="Change">@HistoryModel.Describe(revision)</td>
+                        <td data-label="When">@StudioFormat.When(revision.At)</td>
+                        <td data-label="By" class="mat-hide-sm">@revision.By</td>
+                        <td data-label="Note" class="mat-hide-sm mat-muted">@revision.Note</td>
+                        <td data-label="Actions" class="mat-table__cell-actions">
+                            <div class="mat-table__actions">
+                                <a class="mat-btn mat-btn--ghost mat-btn--sm" href="@StudioHistory.HistoryUrl(kind, id)&amp;b=@revision.Number#changes-title" aria-label="What changed in revision @revision.Number">@Ui.Icon("eye")<span>Changes</span></a>
+                                @if (revision.Number != newest)
+                                {
+                                    <form method="post" action="/Studio/History?handler=Restore">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="kind" value="@kind" />
+                                        <input type="hidden" name="id" value="@id" />
+                                        <input type="hidden" name="revision" value="@revision.Number" />
+                                        <button type="submit" class="mat-btn mat-btn--secondary mat-btn--sm" data-confirm="Restore revision @revision.Number of @Model.Title? It becomes a new revision; the revisions after it stay in the history." data-confirm-ok="Restore" aria-label="Restore revision @revision.Number">@Ui.Icon("restore")<span>Restore</span></button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="changes-title">
+    <div class="mat-section__head">
+        <h2 id="changes-title">What changed</h2>
+        <p class="mat-section__lead">
+            @if (Model.Left is null)
+            {
+                <text>Revision @Model.Right!.Number is the first: everything in it is new.</text>
+            }
+            else
+            {
+                <text>From revision @Model.Left.Number to revision @Model.Right!.Number.</text>
+            }
+        </p>
+    </div>
+
+    @if (Model.Revisions.Count > 1)
+    {
+        <form class="mat-form" method="get" action="/Studio/History">
+            <input type="hidden" name="kind" value="@kind" />
+            <input type="hidden" name="id" value="@id" />
+            <div class="mat-form__grid" role="group" aria-label="Compare two revisions">
+                <div class="mat-field">
+                    <label class="mat-label" for="compare-from">From</label>
+                    <select class="mat-select" id="compare-from" name="a">
+                        @foreach (var revision in Model.Revisions)
+                        {
+                            <option value="@revision.Number" selected="@(revision.Number == Model.Left?.Number)">Revision @revision.Number</option>
+                        }
+                    </select>
+                </div>
+                <div class="mat-field">
+                    <label class="mat-label" for="compare-to">To</label>
+                    <select class="mat-select" id="compare-to" name="b">
+                        @foreach (var revision in Model.Revisions)
+                        {
+                            <option value="@revision.Number" selected="@(revision.Number == Model.Right!.Number)">Revision @revision.Number</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="mat-actions">
+                <button type="submit" class="mat-btn mat-btn--secondary">@Ui.Icon("refresh")<span>Compare</span></button>
+            </div>
+        </form>
+    }
+
+    @if (Model.Changes.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("check-circle")</span>
+            <div class="mat-empty__title">Nothing differs</div>
+            <p>@(Model.Right!.Deleted ? "This revision is a deletion." : "The two revisions say the same.")</p>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Fields that differ</caption>
+                <thead><tr><th scope="col">Field</th><th scope="col">Change</th></tr></thead>
+                <tbody>
+                    @foreach (var change in Model.Changes)
+                    {
+                        <tr>
+                            <td data-label="Field"><code>@change.Path</code></td>
+                            <td data-label="Change">
+                                <div class="doc-diff">
+                                    @foreach (var line in HistoryModel.Lines(change))
+                                    {
+                                        <span class="doc-diff__line @(line.Op == '+' ? "doc-diff__line--add" : line.Op == '-' ? "doc-diff__line--del" : string.Empty)"><span class="doc-diff__op" aria-label="@(line.Op == '+' ? "new" : line.Op == '-' ? "gone" : "kept")">@(line.Op == ' ' ? "·" : line.Op.ToString())</span>@line.Text</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<div class="mat-btn-row">
+    <a class="mat-btn mat-btn--secondary" href="@Model.BackUrl">@Ui.Icon("back")<span>Back</span></a>
+    <a class="mat-btn mat-btn--ghost" href="/Studio/Activity?q=@Uri.EscapeDataString(id)">@Ui.Icon("activity")<span>In the activity</span></a>
+</div>

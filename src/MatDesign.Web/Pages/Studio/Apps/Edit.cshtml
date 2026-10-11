@@ -1,5 +1,6 @@
 @page "/Studio/Apps/Edit"
 @model MatDesign.Web.Pages.Studio.Apps.EditModel
+@inject StudioHistory History
 @using MatDesign.Web.Studio
 @{
     var input = Model.Input;
@@ -167,6 +168,10 @@
         @if (!isNew && !string.IsNullOrEmpty(input.Id))
         {
             <a class="mat-btn mat-btn--ghost" href="/Preview?app=@input.Id&amp;view=list">@Ui.Icon("eye")<span>Preview</span></a>
+        }
+        @if (!isNew && History.HasHistory("apps", input.Id ?? string.Empty))
+        {
+            <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl("apps", input.Id!)">@Ui.Icon("restore")<span>History</span></a>
         }
         @if (!isNew && Model.Source != ItemSource.BuiltIn)
         {

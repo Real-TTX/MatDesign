@@ -68,6 +68,7 @@ builder.Services.AddRazorPages(options =>
 });
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<DesignData>();
+builder.Services.AddSingleton<StudioHistory>();
 builder.Services.AddSingleton<ToolkitFiles>();
 builder.Services.AddSingleton<AuditData>();
 

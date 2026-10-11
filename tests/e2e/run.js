@@ -1178,6 +1178,55 @@ function expectTrue(value, what) {
         const html = await (await page.request.get(BASE + '/Components')).text();
         expectTrue(!html.includes('id="' + compId + '"'), 'the component is still on its page');
       });
+      // the history of an app: two revisions, what changed between them, and a restore that asks first
+      const histLetters = Array.from({ length: 6 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join('');
+      const histId = 'qh' + histLetters;
+      const histName = 'Qh' + histLetters;
+      await check('a changed app has a history with its revisions, and the page says what changed between the last two', async () => {
+        await page.goto(BASE + '/Studio/Apps/Edit', { waitUntil: 'networkidle' });
+        await page.fill('#Input_Name', histName);
+        await page.fill('#Input_Id', histId);
+        await page.fill('#Input_Tagline', 'First tagline');
+        await page.evaluate(() => { const el = document.getElementById('Input_Accent'); el.value = '#0f766e'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForURL('**/Studio/Apps');
+        await page.goto(BASE + '/Studio/Apps/Edit?id=' + histId, { waitUntil: 'networkidle' });
+        expect(await page.locator('a.mat-btn:has-text("History")').count(), 1, 'the History button of an app that has revisions');
+        await page.fill('#Input_Tagline', 'Second tagline');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForURL('**/Studio/Apps');
+        await page.goto(BASE + '/Studio/Apps/Edit?id=' + histId, { waitUntil: 'networkidle' });
+        await page.click('a.mat-btn:has-text("History")');
+        await page.waitForURL('**/Studio/History**');
+        expect(await page.locator('section[aria-labelledby="revisions-title"] tbody tr').count(), 2, 'revisions');
+        expect(await page.locator('.mat-pill:has-text("Current")').count(), 1, 'the current revision');
+        const diff = await page.textContent('section[aria-labelledby="changes-title"] .mat-table-wrap');
+        expectTrue(diff.includes('tagline') && diff.includes('First tagline') && diff.includes('Second tagline'), 'the diff does not show the tagline: ' + diff.trim().slice(0, 160));
+        expect(await page.locator('.doc-diff__line--add').count(), 1, 'lines that are new');
+        expect(await page.locator('.doc-diff__line--del').count(), 1, 'lines that are gone');
+      });
+      await check('restoring the first revision asks in a dialog, can be cancelled, and brings the first tagline back with a toast', async () => {
+        await page.click('button[aria-label="Restore revision 1"]');
+        expect(await page.locator('dialog[open]').count(), 1, 'the confirmation dialog');
+        await page.click('dialog[open] [data-dialog-close]');
+        expect(await page.locator('section[aria-labelledby="revisions-title"] tbody tr').count(), 2, 'Cancel changed nothing');
+        await page.click('button[aria-label="Restore revision 1"]');
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForSelector('.mat-toast');
+        expectTrue((await page.textContent('.mat-toast')).includes('was restored as revision 3'), 'no toast: ' + await page.textContent('.mat-toasts'));
+        expect(await page.locator('section[aria-labelledby="revisions-title"] tbody tr').count(), 3, 'revisions after the restore');
+        const apps = await (await page.request.get(BASE + '/api/apps')).json();
+        expect(apps.find(a => a.id === histId).tagline, 'First tagline', 'the tagline on the site');
+      });
+      await check('the activity links the item to its history, and the app is deleted again', async () => {
+        await page.goto(BASE + '/Studio/Activity?q=' + histId, { waitUntil: 'networkidle' });
+        expect(await page.locator('a[href*="/Studio/History?kind=apps"]').count() > 0, true, 'a link to the history in the activity');
+        await page.goto(BASE + '/Studio/Apps/Edit?id=' + histId, { waitUntil: 'networkidle' });
+        await page.click('.mat-btn--danger[data-confirm]');
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForURL('**/Studio/Apps');
+        expect((await page.request.get(BASE + '/Identity/App?id=' + histId)).status(), 404, 'the page of the deleted app');
+      });
       await check('Sign out is the last entry of the user menu, ends the session and leads back to the site', async () => {
         await page.click('.mat-user');
         const items = await page.locator('#user-menu .mat-menu__item').allTextContents();

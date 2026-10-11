@@ -1,5 +1,6 @@
 @page "/Studio/Components/Edit"
 @model MatDesign.Web.Pages.Studio.Components.EditModel
+@inject StudioHistory History
 @using MatDesign.Web.Studio
 @{
     var input = Model.Input;
@@ -150,6 +151,10 @@
         @if (!isNew && !string.IsNullOrEmpty(input.Id))
         {
             <a class="mat-btn mat-btn--ghost" href="@(MatDesign.Web.Services.ComponentCatalog.Sections.FirstOrDefault(s => s.Groups.Contains(input.Group ?? string.Empty))?.Path ?? "/Components")#@input.Id">@Ui.Icon("eye")<span>On the site</span></a>
+        }
+        @if (!isNew && History.HasHistory("components", input.Id ?? string.Empty))
+        {
+            <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl("components", input.Id!)">@Ui.Icon("restore")<span>History</span></a>
         }
         @if (!isNew && Model.Source != ItemSource.BuiltIn)
         {

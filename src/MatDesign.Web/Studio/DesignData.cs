@@ -86,6 +86,10 @@ public sealed class DesignData
     /// <summary>The components a page of the documentation shows: those of its groups.</summary>
     public IEnumerable<ComponentDoc> ComponentsIn(CatalogSection section) => Components.Where(c => section.Groups.Contains(c.Group));
 
+    /// <summary>The names of the components of the Studio (added or changed) that name a rule: while there are any, an added rule cannot be deleted.</summary>
+    public IReadOnlyList<string> ComponentsNaming(string ruleId)
+        => Components.Where(c => ComponentSourceOf(c.Id) != ItemSource.BuiltIn && c.Rules.Contains(ruleId, StringComparer.OrdinalIgnoreCase)).Select(c => c.Name).ToList();
+
     public ItemSource ComponentSourceOf(string id) => _snapshot.Components.Sources.GetValueOrDefault(id.ToLowerInvariant(), ItemSource.BuiltIn);
 
     /// <summary>What the menu counts: the apps (for the palette), the rules and the components of the components page.</summary>
