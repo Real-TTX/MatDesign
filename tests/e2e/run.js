@@ -1006,7 +1006,7 @@ function expectTrue(value, what) {
         expect(await page.locator('#nav-switch-menu [data-nav-set]').evaluateAll(els => els.map(e => e.getAttribute('data-nav-set'))), ['design', 'toolkit', 'studio'], 'menus in the switcher');
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
-        expect(await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').allTextContents().then(t => t.map(x => x.trim())), ['Overview', 'Apps', 'Rules', 'Activity'], 'items of the Studio menu');
+        expect(await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').allTextContents().then(t => t.map(x => x.trim())), ['Overview', 'Apps', 'Rules', 'Components', 'Activity'], 'items of the Studio menu');
       });
       await check('the activity list has its toolbar above it and the sort dialog opens', async () => {
         const bar = await page.locator('.mat-toolbar').boundingBox();
@@ -1120,6 +1120,63 @@ function expectTrue(value, what) {
         await page.click('dialog[open] button[value="ok"]');
         await page.waitForURL('**/Studio/Rules');
         expect((await page.request.get(BASE + '/Rules/Detail?id=' + ruleId)).status(), 404, 'the page of the deleted rule');
+      });
+      // a component with an example: refused for a class the toolkit does not have, corrected, saved, seen live in its group and index on the page, deleted again
+      const compLetters = Array.from({ length: 6 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join('');
+      const compId = 'qa-' + compLetters;
+      const compName = 'Qa ' + compLetters;
+      await check('a component whose markup uses a class the toolkit does not have is refused with the reason, and its example is shown live next to the form', async () => {
+        await page.goto(BASE + '/Studio/Components', { waitUntil: 'networkidle' });
+        const bar = await page.locator('.mat-toolbar').boundingBox();
+        const table = await page.locator('.mat-table-wrap').boundingBox();
+        expectTrue(bar.y < table.y, 'the toolbar is not above the table');
+        await page.click('a.mat-btn--primary:has-text("New component")');
+        await page.waitForURL('**/Studio/Components/Edit');
+        await page.fill('#Input_Name', compName);
+        await page.fill('#Input_Id', compId);
+        await page.selectOption('#Input_Group', 'Content');
+        await page.fill('#Input_Summary', 'A component that the browser check adds and deletes again.');
+        await page.fill('#Input_Rules', 'BUTTON-01');
+        await page.fill('#Input_Examples_0_Title', 'A pill');
+        await page.fill('#Input_Examples_0_Html', '<span class="mat-pill nopeclass">Online</span>');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await page.textContent('[data-validation-summary]')).includes("the toolkit has no class 'nopeclass'"), 'no reason in the summary');
+        expect(await page.inputValue('#Input_Name'), compName, 'the name that was typed');
+        const form = await page.locator('form.mat-form').boundingBox();
+        const preview = await page.locator('#preview-title').boundingBox();
+        expectTrue(preview.x > form.x + form.width - 1, 'the preview is not beside the form');
+        expect(await page.locator('.doc-example__live .mat-pill').count(), 1, 'the example drawn live');
+      });
+      await check('examples are added and removed without saving, and the corrected component is saved with its toast', async () => {
+        await page.fill('#Input_Examples_0_Html', '<span class="mat-pill mat-pill--ok">Online</span>');
+        await page.click('button:has-text("Add an example")');
+        await page.waitForLoadState('networkidle');
+        expect(await page.locator('textarea[name$=".Html"]').count(), 2, 'example blocks after Add');
+        expect(await page.inputValue('#Input_Examples_0_Html'), '<span class="mat-pill mat-pill--ok">Online</span>', 'the markup stays');
+        await page.click('button[aria-label="Remove example 2"]');
+        await page.waitForLoadState('networkidle');
+        expect(await page.locator('textarea[name$=".Html"]').count(), 1, 'example blocks after Remove');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForURL('**/Studio/Components');
+        await page.waitForSelector('.mat-toast');
+        expectTrue((await page.textContent('.mat-toast')).includes(compName + ' was added.'), 'no toast');
+      });
+      await check('the component is on its page, live, in its group and in the index of the page', async () => {
+        await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+        expect(await page.locator('#' + compId + ' .mat-pill--ok').count(), 1, 'the example drawn live on the page');
+        expect(await page.locator('.mat-toc-aside a[href="#' + compId + '"]').count(), 1, 'the link in the index');
+        expectTrue((await page.locator('#group-content').evaluate((el, id) => !!el.querySelector('#' + id), compId)), 'the component is not in the group Content');
+        await page.click('.mat-toc-aside a[href="#' + compId + '"]');
+        await page.waitForFunction((id) => document.querySelector('.mat-toc-aside a[href="#' + id + '"]').classList.contains('is-active'), compId);
+      });
+      await check('deleting the component asks in a dialog and takes it off its page', async () => {
+        await page.goto(BASE + '/Studio/Components/Edit?id=' + compId, { waitUntil: 'networkidle' });
+        await page.click('.mat-btn--danger[data-confirm]');
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForURL('**/Studio/Components');
+        const html = await (await page.request.get(BASE + '/Components')).text();
+        expectTrue(!html.includes('id="' + compId + '"'), 'the component is still on its page');
       });
       await check('Sign out is the last entry of the user menu, ends the session and leads back to the site', async () => {
         await page.click('.mat-user');

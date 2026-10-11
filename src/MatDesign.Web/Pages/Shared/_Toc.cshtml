@@ -1,4 +1,5 @@
 @model CatalogSection
+@inject MatDesign.Web.Studio.DesignData Design
 @*
     The index of a documentation page ("On this page", SHELL-16): the groups of its section and, below each, its components. It is drawn twice, beside the
     content and in the dialog that small screens open, so both are marked by the scroll spy.
@@ -11,7 +12,7 @@
             <li>
                 <a class="mat-toc__link mat-toc__link--group" href="#@ComponentCatalog.GroupAnchor(group)">@group</a>
                 <ul class="mat-toc__list">
-                    @foreach (var component in ComponentCatalog.All.Where(c => c.Group == group))
+                    @foreach (var component in Design.ComponentsOf(group))
                     {
                         <li><a class="mat-toc__link" href="#@component.Id">@component.Name</a></li>
                     }

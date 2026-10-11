@@ -48,6 +48,7 @@ public sealed partial class ToolkitFiles
         Sprite = Read("img/matui-icons.svg");
         IconNames = SymbolRegex().Matches(Sprite).Select(m => m.Groups[1].Value).Order().ToList();
         Tokens = CssTokens.Tokens(_css["matui.tokens.css"]);
+        Facts = new MarkupFacts(MarkupChecks.ClassesIn(CssParts.Select(part => _css[part])), IconNames.ToHashSet());
         _state = Build(design.Version);
     }
 
@@ -127,6 +128,9 @@ public sealed partial class ToolkitFiles
     public IReadOnlyList<string> IconNames { get; }
 
     public IReadOnlyList<DesignToken> Tokens { get; }
+
+    /// <summary>What the toolkit ships (its classes and its icons): the markup of an example may use nothing else.</summary>
+    public MarkupFacts Facts { get; }
 
     public string TokensCss => _css["matui.tokens.css"];
 

@@ -83,17 +83,21 @@ public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<
     public bool IsValid => Groups.SelectMany(g => g.Items).All(i => !i.IsParent || i.Children!.All(c => !c.IsParent && c.Href is not null));
 }
 
+/// <summary>What the menu counts: the apps (the palette's badge counts the pairs of accents that are too close), the rules and the components of the components page.</summary>
+public sealed record NavFacts(IReadOnlyList<MatApp> Apps, int Rules, int Components)
+{
+    /// <summary>The built-in data, before the Studio has changed anything.</summary>
+    public static NavFacts BuiltIn { get; } = new(AppRegistry.All, RuleBook.All.Count, ComponentCatalog.In(ComponentCatalog.Sections[0]).Count());
+}
+
 /// <summary>The menus of the site. The item whose address is the longest prefix of the current path is the active one.</summary>
 public static class Navigation
 {
     /// <summary>The two menus of the site as the built-in data gives them. The pages use <see cref="Create"/> with the data the Studio changed.</summary>
-    public static IReadOnlyList<NavSet> Sets { get; } = Create(AppRegistry.All, RuleBook.All.Count);
+    public static IReadOnlyList<NavSet> Sets { get; } = Create(NavFacts.BuiltIn);
 
-    /// <summary>
-    /// The two menus of the site; the badge of the palette counts the pairs of accents of <paramref name="apps"/> that are too close, the one of the rulebook the
-    /// <paramref name="rules"/>.
-    /// </summary>
-    public static IReadOnlyList<NavSet> Create(IReadOnlyList<MatApp> apps, int rules) =>
+    /// <summary>The two menus of the site with the counts of <paramref name="facts"/>.</summary>
+    public static IReadOnlyList<NavSet> Create(NavFacts facts) =>
     [
         new("design", "Design", "palette",
         [
@@ -101,10 +105,10 @@ public static class Navigation
             new("Identity",
             [
                 new("Apps", "/Identity", "apps"),
-                new("Palette", "/Identity/Palette", "palette", NavBadge.Count(PaletteAdvisor.Collisions(apps).Count, "warn", "pairs of accents that are too close")),
+                new("Palette", "/Identity/Palette", "palette", NavBadge.Count(PaletteAdvisor.Collisions(facts.Apps).Count, "warn", "pairs of accents that are too close")),
                 new("Audit", "/Identity/Audit", "check-square"),
             ]),
-            new("Rules", [new("Rulebook", "/Rules", "book", NavBadge.Count(rules, "plain", "rules"))]),
+            new("Rules", [new("Rulebook", "/Rules", "book", NavBadge.Count(facts.Rules, "plain", "rules"))]),
             new("Foundations",
             [
                 new("Foundations", null, "layers", Children:
@@ -123,7 +127,7 @@ public static class Navigation
             new(null, [new("Shell", "/Shell", "sidebar")]),
             new("Build with it",
             [
-                new("Components", "/Components", "toggle", NavBadge.Count(ComponentCatalog.In(ComponentCatalog.Sections[0]).Count(), "plain", "components")),
+                new("Components", "/Components", "toggle", NavBadge.Count(facts.Components, "plain", "components")),
                 new("Layout", "/Layout", "grid"),
                 new("Utilities", "/Utilities", "sliders"),
                 new("Patterns", "/Patterns", "template"),
@@ -143,12 +147,13 @@ public static class Navigation
         [
             new("Apps", "/Studio/Apps", "apps"),
             new("Rules", "/Studio/Rules", "book"),
+            new("Components", "/Studio/Components", "toggle"),
             new("Activity", "/Studio/Activity", "activity"),
         ]),
     ]);
 
     /// <summary>The menus a visitor sees: the two of the site, and the Studio for the signed-in administrator.</summary>
-    public static IReadOnlyList<NavSet> For(IReadOnlyList<MatApp> apps, int rules, bool studio) => studio ? [.. Create(apps, rules), StudioSet] : Create(apps, rules);
+    public static IReadOnlyList<NavSet> For(NavFacts facts, bool studio) => studio ? [.. Create(facts), StudioSet] : Create(facts);
 
     /// <summary>Every page of every menu (no parents), the Studio's included.</summary>
     public static IEnumerable<NavItem> Pages => Sets.Append(StudioSet).SelectMany(s => s.Pages);

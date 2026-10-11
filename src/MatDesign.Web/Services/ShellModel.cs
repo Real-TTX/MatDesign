@@ -87,7 +87,7 @@ public sealed class ShellModel
     {
         App = design?.App("matdesign") ?? AppRegistry.Get("matdesign")!,
         Tagline = "Identity of the Mat apps",
-        Menus = Navigation.For(design?.Apps ?? AppRegistry.All, design?.Rules.Count ?? RuleBook.All.Count, signedIn),
+        Menus = Navigation.For(design?.NavFacts ?? NavFacts.BuiltIn, signedIn),
         UserName = signedIn ? "Admin" : "Visitor",
         UserRole = signedIn ? "Studio" : "Guest",
         UserLine = signedIn ? "Signed in to the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",

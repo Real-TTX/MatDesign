@@ -1,4 +1,5 @@
 @model CatalogSection
+@inject MatDesign.Web.Studio.DesignData Design
 @*
     A page of the documentation of the toolkit that shows some groups of the catalogue (the components, the layout, the utilities): an index beside the
     content (SHELL-16), and for each group its components with live examples, the markup to copy and the rules.
@@ -34,7 +35,7 @@
                     <p class="mat-section__lead">@ComponentCatalog.GroupSummaries[group]</p>
                 </div>
                 <div class="doc-components">
-                    @foreach (var component in ComponentCatalog.All.Where(c => c.Group == group))
+                    @foreach (var component in Design.ComponentsOf(group))
                     {
                         <partial name="_Component" model="component" />
                     }

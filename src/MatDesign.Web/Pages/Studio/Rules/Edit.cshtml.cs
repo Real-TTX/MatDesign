@@ -127,6 +127,19 @@ public class EditModel(StudioService studio, DesignData design) : StudioPageMode
             return BadRequest("A built-in rule cannot be deleted.");
         }
 
+        // a rule that a component of the Studio names cannot go before the component lets go of it (a changed built-in rule only goes back to the built-in one, which keeps its id)
+        if (source == ItemSource.Added)
+        {
+            var users = design.Components.Where(c => design.ComponentSourceOf(c.Id) != ItemSource.BuiltIn && c.Rules.Contains(rule.Id, StringComparer.OrdinalIgnoreCase)).Select(c => c.Name).ToList();
+            if (users.Count > 0)
+            {
+                Source = source;
+                Preview = rule;
+                Problems = [new Problem("Id", $"{rule.Id} is named by {string.Join(", ", users)}. Take it out of the rules of the component first.")];
+                return Page();
+            }
+        }
+
         Studio.Store.Delete("rules", rule.Id, Studio.Administrator, source == ItemSource.Added ? "Deleted" : "Reset to the built-in rule");
         design.Reload();
         TempData["Flash"] = source == ItemSource.Added ? $"{rule.Id} was deleted." : $"{rule.Id} is the built-in rule again.";

@@ -1,0 +1,200 @@
+@page "/Studio/Components/Edit"
+@model MatDesign.Web.Pages.Studio.Components.EditModel
+@using MatDesign.Web.Studio
+@{
+    var input = Model.Input;
+    var isNew = Model.IsNew;
+    var title = isNew ? "New component" : string.IsNullOrWhiteSpace(input.Name) ? "Component" : input.Name!;
+    ViewData["Title"] = title;
+    ViewData["PageSub"] = isNew
+        ? "A component documents one control of the toolkit: what it is for, the rules it follows, and examples with the markup to copy."
+        : Model.Source switch
+        {
+            ItemSource.BuiltIn => "A built-in component. Saving a change here replaces it on the site; deleting that change brings the built-in component back.",
+            ItemSource.Changed => "A built-in component that was changed in the Studio. Resetting it brings the built-in component back.",
+            _ => "A component that was added in the Studio.",
+        };
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Components", "/Studio/Components"), (title, null));
+    ViewData["Width"] = "wide";
+
+    string Anchor(string field) => "Input_" + field.Replace("[", "_").Replace("].", "_");
+    string Invalid(string field) => Model.ProblemFor(field) is null ? string.Empty : " is-invalid";
+    var blocks = Math.Max(1, input.Examples.Count);
+}
+
+<div class="mat-cols">
+<div class="mat-col-12 mat-col-lg-7">
+<form class="mat-form" method="post" action="/Studio/Components/Edit" novalidate>
+    @* The action is written out: after Check the address ends in ?check=true, and Save must not inherit it. A form with an action gets no token by itself. *@
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Input.Original" value="@input.Original" />
+    <input type="hidden" name="Input.Icon" value="@input.Icon" />
+
+    <div class="mat-alert mat-alert--danger" role="alert" data-validation-summary hidden="@(Model.Problems.Count == 0)">
+        @Ui.Icon("x-circle")
+        <div class="mat-alert__body">
+            <strong>Please check the form.</strong>
+            <ul class="mat-alert__list">
+                @foreach (var problem in Model.Problems)
+                {
+                    <li><a href="#@Anchor(problem.Field)">@problem.Message</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+    @if (Model.Checked && Model.Problems.Count == 0)
+    {
+        <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>All checks pass.</strong> Nothing was saved yet.</div></div>
+    }
+
+    <section class="mat-card" aria-labelledby="component-title">
+        <div class="mat-card__head">@Ui.Icon("toggle")<h2 class="mat-card__title" id="component-title">The component</h2></div>
+        <div class="mat-card__body">
+            <div class="mat-form__grid">
+                <div class="mat-field@(Invalid("Name"))">
+                    <label class="mat-label" for="Input_Name">Name <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Input_Name" name="Input.Name" value="@input.Name" maxlength="60" required data-msg-required="Please give the component a name." />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Name")</span>
+                </div>
+                <div class="mat-field@(Invalid("Id"))">
+                    <label class="mat-label" for="Input_Id">Id @if (isNew) { <span class="mat-req" aria-hidden="true">*</span> }</label>
+                    <input class="mat-input mat-mono" id="Input_Id" name="Input.Id" value="@input.Id" maxlength="40" readonly="@(!isNew)" required="@isNew" pattern="[a-z][a-z0-9\-]{1,39}" data-msg-pattern="Use lower-case letters, digits and dashes." data-msg-required="Please give the component an id." autocomplete="off" />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Id")</span>
+                    <span class="mat-hint">@(isNew ? "Lower-case, like date-picker. It is the anchor of the component on its page and cannot change later." : "The anchor of the component on its page. It cannot change.")</span>
+                </div>
+                <div class="mat-field mat-field--full@(Invalid("Group"))">
+                    <label class="mat-label" for="Input_Group">Group</label>
+                    <select class="mat-select" id="Input_Group" name="Input.Group">
+                        @foreach (var group in ComponentCatalog.Groups)
+                        {
+                            <option value="@group" selected="@(group == input.Group)">@group</option>
+                        }
+                    </select>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Group")</span>
+                    <span class="mat-hint">The group decides the page (Components, Layout or Utilities) and the place in its index.</span>
+                </div>
+                <div class="mat-field mat-field--full@(Invalid("Summary"))">
+                    <label class="mat-label" for="Input_Summary">Summary <span class="mat-req" aria-hidden="true">*</span></label>
+                    <textarea class="mat-textarea" id="Input_Summary" name="Input.Summary" rows="2" maxlength="300" required data-msg-required="Please say what the component is for.">@input.Summary</textarea>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Summary")</span>
+                </div>
+                <div class="mat-field mat-field--full@(Invalid("Rules"))">
+                    <label class="mat-label" for="Input_Rules">Rules it follows <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input mat-mono" id="Input_Rules" name="Input.Rules" value="@input.Rules" placeholder="BUTTON-01, BUTTON-02" autocomplete="off" />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Rules")</span>
+                    <span class="mat-hint">Ids from the rulebook, separated by commas. They become the chips under the title.</span>
+                </div>
+                <div class="mat-field mat-field--full@(Invalid("Behaviour"))">
+                    <label class="mat-label" for="Input_Behaviour">Good to know <span class="mat-opt">(optional)</span></label>
+                    <textarea class="mat-textarea" id="Input_Behaviour" name="Input.Behaviour" rows="3">@input.Behaviour</textarea>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Behaviour")</span>
+                    <span class="mat-hint">One sentence per line. Code goes in backticks, like <code>mat-btn</code>.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    @for (var i = 0; i < blocks; i++)
+    {
+        var example = i < input.Examples.Count ? input.Examples[i] : new MatDesign.Web.Pages.Studio.Components.ExampleInput();
+        var n = i + 1;
+        <section class="mat-card" aria-labelledby="example-title-@i">
+            <div class="mat-card__head">
+                @Ui.Icon("code")<h2 class="mat-card__title" id="example-title-@i">Example @n</h2>
+                @if (input.Examples.Count > 1)
+                {
+                    <button type="submit" class="mat-btn mat-btn--ghost mat-btn--sm" formaction="?handler=RemoveExample&amp;index=@i" aria-label="Remove example @n">@Ui.Icon("trash")<span>Remove</span></button>
+                }
+            </div>
+            <div class="mat-card__body">
+                <input type="hidden" name="Input.Examples[@i].Js" value="@example.Js" />
+                <input type="hidden" name="Input.Examples[@i].Demo" value="@example.Demo" />
+                <input type="hidden" name="Input.Examples[@i].Frame" value="@example.Frame" />
+                <div class="mat-form__grid">
+                    <div class="mat-field mat-field--full@(Invalid($"Examples[{i}].Title"))">
+                        <label class="mat-label" for="@Anchor($"Examples[{i}].Title")">Title</label>
+                        <input class="mat-input" id="@Anchor($"Examples[{i}].Title")" name="Input.Examples[@i].Title" value="@example.Title" maxlength="80" />
+                        <span class="mat-error" aria-live="polite">@Model.ProblemFor($"Examples[{i}].Title")</span>
+                    </div>
+                    <div class="mat-field mat-field--full@(Invalid($"Examples[{i}].Html"))">
+                        <label class="mat-label" for="@Anchor($"Examples[{i}].Html")">Markup</label>
+                        <textarea class="mat-textarea mat-mono" id="@Anchor($"Examples[{i}].Html")" name="Input.Examples[@i].Html" rows="10" spellcheck="false">@example.Html</textarea>
+                        @foreach (var message in Model.ProblemsFor($"Examples[{i}].Html"))
+                        {
+                            <span class="mat-error" aria-live="polite">@message</span>
+                        }
+                        <span class="mat-hint">Only classes, icons and data-attributes of the toolkit: no style, no script, nothing from another site.</span>
+                    </div>
+                    <div class="mat-field mat-field--full">
+                        <label class="mat-label" for="@Anchor($"Examples[{i}].Note")">Note <span class="mat-opt">(optional)</span></label>
+                        <input class="mat-input" id="@Anchor($"Examples[{i}].Note")" name="Input.Examples[@i].Note" value="@example.Note" maxlength="400" />
+                    </div>
+                    <div class="mat-field mat-field--full">
+                        @* An unchecked box sends nothing, so a hidden false follows it: the first value of the name is the one that counts. *@
+                        <label class="mat-check"><input type="checkbox" id="@Anchor($"Examples[{i}].Live")" name="Input.Examples[@i].Live" value="true" checked="@example.Live" /><span class="mat-check__text">Show it live above its markup</span></label>
+                        <input type="hidden" name="Input.Examples[@i].Live" value="false" />
+                    </div>
+                </div>
+            </div>
+        </section>
+    }
+
+    <div class="mat-actions">
+        <button type="submit" class="mat-btn mat-btn--secondary" formaction="?handler=AddExample">@Ui.Icon("plus")<span>Add an example</span></button>
+    </div>
+
+    <div class="mat-btn-row">
+        <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+        <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        <a class="mat-btn mat-btn--secondary" href="/Studio/Components">@Ui.Icon("back")<span>Back</span></a>
+        @if (!isNew && !string.IsNullOrEmpty(input.Id))
+        {
+            <a class="mat-btn mat-btn--ghost" href="@(MatDesign.Web.Services.ComponentCatalog.Sections.FirstOrDefault(s => s.Groups.Contains(input.Group ?? string.Empty))?.Path ?? "/Components")#@input.Id">@Ui.Icon("eye")<span>On the site</span></a>
+        }
+        @if (!isNew && Model.Source != ItemSource.BuiltIn)
+        {
+            <span class="mat-btn-row__spacer"></span>
+            @if (Model.Source == ItemSource.Added)
+            {
+                <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Delete" data-confirm="Delete @input.Name? It leaves its page and its index; the history stays." data-confirm-ok="Delete">@Ui.Icon("trash")<span>Delete</span></button>
+            }
+            else
+            {
+                <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Delete" data-confirm="Reset @input.Name to the built-in component? Your changes are gone; the history stays." data-confirm-ok="Reset">@Ui.Icon("restore")<span>Reset to built-in</span></button>
+            }
+        }
+    </div>
+</form>
+</div>
+
+@* The preview is outside the form: a button inside an example must not submit the editor. *@
+<div class="mat-col-12 mat-col-lg-5">
+    <section class="mat-stack" aria-labelledby="preview-title">
+        <h2 id="preview-title">Preview</h2>
+        @if (Model.Preview is { } preview && preview.Examples.Count > 0)
+        {
+            @foreach (var ex in preview.Examples)
+            {
+                <div class="doc-example" role="group" aria-label="@ex.Title">
+                    <div class="doc-example__head">
+                        <h4>@ex.Title</h4>
+                        @if (ex.Note is not null) { <p>@Ui.Rich(ex.Note)</p> }
+                    </div>
+                    @if (ex.Html.Length > 0 && Model.CanShow(ex.Html))
+                    {
+                        <div class="doc-example__live@(ex.Frame is null ? string.Empty : " doc-example__live--" + ex.Frame)">@Html.Raw(ex.Html)</div>
+                    }
+                    else if (ex.Html.Length > 0)
+                    {
+                        <div class="doc-example__live"><span class="mat-muted">Not shown: the markup breaks a check that keeps the page safe.</span></div>
+                    }
+                </div>
+            }
+        }
+        else
+        {
+            <p class="mat-muted">The examples appear here, live, as soon as there is markup to show. Check shows them for what you typed.</p>
+        }
+    </section>
+</div>
+</div>

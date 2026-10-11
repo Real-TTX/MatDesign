@@ -14,7 +14,7 @@
     <div class="mat-card"><div class="mat-card__body">
         <dl class="mat-kv">
             <dt>Built in</dt>
-            <dd>@Design.Apps.Count apps, @Design.Rules.Count rules, @ComponentCatalog.All.Count components, @Toolkit.Tokens.Count tokens</dd>
+            <dd>@Design.Apps.Count apps, @Design.Rules.Count rules, @Design.Components.Count components, @Toolkit.Tokens.Count tokens</dd>
             <dt>Saved in the Studio</dt>
             <dd>
                 @if (Model.Saved.Count == 0)
@@ -41,6 +41,12 @@
             <a class="doc-index__row" href="/Studio/Apps">
                 <span class="doc-index__key"><strong class="doc-index__title">Apps</strong></span>
                 <span class="doc-index__body"><span class="mat-muted">Create and change the apps of the family: name, colour, icon and port. The contrast of the colour is checked before it is saved.</span></span>
+            </a>
+        </li>
+        <li>
+            <a class="doc-index__row" href="/Studio/Components">
+                <span class="doc-index__key"><strong class="doc-index__title">Components</strong></span>
+                <span class="doc-index__body"><span class="mat-muted">Document a control of the toolkit: what it is for, the rules it follows, and examples shown live with the markup to copy. The markup is held to the same checks as the built-in examples.</span></span>
             </a>
         </li>
         <li>

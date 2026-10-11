@@ -1,0 +1,61 @@
+@page "/Studio/Components"
+@model MatDesign.Web.Pages.Studio.Components.IndexModel
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "Components";
+    ViewData["PageSub"] = "The controls of the toolkit as the documentation shows them: what they are for, the rules they follow, and their examples with the markup to copy.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Components", null));
+}
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No component matches</div>
+            <p>Change the search or the filters, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Components">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Components of the documentation</caption>
+                <thead>
+                    <tr><th scope="col">Component</th><th scope="col" class="mat-hide-sm">Group</th><th scope="col" class="mat-num mat-hide-sm">Examples</th><th scope="col">Source</th><th scope="col"><span class="mat-sr-only">Actions</span></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var doc in Model.Items)
+                    {
+                        var source = Model.SourceOf(doc);
+                        <tr>
+                            <td data-label="Component">
+                                <div class="mat-table__name">
+                                    <span><a href="/Studio/Components/Edit?id=@doc.Id">@doc.Name</a><small><code>@doc.Id</code></small></span>
+                                </div>
+                            </td>
+                            <td data-label="Group" class="mat-hide-sm">@doc.Group</td>
+                            <td data-label="Examples" class="mat-num mat-hide-sm">@doc.Examples.Count</td>
+                            <td data-label="Source"><span class="mat-pill mat-pill--plain @IndexModel.PillClass(source)">@IndexModel.Label(source)</span></td>
+                            <td data-label="Actions" class="mat-table__cell-actions">
+                                <div class="mat-table__actions">
+                                    <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Studio/Components/Edit?id=@doc.Id" aria-label="Edit @doc.Name" data-tip="Edit">@Ui.Icon("edit")</a>
+                                    <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="@IndexModel.PageOf(doc)" aria-label="@doc.Name on the site" data-tip="See it on the site">@Ui.Icon("external")</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--primary" href="/Studio/Components/Edit">@Ui.Icon("plus")<span>New component</span></a>
+    </div>
+</div>

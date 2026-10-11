@@ -1,10 +1,11 @@
 using System.Text.Json;
 using MatDesign.Core;
 using MatDesign.Core.Studio;
+using MatDesign.Web.Services;
 
 namespace MatDesign.Web.Studio;
 
-/// <summary>Where an app or a rule comes from.</summary>
+/// <summary>Where an app, a rule or a component comes from.</summary>
 public enum ItemSource
 {
     /// <summary>Written in the code.</summary>
@@ -37,38 +38,58 @@ public sealed class DesignData
         _snapshot = Load();
     }
 
-    private sealed record Snapshot(
-        IReadOnlyList<MatApp> Apps,
-        IReadOnlyList<MatApp> Items,
-        IReadOnlyDictionary<string, ItemSource> Sources,
-        IReadOnlyList<Rule> Rules,
-        IReadOnlyList<Rule> RuleItems,
-        IReadOnlyDictionary<string, ItemSource> RuleSources);
+    private sealed record Kind<T>(IReadOnlyList<T> All, IReadOnlyList<T> Items, IReadOnlyDictionary<string, ItemSource> Sources);
+
+    private sealed record Snapshot(Kind<MatApp> Apps, Kind<Rule> Rules, Kind<ComponentDoc> Components);
 
     /// <summary>A number that grows with every change made in the Studio.</summary>
     public long Version => Interlocked.Read(ref _version);
 
+    // ---- apps
+
     /// <summary>Every app of the family: the built-in ones (changed ones replaced) and the added ones.</summary>
-    public IReadOnlyList<MatApp> Apps => _snapshot.Apps;
+    public IReadOnlyList<MatApp> Apps => _snapshot.Apps.All;
 
     /// <summary>The apps that were added or changed in the Studio.</summary>
-    public IReadOnlyList<MatApp> StudioApps => _snapshot.Items;
+    public IReadOnlyList<MatApp> StudioApps => _snapshot.Apps.Items;
 
     public MatApp? App(string? id) => id is null ? null : Apps.FirstOrDefault(a => a.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
-    public ItemSource SourceOf(string id) => _snapshot.Sources.GetValueOrDefault(id.ToLowerInvariant(), ItemSource.BuiltIn);
+    public ItemSource SourceOf(string id) => _snapshot.Apps.Sources.GetValueOrDefault(id.ToLowerInvariant(), ItemSource.BuiltIn);
+
+    // ---- rules
 
     /// <summary>The rulebook: the built-in rules (changed ones replaced), and the rules added in the Studio after the last rule of their area.</summary>
-    public IReadOnlyList<Rule> Rules => _snapshot.Rules;
+    public IReadOnlyList<Rule> Rules => _snapshot.Rules.All;
 
     /// <summary>The rules that were added or changed in the Studio.</summary>
-    public IReadOnlyList<Rule> StudioRules => _snapshot.RuleItems;
+    public IReadOnlyList<Rule> StudioRules => _snapshot.Rules.Items;
 
     public Rule? Rule(string? id) => id is null ? null : Rules.FirstOrDefault(r => r.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
     public IEnumerable<Rule> RulesIn(string areaId) => Rules.Where(r => r.Area == areaId);
 
-    public ItemSource RuleSourceOf(string id) => _snapshot.RuleSources.GetValueOrDefault(id.ToUpperInvariant(), ItemSource.BuiltIn);
+    public ItemSource RuleSourceOf(string id) => _snapshot.Rules.Sources.GetValueOrDefault(id.ToUpperInvariant(), ItemSource.BuiltIn);
+
+    // ---- components
+
+    /// <summary>The documentation of the controls: the built-in components (changed ones replaced), and the ones added in the Studio after the last component of their group.</summary>
+    public IReadOnlyList<ComponentDoc> Components => _snapshot.Components.All;
+
+    /// <summary>The components that were added or changed in the Studio.</summary>
+    public IReadOnlyList<ComponentDoc> StudioComponents => _snapshot.Components.Items;
+
+    public ComponentDoc? Component(string? id) => id is null ? null : Components.FirstOrDefault(c => c.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+
+    public IEnumerable<ComponentDoc> ComponentsOf(string group) => Components.Where(c => c.Group == group);
+
+    /// <summary>The components a page of the documentation shows: those of its groups.</summary>
+    public IEnumerable<ComponentDoc> ComponentsIn(CatalogSection section) => Components.Where(c => section.Groups.Contains(c.Group));
+
+    public ItemSource ComponentSourceOf(string id) => _snapshot.Components.Sources.GetValueOrDefault(id.ToLowerInvariant(), ItemSource.BuiltIn);
+
+    /// <summary>What the menu counts: the apps (for the palette), the rules and the components of the components page.</summary>
+    public NavFacts NavFacts => new(Apps, Rules.Count, ComponentsIn(ComponentCatalog.Sections[0]).Count());
 
     /// <summary>Reads the Studio's items again. Called after every save and delete.</summary>
     public void Reload()
@@ -81,7 +102,7 @@ public sealed class DesignData
     }
 
     /// <summary>The items of a kind that can be read as <typeparamref name="T"/> and are safe; the others (a file edited by hand into nonsense) are left out, the site goes on.</summary>
-    private List<T> Items<T>(string kind, Func<T, bool> safe, Func<T, string> idOf) where T : class
+    private List<T> Items<T>(string kind, Func<T, T> clean, Func<T, bool> safe, Func<T, string> idOf) where T : class
     {
         var items = new List<T>();
         if (!_studio.Enabled)
@@ -93,12 +114,12 @@ public sealed class DesignData
         {
             try
             {
-                if (stored.Revision.Data.Deserialize<T>(Options) is { } item && safe(item) && idOf(item).Equals(stored.Id, StringComparison.OrdinalIgnoreCase))
+                if (stored.Revision.Data.Deserialize<T>(Options) is { } read && clean(read) is var item && safe(item) && idOf(item).Equals(stored.Id, StringComparison.OrdinalIgnoreCase))
                 {
                     items.Add(item);
                 }
             }
-            catch (JsonException)
+            catch (Exception ex) when (ex is JsonException or NullReferenceException or ArgumentException)
             {
                 // not an item any more
             }
@@ -107,45 +128,39 @@ public sealed class DesignData
         return items;
     }
 
+    /// <summary>
+    /// The built-in entries with the items on top: an item with the id of a built-in entry replaces it where it stands, the others are placed by <paramref name="place"/>
+    /// (after the last entry of their area or group).
+    /// </summary>
+    private static Kind<T> Merge<T>(IReadOnlyList<T> builtIn, List<T> items, Func<T, string> idOf, StringComparison comparison, Func<List<T>, T, int> place)
+    {
+        var sources = new Dictionary<string, ItemSource>();
+        var all = builtIn.Select(b =>
+        {
+            var changed = items.FirstOrDefault(i => idOf(i).Equals(idOf(b), comparison));
+            if (changed is not null)
+            {
+                sources[idOf(b)] = ItemSource.Changed;
+            }
+
+            return changed ?? b;
+        }).ToList();
+        foreach (var added in items.Where(i => !builtIn.Any(b => idOf(b).Equals(idOf(i), comparison))).OrderBy(idOf, StringComparer.Ordinal))
+        {
+            sources[idOf(added)] = ItemSource.Added;
+            all.Insert(place(all, added), added);
+        }
+
+        return new Kind<T>(all, items, sources);
+    }
+
     private Snapshot Load()
     {
-        var items = Items<MatApp>("apps", AppValidator.IsSafe, a => a.Id);
-        var sources = new Dictionary<string, ItemSource>();
-        var apps = AppRegistry.All.Select(builtIn =>
-        {
-            var changed = items.FirstOrDefault(i => i.Id == builtIn.Id);
-            if (changed is not null)
-            {
-                sources[builtIn.Id] = ItemSource.Changed;
-            }
-
-            return changed ?? builtIn;
-        }).ToList();
-        foreach (var added in items.Where(i => AppRegistry.Get(i.Id) is null))
-        {
-            sources[added.Id] = ItemSource.Added;
-            apps.Add(added);
-        }
-
-        var ruleItems = Items<Rule>("rules", RuleValidator.IsSafe, r => r.Id);
-        var ruleSources = new Dictionary<string, ItemSource>();
-        var rules = RuleBook.All.Select(builtIn =>
-        {
-            var changed = ruleItems.FirstOrDefault(i => i.Id == builtIn.Id);
-            if (changed is not null)
-            {
-                ruleSources[builtIn.Id] = ItemSource.Changed;
-            }
-
-            return changed ?? builtIn;
-        }).ToList();
-        foreach (var added in ruleItems.Where(i => RuleBook.Get(i.Id) is null).OrderBy(i => i.Id, StringComparer.Ordinal))
-        {
-            ruleSources[added.Id] = ItemSource.Added;
-            var last = rules.FindLastIndex(r => r.Area == added.Area);
-            rules.Insert(last < 0 ? rules.Count : last + 1, added);
-        }
-
-        return new Snapshot(apps, items, sources, rules, ruleItems, ruleSources);
+        var apps = Merge(AppRegistry.All, Items<MatApp>("apps", a => a, AppValidator.IsSafe, a => a.Id), a => a.Id, StringComparison.Ordinal, (all, _) => all.Count);
+        var rules = Merge(RuleBook.All, Items<Rule>("rules", r => r, RuleValidator.IsSafe, r => r.Id), r => r.Id, StringComparison.Ordinal,
+            (all, added) => all.FindLastIndex(r => r.Area == added.Area) is var last and >= 0 ? last + 1 : all.Count);
+        var components = Merge(ComponentCatalog.All, Items<ComponentDoc>("components", ComponentValidator.Normalize, ComponentValidator.IsSafe, c => c.Id), c => c.Id, StringComparison.Ordinal,
+            (all, added) => all.FindLastIndex(c => c.Group == added.Group) is var last and >= 0 ? last + 1 : all.Count);
+        return new Snapshot(apps, rules, components);
     }
 }

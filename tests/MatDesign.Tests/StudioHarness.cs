@@ -64,10 +64,14 @@ public sealed partial class StudioHarness : IDisposable
     }
 
     /// <summary>Posts a form like the browser does: the token comes from the page that holds the form.</summary>
-    public async Task<HttpResponseMessage> Post(string formPage, string postUrl, IDictionary<string, string> fields)
+    public Task<HttpResponseMessage> Post(string formPage, string postUrl, IDictionary<string, string> fields)
+        => Post(formPage, postUrl, fields.AsEnumerable());
+
+    /// <summary>The same for a form in which a name appears more than once (a checkbox and its hidden false).</summary>
+    public async Task<HttpResponseMessage> Post(string formPage, string postUrl, IEnumerable<KeyValuePair<string, string>> fields)
     {
         var page = await Html(formPage);
-        var all = new Dictionary<string, string>(fields) { ["__RequestVerificationToken"] = Token().Match(page).Groups[1].Value };
+        var all = fields.Append(new("__RequestVerificationToken", Token().Match(page).Groups[1].Value));
         return await Client.PostAsync(postUrl, new FormUrlEncodedContent(all));
     }
 

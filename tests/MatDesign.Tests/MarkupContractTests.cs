@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using MatDesign.Core;
+using MatDesign.Core.Studio;
 using MatDesign.Web.Services;
 
 namespace MatDesign.Tests;
@@ -12,9 +13,9 @@ public partial class MarkupContractTests
 {
     private static readonly string[] Parts = ["tokens", "base", "shell", "controls", "forms", "pickers", "lists", "dialogs", "layout", "apps"];
 
-    private static readonly Lazy<IReadOnlySet<string>> ToolkitClasses = new(() => ClassesIn(Parts.Select(p => TestPaths.ReadToolkit($"css/matui.{p}.css"))));
+    private static readonly Lazy<IReadOnlySet<string>> ToolkitClasses = new(() => MarkupChecks.ClassesIn(Parts.Select(p => TestPaths.ReadToolkit($"css/matui.{p}.css"))));
 
-    private static readonly Lazy<IReadOnlySet<string>> SiteClasses = new(() => ClassesIn([File.ReadAllText(TestPaths.Web("wwwroot/css/site.css"))]));
+    private static readonly Lazy<IReadOnlySet<string>> SiteClasses = new(() => MarkupChecks.ClassesIn([File.ReadAllText(TestPaths.Web("wwwroot/css/site.css"))]));
 
     [GeneratedRegex(@"\[[^\]]*\]")]
     private static partial Regex AttributeSelector();
@@ -55,12 +56,6 @@ public partial class MarkupContractTests
 
     [GeneratedRegex(@"Icon\(\s*""([a-z0-9-]+)""")]
     private static partial Regex IconCall();
-
-    private static IReadOnlySet<string> ClassesIn(IEnumerable<string> stylesheets)
-        => stylesheets
-            .SelectMany(css => CssTokens.ParseBlocks(css).Select(b => b.Selector))
-            .SelectMany(selector => ClassSelector().Matches(AttributeSelector().Replace(selector, string.Empty)).Select(m => m.Groups[1].Value))
-            .ToHashSet();
 
     private static IEnumerable<string> Files(string pattern)
         => Directory.EnumerateFiles(TestPaths.Web("Pages"), pattern, SearchOption.AllDirectories);
@@ -188,158 +183,62 @@ public partial class MarkupContractTests
         }
     }
 
+    private static readonly MarkupFacts Facts = new(ToolkitClasses.Value, RegistryTests.Sprite);
+
+    private static readonly Lazy<IReadOnlyList<(string Component, IReadOnlyList<MarkupProblem> Problems)>> CatalogueProblems = new(() =>
+        ComponentCatalog.All.Select(c => (c.Id, MarkupChecks.Check(c.Examples.Select(e => e.Html).ToList(), Facts))).ToList());
+
+    /// <summary>The faults of the given kinds in the examples of the catalogue; the same checks hold a typed example in the Studio.</summary>
+    private static void NoProblems(string because, params string[] checks)
+    {
+        var found = CatalogueProblems.Value.SelectMany(c => c.Problems.Where(p => checks.Contains(p.Check)).Select(p => $"{c.Component}: {p.Message}")).ToList();
+        Assert.True(found.Count == 0, because + "\n" + string.Join("\n", found));
+    }
+
     [Fact]
     public void Examples_use_only_classes_the_toolkit_ships()
-    {
-        var problems = new List<string>();
-        foreach (var component in ComponentCatalog.All)
-        {
-            foreach (var token in component.Examples.SelectMany(e => ClassAttribute().Matches(e.Html).SelectMany(m => m.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))).Distinct())
-            {
-                if (!ToolkitClasses.Value.Contains(token))
-                {
-                    problems.Add($"{component.Id}: .{token}");
-                }
-            }
-        }
-
-        Assert.True(problems.Count == 0, "Examples with classes the toolkit does not have:\n" + string.Join("\n", problems));
-    }
+        => NoProblems("Examples with classes the toolkit does not have:", MarkupChecks.Classes);
 
     [Fact]
-    public void Examples_have_no_inline_styles_handlers_or_scripts()
-    {
-        var problems = ComponentCatalog.All.SelectMany(c => c.Examples.Select(e => (c.Id, e.Html)))
-            .Where(x => InlineStyle().IsMatch(x.Html) || InlineHandler().IsMatch(x.Html) || InlineScript().IsMatch(x.Html) || x.Html.Contains("javascript:", StringComparison.OrdinalIgnoreCase))
-            .Select(x => x.Id).ToList();
-        Assert.True(problems.Count == 0, "Examples that break CODE-02: " + string.Join(", ", problems));
-    }
+    public void Examples_have_no_inline_styles_handlers_or_scripts_and_load_nothing_from_outside()
+        => NoProblems("Examples that break CODE-02 or CODE-03:", MarkupChecks.Inline, MarkupChecks.Elements, MarkupChecks.Outside);
 
     [Fact]
     public void Every_icon_an_example_uses_is_in_the_sprite()
-    {
-        var names = ComponentCatalog.All.SelectMany(c => c.Examples).SelectMany(e => SpriteReference().Matches(e.Html).Select(m => m.Groups[1].Value)).Distinct();
-        Assert.All(names, n => Assert.True(RegistryTests.Sprite.Contains(n), $"icon '{n}' is not in matui-icons.svg"));
-    }
+        => NoProblems("Icons that are not in matui-icons.svg:", MarkupChecks.Icons);
 
     [Fact]
     public void Every_cell_of_an_example_table_has_a_label()
-    {
-        // TABLE-02: on a phone the label is what the card line shows.
-        foreach (var component in ComponentCatalog.All)
-        {
-            foreach (var example in component.Examples)
-            {
-                foreach (Match cell in TableCell().Matches(example.Html))
-                {
-                    var attributes = cell.Groups[1].Value;
-                    Assert.True(attributes.Contains("data-label=") || attributes.Contains("mat-table__cell-actions"), $"{component.Id}: a <td> without data-label: {cell.Value}");
-                }
-            }
-        }
-    }
+        => NoProblems("TABLE-02: on a phone the label is what the card line shows.", MarkupChecks.CellLabel);
 
     [Fact]
     public void Every_button_of_an_example_has_a_type()
-    {
-        // A button without a type submits the form it happens to sit in.
-        foreach (var component in ComponentCatalog.All)
-        {
-            foreach (var button in component.Examples.SelectMany(e => Button().Matches(e.Html)))
-            {
-                Assert.True(button.Groups[1].Value.Contains("type=\""), $"{component.Id}: {button.Value}");
-            }
-        }
-    }
+        => NoProblems("A button without a type submits the form it happens to sit in.", MarkupChecks.ButtonType);
 
     [Fact]
     public void Every_control_of_an_example_has_an_id_and_the_ids_of_a_component_are_unique()
-    {
-        // FORM-08
-        foreach (var component in ComponentCatalog.All)
-        {
-            var ids = component.Examples.SelectMany(e => IdAttribute().Matches(e.Html).Select(m => m.Groups[1].Value)).ToList();
-            Assert.True(ids.Count == ids.Distinct().Count(), $"{component.Id}: ids twice: {string.Join(", ", ids.GroupBy(i => i).Where(g => g.Count() > 1).Select(g => g.Key))}");
-
-            foreach (var control in component.Examples.SelectMany(e => Control().Matches(e.Html)))
-            {
-                if (control.Groups[2].Value.Contains("type=\"hidden\""))
-                {
-                    continue;
-                }
-
-                Assert.True(control.Groups[2].Value.Contains(" id=\"") || control.Groups[2].Value.StartsWith(" id=\""), $"{component.Id}: a control without an id: {control.Value}");
-            }
-        }
-    }
+        => NoProblems("FORM-08:", MarkupChecks.Controls, MarkupChecks.Ids);
 
     [Fact]
     public void References_between_the_elements_of_an_example_resolve()
-    {
-        var references = new[] { @"\sfor=""([^""]+)""", @"aria-labelledby=""([^""]+)""", @"aria-controls=""([^""]+)""", @"data-dialog-open=""([^""]+)""", @"data-menu-toggle=""([^""]+)""", @"\sform=""([^""]+)""", @"data-copy=""#([^""]+)""" };
-        foreach (var component in ComponentCatalog.All)
-        {
-            var html = string.Join("\n", component.Examples.Select(e => e.Html));
-            var ids = IdAttribute().Matches(html).Select(m => m.Groups[1].Value).ToHashSet();
-            foreach (var pattern in references)
-            {
-                foreach (Match reference in Regex.Matches(html, pattern))
-                {
-                    Assert.True(ids.Contains(reference.Groups[1].Value), $"{component.Id}: {reference.Value} points at nothing");
-                }
-            }
-        }
-    }
+        => NoProblems("References that point at nothing:", MarkupChecks.References);
 
     [Fact]
     public void Every_dialog_of_an_example_is_named_and_can_be_closed()
-    {
-        // DIALOG-04, DIALOG-03: a title that names it, and the X.
-        foreach (var component in ComponentCatalog.All)
-        {
-            foreach (var html in component.Examples.Select(e => e.Html).Where(h => h.Contains("<dialog")))
-            {
-                var dialogs = Regex.Matches(html, @"<dialog\b[^>]*aria-labelledby=""[^""]+""[^>]*>");
-                Assert.Equal(Regex.Matches(html, "<dialog\\b").Count, dialogs.Count);
-                Assert.Equal(Regex.Matches(html, "<dialog\\b").Count, Regex.Matches(html, @"mat-dialog__close[^>]*aria-label=""Close""").Count);
-                Assert.Equal(Regex.Matches(html, "<dialog\\b").Count, Regex.Matches(html, @"class=""mat-dialog__title""").Count);
-            }
-        }
-    }
+        => NoProblems("DIALOG-04, DIALOG-03: a title that names it, and the X.", MarkupChecks.Dialog);
 
     [Fact]
     public void Every_icon_only_button_of_an_example_has_an_accessible_name()
     {
         // ICON-03: a button whose only content is an icon has an aria-label.
-        var checkedButtons = 0;
-        foreach (var component in ComponentCatalog.All)
-        {
-            foreach (Match button in Regex.Matches(string.Join("\n", component.Examples.Select(e => e.Html)), @"<(?:button|a)\b([^>]*)>\s*<svg[^>]*><use[^>]*></use></svg>\s*</(?:button|a)>"))
-            {
-                Assert.Contains("aria-label=", button.Groups[1].Value);
-                checkedButtons++;
-            }
-        }
-
-        Assert.True(checkedButtons >= 5, $"the pattern found only {checkedButtons} icon-only buttons: the test no longer looks at anything");
+        NoProblems("ICON-03:", MarkupChecks.IconButton);
+        var looked = ComponentCatalog.All.Sum(c => MarkupChecks.IconOnlyButtons(string.Join("\n", c.Examples.Select(e => e.Html))));
+        Assert.True(looked >= 5, $"the pattern found only {looked} icon-only buttons: the test no longer looks at anything");
     }
 
     [Fact]
     public void Example_markup_is_balanced()
-    {
-        foreach (var component in ComponentCatalog.All)
-        {
-            foreach (var example in component.Examples)
-            {
-                foreach (var tag in new[] { "div", "span", "section", "table", "tbody", "tr", "td", "ul", "ol", "li", "form", "dialog", "nav", "button", "label", "dl", "pre" })
-                {
-                    var open = Regex.Matches(example.Html, $@"<{tag}\b").Count;
-                    var close = Regex.Matches(example.Html, $@"</{tag}>").Count;
-                    Assert.True(open == close, $"{component.Id} / {example.Title}: {open} <{tag}> but {close} </{tag}>");
-                }
-            }
-        }
-    }
+        => NoProblems("Tags that are not closed:", MarkupChecks.Balanced);
 
     [Fact]
     public void An_example_that_is_a_script_names_the_demo_that_runs_it()
