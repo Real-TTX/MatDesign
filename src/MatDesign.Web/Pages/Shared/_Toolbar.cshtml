@@ -147,7 +147,7 @@
                     <div class="mat-options">
                         @foreach (var o in Model.SortOptions)
                         {
-                            <label class="mat-option"><input type="radio" id="@id-sort-@o.Value" name="sort" value="@o.Value" form="@form" checked="@((Model.Sort ?? Model.DefaultSort) == o.Value)" /><span>@o.Label</span></label>
+                            <label class="mat-option"><input type="radio" id="@id-sort-by-@o.Value" name="sort" value="@o.Value" form="@form" checked="@((Model.Sort ?? Model.DefaultSort) == o.Value)" /><span>@o.Label</span></label>
                         }
                     </div>
                 </fieldset>

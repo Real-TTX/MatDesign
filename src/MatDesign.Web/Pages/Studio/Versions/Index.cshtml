@@ -1,0 +1,62 @@
+@page "/Studio/Versions"
+@model MatDesign.Web.Pages.Studio.Versions.IndexModel
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "Versions";
+    ViewData["PageSub"] = Model.Latest is null
+        ? "Which release of MatUi each app uses. Nothing has been released yet, so there is nothing to be behind."
+        : $"Which release of MatUi each app uses, written down by hand. The latest release is {Model.Latest}; {(Model.Behind == 0 ? "no app is behind it" : StudioFormat.Count(Model.Behind, "app") + " " + (Model.Behind == 1 ? "is" : "are") + " behind it")}.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Versions", null));
+}
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No app matches</div>
+            <p>Change the search or the filter, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Versions">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">The version of MatUi each app uses</caption>
+                <thead>
+                    <tr><th scope="col">App</th><th scope="col">Uses</th><th scope="col">Where it stands</th><th scope="col" class="mat-hide-sm">Written down</th><th scope="col"><span class="mat-sr-only">Actions</span></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Items)
+                    {
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    @Ui.Logo(row.App, "sm")
+                                    <span><a href="/Studio/Versions/Edit?id=@row.App.Id">@row.App.Name</a>@if (row.Note is not null) { <small>@row.Note</small> }</span>
+                                </div>
+                            </td>
+                            <td data-label="Uses">@if (row.Version is not null) { <code>@row.Version</code> } else { <span class="mat-muted">-</span> }</td>
+                            <td data-label="Where it stands"><span class="mat-pill mat-pill--plain @IndexModel.PillClass(row)">@IndexModel.Label(row)</span></td>
+                            <td data-label="Written down" class="mat-hide-sm mat-muted">@(row.RecordedAt is { } at ? StudioFormat.When(at) : "-")</td>
+                            <td data-label="Actions" class="mat-table__cell-actions">
+                                <div class="mat-table__actions">
+                                    <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Studio/Versions/Edit?id=@row.App.Id" aria-label="Write down the version of @row.App.Name" data-tip="Write it down">@Ui.Icon("edit")</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="/Studio/Releases">@Ui.Icon("rocket")<span>The releases</span></a>
+    </div>
+</div>

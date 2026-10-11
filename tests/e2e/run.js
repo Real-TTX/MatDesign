@@ -1007,7 +1007,7 @@ function expectTrue(value, what) {
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
         const names = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').evaluateAll(els => els.map(e => { const c = e.cloneNode(true); c.querySelectorAll('.mat-nav__badge').forEach(b => b.remove()); return c.textContent.trim(); }));
-        expect(names, ['Overview', 'Apps', 'Rules', 'Components', 'Activity', 'Checks', 'Releases'], 'items of the Studio menu');
+        expect(names, ['Overview', 'Apps', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'Versions'], 'items of the Studio menu');
       });
       await check('the activity list has its toolbar above it and the sort dialog opens', async () => {
         const bar = await page.locator('.mat-toolbar').boundingBox();
@@ -1283,6 +1283,28 @@ function expectTrue(value, what) {
         expectTrue((await page.textContent('section[aria-labelledby="releases-title"] tbody tr')).includes(version), 'the release is first in the list');
         expect(await page.locator('section[aria-labelledby="releases-title"] .mat-pill:has-text("Latest")').count(), 1, 'the latest release');
       });
+      // the versions: the latest release is taken over for an app, the list says that it is current, and the record is forgotten again
+      await check('the version of an app is taken over from the latest release, shown as current in the list, and forgotten again behind a dialog', async () => {
+        await page.goto(BASE + '/Studio/Versions', { waitUntil: 'networkidle' });
+        const bar = await page.locator('.mat-toolbar').boundingBox();
+        const table = await page.locator('.mat-table-wrap').boundingBox();
+        expectTrue(bar.y < table.y, 'the toolbar is not above the table');
+        const latest = (await (await page.request.get(BASE + '/releases/latest.json')).json()).version;
+        await page.goto(BASE + '/Studio/Versions/Edit?id=matmail', { waitUntil: 'networkidle' });
+        await page.click('button:has-text("Use the latest")');
+        await page.waitForURL('**/Studio/Versions');
+        await page.waitForSelector('.mat-toast');
+        expectTrue((await page.textContent('.mat-toast')).includes('MatMail uses ' + latest), 'no toast: ' + await page.textContent('.mat-toasts'));
+        await page.goto(BASE + '/Studio/Versions?q=MatMail', { waitUntil: 'networkidle' });
+        const row = await page.textContent('.mat-table tbody tr');
+        expectTrue(row.includes(latest) && row.includes('Latest'), 'the row of MatMail: ' + row.replace(/\s+/g, ' ').trim());
+        await page.goto(BASE + '/Studio/Versions/Edit?id=matmail', { waitUntil: 'networkidle' });
+        await page.click('.mat-btn--danger[data-confirm]');
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForURL('**/Studio/Versions');
+        await page.goto(BASE + '/Studio/Versions?q=MatMail', { waitUntil: 'networkidle' });
+        expectTrue((await page.textContent('.mat-table tbody tr')).includes('Not written down'), 'MatMail is still written down');
+      });
       await check('Sign out is the last entry of the user menu, ends the session and leads back to the site', async () => {
         await page.click('.mat-user');
         const items = await page.locator('#user-menu .mat-menu__item').allTextContents();
@@ -1302,6 +1324,20 @@ function expectTrue(value, what) {
         await phone.page.click('.mat-auth__card button[type="submit"]');
         await phone.page.waitForURL('**/Studio');
         expectTrue(await wide(), 'the Studio is wider than the window');
+      });
+      await check('every page of the Studio fits a phone (MOBILE-01): no sideways scroll, and the menu opens as a drawer with the Studio in it', async () => {
+        const wide = () => phone.page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+        const urls = ['/Studio/Apps', '/Studio/Apps/Edit?id=matmail', '/Studio/Rules', '/Studio/Rules/Edit?id=SHELL-01', '/Studio/Components', '/Studio/Components/Edit?id=buttons', '/Studio/Components/Edit?id=pills',
+          '/Studio/Activity', '/Studio/Checks', '/Studio/Releases', '/Studio/Releases/New', '/Studio/Versions', '/Studio/Versions/Edit?id=matmail'];
+        for (const url of urls) {
+          await phone.page.goto(BASE + url, { waitUntil: 'networkidle' });
+          const size = await wide();
+          expectTrue(size.page <= size.window, `${url} is ${size.page} px wide in a window of ${size.window} px`);
+        }
+
+        await phone.page.click('.mat-burger');
+        expect(await phone.page.locator('.mat-app.is-nav-open').count(), 1, 'the drawer');
+        expectTrue(await phone.page.locator('.mat-nav__scroll:not([hidden]) a.mat-nav__item[href="/Studio/Releases"]').isVisible(), 'the Studio menu in the drawer');
       });
       await phone.ctx.close();
     }

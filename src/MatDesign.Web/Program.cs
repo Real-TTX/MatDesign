@@ -71,6 +71,7 @@ builder.Services.AddSingleton<DesignData>();
 builder.Services.AddSingleton<StudioHistory>();
 builder.Services.AddSingleton<DesignChecks>();
 builder.Services.AddSingleton<ReleaseService>();
+builder.Services.AddSingleton<VersionTracker>();
 builder.Services.AddSingleton<ToolkitFiles>();
 builder.Services.AddSingleton<AuditData>();
 

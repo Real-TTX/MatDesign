@@ -166,6 +166,7 @@ public static class Navigation
                 var n => NavBadge.Count(n, "error", "checks find errors"),
             }),
             new("Releases", "/Studio/Releases", "rocket"),
+            new("Versions", "/Studio/Versions", "tag"),
         ]),
     ]);
 

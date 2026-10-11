@@ -164,6 +164,23 @@ and a `#rrggbb` value; everything else is ignored. A preview frame never saves i
 checks the icon sprite, builds, runs the tests and pushes a multi-arch image to GitHub Packages (`main` → `latest`, `dev` → `nightly`). The Docker build runs on the builder's own platform, so the
 arm64 image needs no emulation for the compile.
 
+## 12. The Studio
+
+The design data used to be written in C# (the registry, the rulebook, the catalogue of components) and a change was a commit. The **Studio** ([STUDIO.md](STUDIO.md)) lets a person maintain it in the browser and
+turns the data into releases, without giving up what the site is: the decisions are these.
+
+- **Opt-in state.** The site stays stateless and read-only. The Studio is off until a data directory is writable (`/data`, a volume) and `MATDESIGN_ADMIN_PASSWORD` is set. One administrator whose password is in the
+  environment: nothing to register, nothing for a first visitor to claim.
+- **The code stays the base, the Studio puts items on top.** An item with the id of a built-in app, rule or component replaces it; deleting the item brings the built-in one back. `DesignData` is the one place every
+  page reads from, and `ToolkitFiles` rebuilds what depends on it (the colours of the apps, the bundle, its hash) when its version moves.
+- **An append-only log per item.** A save writes a file with who, when, why and the whole item, atomically; the newest is the current state. History, diff and restore need nothing else, and a restore is a new revision
+  that has to pass the same validator as a save, so an old state that is wrong today is refused with the reason.
+- **One code for the contract.** The checks that hold the built-in examples in the unit tests (`MarkupChecks`) are the checks that hold a typed example in the Studio; markup that could harm a page is never drawn.
+  The validators, the checks page and the release pipeline all call the same code, so a release cannot pass what the page fails.
+- **Releases are immutable.** A release is a directory with its files, their hashes and a manifest, moved into place whole. The site offers no way to change or delete one: apps may depend on it. Apps learn of the
+  newest from `/releases/latest.json` and copy the files; the Studio records by hand which release each app has.
+- **It edits data, not the toolkit.** The CSS and the script are files of the repository, reviewed and tested there; the Studio never writes them. It is also not a CI system for the apps: its release is the design system.
+
 ## What it does not do
 
 - It does not change the other apps. Adoption is a decision and a piece of work in each repository ([ADOPTING.md](ADOPTING.md)); the audit shows where each one stands.

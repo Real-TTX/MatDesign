@@ -88,7 +88,14 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 5 | **History:** per item the revisions, a diff between two, restore; the activity list filters by kind, item and person | **done** |
 | 6 | **Checks:** one page runs every check and lists what fails and where, with a link to the item | **done** |
 | 7 | **Releases:** the pipeline, versions, changelog, stored archives, `/releases/...` and `/api/releases/latest` | **done** |
-| 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | open |
+| 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | **done** |
+
+### Versions
+
+The Studio does not look into the apps. A person writes down which release of MatUi an app carries (Studio → Versions → the app; one button takes the latest release over), with a note such as the branch
+of the app that has the copy. `VersionTracker` compares that with the releases: **Latest**, **N releases behind**, **not from a release** (a copy from before the first release, or an app's own build),
+**no release yet**, or **not written down**. Being behind is advice (a check says so and links to the app's page), never an error: updating an app is the work of its own repository. The overview counts
+the apps that are behind. The record is an item of the kind `usage`, one per app, with a history of its own.
 
 ## Releases in practice
 
@@ -104,6 +111,15 @@ directory into place, so a release is whole or not there. The site offers no way
 **Taking one:** `GET /releases/<version>/<file>` (public, read-only, any origin, cached for good because it never changes), `GET /releases/latest.json` (the manifest of the highest version, never cached),
 `GET /api/releases` (the list) and `GET /api/releases/latest`. An app compares the `version` of `latest.json` with what it carries, and copies the files of that release if it is newer; it checks them
 against the hashes of the manifest. The changelog says what changed.
+
+## Tests of the whole Studio
+
+The unit tests cover each piece (the store, the sign-in, the validators, the shared markup checks, the diff, the restore, the checks, the pipeline, the versions) and the pages with a Studio switched on in memory
+(`StudioHarness`). `StudioPagesTests` signs in with something in every list and holds **every page of the Studio** to the shell rules (one title, the menu with the Studio in it, the breadcrumb, the user,
+the version, no inline style, no id twice, a label on every table cell), crawls the Studio for links that lead nowhere, and checks that every page of the menu marks itself as the open one. `tests/e2e/run.js`
+drives a real browser through the Studio: sign-in and lock, creating, refusing, saving and deleting an app, a rule and a component, the history and a restore, the checks, a release and the files it serves, the
+versions, and every page at the width of a phone. **Each run of the browser checks makes one release** (they never change), so the development volume grows by one release per run;
+`docker compose -f docker-compose.dev.yml down -v` followed by `up -d --build` starts it clean.
 
 ## What it does not do
 

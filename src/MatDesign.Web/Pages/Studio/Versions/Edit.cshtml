@@ -1,0 +1,52 @@
+@page "/Studio/Versions/Edit"
+@model MatDesign.Web.Pages.Studio.Versions.EditModel
+@using MatDesign.Web.Studio
+@{
+    var row = Model.Row;
+    ViewData["Title"] = $"Version of {row.App.Name}";
+    ViewData["PageSub"] = "Which release of MatUi the app carries. Write down what the app's repository has, or take the latest release over once the app copied it.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Versions", "/Studio/Versions"), (row.App.Name, null));
+    ViewData["ActiveHref"] = "/Studio/Versions";
+    ViewData["Width"] = "narrow";
+    string Invalid(string? problem) => problem is null ? string.Empty : " is-invalid";
+}
+
+<form class="mat-form" method="post" action="/Studio/Versions/Edit" novalidate>
+    @* The action is written out; a form with an action gets no token by itself. *@
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Input.AppId" value="@row.App.Id" />
+
+    <section class="mat-card" aria-labelledby="version-title">
+        <div class="mat-card__head">@Ui.Logo(row.App, "sm")<h2 class="mat-card__title" id="version-title">@row.App.Name</h2><span class="mat-pill mat-pill--plain @MatDesign.Web.Pages.Studio.Versions.IndexModel.PillClass(row)">@MatDesign.Web.Pages.Studio.Versions.IndexModel.Label(row)</span></div>
+        <div class="mat-card__body">
+            <div class="mat-form__grid">
+                <div class="mat-field@(Invalid(Model.VersionProblem))">
+                    <label class="mat-label" for="Input_Version">Version of MatUi <span class="mat-opt">(optional)</span></label>
+                    <input class="mat-input mat-mono" id="Input_Version" name="Input.Version" value="@Model.Input.Version" maxlength="14" pattern="\d{1,4}\.\d{1,4}\.\d{1,4}" data-msg-pattern="Three numbers with dots, like 0.1.0." autocomplete="off" />
+                    <span class="mat-error" aria-live="polite">@Model.VersionProblem</span>
+                    <span class="mat-hint">@(Model.Latest is null ? "Nothing has been released yet." : $"The latest release is {Model.Latest}.") Empty means that nobody wrote it down.</span>
+                </div>
+                <div class="mat-field mat-field--full@(Invalid(Model.NoteProblem))">
+                    <label class="mat-label" for="Input_Note">Note <span class="mat-opt">(optional)</span></label>
+                    <input class="mat-input" id="Input_Note" name="Input.Note" value="@Model.Input.Note" maxlength="200" />
+                    <span class="mat-error" aria-live="polite">@Model.NoteProblem</span>
+                    <span class="mat-hint">For example the commit or the branch of the app that has this copy.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="mat-btn-row">
+        <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+        @if (Model.Latest is not null)
+        {
+            <button type="submit" class="mat-btn mat-btn--secondary" formaction="?handler=Latest">@Ui.Icon("rocket")<span>Use the latest (@Model.Latest)</span></button>
+        }
+        <a class="mat-btn mat-btn--secondary" href="/Studio/Versions">@Ui.Icon("back")<span>Back</span></a>
+        @if (row.RecordedAt is not null)
+        {
+            <span class="mat-btn-row__spacer"></span>
+            <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Forget" data-confirm="Take away what is written down about @row.App.Name? The history stays." data-confirm-ok="Take it away">@Ui.Icon("trash")<span>Forget</span></button>
+        }
+    </div>
+</form>

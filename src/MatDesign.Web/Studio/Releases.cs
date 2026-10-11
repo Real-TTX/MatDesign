@@ -325,6 +325,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
                 Directory.Move(buildDirectory!, directory);
                 buildDirectory = null;
                 studio.Store.Save("releases", version, manifest, by, note.Length == 0 ? $"Release {version}" : note);
+                design.Reload();
                 log.Add($"Published as {version}: {files.Count + 1} files in {directory}.");
                 return true;
             });

@@ -49,10 +49,11 @@ src/MatDesign.Core         no web types
   Studio/MarkupChecks.cs     the contract of the markup of an example (classes, icons, no inline/outside/script, labels, ids ...): the unit tests and the Studio use this one code
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /releases/* (the releases of the Studio), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
+  Studio/VersionTracker.cs   which release of MatUi each app uses (written down by hand) and where that stands against the releases
   Studio/Releases.cs         the release pipeline (Check, Version, Build, Publish, Notify), the run records, the releases on the volume and the files they serve
   Studio/                    StudioService (on or off, the password, the lock-out), DesignData (built-in + Studio items: the apps, rules and components every page reads; Version), ComponentValidator, StudioHistory (restore checks),
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
-  Pages/Studio/              Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
+  Pages/Studio/              Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
                              ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
@@ -100,6 +101,7 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - Numbers and dates use the invariant culture (the site is English; a developer PC and a container must show the same text).
 - **Mobile matters:** check 390 px for every new page; secondary table columns get `mat-hide-sm`; on a phone dialogs are full screen with the X at the top right.
 - After a change to CSS, JS or cshtml the container must be rebuilt.
+- **The browser checks make one release per run** (a release never changes): the development volume grows; `docker compose -f docker-compose.dev.yml down -v` then `up -d --build` starts it clean.
 
 **Code**
 - Microsoft C# guidelines, file-scoped namespaces, `.editorconfig`. Few nested types; several functions per class are fine. Code, identifiers and comments are English.

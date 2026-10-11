@@ -23,6 +23,7 @@ public static class StudioFormat
         "components" => "Component",
         "releases" => "Release",
         "runs" => "Run",
+        "usage" => "Version",
         _ => char.ToUpperInvariant(kind[0]) + kind[1..],
     };
 }

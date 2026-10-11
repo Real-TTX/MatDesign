@@ -11,6 +11,8 @@ Every Mat app has its own colour and the same design. MatDesign is the reference
 the **shell** (menu left with submenus, badges and a switcher between menus, breadcrumb above the content), **49 components** with live examples and the markup to copy (forms, pickers, lists,
 dialogs, ...), a **layout system** (twelve columns, breakpoints) and **utility classes**, the **page patterns**,
 a **builder** that checks an accent colour, and **MatUi**, the toolkit itself: four files you copy into an app.
+And a **Studio**, where all of it is maintained and released: create and change apps, rules and components with live examples, see what changed and go back, run the checks, make a **release** of
+the toolkit under a version, and see which app is behind.
 
 </div>
 
@@ -54,6 +56,20 @@ and checked for WCAG AA, for every app, in light and dark.
 |---|
 | ![The layout page with the grid of twelve columns](docs/images/layout-grid.png) |
 
+**The Studio**
+
+| The overview | An app and its colour | A component with its examples next to it |
+|---|---|---|
+| ![The overview of the Studio](docs/images/studio-overview.png) | ![Editing an app](docs/images/studio-app.png) | ![Editing a component with the live preview](docs/images/studio-component.png) |
+
+| What changed between two revisions | Every check, run on the data as it is | Releases and the last runs |
+|---|---|---|
+| ![The history of an app with a diff](docs/images/studio-history.png) | ![The checks](docs/images/studio-checks.png) | ![The releases](docs/images/studio-releases.png) |
+
+| One run of the pipeline | Which app is behind | On a phone |
+|---|---|---|
+| ![A run with its five stages](docs/images/studio-run.png) | ![The versions of the apps](docs/images/studio-versions.png) | ![The versions on a phone](docs/images/studio-phone.png) |
+
 ## What is on the site
 
 | Section | What you find |
@@ -68,6 +84,7 @@ and checked for WCAG AA, for every app, in light and dark.
 | **Patterns** | The page types (list, gallery, edit, settings, dashboard, sign-in) in real frames, on a desktop and on a phone, in the accent of any app. |
 | **Builder** | Try an accent: what the toolkit derives from it, contrast in both modes, the nearest app, the real screens in that colour, the snippet. |
 | **Download** | MatUi as an archive or file by file, how to use it, and the design system as JSON (`/api/rules`, `/api/tokens` …). |
+| **Studio** | Behind a sign-in, off until `MATDESIGN_ADMIN_PASSWORD` is set ([docs/STUDIO.md](docs/STUDIO.md)). **Apps**, **Rules** and **Components** (with examples shown live and held to the same checks as the built-in ones) are created and changed; every change is a revision with a **history**, a diff and a restore; **Checks** runs everything the design system holds itself to; **Releases** turns the data into a numbered, immutable release (check, version, build, publish, notify) that apps copy from `/releases/<version>/` and learn about from `/releases/latest.json`; **Versions** records which release each app uses. |
 
 ## Run it
 
@@ -119,7 +136,7 @@ The **Download** page has the archive; [docs/ADOPTING.md](docs/ADOPTING.md) is t
 ```
 src/MatUi            Razor class library: the toolkit (CSS in ten parts, matui.js, the icon sprite). No build step.
 src/MatDesign.Core   Colour maths (OKLab, contrast), the app registry, the rulebook, the CSS token parser. No web types.
-src/MatDesign.Web    ASP.NET Core 10 Razor Pages: the site. It uses MatUi for itself (the same layout as the sample apps).
+src/MatDesign.Web    ASP.NET Core 10 Razor Pages: the site. It uses MatUi for itself (the same layout as the sample apps). Studio/ and Pages/Studio/ are the Studio.
 tests/MatDesign.Tests  xUnit: colours, the rulebook, the CSS and the script against the rules, the catalogues, the whole site in memory.
 tests/e2e            The behaviour in a real browser against a running site (Playwright).
 tools/               icons.js (builds the sprite), audit.js (scans the other repositories).
@@ -132,7 +149,7 @@ Every example in the component catalogue is rendered live and shown as source fr
 
 ## Tests
 
-`dotnet test` runs 200+ tests without Docker or a browser (and `tests/e2e` the browser checks, see Status). They check, among other things:
+`dotnet test` runs 500+ tests without Docker or a browser (and `tests/e2e` the browser checks, see Status). They check, among other things:
 
 - the colour maths against what CSS `color-mix(in oklab, …)` gives, and WCAG AA for **every app, in light and dark**
 - the two places that write the dark set are identical; no literal colour outside the tokens; no web font; every class and property is `mat-`-prefixed
@@ -140,7 +157,9 @@ Every example in the component catalogue is rendered live and shown as source fr
   `data-` attribute is handled
 - every page answers, has exactly one `h1`, the menu, the logo, the breadcrumb, the theme button, the user and the version, and no inline style; every list page has
   its toolbar above the table and its three dialogs; no link leads nowhere
-- every example in the catalogue uses classes the toolkit ships, icons the sprite has, labelled table cells, typed buttons and unique ids
+- every example in the catalogue uses classes the toolkit ships, icons the sprite has, labelled table cells, typed buttons and unique ids (the Studio holds a typed example to the same code)
+- the Studio: the store of revisions, the sign-in and its lock-out, every validator, the checks (a fault that is put into the data is found with its item), the pipeline and the files of a release with their hashes,
+  and every page of the Studio against the shell rules
 
 ## Versions
 

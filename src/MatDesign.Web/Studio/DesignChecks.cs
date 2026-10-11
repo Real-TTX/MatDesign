@@ -2,6 +2,7 @@ using System.Text.RegularExpressions;
 using MatDesign.Core;
 using MatDesign.Core.Studio;
 using MatDesign.Web.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MatDesign.Web.Studio;
 
@@ -12,11 +13,15 @@ public enum Severity
     Advice,
 }
 
-/// <summary>A thing a check found. <see cref="Kind"/> and <see cref="Id"/> name the item it is about (apps, rules, components), so the report can link to it.</summary>
-public sealed record Finding(string Check, Severity Severity, string Message, string? Kind = null, string? Id = null);
+/// <summary>A thing a check found. <see cref="Kind"/> and <see cref="Id"/> name the item it is about (apps, rules, components), so the report can link to it; a <see cref="Link"/> leads somewhere else.</summary>
+public sealed record Finding(string Check, Severity Severity, string Message, string? Kind = null, string? Id = null, string? Link = null);
 
 /// <summary>What a check looks at: the design data as it is now (built in, with what the Studio saved), the toolkit and the Studio's storage.</summary>
-public sealed record CheckContext(DesignData Design, ToolkitFiles Toolkit, StudioService Studio);
+public sealed record CheckContext(DesignData Design, ToolkitFiles Toolkit, StudioService Studio, Func<VersionTracker> VersionsOf)
+{
+    /// <summary>Which version of MatUi each app uses (asked for when a check needs it: the tracker needs the releases, which need the checks).</summary>
+    public VersionTracker Versions => VersionsOf();
+}
 
 /// <summary>One check of the design system: what it is called, which area it belongs to, what it holds to, and the code that finds what breaks it.</summary>
 public sealed record DesignCheck(string Id, string Area, string Name, string What, Func<CheckContext, IEnumerable<Finding>> Run);
@@ -49,7 +54,7 @@ public sealed record CheckReport(long Version, DateTimeOffset At, IReadOnlyList<
 /// that patterns cite, the ids of the pages of the documentation, the tokens, the naming of the toolkit, the menu, and the items on the volume that the site had to leave out. The
 /// report is the same for the page that shows it and for the pipeline that decides whether a release may be made; it is computed again when the design data changes.
 /// </summary>
-public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit, StudioService studio)
+public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit, StudioService studio, IServiceProvider services)
 {
     private readonly object _gate = new();
     private CheckReport? _report;
@@ -84,7 +89,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
     public CheckReport Run()
     {
         var version = design.Version;
-        var context = new CheckContext(design, toolkit, studio);
+        var context = new CheckContext(design, toolkit, studio, () => services.GetRequiredService<VersionTracker>());
         var results = All.Select(check => new CheckResult(check, check.Run(context).ToList())).ToList();
         return new CheckReport(version, DateTimeOffset.UtcNow, results);
     }
@@ -92,6 +97,11 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
     /// <summary>Where a finding leads: the edit page of the item, or its history when it is gone from the site; null when it is about nothing in particular.</summary>
     public string? UrlOf(Finding finding)
     {
+        if (finding.Link is not null)
+        {
+            return finding.Link;
+        }
+
         if (finding.Kind is null || finding.Id is null || !StudioHistory.IsKind(finding.Kind))
         {
             return null;
@@ -115,6 +125,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
     public static IReadOnlyList<DesignCheck> All { get; } =
     [
         new("apps", "Apps", "Every app is valid", "Name, id, tagline, category, glyph, port and colours of every app pass what a save holds them to, and every accent reaches AA in light and dark with its text.", AppsValid),
+        new("versions", "Apps", "The apps use the latest release", "Every app whose version of MatUi is written down uses the latest release. Advice: updating an app is the work of its own repository.", Versions),
         new("palette", "Apps", "No two accents are alike", "No two accents are closer than the palette check allows (IDENT-04). Advice: changing an app's colour is a decision for a person.", Palette),
         new("rules", "Rules", "Every rule is valid", "Id of its area, title, statement, level and source of every rule pass what a save holds them to.", RulesValid),
         new("components", "Components", "Every component is valid", "Every example uses only what the toolkit ships, with no inline style, handler or script, nothing from outside, labelled cells, typed buttons and unique ids; the rules a component names exist.", ComponentsValid),
@@ -136,6 +147,14 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
             {
                 yield return new Finding("apps", Severity.Error, $"{app.Name}: {problem.Message}", "apps", app.Id);
             }
+        }
+    }
+
+    private static IEnumerable<Finding> Versions(CheckContext c)
+    {
+        foreach (var behind in c.Versions.All().Where(v => v.State == VersionState.Behind))
+        {
+            yield return new Finding("versions", Severity.Advice, $"{behind.App.Name} uses MatUi {behind.Version}, {StudioFormat.Count(behind.Behind, "release")} behind the latest ({c.Versions.LatestVersion}).", "apps", behind.App.Id, $"/Studio/Versions/Edit?id={behind.App.Id}");
         }
     }
 
