@@ -1,0 +1,309 @@
+using System.Text.RegularExpressions;
+using MatDesign.Core;
+using MatDesign.Core.Studio;
+using MatDesign.Web.Services;
+
+namespace MatDesign.Web.Studio;
+
+/// <summary>How serious a finding is: an error stops a release, advice is for a person to look at.</summary>
+public enum Severity
+{
+    Error,
+    Advice,
+}
+
+/// <summary>A thing a check found. <see cref="Kind"/> and <see cref="Id"/> name the item it is about (apps, rules, components), so the report can link to it.</summary>
+public sealed record Finding(string Check, Severity Severity, string Message, string? Kind = null, string? Id = null);
+
+/// <summary>What a check looks at: the design data as it is now (built in, with what the Studio saved), the toolkit and the Studio's storage.</summary>
+public sealed record CheckContext(DesignData Design, ToolkitFiles Toolkit, StudioService Studio);
+
+/// <summary>One check of the design system: what it is called, which area it belongs to, what it holds to, and the code that finds what breaks it.</summary>
+public sealed record DesignCheck(string Id, string Area, string Name, string What, Func<CheckContext, IEnumerable<Finding>> Run);
+
+/// <summary>The findings of one check.</summary>
+public sealed record CheckResult(DesignCheck Check, IReadOnlyList<Finding> Findings)
+{
+    public int Errors => Findings.Count(f => f.Severity == Severity.Error);
+
+    public int Advice => Findings.Count(f => f.Severity == Severity.Advice);
+
+    /// <summary>Advice does not fail a check.</summary>
+    public bool Passed => Errors == 0;
+}
+
+/// <summary>The result of running every check against the data of one moment (<see cref="Version"/> is the version of the design data it was run on).</summary>
+public sealed record CheckReport(long Version, DateTimeOffset At, IReadOnlyList<CheckResult> Results)
+{
+    public int Errors => Results.Sum(r => r.Errors);
+
+    public int Advice => Results.Sum(r => r.Advice);
+
+    public bool Passed => Errors == 0;
+
+    public IEnumerable<Finding> Findings => Results.SelectMany(r => r.Findings);
+}
+
+/// <summary>
+/// The checks of the design system in one place: the validators on every app, rule and component as they stand now (the built-in ones too), the contrast of every accent, the rules
+/// that patterns cite, the ids of the pages of the documentation, the tokens, the naming of the toolkit, the menu, and the items on the volume that the site had to leave out. The
+/// report is the same for the page that shows it and for the pipeline that decides whether a release may be made; it is computed again when the design data changes.
+/// </summary>
+public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit, StudioService studio)
+{
+    private readonly object _gate = new();
+    private CheckReport? _report;
+
+    [GeneratedRegex(@"^(?:mat|is)-")]
+    private static partial Regex ToolkitClassName();
+
+    /// <summary>The report for the design data as it is now. It is computed once for each version of the data.</summary>
+    public CheckReport Report
+    {
+        get
+        {
+            var current = _report;
+            if (current is not null && current.Version == design.Version)
+            {
+                return current;
+            }
+
+            lock (_gate)
+            {
+                if (_report is null || _report.Version != design.Version)
+                {
+                    _report = Run();
+                }
+
+                return _report;
+            }
+        }
+    }
+
+    /// <summary>Runs every check now, whatever was computed before.</summary>
+    public CheckReport Run()
+    {
+        var version = design.Version;
+        var context = new CheckContext(design, toolkit, studio);
+        var results = All.Select(check => new CheckResult(check, check.Run(context).ToList())).ToList();
+        return new CheckReport(version, DateTimeOffset.UtcNow, results);
+    }
+
+    /// <summary>Where a finding leads: the edit page of the item, or its history when it is gone from the site; null when it is about nothing in particular.</summary>
+    public string? UrlOf(Finding finding)
+    {
+        if (finding.Kind is null || finding.Id is null || !StudioHistory.IsKind(finding.Kind))
+        {
+            return null;
+        }
+
+        var exists = finding.Kind switch
+        {
+            "apps" => design.App(finding.Id) is not null,
+            "rules" => design.Rule(finding.Id) is not null,
+            _ => design.Component(finding.Id) is not null,
+        };
+        if (exists)
+        {
+            return StudioHistory.EditUrl(finding.Kind, finding.Id);
+        }
+
+        return studio.Enabled && StudioStore.IsId(finding.Id) && studio.Store.Current(finding.Kind, finding.Id) is not null ? StudioHistory.HistoryUrl(finding.Kind, finding.Id) : null;
+    }
+
+    /// <summary>Every check, in the order the report shows them.</summary>
+    public static IReadOnlyList<DesignCheck> All { get; } =
+    [
+        new("apps", "Apps", "Every app is valid", "Name, id, tagline, category, glyph, port and colours of every app pass what a save holds them to, and every accent reaches AA in light and dark with its text.", AppsValid),
+        new("palette", "Apps", "No two accents are alike", "No two accents are closer than the palette check allows (IDENT-04). Advice: changing an app's colour is a decision for a person.", Palette),
+        new("rules", "Rules", "Every rule is valid", "Id of its area, title, statement, level and source of every rule pass what a save holds them to.", RulesValid),
+        new("components", "Components", "Every component is valid", "Every example uses only what the toolkit ships, with no inline style, handler or script, nothing from outside, labelled cells, typed buttons and unique ids; the rules a component names exist.", ComponentsValid),
+        new("page-ids", "Components", "The ids of a page are unique", "The components, the layout and the utilities pages draw many examples on one page: no id is on a page twice, and no id is one the page makes itself.", PageIds),
+        new("groups", "Components", "Every group has components", "Each group of the documentation has at least one component, so no heading stands over nothing.", Groups),
+        new("patterns", "Components", "Patterns cite what exists", "The rules and the apps that the page patterns name are in the rulebook and in the family.", Patterns),
+        new("tokens", "Toolkit", "Every token is described", "Every custom property says what it is for, and every colour token has a dark value or is derived from one that has.", Tokens),
+        new("naming", "Toolkit", "The toolkit follows its naming", "Every class of the stylesheets starts with mat- (or is a state such as is-active) (CODE-04).", Naming),
+        new("menu", "Site", "The menus are well formed", "Every menu has at most one level of submenus, its ids are unique, and so are its addresses.", Menus),
+        new("volume", "Studio", "Nothing on the volume is left out", "Every item the Studio saved is read back by the site; an item that was edited by hand into something unsafe or wrong is not, and is reported here.", Volume),
+    ];
+
+    private static IEnumerable<Finding> AppsValid(CheckContext c)
+    {
+        foreach (var app in c.Design.Apps)
+        {
+            var others = c.Design.Apps.Where(a => a.Id != app.Id);
+            foreach (var problem in AppValidator.Validate(app, others, c.Toolkit.IconNames))
+            {
+                yield return new Finding("apps", Severity.Error, $"{app.Name}: {problem.Message}", "apps", app.Id);
+            }
+        }
+    }
+
+    private static IEnumerable<Finding> Palette(CheckContext c)
+    {
+        foreach (var pair in PaletteAdvisor.Collisions(c.Design.Apps))
+        {
+            yield return new Finding("palette", Severity.Advice, $"{pair.A.Name} and {pair.B.Name} are close ({pair.Distance.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)}): they can be mistaken for one another.", "apps", pair.A.Id);
+        }
+    }
+
+    private static IEnumerable<Finding> RulesValid(CheckContext c)
+    {
+        foreach (var rule in c.Design.Rules)
+        {
+            foreach (var problem in RuleValidator.Validate(rule, c.Design.Rules.Where(r => r.Id != rule.Id)))
+            {
+                yield return new Finding("rules", Severity.Error, $"{rule.Id}: {problem.Message}", "rules", rule.Id);
+            }
+        }
+    }
+
+    private static IEnumerable<Finding> ComponentsValid(CheckContext c)
+    {
+        foreach (var doc in c.Design.Components)
+        {
+            var others = c.Design.Components.Where(d => d.Id != doc.Id);
+            foreach (var problem in ComponentValidator.Validate(doc, others, rule => c.Design.Rule(rule) is not null, c.Toolkit.Facts))
+            {
+                yield return new Finding("components", Severity.Error, $"{doc.Name}: {problem.Message}", "components", doc.Id);
+            }
+        }
+    }
+
+    private static IEnumerable<Finding> PageIds(CheckContext c)
+    {
+        // what the layout and the section draw themselves, on every documentation page
+        string[] own = ["main", "toc-dialog", "toc-dialog-title", "user-menu", "mat-nav", "nav-switch-menu"];
+        foreach (var section in ComponentCatalog.Sections)
+        {
+            var ids = new List<(string Id, string Owner, string? Component)>(own.Select(i => (i, "the page", (string?)null)));
+            foreach (var group in section.Groups)
+            {
+                ids.Add((ComponentCatalog.GroupAnchor(group), "the group " + group, null));
+                ids.Add(("h-" + ComponentCatalog.GroupAnchor(group), "the group " + group, null));
+            }
+
+            foreach (var doc in c.Design.ComponentsIn(section))
+            {
+                ids.Add((doc.Id, doc.Name, doc.Id));
+                ids.Add(("h-" + doc.Id, doc.Name, doc.Id));
+                for (var i = 1; i <= doc.Examples.Count; i++)
+                {
+                    ids.Add(($"src-{doc.Id}-{i}", doc.Name, doc.Id));
+                    ids.Add(($"ex-{doc.Id}-{i}", doc.Name, doc.Id));
+                }
+
+                foreach (var example in doc.Examples.Where(e => e.Live && e.Html.Length > 0))
+                {
+                    ids.AddRange(MarkupChecks.IdsIn(example.Html).Select(i => (i, doc.Name, (string?)doc.Id)));
+                }
+            }
+
+            foreach (var twice in ids.GroupBy(i => i.Id).Where(g => g.Count() > 1))
+            {
+                var owners = twice.Select(i => i.Owner).Distinct().ToList();
+                var component = twice.Select(i => i.Component).FirstOrDefault(i => i is not null);
+                yield return new Finding("page-ids", Severity.Error, $"On the page {section.Title}, the id '{twice.Key}' is used {twice.Count()} times ({string.Join(", ", owners)}).", component is null ? null : "components", component);
+            }
+        }
+    }
+
+    private static IEnumerable<Finding> Groups(CheckContext c)
+    {
+        foreach (var group in ComponentCatalog.Groups)
+        {
+            if (!c.Design.ComponentsOf(group).Any())
+            {
+                yield return new Finding("groups", Severity.Error, $"The group {group} has no component.");
+            }
+
+            if (!ComponentCatalog.GroupSummaries.ContainsKey(group))
+            {
+                yield return new Finding("groups", Severity.Error, $"The group {group} has no summary line.");
+            }
+        }
+    }
+
+    private static IEnumerable<Finding> Patterns(CheckContext c)
+    {
+        foreach (var pattern in PatternCatalog.All)
+        {
+            foreach (var rule in pattern.Rules.Concat(pattern.Parts.Where(p => p.Rule is not null).Select(p => p.Rule!)).Distinct().Where(r => c.Design.Rule(r) is null))
+            {
+                yield return new Finding("patterns", Severity.Error, $"The pattern {pattern.Name} cites {rule}, which is not in the rulebook.");
+            }
+        }
+
+        foreach (var app in PatternCatalog.Apps.Where(a => c.Design.App(a) is null))
+        {
+            yield return new Finding("patterns", Severity.Error, $"The patterns show the app {app}, which is not in the family.");
+        }
+    }
+
+    private static IEnumerable<Finding> Tokens(CheckContext c)
+    {
+        foreach (var token in c.Toolkit.Tokens)
+        {
+            if (token.Description.Length == 0)
+            {
+                yield return new Finding("tokens", Severity.Error, $"{token.Name} has no comment that says what it is for.");
+            }
+
+            // --mat-picker-*: the white and the black of the colour picker's model are the same in light and dark on purpose
+            if (token.IsColor && token.Dark is null && !token.Name.StartsWith("--mat-picker-", StringComparison.Ordinal) && !token.Light.StartsWith("color-mix", StringComparison.Ordinal) && !token.Light.StartsWith("var(", StringComparison.Ordinal))
+            {
+                yield return new Finding("tokens", Severity.Error, $"{token.Name} is a colour without a dark value.");
+            }
+        }
+    }
+
+    private static IEnumerable<Finding> Naming(CheckContext c)
+    {
+        foreach (var name in c.Toolkit.Facts.Classes.Where(n => !ToolkitClassName().IsMatch(n)).Order(StringComparer.Ordinal))
+        {
+            yield return new Finding("naming", Severity.Error, $"The class .{name} does not start with mat- and is not a state class.");
+        }
+    }
+
+    private static IEnumerable<Finding> Menus(CheckContext c)
+    {
+        var sets = Navigation.For(c.Design.NavFacts, studio: true);
+        foreach (var set in sets.Where(s => !s.IsValid))
+        {
+            yield return new Finding("menu", Severity.Error, $"The menu {set.Title} has a submenu that is more than one level deep, or a child without an address.");
+        }
+
+        foreach (var twice in sets.GroupBy(s => s.Id).Where(g => g.Count() > 1))
+        {
+            yield return new Finding("menu", Severity.Error, $"Two menus have the id {twice.Key}.");
+        }
+
+        foreach (var twice in sets.SelectMany(s => s.Pages).GroupBy(i => i.Href).Where(g => g.Count() > 1))
+        {
+            yield return new Finding("menu", Severity.Error, $"The address {twice.Key} is in the menus {twice.Count()} times.");
+        }
+    }
+
+    private static IEnumerable<Finding> Volume(CheckContext c)
+    {
+        if (!c.Studio.Enabled)
+        {
+            yield break;
+        }
+
+        foreach (var app in c.Studio.Store.List("apps").Where(i => c.Design.StudioApps.All(a => !a.Id.Equals(i.Id, StringComparison.OrdinalIgnoreCase))))
+        {
+            yield return new Finding("volume", Severity.Error, $"The app {app.Id} on the volume is left out: it is not a valid app, or its id is not the name of its folder.", "apps", app.Id);
+        }
+
+        foreach (var rule in c.Studio.Store.List("rules").Where(i => c.Design.StudioRules.All(r => !r.Id.Equals(i.Id, StringComparison.OrdinalIgnoreCase))))
+        {
+            yield return new Finding("volume", Severity.Error, $"The rule {rule.Id} on the volume is left out: it is not a valid rule, or its id is not the name of its folder.", "rules", rule.Id);
+        }
+
+        foreach (var doc in c.Studio.Store.List("components").Where(i => c.Design.StudioComponents.All(d => !d.Id.Equals(i.Id, StringComparison.OrdinalIgnoreCase))))
+        {
+            yield return new Finding("volume", Severity.Error, $"The component {doc.Id} on the volume is left out: it is not valid, or breaks a check that keeps the page safe.", "components", doc.Id);
+        }
+    }
+}

@@ -49,8 +49,9 @@ src/MatDesign.Core         no web types
   Studio/MarkupChecks.cs     the contract of the markup of an example (classes, icons, no inline/outside/script, labels, ids ...): the unit tests and the Studio use this one code
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
-  Studio/                    StudioService (on or off, the password, the lock-out), DesignData (built-in + Studio items: the apps, rules and components every page reads; Version), ComponentValidator, StudioHistory (restore checks), StudioFormat
-  Pages/Studio/              Login, Logout, Index, Activity, History, Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
+  Studio/                    StudioService (on or off, the password, the lock-out), DesignData (built-in + Studio items: the apps, rules and components every page reads; Version), ComponentValidator, StudioHistory (restore checks),
+                             DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
+  Pages/Studio/              Login, Logout, Index, Activity, History, Checks, Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
                              ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)

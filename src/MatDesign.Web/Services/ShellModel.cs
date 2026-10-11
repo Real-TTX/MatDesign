@@ -83,17 +83,26 @@ public sealed class ShellModel
     /// The site as a visitor sees it, or as the administrator of the Studio does (<paramref name="signedIn"/>: a third menu, a user menu with the Studio and Sign out).
     /// <paramref name="studioOn"/> says whether there is a Studio to sign in to; <paramref name="design"/> is the data as the Studio left it (the built-in data when empty).
     /// </summary>
-    public static ShellModel Site(bool studioOn = false, bool signedIn = false, MatDesign.Web.Studio.DesignData? design = null) => new()
+    public static ShellModel Site(bool studioOn = false, bool signedIn = false, MatDesign.Web.Studio.DesignData? design = null, MatDesign.Web.Studio.DesignChecks? checks = null)
     {
-        App = design?.App("matdesign") ?? AppRegistry.Get("matdesign")!,
-        Tagline = "Identity of the Mat apps",
-        Menus = Navigation.For(design?.NavFacts ?? NavFacts.BuiltIn, signedIn),
-        UserName = signedIn ? "Admin" : "Visitor",
-        UserRole = signedIn ? "Studio" : "Guest",
-        UserLine = signedIn ? "Signed in to the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",
-        UserMenu = SiteUserMenu(signedIn),
-        Version = $"MatDesign {AppVersion.Current}",
-    };
+        var facts = design?.NavFacts ?? NavFacts.BuiltIn;
+        if (signedIn && checks is not null)
+        {
+            facts = facts with { CheckErrors = checks.Report.Errors };
+        }
+
+        return new ShellModel
+        {
+            App = design?.App("matdesign") ?? AppRegistry.Get("matdesign")!,
+            Tagline = "Identity of the Mat apps",
+            Menus = Navigation.For(facts, signedIn),
+            UserName = signedIn ? "Admin" : "Visitor",
+            UserRole = signedIn ? "Studio" : "Guest",
+            UserLine = signedIn ? "Signed in to the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",
+            UserMenu = SiteUserMenu(signedIn),
+            Version = $"MatDesign {AppVersion.Current}",
+        };
+    }
 
     private static List<UserMenuItem> SiteUserMenu(bool signedIn)
     {

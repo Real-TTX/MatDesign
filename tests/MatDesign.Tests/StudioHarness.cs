@@ -32,6 +32,8 @@ public sealed partial class StudioHarness : IDisposable
 
     public DesignData Design => Factory.Services.GetRequiredService<DesignData>();
 
+    public DesignChecks Checks => Factory.Services.GetRequiredService<DesignChecks>();
+
     [GeneratedRegex(@"name=""__RequestVerificationToken""[^>]*value=""([^""]+)""")]
     private static partial Regex Token();
 

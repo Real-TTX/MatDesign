@@ -60,6 +60,15 @@ through only when the old revision would be accepted as it is today: `StudioHist
 has taken since, a rule that is gone, a name somebody else has), and says why when it refuses. A deletion can be restored (the item is deleted again) while the item lives, and a rule that a component of
 the Studio names is not deleted that way either. The activity list filters by kind, change and person.
 
+### Checks
+
+`DesignChecks` is the list of everything the design system holds itself to, run on the data as it is now (the built-in items too): every app, rule and component through its validator (contrast of every accent
+in light and dark, the contract of the markup of every example, rules that exist), the palette (advice, never an error), the ids of the pages of the documentation (no id twice across the live examples of a page,
+none that the page makes itself), groups that have components, the rules and apps that the page patterns cite, tokens with a description and a dark value, the naming of the toolkit's classes, the menus, and the
+items on the volume that the site had to leave out (edited by hand into something unsafe or wrong). A check is a named record (`Id`, `Area`, `Name`, `What`, and code that yields `Finding`s); a finding is an
+error or advice, and names the item it is about, so the page links to its edit page (or its history when it is gone from the site). The report is computed once for a version of the data and again when the data
+changes; **the page `/Studio/Checks`, the badge of the menu item and the pipeline of stage 7 read the same report**. A release needs every check to pass; advice does not stop it.
+
 ## The pipeline
 
 `Check` (everything above, on the built-in data plus the items) -> `Version` (the next number, the changelog text from the revisions since the last release)
@@ -77,7 +86,7 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 3 | **Rules:** create, edit, delete rules (area, title, statement, level, source, why, do, don't); validation; they appear in the rulebook and the API | **done** |
 | 4 | **Components:** create components with examples (title, note, markup, live or not) and the rules they follow; preview next to the editor; the contract checks of the tests run on save | **done** |
 | 5 | **History:** per item the revisions, a diff between two, restore; the activity list filters by kind, item and person | **done** |
-| 6 | **Checks:** one page runs every check and lists what fails and where, with a link to the item | open |
+| 6 | **Checks:** one page runs every check and lists what fails and where, with a link to the item | **done** |
 | 7 | **Releases:** the pipeline, versions, changelog, stored archives, `/releases/...` and `/api/releases/latest` | open |
 | 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | open |
 

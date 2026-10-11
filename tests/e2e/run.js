@@ -1006,7 +1006,8 @@ function expectTrue(value, what) {
         expect(await page.locator('#nav-switch-menu [data-nav-set]').evaluateAll(els => els.map(e => e.getAttribute('data-nav-set'))), ['design', 'toolkit', 'studio'], 'menus in the switcher');
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
-        expect(await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').allTextContents().then(t => t.map(x => x.trim())), ['Overview', 'Apps', 'Rules', 'Components', 'Activity'], 'items of the Studio menu');
+        const names = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').evaluateAll(els => els.map(e => { const c = e.cloneNode(true); c.querySelectorAll('.mat-nav__badge').forEach(b => b.remove()); return c.textContent.trim(); }));
+        expect(names, ['Overview', 'Apps', 'Rules', 'Components', 'Checks', 'Activity'], 'items of the Studio menu');
       });
       await check('the activity list has its toolbar above it and the sort dialog opens', async () => {
         const bar = await page.locator('.mat-toolbar').boundingBox();
@@ -1017,6 +1018,19 @@ function expectTrue(value, what) {
         await page.click('#activity-sort [data-dialog-close]');
       });
 
+      await check('the checks page lists the checks with their result, has the toolbar above the findings, and the menu says that all pass', async () => {
+        await page.goto(BASE + '/Studio/Checks', { waitUntil: 'networkidle' });
+        expect(await page.textContent('#result-title'), 'All checks pass', 'the result');
+        expect(await page.locator('section[aria-labelledby="result-title"] tbody tr').count() >= 10, true, 'the checks listed');
+        expect(await page.locator('section[aria-labelledby="result-title"] .mat-pill--error').count(), 0, 'checks that fail');
+        const bar = await page.locator('.mat-toolbar').boundingBox();
+        const table = await page.locator('section[aria-labelledby="findings-title"] .mat-table-wrap, section[aria-labelledby="findings-title"] .mat-empty').first().boundingBox();
+        expectTrue(bar.y < table.y, 'the toolbar is not above the findings');
+        expectTrue((await page.locator('a.mat-nav__item[href="/Studio/Checks"]').textContent()).includes('all checks pass'), 'the badge of the menu item');
+        await page.click('[data-dialog-open="findings-filter"]');
+        expect(await page.locator('#findings-filter[open]').count(), 1, 'filter dialog');
+        await page.click('#findings-filter [data-dialog-close]');
+      });
       // an app is created, refused, saved, seen on the site and in the toolkit, and deleted again (the ids are letters only, so the name has no digits)
       const letters = Array.from({ length: 6 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join('');
       const appId = 'qa' + letters;

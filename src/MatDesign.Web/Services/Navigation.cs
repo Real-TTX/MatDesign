@@ -83,8 +83,11 @@ public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<
     public bool IsValid => Groups.SelectMany(g => g.Items).All(i => !i.IsParent || i.Children!.All(c => !c.IsParent && c.Href is not null));
 }
 
-/// <summary>What the menu counts: the apps (the palette's badge counts the pairs of accents that are too close), the rules and the components of the components page.</summary>
-public sealed record NavFacts(IReadOnlyList<MatApp> Apps, int Rules, int Components)
+/// <summary>
+/// What the menu counts: the apps (the palette's badge counts the pairs of accents that are too close), the rules and the components of the components page, and for the Studio the errors
+/// of the checks (-1 when they were not run: no badge).
+/// </summary>
+public sealed record NavFacts(IReadOnlyList<MatApp> Apps, int Rules, int Components, int CheckErrors = -1)
 {
     /// <summary>The built-in data, before the Studio has changed anything.</summary>
     public static NavFacts BuiltIn { get; } = new(AppRegistry.All, RuleBook.All.Count, ComponentCatalog.In(ComponentCatalog.Sections[0]).Count());
@@ -138,9 +141,13 @@ public static class Navigation
     ];
 
     /// <summary>
-    /// The menu of the Studio (docs/STUDIO.md). It is a third menu behind the switcher, shown only to the signed-in administrator, so it is not one of <see cref="Sets"/>.
+    /// The menu of the Studio without counts (docs/STUDIO.md). It is a third menu behind the switcher, shown only to the signed-in administrator, so it is not one of
+    /// <see cref="Sets"/>; the pages use <see cref="StudioMenu"/>.
     /// </summary>
-    public static NavSet StudioSet { get; } = new("studio", "Studio", "wrench",
+    public static NavSet StudioSet { get; } = StudioMenu(NavFacts.BuiltIn);
+
+    /// <summary>The menu of the Studio; the badge of Checks says how many checks fail (a dot when none does), once they have been run.</summary>
+    public static NavSet StudioMenu(NavFacts facts) => new("studio", "Studio", "wrench",
     [
         new(null, [new("Overview", "/Studio", "home")]),
         new("Maintain",
@@ -148,12 +155,18 @@ public static class Navigation
             new("Apps", "/Studio/Apps", "apps"),
             new("Rules", "/Studio/Rules", "book"),
             new("Components", "/Studio/Components", "toggle"),
+            new("Checks", "/Studio/Checks", "check-square", facts.CheckErrors switch
+            {
+                < 0 => null,
+                0 => NavBadge.Dot("ok", "all checks pass"),
+                var n => NavBadge.Count(n, "error", "checks find errors"),
+            }),
             new("Activity", "/Studio/Activity", "activity"),
         ]),
     ]);
 
     /// <summary>The menus a visitor sees: the two of the site, and the Studio for the signed-in administrator.</summary>
-    public static IReadOnlyList<NavSet> For(NavFacts facts, bool studio) => studio ? [.. Create(facts), StudioSet] : Create(facts);
+    public static IReadOnlyList<NavSet> For(NavFacts facts, bool studio) => studio ? [.. Create(facts), StudioMenu(facts)] : Create(facts);
 
     /// <summary>Every page of every menu (no parents), the Studio's included.</summary>
     public static IEnumerable<NavItem> Pages => Sets.Append(StudioSet).SelectMany(s => s.Pages);

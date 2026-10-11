@@ -1,0 +1,93 @@
+@page "/Studio/Checks"
+@model MatDesign.Web.Pages.Studio.ChecksModel
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "Checks";
+    ViewData["PageSub"] = "Everything the design system holds itself to, run on the data as it is now: the built-in apps, rules and components and what the Studio changed or added.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Checks", null));
+    var report = Model.Report;
+}
+
+<section class="mat-section" aria-labelledby="result-title">
+    <div class="mat-section__head">
+        <h2 id="result-title">@(report.Passed ? "All checks pass" : StudioFormat.Count(report.Errors, "error"))</h2>
+        <p class="mat-section__lead">
+            @report.Results.Count(r => r.Passed) of @report.Results.Count checks pass@(report.Advice > 0 ? $", with {report.Advice} {(report.Advice == 1 ? "piece" : "pieces")} of advice" : string.Empty).
+            Run at @StudioFormat.When(report.At) on version @report.Version of the data. A release needs every check to pass; advice is for a person to look at.
+        </p>
+    </div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">The checks and their results</caption>
+            <thead><tr><th scope="col">Check</th><th scope="col" class="mat-hide-sm">Area</th><th scope="col" class="mat-hide-sm">What it holds to</th><th scope="col">Result</th></tr></thead>
+            <tbody>
+                @foreach (var result in report.Results)
+                {
+                    <tr>
+                        <td data-label="Check"><strong>@result.Check.Name</strong></td>
+                        <td data-label="Area" class="mat-hide-sm">@result.Check.Area</td>
+                        <td data-label="What" class="mat-hide-sm mat-muted">@result.Check.What</td>
+                        <td data-label="Result">
+                            @if (result.Errors > 0) { <a class="mat-pill mat-pill--error" href="/Studio/Checks?check=@result.Check.Id">@result.Errors @(result.Errors == 1 ? "error" : "errors")</a> }
+                            else if (result.Advice > 0) { <a class="mat-pill mat-pill--warn" href="/Studio/Checks?check=@result.Check.Id">@result.Advice advice</a> }
+                            else { <span class="mat-pill mat-pill--ok">Passes</span> }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="findings-title">
+    <div class="mat-section__head"><h2 id="findings-title">Findings</h2></div>
+    <div class="mat-list">
+        <partial name="_Toolbar" model="Model.Toolbar" />
+
+        @if (Model.Toolbar.Total == 0)
+        {
+            <div class="mat-empty">
+                <span class="mat-empty__icon">@Ui.Icon("check-circle")</span>
+                <div class="mat-empty__title">Nothing to report</div>
+                <p>Every check passes and there is no advice.</p>
+            </div>
+        }
+        else if (Model.Items.Count == 0)
+        {
+            <div class="mat-empty">
+                <span class="mat-empty__icon">@Ui.Icon("search")</span>
+                <div class="mat-empty__title">No finding matches</div>
+                <p>Change the search or the filters, or reset them.</p>
+                <a class="mat-btn mat-btn--primary" href="/Studio/Checks">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+            </div>
+        }
+        else
+        {
+            <div class="mat-table-wrap">
+                <table class="mat-table">
+                    <caption class="mat-sr-only">Findings of the checks</caption>
+                    <thead><tr><th scope="col">Severity</th><th scope="col">Finding</th><th scope="col" class="mat-hide-sm">Check</th><th scope="col"><span class="mat-sr-only">Open</span></th></tr></thead>
+                    <tbody>
+                        @foreach (var (check, finding) in Model.Items)
+                        {
+                            var url = Model.UrlOf(finding);
+                            <tr>
+                                <td data-label="Severity"><span class="mat-pill @(finding.Severity == Severity.Error ? "mat-pill--error" : "mat-pill--warn")">@finding.Severity</span></td>
+                                <td data-label="Finding">@finding.Message</td>
+                                <td data-label="Check" class="mat-hide-sm mat-muted">@check.Name</td>
+                                <td data-label="Open" class="mat-table__cell-actions">
+                                    @if (url is not null)
+                                    {
+                                        <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="@url" aria-label="Open @finding.Id" data-tip="Open it">@Ui.Icon("edit")</a>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        <partial name="_Pager" model="Model.Pager" />
+    </div>
+</section>
