@@ -1,9 +1,10 @@
 @inject ToolkitFiles Toolkit
 @inject MatDesign.Web.Studio.StudioService Studio
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     // A page fills these in: Title, PageSub, Crumbs (the breadcrumb below the app name), Width ("narrow" or "wide"). A page that draws its own head sets OwnHead.
     // The shell itself comes from ViewData["Shell"]; without it the site draws itself, for a visitor or for the signed-in administrator of the Studio.
-    var shell = ViewData["Shell"] as ShellModel ?? ShellModel.Site(Studio.Enabled, Studio.Enabled && User.Identity?.IsAuthenticated == true);
+    var shell = ViewData["Shell"] as ShellModel ?? ShellModel.Site(Studio.Enabled, Studio.Enabled && User.Identity?.IsAuthenticated == true, Design.Apps);
     var app = shell.App;
     var title = ViewData["Title"] as string ?? app.Name;
     var ownHead = ViewData["OwnHead"] is true;
@@ -130,6 +131,12 @@
     </div>
 
     <partial name="_MenuSwitchPopup" model="(shell, active)" />
+
+    @* After a save the Studio redirects (SHELL-12) and the page shows what was done as a toast. *@
+    @if (Studio.Enabled && TempData["Flash"] is string flash)
+    {
+        <div data-toast="@flash" data-tone="success" hidden></div>
+    }
 
     <script src="/ui/matui.js?v=@Toolkit.Hash"></script>
     @await RenderSectionAsync("Scripts", required: false)

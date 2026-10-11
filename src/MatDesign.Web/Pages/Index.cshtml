@@ -1,11 +1,12 @@
 @page "/"
 @inject ToolkitFiles Toolkit
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     ViewData["Title"] = "Overview";
     ViewData["OwnHead"] = true;
     var firstRules = new[] { "SHELL-01", "SHELL-03", "SHELL-07", "SHELL-08", "LIST-03", "FORM-01", "DIALOG-03", "IDENT-01" }
         .Select(id => RuleBook.Get(id)!).ToList();
-    var apps = AppRegistry.All;
+    var apps = Design.Apps;
     var pages = new (string Name, string Href, string Text)[]
     {
         ("Foundations", "/Foundations", "Colour, type, space, shape, motion and the icons."),

@@ -67,6 +67,7 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AllowAnonymousToPage("/Studio/Logout");
 });
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<DesignData>();
 builder.Services.AddSingleton<ToolkitFiles>();
 builder.Services.AddSingleton<AuditData>();
 
@@ -111,7 +112,7 @@ ui.MapGet("/css/{name}", (string name, ToolkitFiles files, HttpContext http) =>
 
 // ---- The design system as data: what a tool, a test or another app can read. ----
 var api = app.MapGroup("/api");
-api.MapGet("/apps", () => AppRegistry.All.Select(a => new { a.Id, a.Name, a.Tagline, a.Category, a.Accent, onAccent = a.OnAccent ?? "#ffffff", a.AccentText, a.Glyph, a.Port }));
+api.MapGet("/apps", (DesignData design) => design.Apps.Select(a => new { a.Id, a.Name, a.Tagline, a.Category, a.Accent, onAccent = a.OnAccent ?? "#ffffff", a.AccentText, a.Glyph, a.Port }));
 api.MapGet("/accents", () => AccentPresets.All);
 api.MapGet("/rules", () => RuleBook.All.Select(r => new { r.Id, r.Area, r.Title, r.Statement, level = r.Level.ToString(), r.Source, r.Check }));
 api.MapGet("/tokens", (ToolkitFiles files) => files.Tokens.Select(t => new { t.Name, t.Light, t.Dark, t.Description, t.Group }));

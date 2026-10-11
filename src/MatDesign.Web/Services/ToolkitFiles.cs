@@ -3,6 +3,8 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using MatDesign.Core;
+using MatDesign.Core.Studio;
+using MatDesign.Web.Studio;
 using Microsoft.Extensions.FileProviders;
 
 namespace MatDesign.Web.Services;
@@ -13,6 +15,8 @@ public sealed record ToolkitFile(string Name, string Url, string Description, in
 /// <summary>
 /// The files of MatUi (CSS parts, script, sprite), read once from the toolkit project's static assets. The site serves them as
 /// one bundle (<c>/ui/matui.css</c>) so that any app can use the toolkit with one line, and reads the tokens from the CSS for the docs.
+/// The one part that can change while the site runs is the colours of the apps: what was added or changed in the Studio is written after the built-in ones,
+/// so the bundle, its hash and the archive follow every change (<see cref="DesignData.Version"/>).
 /// </summary>
 public sealed partial class ToolkitFiles
 {
@@ -22,12 +26,18 @@ public sealed partial class ToolkitFiles
         "matui.tokens.css", "matui.base.css", "matui.shell.css", "matui.controls.css", "matui.forms.css", "matui.pickers.css", "matui.lists.css", "matui.dialogs.css", "matui.layout.css", "matui.apps.css",
     ];
 
-    private readonly IFileProvider _files;
-    private readonly Dictionary<string, string> _css = new(StringComparer.OrdinalIgnoreCase);
+    private const string AppsPart = "matui.apps.css";
 
-    public ToolkitFiles(IWebHostEnvironment env)
+    private readonly IFileProvider _files;
+    private readonly DesignData _design;
+    private readonly Dictionary<string, string> _css = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _gate = new();
+    private State _state;
+
+    public ToolkitFiles(IWebHostEnvironment env, DesignData design)
     {
         _files = env.WebRootFileProvider;
+        _design = design;
         foreach (var part in CssParts)
         {
             _css[part] = Read($"css/{part}");
@@ -38,22 +48,74 @@ public sealed partial class ToolkitFiles
         Sprite = Read("img/matui-icons.svg");
         IconNames = SymbolRegex().Matches(Sprite).Select(m => m.Groups[1].Value).Order().ToList();
         Tokens = CssTokens.Tokens(_css["matui.tokens.css"]);
-
-        Hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Concat(_css.Values) + Script + BootScript + Sprite)))[..10].ToLowerInvariant();
-        CssBundle = $"/* MatUi {AppVersion.Current} ({Hash}) - bundled from {string.Join(", ", CssParts)} */\n" + string.Join("\n", CssParts.Select(p => _css[p]));
-        _zip = new Lazy<byte[]>(BuildZip);
+        _state = Build(design.Version);
     }
 
-    private readonly Lazy<byte[]> _zip;
+    /// <summary>What depends on the apps of the Studio: the colours of the apps, and everything made from them.</summary>
+    private sealed record State(long Version, string AppsCss, string Hash, string CssBundle, Lazy<byte[]> Zip);
+
+    private State Current
+    {
+        get
+        {
+            var state = _state;
+            if (state.Version == _design.Version)
+            {
+                return state;
+            }
+
+            lock (_gate)
+            {
+                if (_state.Version != _design.Version)
+                {
+                    _state = Build(_design.Version);
+                }
+
+                return _state;
+            }
+        }
+    }
+
+    private State Build(long version)
+    {
+        var appsCss = _css[AppsPart] + AppsOverlay(_design.StudioApps);
+        string Part(string name) => name == AppsPart ? appsCss : _css[name];
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Concat(CssParts.Select(Part)) + Script + BootScript + Sprite)))[..10].ToLowerInvariant();
+        var bundle = $"/* MatUi {AppVersion.Current} ({hash}) - bundled from {string.Join(", ", CssParts)} */\n" + string.Join("\n", CssParts.Select(Part));
+        return new State(version, appsCss, hash, bundle, new Lazy<byte[]>(() => BuildZip(bundle, appsCss, hash)));
+    }
+
+    /// <summary>The colours of the apps that were added or changed in the Studio, written like the built-in ones and placed after them, so they win.</summary>
+    public static string AppsOverlay(IEnumerable<MatApp> apps)
+    {
+        var sb = new StringBuilder();
+        foreach (var app in apps.Where(AppValidator.IsSafe))
+        {
+            sb.Append("[data-app=\"").Append(app.Id).Append("\"] { --mat-app-accent: ").Append(app.Accent).Append(';');
+            if (app.OnAccent is not null)
+            {
+                sb.Append(" --mat-app-on-accent: ").Append(app.OnAccent).Append(';');
+            }
+
+            if (app.AccentText is not null)
+            {
+                sb.Append(" --mat-app-accent-text: ").Append(app.AccentText).Append(';');
+            }
+
+            sb.Append(" }\n");
+        }
+
+        return sb.Length == 0 ? string.Empty : "\n/* Apps added or changed in the Studio. */\n" + sb;
+    }
 
     /// <summary>Every file of the toolkit and a short README, to be copied into an app's static files (an app never loads them from this site).</summary>
-    public byte[] Zip => _zip.Value;
+    public byte[] Zip => Current.Zip.Value;
 
     public string ZipName => $"matui-{AppVersion.Current}.zip";
 
-    public string Hash { get; }
+    public string Hash => Current.Hash;
 
-    public string CssBundle { get; }
+    public string CssBundle => Current.CssBundle;
 
     public string Script { get; }
 
@@ -68,18 +130,22 @@ public sealed partial class ToolkitFiles
 
     public string TokensCss => _css["matui.tokens.css"];
 
-    public string? Css(string name) => _css.GetValueOrDefault(name);
+    public string? Css(string name) => name.Equals(AppsPart, StringComparison.OrdinalIgnoreCase) ? Current.AppsCss : _css.GetValueOrDefault(name);
 
-    public IReadOnlyList<ToolkitFile> Files() =>
-    [
-        new("matui.css", "/ui/matui.css", "All styles in one file: tokens, base, shell, controls, forms, pickers, lists, dialogs, layout, apps.", Encoding.UTF8.GetByteCount(CssBundle)),
-        new("matui.js", "/ui/matui.js", "Behaviour: theme button, menu drawer, context menus, dialogs, dependent fields, tabs, toasts.", Encoding.UTF8.GetByteCount(Script)),
-        new("matui.boot.js", "/ui/matui.boot.js", "Tiny script for <head>: applies the saved theme before the first paint.", Encoding.UTF8.GetByteCount(BootScript)),
-        new("matui-icons.svg", "/ui/matui-icons.svg", $"The icon sprite ({IconNames.Count} icons), to be placed inline in the page.", Encoding.UTF8.GetByteCount(Sprite)),
-        .. CssParts.Select(p => new ToolkitFile(p, $"/ui/css/{p}", "A part of the bundle, for apps that load them one by one.", Encoding.UTF8.GetByteCount(_css[p]))),
-    ];
+    public IReadOnlyList<ToolkitFile> Files()
+    {
+        var state = Current;
+        return
+        [
+            new("matui.css", "/ui/matui.css", "All styles in one file: tokens, base, shell, controls, forms, pickers, lists, dialogs, layout, apps.", Encoding.UTF8.GetByteCount(state.CssBundle)),
+            new("matui.js", "/ui/matui.js", "Behaviour: theme button, menu drawer, context menus, dialogs, dependent fields, tabs, toasts.", Encoding.UTF8.GetByteCount(Script)),
+            new("matui.boot.js", "/ui/matui.boot.js", "Tiny script for <head>: applies the saved theme before the first paint.", Encoding.UTF8.GetByteCount(BootScript)),
+            new("matui-icons.svg", "/ui/matui-icons.svg", $"The icon sprite ({IconNames.Count} icons), to be placed inline in the page.", Encoding.UTF8.GetByteCount(Sprite)),
+            .. CssParts.Select(p => new ToolkitFile(p, $"/ui/css/{p}", "A part of the bundle, for apps that load them one by one.", Encoding.UTF8.GetByteCount(p == AppsPart ? state.AppsCss : _css[p]))),
+        ];
+    }
 
-    private byte[] BuildZip()
+    private byte[] BuildZip(string bundle, string appsCss, string hash)
     {
         using var stream = new MemoryStream();
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
@@ -91,23 +157,23 @@ public sealed partial class ToolkitFiles
                 writer.Write(content);
             }
 
-            Add("matui.css", CssBundle);
+            Add("matui.css", bundle);
             Add("matui.js", Script);
             Add("matui.boot.js", BootScript);
             Add("matui-icons.svg", Sprite);
             foreach (var part in CssParts)
             {
-                Add($"css/{part}", _css[part]);
+                Add($"css/{part}", part == AppsPart ? appsCss : _css[part]);
             }
 
-            Add("README.txt", Readme());
+            Add("README.txt", Readme(hash));
         }
 
         return stream.ToArray();
     }
 
-    private string Readme() => string.Join('\n',
-        $"MatUi {AppVersion.Current} ({Hash})",
+    private string Readme(string hash) => string.Join('\n',
+        $"MatUi {AppVersion.Current} ({hash})",
         "The UI toolkit of the Mat apps. Rules, documentation and live examples: the MatDesign site.",
         string.Empty,
         "Copy these files into the app's static files. An app never loads them from another site (rule CODE-03); update by copying again.",

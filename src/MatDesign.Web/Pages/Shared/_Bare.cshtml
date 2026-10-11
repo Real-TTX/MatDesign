@@ -1,7 +1,8 @@
 @inject ToolkitFiles Toolkit
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     // A page without a menu: sign-in, setup. A centred card on the plain page background (rule SHELL-11).
-    var shell = ViewData["Shell"] as ShellModel ?? ShellModel.Site();
+    var shell = ViewData["Shell"] as ShellModel ?? ShellModel.Site(apps: Design.Apps);
     var app = shell.App;
     var title = ViewData["Title"] as string ?? app.Name;
 }

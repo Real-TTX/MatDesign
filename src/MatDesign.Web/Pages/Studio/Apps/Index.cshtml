@@ -1,0 +1,62 @@
+@page "/Studio/Apps"
+@model MatDesign.Web.Pages.Studio.Apps.IndexModel
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "Apps";
+    ViewData["PageSub"] = "The apps of the family: their name, colour and icon. A change shows on every page of the site and in the toolkit files.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Apps", null));
+}
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No app matches</div>
+            <p>Change the search or the filters, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Apps">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Apps of the family</caption>
+                <thead>
+                    <tr><th scope="col">App</th><th scope="col" class="mat-hide-sm">Category</th><th scope="col">Accent</th><th scope="col">Source</th><th scope="col"><span class="mat-sr-only">Actions</span></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var app in Model.Items)
+                    {
+                        var source = Model.SourceOf(app);
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    @Ui.Logo(app, "sm")
+                                    <span><a href="/Studio/Apps/Edit?id=@app.Id">@app.Name</a><small>@app.Tagline</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category" class="mat-hide-sm">@app.Category</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap">@Ui.Swatch(app.Accent)<code>@app.Accent</code></span></td>
+                            <td data-label="Source"><span class="mat-pill mat-pill--plain @IndexModel.PillClass(source)">@IndexModel.Label(source)</span></td>
+                            <td data-label="Actions" class="mat-table__cell-actions">
+                                <div class="mat-table__actions">
+                                    <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Studio/Apps/Edit?id=@app.Id" aria-label="Edit @app.Name" data-tip="Edit">@Ui.Icon("edit")</a>
+                                    <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Identity/App?id=@app.Id" aria-label="@app.Name on the site" data-tip="See it on the site">@Ui.Icon("external")</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--primary" href="/Studio/Apps/Edit">@Ui.Icon("plus")<span>New app</span></a>
+    </div>
+</div>

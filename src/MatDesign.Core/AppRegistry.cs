@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace MatDesign.Core;
 
 /// <summary>
@@ -22,9 +24,11 @@ public sealed record MatApp(
     string TokenScheme = "",
     string Notes = "")
 {
+    [JsonIgnore]
     public Rgb AccentRgb => Rgb.Parse(Accent);
 
     /// <summary>The colour of text on a filled accent surface.</summary>
+    [JsonIgnore]
     public Rgb OnAccentRgb => Rgb.Parse(OnAccent ?? "#ffffff");
 }
 

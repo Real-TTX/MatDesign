@@ -10,7 +10,7 @@ namespace MatDesign.Web.Pages;
 /// A sample app of the family, drawn with the real shell and the real controls: it is what the preview frames of the site show.
 /// <c>?app=matmail&amp;theme=dark&amp;accent=%23ff6600&amp;view=list</c>. The search, filter and sort dialogs of the list work.
 /// </summary>
-public class PreviewModel : PageModel
+public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
 {
     private const int PageSize = 8;
 
@@ -85,7 +85,7 @@ public class PreviewModel : PageModel
 
     public void OnGet()
     {
-        App = AppRegistry.Get(Request.Query["app"].ToString()) ?? AppRegistry.Get("matdesign")!;
+        App = design.App(Request.Query["app"].ToString()) ?? design.App("matdesign")!;
         View = Request.Query["view"].ToString() is "list" or "gallery" or "form" or "dashboard" or "settings" or "auth" ? Request.Query["view"].ToString() : "list";
         var theme = Request.Query["theme"].ToString() is "light" or "dark" ? Request.Query["theme"].ToString() : null;
         var accent = Request.Query["accent"].ToString();

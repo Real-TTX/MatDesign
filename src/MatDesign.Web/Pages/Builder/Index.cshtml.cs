@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 using MatDesign.Core;
+using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace MatDesign.Web.Pages.Builder;
@@ -10,7 +11,7 @@ namespace MatDesign.Web.Pages.Builder;
 /// Tries an accent: derives the colours the toolkit would use, checks the contrast in both modes, names the nearest app and gives the
 /// snippet for the app's CSS. The preview frames are the real sample app with this accent.
 /// </summary>
-public partial class IndexModel : PageModel
+public partial class IndexModel(DesignData design) : PageModel
 {
     [GeneratedRegex("^#[0-9a-fA-F]{6}$")]
     private static partial Regex HexRegex();
@@ -39,7 +40,7 @@ public partial class IndexModel : PageModel
 
     public void OnGet(string? app, string? accent)
     {
-        BaseApp = (app is null ? null : AppRegistry.Get(app)) ?? AppRegistry.Get("mattiverse")!;
+        BaseApp = design.App(app) ?? design.App("mattiverse")!;
         var hex = accent is not null && HexRegex().IsMatch(accent) ? accent.ToLowerInvariant() : BaseApp.Accent.ToLowerInvariant();
         Accent = hex;
         Custom = !hex.Equals(BaseApp.Accent, StringComparison.OrdinalIgnoreCase);
@@ -48,7 +49,7 @@ public partial class IndexModel : PageModel
         Report = AccentReport.For(effective);
 
         var rgb = Rgb.Parse(hex);
-        var nearest = AppRegistry.All.Where(a => a.Id != BaseApp.Id).Select(a => (App: a, Distance: Colors.Distance(rgb, a.AccentRgb))).MinBy(x => x.Distance);
+        var nearest = design.Apps.Where(a => a.Id != BaseApp.Id).Select(a => (App: a, Distance: Colors.Distance(rgb, a.AccentRgb))).MinBy(x => x.Distance);
         Nearest = nearest.App;
         NearestDistance = nearest.Distance;
 

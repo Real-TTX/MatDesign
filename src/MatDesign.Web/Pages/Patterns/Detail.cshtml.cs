@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace MatDesign.Web.Pages.Patterns;
 
-public class DetailModel : PageModel
+public class DetailModel(MatDesign.Web.Studio.DesignData design) : PageModel
 {
     public PatternDoc Pattern { get; private set; } = null!;
 
@@ -31,7 +31,7 @@ public class DetailModel : PageModel
         }
 
         Pattern = pattern;
-        Apps = PatternCatalog.Apps.Select(AppRegistry.Get).OfType<MatApp>().ToList();
+        Apps = PatternCatalog.Apps.Select(design.App).OfType<MatApp>().ToList();
         App = Apps.FirstOrDefault(a => a.Id.Equals(app, StringComparison.OrdinalIgnoreCase)) ?? Apps[0];
         Rules = pattern.Rules.Select(RuleBook.Get).OfType<Rule>().ToList();
         var all = PatternCatalog.All.ToList();

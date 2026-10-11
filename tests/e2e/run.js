@@ -1006,7 +1006,7 @@ function expectTrue(value, what) {
         expect(await page.locator('#nav-switch-menu [data-nav-set]').evaluateAll(els => els.map(e => e.getAttribute('data-nav-set'))), ['design', 'toolkit', 'studio'], 'menus in the switcher');
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
-        expect(await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').allTextContents().then(t => t.map(x => x.trim())), ['Overview', 'Activity'], 'items of the Studio menu');
+        expect(await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').allTextContents().then(t => t.map(x => x.trim())), ['Overview', 'Apps', 'Activity'], 'items of the Studio menu');
       });
       await check('the activity list has its toolbar above it and the sort dialog opens', async () => {
         const bar = await page.locator('.mat-toolbar').boundingBox();
@@ -1015,6 +1015,70 @@ function expectTrue(value, what) {
         await page.click('[data-dialog-open="activity-sort"]');
         expect(await page.locator('#activity-sort[open]').count(), 1, 'sort dialog');
         await page.click('#activity-sort [data-dialog-close]');
+      });
+
+      // an app is created, refused, saved, seen on the site and in the toolkit, and deleted again (the ids are letters only, so the name has no digits)
+      const letters = Array.from({ length: 6 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join('');
+      const appId = 'qa' + letters;
+      const appName = 'Qa' + letters;
+      const setPicker = (id, value) => page.evaluate(([i, v]) => { const el = document.getElementById(i); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }, [id, value]);
+      await check('the apps list has its toolbar above the table and the New app button below it', async () => {
+        await page.goto(BASE + '/Studio/Apps', { waitUntil: 'networkidle' });
+        const bar = await page.locator('.mat-toolbar').boundingBox();
+        const table = await page.locator('.mat-table-wrap').boundingBox();
+        const add = await page.locator('a.mat-btn--primary', { hasText: 'New app' }).boundingBox();
+        expectTrue(bar.y < table.y, 'the toolbar is not above the table');
+        expectTrue(add.y > table.y + table.height - 1, 'the New app button is not below the table');
+      });
+      await check('an accent that white text cannot carry is refused with the reason, and what was typed stays', async () => {
+        await page.click('a.mat-btn--primary:has-text("New app")');
+        await page.waitForURL('**/Studio/Apps/Edit');
+        await page.fill('#Input_Name', appName);
+        await page.fill('#Input_Id', appId);
+        await page.fill('#Input_Tagline', 'Made by the browser check');
+        await setPicker('Input_Accent', '#ffe066');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        const summary = await page.textContent('[data-validation-summary]');
+        expectTrue(summary.includes('White text reaches only'), 'no reason in the summary: ' + summary.trim().slice(0, 120));
+        expect(await page.inputValue('#Input_Name'), appName, 'the name that was typed');
+        expect(await page.locator('#Input_OnAccent').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field with the problem');
+      });
+      await check('a dark text colour and a darker link save it, the list says so in a toast, and the Check button saves nothing', async () => {
+        await setPicker('Input_OnAccent', '#0b1020');
+        await setPicker('Input_AccentText', '#7a5c00');
+        await page.click('.mat-btn-row button:has-text("Check")');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await page.textContent('main')).includes('All checks pass.'), 'Check does not say that all pass');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForURL('**/Studio/Apps');
+        await page.waitForSelector('.mat-toast');
+        expectTrue((await page.textContent('.mat-toast')).includes(appName + ' was added.'), 'no toast: ' + await page.textContent('.mat-toasts'));
+        // the list shows 20 apps a page: the search finds the new one
+        await page.goto(BASE + '/Studio/Apps?q=' + appId, { waitUntil: 'networkidle' });
+        expectTrue((await page.textContent('.mat-table')).includes(appName), 'the app is not in the list');
+      });
+      await check('the new app is on the site and its colours are in the toolkit files', async () => {
+        await page.goto(BASE + '/Identity/App?id=' + appId, { waitUntil: 'networkidle' });
+        expect(await page.textContent('main h1'), appName, 'the page of the app');
+        const css = await (await page.request.get(BASE + '/ui/css/matui.apps.css')).text();
+        expectTrue(css.includes('[data-app="' + appId + '"] { --mat-app-accent: #ffe066; --mat-app-on-accent: #0b1020; --mat-app-accent-text: #7a5c00; }'), 'the colours are not in matui.apps.css');
+        const apps = await (await page.request.get(BASE + '/api/apps')).json();
+        expectTrue(apps.some(a => a.id === appId), 'the app is not in the API');
+      });
+      await check('Delete asks in a dialog, the dialog can be cancelled, and the app is gone with its colours afterwards', async () => {
+        await page.goto(BASE + '/Studio/Apps/Edit?id=' + appId, { waitUntil: 'networkidle' });
+        expect(await page.locator('#Input_Id').evaluate(el => el.readOnly), true, 'the id of a saved app is read-only');
+        await page.click('.mat-btn--danger[data-confirm]');
+        expect(await page.locator('dialog[open]').count(), 1, 'the confirmation dialog');
+        await page.click('dialog[open] [data-dialog-close]');
+        expectTrue(page.url().includes('/Studio/Apps/Edit'), 'Cancel left the page');
+        await page.click('.mat-btn--danger[data-confirm]');
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForURL('**/Studio/Apps');
+        const css = await (await page.request.get(BASE + '/ui/css/matui.apps.css')).text();
+        expectTrue(!css.includes('data-app="' + appId + '"'), 'the colours of the deleted app are still in the toolkit');
+        expect((await page.request.get(BASE + '/Identity/App?id=' + appId)).status(), 404, 'the page of the deleted app');
       });
       await check('Sign out is the last entry of the user menu, ends the session and leads back to the site', async () => {
         await page.click('.mat-user');

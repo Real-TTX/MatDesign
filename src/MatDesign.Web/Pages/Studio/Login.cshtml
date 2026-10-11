@@ -1,9 +1,10 @@
 @page "/Studio/Login"
 @model MatDesign.Web.Pages.Studio.LoginModel
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     ViewData["Title"] = "Studio sign-in";
     Layout = "_Bare";
-    var app = AppRegistry.Get("matdesign")!;
+    var app = Design.App("matdesign")!;
 }
 
 <div class="mat-auth__card">

@@ -86,7 +86,11 @@ public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<
 /// <summary>The menus of the site. The item whose address is the longest prefix of the current path is the active one.</summary>
 public static class Navigation
 {
-    public static IReadOnlyList<NavSet> Sets { get; } =
+    /// <summary>The two menus of the site as the built-in data gives them. The pages use <see cref="Create"/> with the apps the Studio changed.</summary>
+    public static IReadOnlyList<NavSet> Sets { get; } = Create(AppRegistry.All);
+
+    /// <summary>The two menus of the site; the badge of the palette counts the pairs of accents of <paramref name="apps"/> that are too close.</summary>
+    public static IReadOnlyList<NavSet> Create(IReadOnlyList<MatApp> apps) =>
     [
         new("design", "Design", "palette",
         [
@@ -94,7 +98,7 @@ public static class Navigation
             new("Identity",
             [
                 new("Apps", "/Identity", "apps"),
-                new("Palette", "/Identity/Palette", "palette", NavBadge.Count(PaletteAdvisor.Collisions(AppRegistry.All).Count, "warn", "pairs of accents that are too close")),
+                new("Palette", "/Identity/Palette", "palette", NavBadge.Count(PaletteAdvisor.Collisions(apps).Count, "warn", "pairs of accents that are too close")),
                 new("Audit", "/Identity/Audit", "check-square"),
             ]),
             new("Rules", [new("Rulebook", "/Rules", "book", NavBadge.Count(RuleBook.All.Count, "plain", "rules"))]),
@@ -132,11 +136,15 @@ public static class Navigation
     public static NavSet StudioSet { get; } = new("studio", "Studio", "wrench",
     [
         new(null, [new("Overview", "/Studio", "home")]),
-        new("Maintain", [new("Activity", "/Studio/Activity", "activity")]),
+        new("Maintain",
+        [
+            new("Apps", "/Studio/Apps", "apps"),
+            new("Activity", "/Studio/Activity", "activity"),
+        ]),
     ]);
 
     /// <summary>The menus a visitor sees: the two of the site, and the Studio for the signed-in administrator.</summary>
-    public static IReadOnlyList<NavSet> For(bool studio) => studio ? [.. Sets, StudioSet] : Sets;
+    public static IReadOnlyList<NavSet> For(IReadOnlyList<MatApp> apps, bool studio) => studio ? [.. Create(apps), StudioSet] : Create(apps);
 
     /// <summary>Every page of every menu (no parents), the Studio's included.</summary>
     public static IEnumerable<NavItem> Pages => Sets.Append(StudioSet).SelectMany(s => s.Pages);

@@ -1,10 +1,11 @@
 using MatDesign.Core;
+using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace MatDesign.Web.Pages.Identity;
 
-public class AppModel : PageModel
+public class AppModel(DesignData design) : PageModel
 {
     public MatApp App { get; private set; } = null!;
 
@@ -12,7 +13,7 @@ public class AppModel : PageModel
 
     public IActionResult OnGet(string? id)
     {
-        var app = id is null ? null : AppRegistry.Get(id);
+        var app = design.App(id);
         if (app is null)
         {
             return NotFound();

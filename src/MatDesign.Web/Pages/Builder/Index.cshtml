@@ -1,5 +1,6 @@
 @page "/Builder"
 @model MatDesign.Web.Pages.Builder.IndexModel
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     ViewData["Title"] = "Builder";
     ViewData["PageSub"] = "Try an accent: what the toolkit derives from it, whether the text on it is readable, whether it looks like another app, and the real screens in that colour.";
@@ -17,7 +18,7 @@
                     <div class="mat-field">
                         <label class="mat-label" for="b-app">Start from the app</label>
                         <select class="mat-select" id="b-app" name="app" data-autosubmit>
-                            @foreach (var a in AppRegistry.All)
+                            @foreach (var a in Design.Apps)
                             {
                                 <option value="@a.Id" selected="@(a.Id == Model.BaseApp.Id)">@a.Name</option>
                             }

@@ -1,5 +1,6 @@
 using MatDesign.Core;
 using MatDesign.Web.Services;
+using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace MatDesign.Web.Pages.Identity;
@@ -8,10 +9,12 @@ namespace MatDesign.Web.Pages.Identity;
 public class AuditModel : PageModel
 {
     private readonly AuditData _audit;
+    private readonly DesignData _design;
 
-    public AuditModel(AuditData audit)
+    public AuditModel(AuditData audit, DesignData design)
     {
         _audit = audit;
+        _design = design;
     }
 
     public AuditData Audit => _audit;
@@ -39,7 +42,7 @@ public class AuditModel : PageModel
         var descending = ListQuery.Descending(Request);
 
         var rows = _audit.Apps
-            .Select(a => (App: AppRegistry.Get(a.Id)!, Scan: a, Score: Score(a)))
+            .Select(a => (App: _design.App(a.Id)!, Scan: a, Score: Score(a)))
             .Where(r => r.App is not null)
             .ToList();
 

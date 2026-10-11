@@ -1,6 +1,7 @@
 @page "/Studio"
 @model MatDesign.Web.Pages.Studio.IndexModel
 @inject ToolkitFiles Toolkit
+@inject DesignData Design
 @using MatDesign.Web.Studio
 @{
     ViewData["Title"] = "Studio";
@@ -13,7 +14,7 @@
     <div class="mat-card"><div class="mat-card__body">
         <dl class="mat-kv">
             <dt>Built in</dt>
-            <dd>@AppRegistry.All.Count apps, @RuleBook.All.Count rules, @ComponentCatalog.All.Count components, @Toolkit.Tokens.Count tokens</dd>
+            <dd>@Design.Apps.Count apps, @RuleBook.All.Count rules, @ComponentCatalog.All.Count components, @Toolkit.Tokens.Count tokens</dd>
             <dt>Saved in the Studio</dt>
             <dd>
                 @if (Model.Saved.Count == 0)
@@ -31,6 +32,18 @@
             <dd><code>@AppVersion.Current</code></dd>
         </dl>
     </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="maintain-title">
+    <div class="mat-section__head"><h2 id="maintain-title">Maintain</h2></div>
+    <ul class="doc-index">
+        <li>
+            <a class="doc-index__row" href="/Studio/Apps">
+                <span class="doc-index__key"><strong class="doc-index__title">Apps</strong></span>
+                <span class="doc-index__body"><span class="mat-muted">Create and change the apps of the family: name, colour, icon and port. The contrast of the colour is checked before it is saved.</span></span>
+            </a>
+        </li>
+    </ul>
 </section>
 
 <section class="mat-section" aria-labelledby="recent-title">

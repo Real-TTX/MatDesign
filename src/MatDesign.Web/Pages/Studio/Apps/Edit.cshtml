@@ -1,0 +1,184 @@
+@page "/Studio/Apps/Edit"
+@model MatDesign.Web.Pages.Studio.Apps.EditModel
+@using MatDesign.Web.Studio
+@{
+    var input = Model.Input;
+    var isNew = Model.IsNew;
+    var title = isNew ? "New app" : string.IsNullOrWhiteSpace(input.Name) ? "App" : input.Name!;
+    ViewData["Title"] = title;
+    ViewData["PageSub"] = isNew
+        ? "A new app of the family gets its own colour and icon. Everything else is shared."
+        : Model.Source switch
+        {
+            AppSource.BuiltIn => "A built-in app. Saving a change here replaces it on the site; deleting that change brings the built-in app back.",
+            AppSource.Changed => "A built-in app that was changed in the Studio. Resetting it brings the built-in app back.",
+            _ => "An app that was added in the Studio.",
+        };
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Apps", "/Studio/Apps"), (title, null));
+    ViewData["Width"] = "narrow";
+
+    string Field(string name) => Model.ProblemFor(name) is null ? string.Empty : " is-invalid";
+}
+
+@* The action is written out: after Check the address of the page ends in ?check=true, and Save must not inherit it. A form with an action gets no token by itself. *@
+<form class="mat-form" method="post" action="/Studio/Apps/Edit" novalidate>
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Input.Original" value="@input.Original" />
+
+    <div class="mat-alert mat-alert--danger" role="alert" data-validation-summary hidden="@(Model.Problems.Count == 0)">
+        @Ui.Icon("x-circle")
+        <div class="mat-alert__body">
+            <strong>Please check the form.</strong>
+            <ul class="mat-alert__list">
+                @foreach (var problem in Model.Problems)
+                {
+                    <li><a href="#Input_@problem.Field">@problem.Message</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+    @if (Model.Checked && Model.Problems.Count == 0)
+    {
+        <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>All checks pass.</strong> Nothing was saved yet.</div></div>
+    }
+
+    <section class="mat-card" aria-labelledby="app-title">
+        <div class="mat-card__head">@Ui.Icon("apps")<h2 class="mat-card__title" id="app-title">The app</h2></div>
+        <div class="mat-card__body">
+            <div class="mat-form__grid">
+                <div class="mat-field@(Field("Name"))">
+                    <label class="mat-label" for="Input_Name">Name <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Input_Name" name="Input.Name" value="@input.Name" maxlength="40" required data-msg-required="Please give the app a name." />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Name")</span>
+                    <span class="mat-hint">Written as in its menu, its title and its README (IDENT-06).</span>
+                </div>
+                <div class="mat-field@(Field("Id"))">
+                    <label class="mat-label" for="Input_Id">Id @if (isNew) { <span class="mat-req" aria-hidden="true">*</span> }</label>
+                    <input class="mat-input mat-mono" id="Input_Id" name="Input.Id" value="@input.Id" maxlength="24" readonly="@(!isNew)" required="@isNew" pattern="[a-z]{2,24}" data-msg-pattern="Use 2 to 24 lower-case letters." data-msg-required="Please give the app an id." autocomplete="off" />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Id")</span>
+                    <span class="mat-hint">@(isNew ? "Lower-case letters, like matmail. It is the value of data-app and the id in the API, and it cannot change later." : "The value of data-app and the id in the API. It cannot change.")</span>
+                </div>
+                <div class="mat-field mat-field--full@(Field("Tagline"))">
+                    <label class="mat-label" for="Input_Tagline">Tagline <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Input_Tagline" name="Input.Tagline" value="@input.Tagline" maxlength="90" required data-msg-required="Please say what the app is for." />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Tagline")</span>
+                </div>
+                <div class="mat-field@(Field("Category"))">
+                    <label class="mat-label" for="Input_Category">Category</label>
+                    <select class="mat-select" id="Input_Category" name="Input.Category">
+                        @foreach (var category in MatDesign.Core.AppRegistry.Categories)
+                        {
+                            <option value="@category" selected="@(category == input.Category)">@category</option>
+                        }
+                    </select>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Category")</span>
+                </div>
+                <div class="mat-field@(Field("Glyph"))">
+                    <label class="mat-label" for="Input_Glyph">Icon</label>
+                    <select class="mat-select" id="Input_Glyph" name="Input.Glyph">
+                        @foreach (var glyph in Model.Glyphs)
+                        {
+                            <option value="@glyph" selected="@(glyph == input.Glyph)">@glyph</option>
+                        }
+                    </select>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Glyph")</span>
+                    <span class="mat-hint">The glyph of the logo, from the icon sprite.</span>
+                </div>
+                <div class="mat-field@(Field("Repo"))">
+                    <label class="mat-label" for="Input_Repo">Repository <span class="mat-opt">(optional)</span></label>
+                    <input class="mat-input mat-mono" id="Input_Repo" name="Input.Repo" value="@input.Repo" maxlength="60" />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Repo")</span>
+                    <span class="mat-hint">Empty means the name of the app.</span>
+                </div>
+                <div class="mat-field@(Field("Port"))">
+                    <label class="mat-label" for="Input_Port">Port <span class="mat-opt">(optional)</span></label>
+                    <input class="mat-input mat-mono" id="Input_Port" name="Input.Port" value="@input.Port" inputmode="numeric" maxlength="5" />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Port")</span>
+                    <span class="mat-hint">The web port of the app; no two apps share one.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="colour-title">
+        <div class="mat-card__head">@Ui.Icon("palette")<h2 class="mat-card__title" id="colour-title">Colour</h2></div>
+        <div class="mat-card__body">
+            <div class="mat-form__grid">
+                <div class="mat-field@(Field("Accent"))">
+                    <label class="mat-label" for="Input_Accent">Accent <span class="mat-req" aria-hidden="true">*</span></label>
+                    <div class="mat-picker" data-picker="colour" data-placeholder="Choose a colour">
+                        <input class="mat-picker__input" id="Input_Accent" name="Input.Accent" value="@input.Accent" />
+                    </div>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Accent")</span>
+                    <span class="mat-hint">The one colour the app chooses (IDENT-01). The picker tells how white and dark text read on it.</span>
+                </div>
+                <div class="mat-field@(Field("OnAccent"))">
+                    <label class="mat-label" for="Input_OnAccent">Text on the accent <span class="mat-opt">(optional)</span></label>
+                    <div class="mat-picker" data-picker="colour" data-clearable data-placeholder="White">
+                        <input class="mat-picker__input" id="Input_OnAccent" name="Input.OnAccent" value="@input.OnAccent" />
+                    </div>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("OnAccent")</span>
+                    <span class="mat-hint">Empty means white. A dark colour for an accent that is too light for white text (IDENT-02).</span>
+                </div>
+                <div class="mat-field@(Field("AccentText"))">
+                    <label class="mat-label" for="Input_AccentText">Link colour <span class="mat-opt">(optional)</span></label>
+                    <div class="mat-picker" data-picker="colour" data-clearable data-placeholder="Derived from the accent">
+                        <input class="mat-picker__input" id="Input_AccentText" name="Input.AccentText" value="@input.AccentText" />
+                    </div>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("AccentText")</span>
+                    <span class="mat-hint">Only when a link in the accent is too light on white.</span>
+                </div>
+                <div class="mat-field">
+                    <span class="mat-label">As typed</span>
+                    @if (Model.Preview is { } preview && MatDesign.Core.Studio.AppValidator.IsSafe(preview))
+                    {
+                        <span class="mat-row mat-row--nowrap">@Ui.Swatch(preview.Accent, "lg")<span><strong>@preview.Name</strong><small class="mat-muted"> @preview.Accent</small></span></span>
+                    }
+                    else
+                    {
+                        <span class="mat-hint">Appears when the colours are colours.</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </section>
+
+    @if (Model.Report is { } report)
+    {
+        <partial name="_ContrastCard" model="report" />
+    }
+
+    <section class="mat-card" aria-labelledby="note-title">
+        <div class="mat-card__head">@Ui.Icon("file-text")<h2 class="mat-card__title" id="note-title">Note</h2></div>
+        <div class="mat-card__body">
+            <div class="mat-field@(Field("Notes"))">
+                <label class="mat-label" for="Input_Notes">Note <span class="mat-opt">(optional)</span></label>
+                <textarea class="mat-textarea" id="Input_Notes" name="Input.Notes" rows="3" maxlength="300">@input.Notes</textarea>
+                <span class="mat-error" aria-live="polite">@Model.ProblemFor("Notes")</span>
+                <span class="mat-hint">Shown on the page of the app. Up to 300 characters.</span>
+            </div>
+        </div>
+    </section>
+
+    <div class="mat-btn-row">
+        <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+        <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        <a class="mat-btn mat-btn--secondary" href="/Studio/Apps">@Ui.Icon("back")<span>Back</span></a>
+        @if (!isNew && !string.IsNullOrEmpty(input.Id))
+        {
+            <a class="mat-btn mat-btn--ghost" href="/Preview?app=@input.Id&amp;view=list">@Ui.Icon("eye")<span>Preview</span></a>
+        }
+        @if (!isNew && Model.Source != AppSource.BuiltIn)
+        {
+            <span class="mat-btn-row__spacer"></span>
+            @if (Model.Source == AppSource.Added)
+            {
+                <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Delete" data-confirm="Delete @input.Name? Its page, its colours and its entry in the API are gone; the history stays." data-confirm-ok="Delete">@Ui.Icon("trash")<span>Delete</span></button>
+            }
+            else
+            {
+                <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Delete" data-confirm="Reset @input.Name to the built-in app? Your changes are gone; the history stays." data-confirm-ok="Reset">@Ui.Icon("restore")<span>Reset to built-in</span></button>
+            }
+        }
+    </div>
+</form>

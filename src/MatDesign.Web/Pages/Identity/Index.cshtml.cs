@@ -1,11 +1,12 @@
 using MatDesign.Core;
 using MatDesign.Web.Services;
+using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace MatDesign.Web.Pages.Identity;
 
 /// <summary>The apps of the family as a list or a gallery, with the toolbar above (search, filter, sort).</summary>
-public class IndexModel : PageModel
+public class IndexModel(DesignData design) : PageModel
 {
     private const int PageSize = 24;
 
@@ -23,7 +24,7 @@ public class IndexModel : PageModel
         var sort = ListQuery.Text(Request, "sort") ?? "name";
         var descending = ListQuery.Descending(Request);
 
-        IEnumerable<MatApp> apps = AppRegistry.All;
+        IEnumerable<MatApp> apps = design.Apps;
         if (q is not null)
         {
             apps = apps.Where(a => a.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || a.Tagline.Contains(q, StringComparison.OrdinalIgnoreCase) || a.Accent.Contains(q, StringComparison.OrdinalIgnoreCase));
@@ -70,7 +71,7 @@ public class IndexModel : PageModel
             Search = q,
             SearchPlaceholder = "Name, tagline or colour",
             Noun = "apps",
-            Total = AppRegistry.All.Count,
+            Total = design.Apps.Count,
             Matching = matching.Count,
             Sort = sort,
             Descending = descending,

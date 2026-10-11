@@ -1,11 +1,12 @@
 using MatDesign.Core;
 using MatDesign.Web.Services;
+using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace MatDesign.Web.Pages.Identity;
 
 /// <summary>Which accents are too close to tell apart, and which free colours the advisor proposes.</summary>
-public class PaletteModel : PageModel
+public class PaletteModel(DesignData design) : PageModel
 {
     private const int PageSize = 12;
 
@@ -32,10 +33,10 @@ public class PaletteModel : PageModel
         var sort = ListQuery.Text(Request, "sort") ?? "distance";
         var descending = ListQuery.Descending(Request);
 
-        var all = PaletteAdvisor.Collisions(AppRegistry.All);
+        var all = PaletteAdvisor.Collisions(design.Apps);
         TotalCollisions = all.Count;
-        ByHue = AppRegistry.All.OrderBy(IndexModel.Hue).ToList();
-        Suggestions = PaletteAdvisor.Suggest(AppRegistry.All);
+        ByHue = design.Apps.OrderBy(IndexModel.Hue).ToList();
+        Suggestions = PaletteAdvisor.Suggest(design.Apps);
 
         IEnumerable<Collision> items = all;
         if (q is not null)
