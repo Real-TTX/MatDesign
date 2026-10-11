@@ -86,11 +86,14 @@ public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<
 /// <summary>The menus of the site. The item whose address is the longest prefix of the current path is the active one.</summary>
 public static class Navigation
 {
-    /// <summary>The two menus of the site as the built-in data gives them. The pages use <see cref="Create"/> with the apps the Studio changed.</summary>
-    public static IReadOnlyList<NavSet> Sets { get; } = Create(AppRegistry.All);
+    /// <summary>The two menus of the site as the built-in data gives them. The pages use <see cref="Create"/> with the data the Studio changed.</summary>
+    public static IReadOnlyList<NavSet> Sets { get; } = Create(AppRegistry.All, RuleBook.All.Count);
 
-    /// <summary>The two menus of the site; the badge of the palette counts the pairs of accents of <paramref name="apps"/> that are too close.</summary>
-    public static IReadOnlyList<NavSet> Create(IReadOnlyList<MatApp> apps) =>
+    /// <summary>
+    /// The two menus of the site; the badge of the palette counts the pairs of accents of <paramref name="apps"/> that are too close, the one of the rulebook the
+    /// <paramref name="rules"/>.
+    /// </summary>
+    public static IReadOnlyList<NavSet> Create(IReadOnlyList<MatApp> apps, int rules) =>
     [
         new("design", "Design", "palette",
         [
@@ -101,7 +104,7 @@ public static class Navigation
                 new("Palette", "/Identity/Palette", "palette", NavBadge.Count(PaletteAdvisor.Collisions(apps).Count, "warn", "pairs of accents that are too close")),
                 new("Audit", "/Identity/Audit", "check-square"),
             ]),
-            new("Rules", [new("Rulebook", "/Rules", "book", NavBadge.Count(RuleBook.All.Count, "plain", "rules"))]),
+            new("Rules", [new("Rulebook", "/Rules", "book", NavBadge.Count(rules, "plain", "rules"))]),
             new("Foundations",
             [
                 new("Foundations", null, "layers", Children:
@@ -139,12 +142,13 @@ public static class Navigation
         new("Maintain",
         [
             new("Apps", "/Studio/Apps", "apps"),
+            new("Rules", "/Studio/Rules", "book"),
             new("Activity", "/Studio/Activity", "activity"),
         ]),
     ]);
 
     /// <summary>The menus a visitor sees: the two of the site, and the Studio for the signed-in administrator.</summary>
-    public static IReadOnlyList<NavSet> For(IReadOnlyList<MatApp> apps, bool studio) => studio ? [.. Create(apps), StudioSet] : Create(apps);
+    public static IReadOnlyList<NavSet> For(IReadOnlyList<MatApp> apps, int rules, bool studio) => studio ? [.. Create(apps, rules), StudioSet] : Create(apps, rules);
 
     /// <summary>Every page of every menu (no parents), the Studio's included.</summary>
     public static IEnumerable<NavItem> Pages => Sets.Append(StudioSet).SelectMany(s => s.Pages);

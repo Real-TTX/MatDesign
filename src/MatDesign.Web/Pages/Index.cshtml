@@ -5,7 +5,7 @@
     ViewData["Title"] = "Overview";
     ViewData["OwnHead"] = true;
     var firstRules = new[] { "SHELL-01", "SHELL-03", "SHELL-07", "SHELL-08", "LIST-03", "FORM-01", "DIALOG-03", "IDENT-01" }
-        .Select(id => RuleBook.Get(id)!).ToList();
+        .Select(id => Design.Rule(id)!).ToList();
     var apps = Design.Apps;
     var pages = new (string Name, string Href, string Text)[]
     {
@@ -36,7 +36,7 @@
         is the CSS and script an app copies to follow them.
     </p>
     <p class="mat-muted">
-        <a href="/Rules">@RuleBook.All.Count rules</a> in @RuleBook.Areas.Count areas, <a href="/Identity">@apps.Count apps</a>,
+        <a href="/Rules">@Design.Rules.Count rules</a> in @RuleBook.Areas.Count areas, <a href="/Identity">@apps.Count apps</a>,
         <a href="/Foundations/Tokens">@Toolkit.Tokens.Count design tokens</a> and <a href="/Foundations/Icons">@Toolkit.IconNames.Count icons</a>.
     </p>
     <div class="mat-btn-row mat-btn-row--plain">

@@ -15,11 +15,11 @@ public class IndexModel(StudioService studio, DesignData design) : StudioPageMod
 
     public IReadOnlyList<MatApp> Items { get; private set; } = [];
 
-    public AppSource SourceOf(MatApp app) => design.SourceOf(app.Id);
+    public ItemSource SourceOf(MatApp app) => design.SourceOf(app.Id);
 
-    public static string Label(AppSource source) => source switch { AppSource.Added => "Added", AppSource.Changed => "Changed", _ => "Built in" };
+    public static string Label(ItemSource source) => source switch { ItemSource.Added => "Added", ItemSource.Changed => "Changed", _ => "Built in" };
 
-    public static string PillClass(AppSource source) => source switch { AppSource.Added => "mat-pill--ok", AppSource.Changed => "mat-pill--info", _ => string.Empty };
+    public static string PillClass(ItemSource source) => source switch { ItemSource.Added => "mat-pill--ok", ItemSource.Changed => "mat-pill--info", _ => string.Empty };
 
     public void OnGet()
     {
@@ -53,7 +53,7 @@ public class IndexModel(StudioService studio, DesignData design) : StudioPageMod
         {
             "category" => matching.OrderBy(a => AppRegistry.Categories.ToList().IndexOf(a.Category)).ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase),
             "colour" => matching.OrderBy(Identity.IndexModel.Hue).ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase),
-            "source" => matching.OrderByDescending(a => SourceOf(a) != AppSource.BuiltIn).ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase),
+            "source" => matching.OrderByDescending(a => SourceOf(a) != ItemSource.BuiltIn).ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase),
             _ => matching.OrderBy(a => a.Name, StringComparer.OrdinalIgnoreCase),
         };
         var ordering = ordered.ToList();

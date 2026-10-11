@@ -47,7 +47,7 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
 
     public bool IsNew => string.IsNullOrEmpty(Input.Original);
 
-    public AppSource Source { get; private set; }
+    public ItemSource Source { get; private set; }
 
     public IReadOnlyList<Problem> Problems { get; private set; } = [];
 
@@ -96,7 +96,7 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
             return NotFound();
         }
 
-        Source = original is null ? AppSource.Added : design.SourceOf(original.Id);
+        Source = original is null ? ItemSource.Added : design.SourceOf(original.Id);
         var app = Describe(Input, original);
         Preview = app;
         var problems = Validate(app, original);
@@ -124,14 +124,14 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
         }
 
         var source = design.SourceOf(app.Id);
-        if (source == AppSource.BuiltIn)
+        if (source == ItemSource.BuiltIn)
         {
             return BadRequest("A built-in app cannot be deleted.");
         }
 
-        Studio.Store.Delete("apps", app.Id, Studio.Administrator, source == AppSource.Added ? "Deleted" : "Reset to the built-in app");
+        Studio.Store.Delete("apps", app.Id, Studio.Administrator, source == ItemSource.Added ? "Deleted" : "Reset to the built-in app");
         design.Reload();
-        TempData["Flash"] = source == AppSource.Added ? $"{app.Name} was deleted." : $"{app.Name} is the built-in app again.";
+        TempData["Flash"] = source == ItemSource.Added ? $"{app.Name} was deleted." : $"{app.Name} is the built-in app again.";
         return RedirectToPage("/Studio/Apps/Index");
     }
 

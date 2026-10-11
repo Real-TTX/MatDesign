@@ -4,10 +4,10 @@ using MatDesign.Core.Studio;
 
 namespace MatDesign.Web.Studio;
 
-/// <summary>Where an app of the family comes from.</summary>
-public enum AppSource
+/// <summary>Where an app or a rule comes from.</summary>
+public enum ItemSource
 {
-    /// <summary>Written in the registry of the code.</summary>
+    /// <summary>Written in the code.</summary>
     BuiltIn,
 
     /// <summary>Created in the Studio.</summary>
@@ -37,7 +37,13 @@ public sealed class DesignData
         _snapshot = Load();
     }
 
-    private sealed record Snapshot(IReadOnlyList<MatApp> Apps, IReadOnlyList<MatApp> Items, IReadOnlyDictionary<string, AppSource> Sources);
+    private sealed record Snapshot(
+        IReadOnlyList<MatApp> Apps,
+        IReadOnlyList<MatApp> Items,
+        IReadOnlyDictionary<string, ItemSource> Sources,
+        IReadOnlyList<Rule> Rules,
+        IReadOnlyList<Rule> RuleItems,
+        IReadOnlyDictionary<string, ItemSource> RuleSources);
 
     /// <summary>A number that grows with every change made in the Studio.</summary>
     public long Version => Interlocked.Read(ref _version);
@@ -50,7 +56,19 @@ public sealed class DesignData
 
     public MatApp? App(string? id) => id is null ? null : Apps.FirstOrDefault(a => a.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
 
-    public AppSource SourceOf(string id) => _snapshot.Sources.GetValueOrDefault(id.ToLowerInvariant(), AppSource.BuiltIn);
+    public ItemSource SourceOf(string id) => _snapshot.Sources.GetValueOrDefault(id.ToLowerInvariant(), ItemSource.BuiltIn);
+
+    /// <summary>The rulebook: the built-in rules (changed ones replaced), and the rules added in the Studio after the last rule of their area.</summary>
+    public IReadOnlyList<Rule> Rules => _snapshot.Rules;
+
+    /// <summary>The rules that were added or changed in the Studio.</summary>
+    public IReadOnlyList<Rule> StudioRules => _snapshot.RuleItems;
+
+    public Rule? Rule(string? id) => id is null ? null : Rules.FirstOrDefault(r => r.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+
+    public IEnumerable<Rule> RulesIn(string areaId) => Rules.Where(r => r.Area == areaId);
+
+    public ItemSource RuleSourceOf(string id) => _snapshot.RuleSources.GetValueOrDefault(id.ToUpperInvariant(), ItemSource.BuiltIn);
 
     /// <summary>Reads the Studio's items again. Called after every save and delete.</summary>
     public void Reload()
@@ -62,44 +80,72 @@ public sealed class DesignData
         }
     }
 
-    private Snapshot Load()
+    /// <summary>The items of a kind that can be read as <typeparamref name="T"/> and are safe; the others (a file edited by hand into nonsense) are left out, the site goes on.</summary>
+    private List<T> Items<T>(string kind, Func<T, bool> safe, Func<T, string> idOf) where T : class
     {
-        var items = new List<MatApp>();
-        if (_studio.Enabled)
+        var items = new List<T>();
+        if (!_studio.Enabled)
         {
-            foreach (var stored in _studio.Store.List("apps"))
+            return items;
+        }
+
+        foreach (var stored in _studio.Store.List(kind))
+        {
+            try
             {
-                try
+                if (stored.Revision.Data.Deserialize<T>(Options) is { } item && safe(item) && idOf(item).Equals(stored.Id, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (stored.Revision.Data.Deserialize<MatApp>(Options) is { } app && AppValidator.IsSafe(app) && app.Id.Equals(stored.Id, StringComparison.OrdinalIgnoreCase))
-                    {
-                        items.Add(app);
-                    }
+                    items.Add(item);
                 }
-                catch (JsonException)
-                {
-                    // a file that was edited by hand and is not an app any more: it is left out, the site goes on
-                }
+            }
+            catch (JsonException)
+            {
+                // not an item any more
             }
         }
 
-        var sources = new Dictionary<string, AppSource>();
+        return items;
+    }
+
+    private Snapshot Load()
+    {
+        var items = Items<MatApp>("apps", AppValidator.IsSafe, a => a.Id);
+        var sources = new Dictionary<string, ItemSource>();
         var apps = AppRegistry.All.Select(builtIn =>
         {
             var changed = items.FirstOrDefault(i => i.Id == builtIn.Id);
             if (changed is not null)
             {
-                sources[builtIn.Id] = AppSource.Changed;
+                sources[builtIn.Id] = ItemSource.Changed;
             }
 
             return changed ?? builtIn;
         }).ToList();
         foreach (var added in items.Where(i => AppRegistry.Get(i.Id) is null))
         {
-            sources[added.Id] = AppSource.Added;
+            sources[added.Id] = ItemSource.Added;
             apps.Add(added);
         }
 
-        return new Snapshot(apps, items, sources);
+        var ruleItems = Items<Rule>("rules", RuleValidator.IsSafe, r => r.Id);
+        var ruleSources = new Dictionary<string, ItemSource>();
+        var rules = RuleBook.All.Select(builtIn =>
+        {
+            var changed = ruleItems.FirstOrDefault(i => i.Id == builtIn.Id);
+            if (changed is not null)
+            {
+                ruleSources[builtIn.Id] = ItemSource.Changed;
+            }
+
+            return changed ?? builtIn;
+        }).ToList();
+        foreach (var added in ruleItems.Where(i => RuleBook.Get(i.Id) is null).OrderBy(i => i.Id, StringComparer.Ordinal))
+        {
+            ruleSources[added.Id] = ItemSource.Added;
+            var last = rules.FindLastIndex(r => r.Area == added.Area);
+            rules.Insert(last < 0 ? rules.Count : last + 1, added);
+        }
+
+        return new Snapshot(apps, items, sources, rules, ruleItems, ruleSources);
     }
 }

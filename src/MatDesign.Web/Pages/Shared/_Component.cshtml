@@ -1,4 +1,5 @@
 @model ComponentDoc
+@inject MatDesign.Web.Studio.DesignData Design
 @*
     One component on the components page: what it is, the rules it follows, each example live with its markup (or script) to copy, and what is good to know.
     The ids of the elements are prefixed with the id of the component: all components share one page.
@@ -15,7 +16,7 @@
             <div class="mat-row doc-rules">
                 @foreach (var rule in c.Rules)
                 {
-                    <a class="doc-rule-id" href="/Rules/Detail?id=@rule" title="@RuleBook.Get(rule)?.Title">@rule</a>
+                    <a class="doc-rule-id" href="/Rules/Detail?id=@rule" title="@Design.Rule(rule)?.Title">@rule</a>
                 }
             </div>
         </div>

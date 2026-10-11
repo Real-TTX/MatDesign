@@ -1,0 +1,176 @@
+@page "/Studio/Rules/Edit"
+@model MatDesign.Web.Pages.Studio.Rules.EditModel
+@using MatDesign.Web.Studio
+@{
+    var input = Model.Input;
+    var isNew = Model.IsNew;
+    var title = isNew ? "New rule" : input.Id ?? "Rule";
+    ViewData["Title"] = title;
+    ViewData["PageSub"] = isNew
+        ? "A rule says how every Mat app looks or behaves. It gets an id that reviews, commits and prompts can cite."
+        : Model.Source switch
+        {
+            ItemSource.BuiltIn => "A built-in rule. Saving a change here replaces it in the rulebook; deleting that change brings the built-in rule back.",
+            ItemSource.Changed => "A built-in rule that was changed in the Studio. Resetting it brings the built-in rule back.",
+            _ => "A rule that was added in the Studio.",
+        };
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Rules", "/Studio/Rules"), (title, null));
+    ViewData["Width"] = "narrow";
+
+    string Field(string name) => Model.ProblemFor(name) is null ? string.Empty : " is-invalid";
+}
+
+<form class="mat-form" method="post" action="/Studio/Rules/Edit" novalidate>
+    @* The action is written out: after Check the address ends in ?check=true, and Save must not inherit it. A form with an action gets no token by itself. *@
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="Input.Original" value="@input.Original" />
+
+    <div class="mat-alert mat-alert--danger" role="alert" data-validation-summary hidden="@(Model.Problems.Count == 0)">
+        @Ui.Icon("x-circle")
+        <div class="mat-alert__body">
+            <strong>Please check the form.</strong>
+            <ul class="mat-alert__list">
+                @foreach (var problem in Model.Problems)
+                {
+                    <li><a href="#Input_@problem.Field">@problem.Message</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+    @if (Model.Checked && Model.Problems.Count == 0)
+    {
+        <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>All checks pass.</strong> Nothing was saved yet.</div></div>
+    }
+
+    <section class="mat-card" aria-labelledby="rule-title">
+        <div class="mat-card__head">@Ui.Icon("book")<h2 class="mat-card__title" id="rule-title">The rule</h2></div>
+        <div class="mat-card__body">
+            <div class="mat-form__grid">
+                <div class="mat-field@(Field("Area"))">
+                    <label class="mat-label" for="Input_Area">Area</label>
+                    @if (isNew)
+                    {
+                        <select class="mat-select" id="Input_Area" name="Input.Area">
+                            @foreach (var area in MatDesign.Core.RuleBook.Areas)
+                            {
+                                <option value="@area.Id" selected="@(area.Id == input.Area)">@area.Name (@area.Id)</option>
+                            }
+                        </select>
+                        <span class="mat-hint">The id starts with the area. If you change the area, change the id too.</span>
+                    }
+                    else
+                    {
+                        <input class="mat-input" id="Input_Area" name="Input.Area" value="@input.Area" readonly />
+                        <span class="mat-hint">The area of a rule that exists cannot change.</span>
+                    }
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Area")</span>
+                </div>
+                <div class="mat-field@(Field("Id"))">
+                    <label class="mat-label" for="Input_Id">Id @if (isNew) { <span class="mat-req" aria-hidden="true">*</span> }</label>
+                    <input class="mat-input mat-mono" id="Input_Id" name="Input.Id" value="@input.Id" maxlength="12" readonly="@(!isNew)" required="@isNew" autocomplete="off" />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Id")</span>
+                    <span class="mat-hint">@(isNew ? "The area, a dash and two or three digits. The next free one is filled in." : "A rule is cited by its id: it cannot change.")</span>
+                </div>
+                <div class="mat-field mat-field--full@(Field("Title"))">
+                    <label class="mat-label" for="Input_Title">Title <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Input_Title" name="Input.Title" value="@input.Title" maxlength="80" required data-msg-required="Please give the rule a title." />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Title")</span>
+                </div>
+                <div class="mat-field@(Field("Level"))">
+                    <label class="mat-label" for="Input_Level">Level</label>
+                    <select class="mat-select" id="Input_Level" name="Input.Level">
+                        @foreach (var level in Enum.GetValues<MatDesign.Core.RuleLevel>())
+                        {
+                            <option value="@level" selected="@(level.ToString() == input.Level)">@level</option>
+                        }
+                    </select>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Level")</span>
+                    <span class="mat-hint">Must: breaking it is a bug. Should: the default. May: allowed where it fits.</span>
+                </div>
+                <div class="mat-field@(Field("Source"))">
+                    <label class="mat-label" for="Input_Source">Source</label>
+                    <select class="mat-select" id="Input_Source" name="Input.Source">
+                        @foreach (var source in Model.Sources)
+                        {
+                            <option value="@source" selected="@(source == input.Source)">@source</option>
+                        }
+                    </select>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Source")</span>
+                    <span class="mat-hint">Where the rule comes from. Owner is for what the owner said in their own words.</span>
+                </div>
+                <div class="mat-field mat-field--full@(Field("Statement"))">
+                    <label class="mat-label" for="Input_Statement">Statement <span class="mat-req" aria-hidden="true">*</span></label>
+                    <textarea class="mat-textarea" id="Input_Statement" name="Input.Statement" rows="5" maxlength="1200" required data-msg-required="Please state the rule.">@input.Statement</textarea>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Statement")</span>
+                    <span class="mat-hint">What holds, in plain sentences. Put code in backticks, like <code>mat-btn</code>.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="more-title">
+        <div class="mat-card__head">@Ui.Icon("file-text")<h2 class="mat-card__title" id="more-title">Reason and examples</h2></div>
+        <div class="mat-card__body">
+            <div class="mat-form__grid">
+                <div class="mat-field mat-field--full@(Field("Why"))">
+                    <label class="mat-label" for="Input_Why">Why <span class="mat-opt">(optional)</span></label>
+                    <textarea class="mat-textarea" id="Input_Why" name="Input.Why" rows="2" maxlength="400">@input.Why</textarea>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Why")</span>
+                    <span class="mat-hint">The reason, or the owner's words.</span>
+                </div>
+                <div class="mat-field@(Field("Do"))">
+                    <label class="mat-label" for="Input_Do">Do <span class="mat-opt">(optional)</span></label>
+                    <textarea class="mat-textarea mat-mono" id="Input_Do" name="Input.Do" rows="3" maxlength="400">@input.Do</textarea>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Do")</span>
+                </div>
+                <div class="mat-field@(Field("Dont"))">
+                    <label class="mat-label" for="Input_Dont">Don't <span class="mat-opt">(optional)</span></label>
+                    <textarea class="mat-textarea mat-mono" id="Input_Dont" name="Input.Dont" rows="3" maxlength="400">@input.Dont</textarea>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Dont")</span>
+                </div>
+                <div class="mat-field mat-field--full">
+                    <span class="mat-label">Checked by</span>
+                    <span>@Model.CheckedBy</span>
+                    <span class="mat-hint">Only code can enforce a rule: a rule from the Studio is checked by a reviewer, and a built-in rule keeps what its code says.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    @if (Model.Preview is { } preview && preview.Statement.Length > 0)
+    {
+        <section class="mat-card" aria-labelledby="read-title">
+            <div class="mat-card__head">@Ui.Icon("eye")<h2 class="mat-card__title" id="read-title">How it reads</h2></div>
+            <div class="mat-card__body doc-rule">
+                <div class="mat-row"><span class="doc-rule-id">@preview.Id</span><span class="mat-pill @Ui.RuleLevelClass(preview.Level)">@preview.Level</span></div>
+                <p class="doc-rule__statement">@Ui.Inline(preview.Statement)</p>
+                @if (preview.Why is not null)
+                {
+                    <blockquote class="doc-quote">@Ui.Inline(preview.Why)</blockquote>
+                }
+            </div>
+        </section>
+    }
+
+    <div class="mat-btn-row">
+        <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+        <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        <a class="mat-btn mat-btn--secondary" href="/Studio/Rules">@Ui.Icon("back")<span>Back</span></a>
+        @if (!isNew && !string.IsNullOrEmpty(input.Id))
+        {
+            <a class="mat-btn mat-btn--ghost" href="/Rules/Detail?id=@input.Id">@Ui.Icon("eye")<span>In the rulebook</span></a>
+        }
+        @if (!isNew && Model.Source != ItemSource.BuiltIn)
+        {
+            <span class="mat-btn-row__spacer"></span>
+            @if (Model.Source == ItemSource.Added)
+            {
+                <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Delete" data-confirm="Delete @input.Id? The rule leaves the rulebook and the API; the history stays." data-confirm-ok="Delete">@Ui.Icon("trash")<span>Delete</span></button>
+            }
+            else
+            {
+                <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Delete" data-confirm="Reset @input.Id to the built-in rule? Your changes are gone; the history stays." data-confirm-ok="Reset">@Ui.Icon("restore")<span>Reset to built-in</span></button>
+            }
+        }
+    </div>
+</form>

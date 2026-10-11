@@ -1,6 +1,9 @@
+using System.Text.Json.Serialization;
+
 namespace MatDesign.Core;
 
-/// <summary>How binding a rule is.</summary>
+/// <summary>How binding a rule is. Stored by name ("Must"), so a file of the Studio can be read by a person.</summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum RuleLevel
 {
     /// <summary>Every Mat app does this. Breaking it is a bug.</summary>
@@ -47,6 +50,9 @@ public static class RuleBook
     public const string Mattiverse = "Mattiverse";
     public const string MatPaper = "MatPaper";
     public const string Design = "MatDesign";
+
+    /// <summary>The source of a rule that was written in the Studio.</summary>
+    public const string Studio = "Studio";
 
     public static IReadOnlyList<RuleArea> Areas { get; } =
     [

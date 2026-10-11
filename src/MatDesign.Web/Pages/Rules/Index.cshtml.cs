@@ -1,11 +1,12 @@
 using MatDesign.Core;
 using MatDesign.Web.Services;
+using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace MatDesign.Web.Pages.Rules;
 
 /// <summary>The rulebook as a list: toolbar above (search, filter, sort as dialogs), table, pagination.</summary>
-public class IndexModel : PageModel
+public class IndexModel(DesignData design) : PageModel
 {
     private const int PageSize = 20;
 
@@ -29,7 +30,7 @@ public class IndexModel : PageModel
         var sort = ListQuery.Text(Request, "sort") ?? "id";
         var descending = ListQuery.Descending(Request);
 
-        IEnumerable<Rule> rules = RuleBook.All;
+        IEnumerable<Rule> rules = design.Rules;
         if (q is not null)
         {
             rules = rules.Where(r => r.Id.Contains(q, StringComparison.OrdinalIgnoreCase)
@@ -83,7 +84,7 @@ public class IndexModel : PageModel
             Search = q,
             SearchPlaceholder = "Id, title or text, like SHELL or toolbar",
             Noun = "rules",
-            Total = RuleBook.All.Count,
+            Total = design.Rules.Count,
             Matching = matching.Count,
             Sort = sort,
             Descending = descending,
@@ -99,7 +100,7 @@ public class IndexModel : PageModel
             [
                 new("area", "Area", RuleBook.Areas.Select(a => new FilterOption(a.Id, a.Name)).ToList(), area),
                 new("level", "Level", Enum.GetValues<RuleLevel>().Select(l => new FilterOption(l.ToString(), l.ToString())).ToList(), level),
-                new("source", "Source", RuleBook.All.Select(r => r.Source).Distinct().Order().Select(s => new FilterOption(s, s)).ToList(), source),
+                new("source", "Source", design.Rules.Select(r => r.Source).Distinct().Order().Select(s => new FilterOption(s, s)).ToList(), source),
                 new("check", "Checked by", [new("Test", "A test"), new("Report", "The palette report"), new("Review", "A reviewer")], checkedBy),
             ],
         };

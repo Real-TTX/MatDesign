@@ -10,8 +10,8 @@
         ? "A new app of the family gets its own colour and icon. Everything else is shared."
         : Model.Source switch
         {
-            AppSource.BuiltIn => "A built-in app. Saving a change here replaces it on the site; deleting that change brings the built-in app back.",
-            AppSource.Changed => "A built-in app that was changed in the Studio. Resetting it brings the built-in app back.",
+            ItemSource.BuiltIn => "A built-in app. Saving a change here replaces it on the site; deleting that change brings the built-in app back.",
+            ItemSource.Changed => "A built-in app that was changed in the Studio. Resetting it brings the built-in app back.",
             _ => "An app that was added in the Studio.",
         };
     ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Apps", "/Studio/Apps"), (title, null));
@@ -168,10 +168,10 @@
         {
             <a class="mat-btn mat-btn--ghost" href="/Preview?app=@input.Id&amp;view=list">@Ui.Icon("eye")<span>Preview</span></a>
         }
-        @if (!isNew && Model.Source != AppSource.BuiltIn)
+        @if (!isNew && Model.Source != ItemSource.BuiltIn)
         {
             <span class="mat-btn-row__spacer"></span>
-            @if (Model.Source == AppSource.Added)
+            @if (Model.Source == ItemSource.Added)
             {
                 <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Delete" data-confirm="Delete @input.Name? Its page, its colours and its entry in the API are gone; the history stays." data-confirm-ok="Delete">@Ui.Icon("trash")<span>Delete</span></button>
             }

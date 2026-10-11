@@ -1,11 +1,12 @@
 @page "/Foundations"
 @inject ToolkitFiles Toolkit
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     ViewData["Title"] = "Foundations";
     ViewData["PageSub"] = "The values every control is made of. They are custom properties, so an app can never drift from them.";
     ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Foundations", "/Foundations"), ("Colour", null));
 
-    var me = AccentReport.For(AppRegistry.Get("matdesign")!);
+    var me = AccentReport.For(Design.App("matdesign")!);
     DesignToken? Find(string name) => Toolkit.Tokens.FirstOrDefault(t => t.Name == name);
 
     var groups = new (string Title, string Lead, string[] Names)[]
@@ -62,7 +63,7 @@
         <div class="mat-row">
             @foreach (var key in new[] { "mattiverse", "matdock", "matmail", "matpaper", "matsplit", "matdo", "matarchive" })
             {
-                var a = AppRegistry.Get(key)!;
+                var a = Design.App(key)!;
                 <span class="mat-row mat-row--nowrap" data-app="@a.Id">
                     <button type="button" class="mat-btn mat-btn--primary mat-btn--sm">@a.Name</button>
                     <span class="mat-pill mat-pill--accent">@a.Accent</span>
@@ -77,7 +78,7 @@
     <div class="mat-grid">
         @foreach (var id in new[] { "COLOR-01", "COLOR-02", "COLOR-03", "COLOR-04", "COLOR-05", "IDENT-02" })
         {
-            var rule = RuleBook.Get(id)!;
+            var rule = Design.Rule(id)!;
             <a class="mat-card" href="/Rules/Detail?id=@rule.Id"><div class="mat-card__body mat-stack mat-stack--sm"><div class="mat-row"><span class="doc-rule-id">@rule.Id</span></div><strong>@rule.Title</strong></div></a>
         }
     </div>

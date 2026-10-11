@@ -33,7 +33,7 @@ public class DetailModel(MatDesign.Web.Studio.DesignData design) : PageModel
         Pattern = pattern;
         Apps = PatternCatalog.Apps.Select(design.App).OfType<MatApp>().ToList();
         App = Apps.FirstOrDefault(a => a.Id.Equals(app, StringComparison.OrdinalIgnoreCase)) ?? Apps[0];
-        Rules = pattern.Rules.Select(RuleBook.Get).OfType<Rule>().ToList();
+        Rules = pattern.Rules.Select(design.Rule).OfType<Rule>().ToList();
         var all = PatternCatalog.All.ToList();
         var index = all.IndexOf(pattern);
         Previous = index > 0 ? all[index - 1] : null;

@@ -81,13 +81,13 @@ public sealed class ShellModel
 
     /// <summary>
     /// The site as a visitor sees it, or as the administrator of the Studio does (<paramref name="signedIn"/>: a third menu, a user menu with the Studio and Sign out).
-    /// <paramref name="studioOn"/> says whether there is a Studio to sign in to; <paramref name="apps"/> are the apps of the family as the Studio left them (the built-in ones when empty).
+    /// <paramref name="studioOn"/> says whether there is a Studio to sign in to; <paramref name="design"/> is the data as the Studio left it (the built-in data when empty).
     /// </summary>
-    public static ShellModel Site(bool studioOn = false, bool signedIn = false, IReadOnlyList<MatApp>? apps = null) => new()
+    public static ShellModel Site(bool studioOn = false, bool signedIn = false, MatDesign.Web.Studio.DesignData? design = null) => new()
     {
-        App = (apps ?? AppRegistry.All).FirstOrDefault(a => a.Id == "matdesign") ?? AppRegistry.Get("matdesign")!,
+        App = design?.App("matdesign") ?? AppRegistry.Get("matdesign")!,
         Tagline = "Identity of the Mat apps",
-        Menus = Navigation.For(apps ?? AppRegistry.All, signedIn),
+        Menus = Navigation.For(design?.Apps ?? AppRegistry.All, design?.Rules.Count ?? RuleBook.All.Count, signedIn),
         UserName = signedIn ? "Admin" : "Visitor",
         UserRole = signedIn ? "Studio" : "Guest",
         UserLine = signedIn ? "Signed in to the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",

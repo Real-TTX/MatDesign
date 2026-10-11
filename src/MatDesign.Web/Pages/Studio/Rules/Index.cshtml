@@ -1,0 +1,63 @@
+@page "/Studio/Rules"
+@model MatDesign.Web.Pages.Studio.Rules.IndexModel
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "Rules";
+    ViewData["PageSub"] = "The rulebook: add a rule, or change one. What is written here is what the rulebook, the rule pages and the API say.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Rules", null));
+}
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No rule matches</div>
+            <p>Change the search or the filters, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Rules">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Rules of the Mat family</caption>
+                <thead>
+                    <tr><th scope="col">Rule</th><th scope="col" class="mat-hide-sm">Area</th><th scope="col">Level</th><th scope="col">Source</th><th scope="col"><span class="mat-sr-only">Actions</span></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var rule in Model.Items)
+                    {
+                        var source = Model.SourceOf(rule);
+                        var area = RuleBook.Areas.First(a => a.Id == rule.Area);
+                        <tr>
+                            <td data-label="Rule">
+                                <div class="mat-table__name">
+                                    <span class="doc-rule-id">@rule.Id</span>
+                                    <span><a href="/Studio/Rules/Edit?id=@rule.Id">@rule.Title</a></span>
+                                </div>
+                            </td>
+                            <td data-label="Area" class="mat-hide-sm">@area.Name</td>
+                            <td data-label="Level"><span class="mat-pill @Ui.RuleLevelClass(rule.Level)">@rule.Level</span></td>
+                            <td data-label="Source"><span class="mat-pill mat-pill--plain @IndexModel.PillClass(source)">@IndexModel.Label(source)</span></td>
+                            <td data-label="Actions" class="mat-table__cell-actions">
+                                <div class="mat-table__actions">
+                                    <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Studio/Rules/Edit?id=@rule.Id" aria-label="Edit @rule.Id" data-tip="Edit">@Ui.Icon("edit")</a>
+                                    <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Rules/Detail?id=@rule.Id" aria-label="@rule.Id in the rulebook" data-tip="See it in the rulebook">@Ui.Icon("external")</a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--primary" href="/Studio/Rules/Edit">@Ui.Icon("plus")<span>New rule</span></a>
+    </div>
+</div>

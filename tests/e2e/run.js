@@ -1006,7 +1006,7 @@ function expectTrue(value, what) {
         expect(await page.locator('#nav-switch-menu [data-nav-set]').evaluateAll(els => els.map(e => e.getAttribute('data-nav-set'))), ['design', 'toolkit', 'studio'], 'menus in the switcher');
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
-        expect(await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').allTextContents().then(t => t.map(x => x.trim())), ['Overview', 'Apps', 'Activity'], 'items of the Studio menu');
+        expect(await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').allTextContents().then(t => t.map(x => x.trim())), ['Overview', 'Apps', 'Rules', 'Activity'], 'items of the Studio menu');
       });
       await check('the activity list has its toolbar above it and the sort dialog opens', async () => {
         const bar = await page.locator('.mat-toolbar').boundingBox();
@@ -1079,6 +1079,47 @@ function expectTrue(value, what) {
         const css = await (await page.request.get(BASE + '/ui/css/matui.apps.css')).text();
         expectTrue(!css.includes('data-app="' + appId + '"'), 'the colours of the deleted app are still in the toolkit');
         expect((await page.request.get(BASE + '/Identity/App?id=' + appId)).status(), 404, 'the page of the deleted app');
+      });
+      // a rule is added, refused, saved, seen in the rulebook, and deleted again (a number of three digits that is not in use)
+      const ruleId = 'FORM-' + (900 + Math.floor(Math.random() * 99));
+      await check('a rule with an id of another area is refused with the reason, and what was typed stays', async () => {
+        await page.goto(BASE + '/Studio/Rules', { waitUntil: 'networkidle' });
+        const bar = await page.locator('.mat-toolbar').boundingBox();
+        const table = await page.locator('.mat-table-wrap').boundingBox();
+        expectTrue(bar.y < table.y, 'the toolbar is not above the table');
+        await page.click('a.mat-btn--primary:has-text("New rule")');
+        await page.waitForURL('**/Studio/Rules/Edit');
+        await page.selectOption('#Input_Area', 'FORM');
+        await page.fill('#Input_Id', 'LIST-' + ruleId.slice(5));
+        await page.fill('#Input_Title', 'A rule from the browser check');
+        await page.fill('#Input_Statement', 'The browser check adds this rule and deletes it again, so nothing stays in the rulebook.');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await page.textContent('[data-validation-summary]')).includes('starts with FORM-'), 'no reason in the summary');
+        expect(await page.inputValue('#Input_Title'), 'A rule from the browser check', 'the title that was typed');
+      });
+      await check('the right id saves it, the Check button saves nothing, and the rule is in the rulebook with its toast', async () => {
+        await page.fill('#Input_Id', ruleId);
+        await page.click('.mat-btn-row button:has-text("Check")');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await page.textContent('main')).includes('All checks pass.'), 'Check does not say that all pass');
+        expectTrue((await page.textContent('main')).includes('How it reads'), 'no preview');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForURL('**/Studio/Rules');
+        await page.waitForSelector('.mat-toast');
+        expectTrue((await page.textContent('.mat-toast')).includes(ruleId + ' was added.'), 'no toast');
+        await page.goto(BASE + '/Rules/Detail?id=' + ruleId, { waitUntil: 'networkidle' });
+        expectTrue((await page.textContent('main h1')).includes('A rule from the browser check'), 'the rule page');
+        const api = await (await page.request.get(BASE + '/api/rules')).json();
+        expectTrue(api.some(r => r.id === ruleId), 'the rule is not in the API');
+      });
+      await check('deleting the rule asks in a dialog and takes it out of the rulebook', async () => {
+        await page.goto(BASE + '/Studio/Rules/Edit?id=' + ruleId, { waitUntil: 'networkidle' });
+        expect(await page.locator('#Input_Id').evaluate(el => el.readOnly), true, 'the id of a saved rule is read-only');
+        await page.click('.mat-btn--danger[data-confirm]');
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForURL('**/Studio/Rules');
+        expect((await page.request.get(BASE + '/Rules/Detail?id=' + ruleId)).status(), 404, 'the page of the deleted rule');
       });
       await check('Sign out is the last entry of the user menu, ends the session and leads back to the site', async () => {
         await page.click('.mat-user');

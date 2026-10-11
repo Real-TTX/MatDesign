@@ -175,7 +175,7 @@ public sealed class StudioAppsTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.Redirect, await Save(form));
 
         Assert.Equal(AppRegistry.All.Count, _studio.Design.Apps.Count);
-        Assert.Equal(AppSource.Changed, _studio.Design.SourceOf("matmail"));
+        Assert.Equal(ItemSource.Changed, _studio.Design.SourceOf("matmail"));
         Assert.Contains("A new tagline", await _studio.Get("/Identity/App?id=matmail"));
         Assert.Equal("Changed tagline", _studio.Store.Current("apps", "matmail")!.Note);
         var edit = await _studio.Get("/Studio/Apps/Edit?id=matmail");
@@ -184,7 +184,7 @@ public sealed class StudioAppsTests : IClassFixture<WebApplicationFactory<Progra
 
         var reset = await _studio.Post("/Studio/Apps/Edit?id=matmail", "/Studio/Apps/Edit?handler=Delete", form);
         Assert.Equal(HttpStatusCode.Redirect, reset.StatusCode);
-        Assert.Equal(AppSource.BuiltIn, _studio.Design.SourceOf("matmail"));
+        Assert.Equal(ItemSource.BuiltIn, _studio.Design.SourceOf("matmail"));
         Assert.Equal(original.Tagline, _studio.Design.App("matmail")!.Tagline);
         Assert.Equal(["Reset to the built-in app", "Changed tagline"], _studio.Store.History("apps", "matmail").Select(r => r.Note));
     }

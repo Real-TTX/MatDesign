@@ -44,10 +44,11 @@ src/MatDesign.Core         no web types
   RuleBook.cs                the rules (id, area, level, source, text)
   Studio/StudioStore.cs      what the Studio saves: an append-only log per item (studio/<kind>/<id>/<revision>.json), history, restore, activity
   Studio/AppValidator.cs     what an app has to be (id, name, glyph, port, contrast), Normalize, IsSafe
+  Studio/RuleValidator.cs    what a rule has to be (an id of its area, title, statement, level, source), Normalize, IsSafe, NextId
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
-  Studio/                    StudioService (on or off, the password, the lock-out), DesignData (built-in + Studio items: the apps every page reads; Version), StudioFormat
-  Pages/Studio/              Login, Logout, Index, Activity, Apps/ (list, edit); StudioPageModel is the base of the pages that need the administrator
+  Studio/                    StudioService (on or off, the password, the lock-out), DesignData (built-in + Studio items: the apps and the rules every page reads; Version), StudioFormat
+  Pages/Studio/              Login, Logout, Index, Activity, Apps/ and Rules/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
                              ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
