@@ -2,7 +2,6 @@
 @model MatDesign.Web.Pages.Patterns.IndexModel
 @{
     ViewData["Title"] = "Patterns";
-    ViewData["PageIcon"] = "template";
     ViewData["PageSub"] = "The page types of the family, in a real frame: what each consists of and which rules make it so.";
     ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), ("Patterns", null));
 }
@@ -38,7 +37,6 @@
                         <tr>
                             <td data-label="Pattern">
                                 <div class="mat-table__name">
-                                    <span class="mat-page__icon">@Ui.Icon(p.Icon)</span>
                                     <span><a href="/Patterns/Detail?id=@p.Id">@p.Name</a><small>@p.Summary</small></span>
                                 </div>
                             </td>

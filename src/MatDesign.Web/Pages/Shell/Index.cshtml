@@ -1,7 +1,6 @@
 @page "/Shell"
 @{
     ViewData["Title"] = "Shell";
-    ViewData["PageIcon"] = "sidebar";
     ViewData["PageSub"] = "The frame around every page of every app: menu on the left, breadcrumb above the content.";
     ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), ("Shell", null));
 
@@ -14,7 +13,7 @@
         ("The user and the theme button", "The user is a button that opens a context menu (account, settings, Sign out last). Beside it the 3-state button: System, Light, Dark.", "SHELL-03"),
         ("The version", "Below the user, in mono, small and muted: the app name and its version.", "SHELL-06"),
         ("The breadcrumb", "Above every page. The last item is the current page and not a link. On a phone the last two are shown.", "SHELL-08"),
-        ("The page head", "An icon, the title (h1) and a line of explanation. No actions here: they go under the content.", "SHELL-09"),
+        ("The page head", "The title (h1) and a line of explanation. No icon tile, no actions: they go under the content.", "SHELL-09"),
         ("The content", "At most 1240 px wide; forms and reading pages 780 px. Lists have their toolbar on top.", "SHELL-10"),
     };
 }
@@ -34,7 +33,7 @@
             </div>
             <div class="doc-wire__main">
                 <div class="doc-wire__top"><b class="doc-n">7</b><span>Breadcrumb</span></div>
-                <div class="doc-wire__head"><b class="doc-n">8</b><span>Icon · Title · line</span></div>
+                <div class="doc-wire__head"><b class="doc-n">8</b><span>Title · line</span></div>
                 <div class="doc-wire__body"><b class="doc-n">9</b><span>Content: toolbar, list or form, buttons under it</span></div>
             </div>
         </div>

@@ -4,6 +4,7 @@
     var app = Model.App;
     var r = Model.Report;
     ViewData["Title"] = app.Name;
+    ViewData["OwnHead"] = true;
     ViewData["Crumbs"] = Crumbs.Of(("Identity", "/Identity"), ("Apps", "/Identity"), (app.Name, null));
 }
 

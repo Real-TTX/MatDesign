@@ -33,7 +33,7 @@ These are the rules that make a Mat app look like a Mat app. They are in the rul
 - CRUD is a list plus a separate page for create and edit; list actions sit below the table, left-aligned; delete is spaced apart; pagination directly under the table;
   dependent fields appear only when needed; scrollbars show only while scrolling; every page is checked on a phone (390 px).
 
-Each app has **one accent colour** (`--mat-app-accent`); hover, tints, links, the focus ring, the brand gradient and the dark mode are derived from it
+Each app has **one accent colour** (`--mat-app-accent`); hover, tints, links, the focus ring and the dark mode are derived from it
 and checked for WCAG AA, for every app, in light and dark.
 
 ## Screenshots

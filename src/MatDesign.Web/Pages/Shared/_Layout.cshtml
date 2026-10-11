@@ -1,11 +1,11 @@
 @inject ToolkitFiles Toolkit
 @{
-    // A page fills these in: Title, PageIcon, PageSub, Crumbs (the breadcrumb below the app name), Width ("narrow" or "wide").
+    // A page fills these in: Title, PageSub, Crumbs (the breadcrumb below the app name), Width ("narrow" or "wide"). A page that draws its own head sets OwnHead.
     // The shell itself comes from ViewData["Shell"]; without it the site draws itself.
     var shell = ViewData["Shell"] as ShellModel ?? ShellModel.Site();
     var app = shell.App;
     var title = ViewData["Title"] as string ?? app.Name;
-    var icon = ViewData["PageIcon"] as string;
+    var ownHead = ViewData["OwnHead"] is true;
     var sub = ViewData["PageSub"] as string;
     var crumbs = ViewData["Crumbs"] as IReadOnlyList<(string Text, string? Url)> ?? [];
     var width = ViewData["Width"] as string;
@@ -84,10 +84,9 @@
             </header>
 
             <main class="mat-page @(width == "narrow" ? "mat-page--narrow" : width == "wide" ? "mat-page--wide" : "")" id="main">
-                @if (!string.IsNullOrEmpty(icon))
+                @if (!ownHead)
                 {
                     <div class="mat-page__head">
-                        <span class="mat-page__icon">@Ui.Icon(icon)</span>
                         <div class="mat-page__title">
                             <h1>@title</h1>
                             @if (!string.IsNullOrEmpty(sub))

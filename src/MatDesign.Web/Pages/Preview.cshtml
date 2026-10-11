@@ -8,22 +8,21 @@
         Layout = "_Bare";
     }
 
-    var (pageTitle, pageIcon, crumbs) = view switch
+    var (pageTitle, crumbs) = view switch
     {
-        "dashboard" => ("Dashboard", "dashboard", Crumbs.Of(("Dashboard", null))),
-        "gallery" => ("Gallery", "grid", Crumbs.Of(("Work", Model.Query("list")), ("Gallery", null))),
-        "form" => ("Edit item", "edit", Crumbs.Of(("Work", Model.Query("list")), ("Items", Model.Query("list")), ("Quarterly report", null))),
-        "settings" => ("Settings", "settings", Crumbs.Of(("Account", Model.Query("settings")), ("Settings", null))),
-        "auth" => ("Sign in", "login", Crumbs.Of(("Sign in", null))),
-        _ => ("Items", "list", Crumbs.Of(("Work", Model.Query("list")), ("Items", null))),
+        "dashboard" => ("Dashboard", Crumbs.Of(("Dashboard", null))),
+        "gallery" => ("Gallery", Crumbs.Of(("Work", Model.Query("list")), ("Gallery", null))),
+        "form" => ("Edit item", Crumbs.Of(("Work", Model.Query("list")), ("Items", Model.Query("list")), ("Quarterly report", null))),
+        "settings" => ("Settings", Crumbs.Of(("Account", Model.Query("settings")), ("Settings", null))),
+        "auth" => ("Sign in", Crumbs.Of(("Sign in", null))),
+        _ => ("Items", Crumbs.Of(("Work", Model.Query("list")), ("Items", null))),
     };
     if (Model.AreaPage is { } areaPage)
     {
-        (pageTitle, pageIcon, crumbs) = (areaPage.Title, areaPage.Icon, areaPage.Crumbs);
+        (pageTitle, crumbs) = (areaPage.Title, areaPage.Crumbs);
     }
 
     ViewData["Title"] = pageTitle;
-    ViewData["PageIcon"] = pageIcon;
     ViewData["Crumbs"] = crumbs;
     ViewData["PageSub"] = view switch
     {

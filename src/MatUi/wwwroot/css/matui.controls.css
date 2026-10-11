@@ -29,15 +29,15 @@
 .mat-btn:active:not(:disabled) { transform: translateY(1px); }
 .mat-btn:disabled, .mat-btn.is-disabled { opacity: .5; cursor: not-allowed; pointer-events: none; }
 
-.mat-btn--primary { background: var(--mat-accent); color: var(--mat-on-accent); box-shadow: 0 4px 14px color-mix(in srgb, var(--mat-accent) 32%, transparent); }
+.mat-btn--primary { background: var(--mat-accent); color: var(--mat-on-accent); }
 .mat-btn--primary:hover { background: var(--mat-accent-hover); }
 .mat-btn--primary:active:not(:disabled) { background: var(--mat-accent-active); }
 
 .mat-btn--secondary { background: var(--mat-surface); border-color: var(--mat-border-strong); }
-.mat-btn--secondary:hover { background: var(--mat-accent-soft); border-color: color-mix(in srgb, var(--mat-accent) 45%, var(--mat-border-strong)); }
+.mat-btn--secondary:hover { background: var(--mat-surface-3); }
 
 .mat-btn--ghost { background: transparent; color: var(--mat-text-muted); }
-.mat-btn--ghost:hover { background: var(--mat-accent-soft); color: var(--mat-text); }
+.mat-btn--ghost:hover { background: var(--mat-surface-3); color: var(--mat-text); }
 
 .mat-btn--danger { background: var(--mat-surface); border-color: color-mix(in srgb, var(--mat-danger) 45%, transparent); color: var(--mat-danger-text); }
 .mat-btn--danger:hover { background: var(--mat-danger-bg); border-color: var(--mat-danger); }
@@ -83,7 +83,7 @@
   margin-inline: calc(var(--mat-space-4) * -1);
   padding: var(--mat-space-3) var(--mat-space-4) calc(var(--mat-space-3) + var(--mat-safe-bottom));
   background: var(--mat-glass);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--mat-border);
 }
 /* Actions under a list: left aligned, a danger action keeps its distance. */
 .mat-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-3); }
@@ -105,9 +105,9 @@
 .mat-card--flush > .mat-card__body { padding: 0; }
 @media (max-width: 600px) { .mat-card__head, .mat-card__body, .mat-card__foot { padding-inline: var(--mat-space-5); } }
 
-a.mat-card, .mat-card--link { display: block; color: inherit; text-decoration: none; transition: transform var(--mat-dur) var(--mat-ease), box-shadow var(--mat-dur) var(--mat-ease), border-color var(--mat-dur) var(--mat-ease); }
-a.mat-card:hover, .mat-card--link:hover { transform: translateY(-2px); box-shadow: var(--mat-shadow-2); border-color: color-mix(in srgb, var(--mat-accent) 40%, var(--mat-border)); text-decoration: none; }
-.mat-card--accent { border-color: color-mix(in srgb, var(--mat-accent) 40%, var(--mat-border)); background: linear-gradient(180deg, var(--mat-accent-soft), transparent 70%), var(--mat-surface); }
+a.mat-card, .mat-card--link { display: block; color: inherit; text-decoration: none; transition: border-color var(--mat-dur) var(--mat-ease), background var(--mat-dur) var(--mat-ease); }
+a.mat-card:hover, .mat-card--link:hover { border-color: var(--mat-text-faint); background: var(--mat-surface-2); text-decoration: none; }
+.mat-card--accent { border-color: var(--mat-accent); }
 
 /* ---- Badges, pills, chips, tags ---------------------------------------------------------------------------------
    Colour is never the only information: a pill always carries text. */
@@ -179,13 +179,15 @@ a.mat-card:hover, .mat-card--link:hover { transform: translateY(-2px); box-shado
   display: flex; align-items: flex-start; gap: var(--mat-space-3);
   padding: var(--mat-space-3) var(--mat-space-4);
   background: var(--mat-surface); color: var(--mat-text);
-  border: 1px solid var(--mat-border-strong); border-left: 4px solid var(--mat-info);
+  border: 1px solid var(--mat-border-strong);
   border-radius: var(--mat-radius); box-shadow: var(--mat-shadow-2);
   animation: mat-toast-in var(--mat-dur-slow) var(--mat-ease);
 }
-.mat-toast--success { border-left-color: var(--mat-success); }
-.mat-toast--warning { border-left-color: var(--mat-warning); }
-.mat-toast--danger { border-left-color: var(--mat-danger); }
+/* The tone is in the icon (and the words), not in a coloured edge. */
+.mat-toast > .mat-icon { margin-top: 2px; font-size: 1.15rem; color: var(--mat-info-text); }
+.mat-toast--success > .mat-icon { color: var(--mat-success-text); }
+.mat-toast--warning > .mat-icon { color: var(--mat-warning-text); }
+.mat-toast--danger > .mat-icon { color: var(--mat-danger-text); }
 @keyframes mat-toast-in { from { opacity: 0; transform: translateY(10px); } }
 @media (max-width: 600px) { .mat-toasts { left: var(--mat-space-4); right: var(--mat-space-4); width: auto; } }
 
@@ -356,7 +358,7 @@ a.mat-listgroup__item:hover, button.mat-listgroup__item:hover { background: var(
 /* ---- Text: a lead, a quote, running text with its lists, a figure and pictures ---- */
 .mat-lead { font-size: var(--mat-fs-lg); line-height: 1.5; color: var(--mat-text-muted); }
 .mat-small { font-size: var(--mat-fs-sm); }
-.mat-blockquote { margin: 0; padding: var(--mat-space-3) var(--mat-space-5); border-left: 4px solid var(--mat-accent); border-radius: 0 var(--mat-radius) var(--mat-radius) 0; background: var(--mat-accent-soft); }
+.mat-blockquote { margin: 0; padding: var(--mat-space-1) var(--mat-space-5); border-left: 2px solid var(--mat-text-faint); color: var(--mat-text-muted); }
 .mat-blockquote footer { margin-top: var(--mat-space-2); color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
 .mat-prose { max-width: 70ch; line-height: 1.6; }
 .mat-prose > * + * { margin-top: var(--mat-space-4); }

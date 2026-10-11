@@ -17,7 +17,7 @@ public sealed class AccentReport
 {
     // The surfaces of matui.tokens.css that text sits on.
     public static readonly Rgb LightSurface = Rgb.Parse("#ffffff");
-    public static readonly Rgb DarkSurface = Rgb.Parse("#131a2e");
+    public static readonly Rgb DarkSurface = Rgb.Parse("#1e1e1c");
     public static readonly Rgb Ink = Rgb.Parse("#0b1020");
 
     private AccentReport(MatApp app, Rgb accent)

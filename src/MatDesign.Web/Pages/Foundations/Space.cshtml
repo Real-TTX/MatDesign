@@ -2,7 +2,6 @@
 @inject ToolkitFiles Toolkit
 @{
     ViewData["Title"] = "Space and shape";
-    ViewData["PageIcon"] = "layers";
     ViewData["PageSub"] = "The 4 px scale, the radii, the elevation and the breakpoints.";
     ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Foundations", "/Foundations"), ("Space and shape", null));
     DesignToken T(string n) => Toolkit.Tokens.First(t => t.Name == n);
@@ -34,7 +33,7 @@
 </section>
 
 <section class="mat-section" aria-labelledby="radius-title">
-    <div class="mat-section__head"><h2 id="radius-title">Radii</h2><p class="mat-section__lead">Cards and dialogs are large, buttons medium, inputs small, pills round (SPACE-02).</p></div>
+    <div class="mat-section__head"><h2 id="radius-title">Radii</h2><p class="mat-section__lead">Cards and dialogs are the largest, buttons and inputs the same, small marks smaller. Only pills are round (SPACE-02).</p></div>
     <div class="mat-grid">
         @foreach (var (key, token) in radii)
         {
@@ -45,9 +44,9 @@
 </section>
 
 <section class="mat-section" aria-labelledby="elev-title">
-    <div class="mat-section__head"><h2 id="elev-title">Elevation</h2><p class="mat-section__lead">Lines and surfaces structure more than shadows do (SPACE-03).</p></div>
+    <div class="mat-section__head"><h2 id="elev-title">Elevation</h2><p class="mat-section__lead">A card is a line and hardly a shadow. Lines and surfaces structure more than shadows do (SPACE-03).</p></div>
     <div class="mat-grid mat-grid--3">
-        <div class="doc-elevation doc-shadow-1">--mat-shadow-1 · cards</div>
+        <div class="doc-elevation doc-shadow-1">--mat-shadow-1 · cards, barely</div>
         <div class="doc-elevation doc-shadow-2">--mat-shadow-2 · menus</div>
         <div class="doc-elevation doc-shadow-3">--mat-shadow-3 · dialogs</div>
     </div>

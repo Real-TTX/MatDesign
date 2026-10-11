@@ -2,7 +2,6 @@
 @inject ToolkitFiles Toolkit
 @{
     ViewData["Title"] = "Type";
-    ViewData["PageIcon"] = "type";
     ViewData["PageSub"] = "System fonts, one scale, mono for technical values.";
     ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Foundations", "/Foundations"), ("Type", null));
     string Value(string name) => Toolkit.Tokens.First(t => t.Name == name).Light;
@@ -14,7 +13,7 @@
         ("lg", "--mat-fs-lg", "17 px", "Lead text, card titles, dialog titles."),
         ("xl", "--mat-fs-xl", "20 px", "Section titles (h2)."),
         ("2xl", "--mat-fs-2xl", "26 px", "Page titles (h1)."),
-        ("3xl", "--mat-fs-3xl", "34 px", "Hero titles only."),
+        ("3xl", "--mat-fs-3xl", "34 px", "The title of the start page only."),
     };
 }
 

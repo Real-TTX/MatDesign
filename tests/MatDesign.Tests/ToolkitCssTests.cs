@@ -70,6 +70,43 @@ public partial class ToolkitCssTests
         Assert.True(missing.Count == 0, "Colour tokens without a dark value: " + string.Join(", ", missing));
     }
 
+    [Theory]
+    [MemberData(nameof(Parts))]
+    public void The_look_stays_flat(string part)
+    {
+        // COLOR-06, SPACE-03: no glow or gradient background, no blur, nothing that lifts on hover, no brand gradient token.
+        // A linear gradient is allowed where it is data (colour ramps, a range track, the arrow of a select, the skeleton).
+        var css = WithoutComments(Css(part));
+        Assert.DoesNotContain("radial-gradient", css);
+        Assert.DoesNotContain("backdrop-filter", css);
+        Assert.DoesNotContain("--mat-accent-grad", css);
+        Assert.DoesNotContain("--mat-accent-2", css);
+        Assert.DoesNotMatch(@":hover[^{]*\{[^}]*translateY\(-", css);
+    }
+
+    [Fact]
+    public void Headings_of_tables_and_menus_are_not_upper_case()
+    {
+        // SHELL-02: group labels and table headings are sentence case, not small upper-case letters with spacing.
+        foreach (var part in new[] { "shell", "lists" })
+        {
+            Assert.DoesNotContain("text-transform: uppercase", WithoutComments(Css(part)));
+        }
+    }
+
+    [Fact]
+    public void The_radii_are_small_and_only_pills_are_round()
+    {
+        // SPACE-02: 3, 4, 6, 8 and 12 px; the pill is the one round shape.
+        var tokens = CssTokens.Tokens(Css("tokens")).ToDictionary(t => t.Name, t => t.Light);
+        Assert.Equal("3px", tokens["--mat-radius-xs"]);
+        Assert.Equal("4px", tokens["--mat-radius-sm"]);
+        Assert.Equal("6px", tokens["--mat-radius"]);
+        Assert.Equal("8px", tokens["--mat-radius-lg"]);
+        Assert.Equal("12px", tokens["--mat-radius-xl"]);
+        Assert.Equal("999px", tokens["--mat-radius-pill"]);
+    }
+
     [Fact]
     public void Every_token_says_what_it_is_for()
     {

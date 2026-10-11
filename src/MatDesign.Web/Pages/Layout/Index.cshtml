@@ -2,7 +2,6 @@
 @{
     var section = ComponentCatalog.Sections.Single(s => s.Id == "layout");
     ViewData["Title"] = section.Title;
-    ViewData["PageIcon"] = section.Icon;
     ViewData["PageSub"] = section.Sub;
     ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), (section.Title, null));
     ViewData["Width"] = "wide";

@@ -3,7 +3,6 @@
 @{
     var p = Model.Pattern;
     ViewData["Title"] = p.Name;
-    ViewData["PageIcon"] = p.Icon;
     ViewData["PageSub"] = p.Summary;
     ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), ("Patterns", "/Patterns"), (p.Name, null));
 }

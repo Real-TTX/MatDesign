@@ -12,21 +12,18 @@
             <button type="button" class="mat-btn mat-btn--secondary mat-btn--sm" data-dialog-open="toc-dialog" aria-haspopup="dialog">@Ui.Icon("list")<span>Jump to a section</span></button>
         </div>
 
-        <div class="mat-alert mat-alert--info">
-            @Ui.Icon("info")
-            <div class="mat-alert__body">
-                <strong>How to read this page.</strong> Every example is the real thing: use it. Open <em>Markup</em> to copy the HTML (or the script) of an example.
-                The numbers such as <a href="/Rules/Detail?id=FORM-01">FORM-01</a> are the rules of the rulebook that it follows.
-                @if (isComponents)
-                {
-                    <text>The <a href="/Patterns">patterns</a> show the controls together in whole pages.</text>
-                }
-                else
-                {
-                    <text>The <a href="/Components">components</a> use these classes; the sizes, colours and spaces come from the <a href="/Foundations">tokens</a>.</text>
-                }
-            </div>
-        </div>
+        <p class="mat-muted">
+            Every example is live. <em>Markup</em> under it has the HTML (or the script) to copy.
+            Ids such as <a href="/Rules/Detail?id=FORM-01">FORM-01</a> are the rules from the rulebook that the example follows.
+            @if (isComponents)
+            {
+                <text>The <a href="/Patterns">patterns</a> put the controls together in whole pages.</text>
+            }
+            else
+            {
+                <text>The <a href="/Components">components</a> use these classes; sizes, colours and spaces come from the <a href="/Foundations">tokens</a>.</text>
+            }
+        </p>
 
         @foreach (var group in Model.Groups)
         {

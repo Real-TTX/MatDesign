@@ -312,7 +312,7 @@ internal static class LayoutComponents
                       <div class="mat-tint-accent mat-rounded-pill mat-px-5 mat-py-2">rounded-pill</div>
                       <img class="mat-rounded-circle" src="/favicon.svg" alt="" width="64" height="64" />
                     </div>
-                    """, "Inputs and small buttons use 8 px, buttons and menu items 12, cards and dialogs 18 (SPACE-02)."),
+                    """, "Small marks use 4 px, buttons, inputs and menu items 6, cards and dialogs 8 (SPACE-02)."),
                 new("Shadow", """
                     <div class="mat-grid mat-grid--4">
                       <div class="mat-bg-surface mat-border mat-rounded mat-p-4 mat-shadow-0">shadow-0</div>

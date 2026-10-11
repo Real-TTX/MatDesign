@@ -24,7 +24,7 @@ public static partial class Ui
         return new HtmlString($"<svg class=\"{cls}\" aria-hidden=\"true\" focusable=\"false\"><use href=\"#mat-i-{name}\"></use></svg>");
     }
 
-    /// <summary>The logo tile of an app: its glyph on the accent gradient. The tile carries <c>data-app</c>, so it has the app's colour wherever it is.</summary>
+    /// <summary>The logo tile of an app: its glyph on the flat accent colour. The tile carries <c>data-app</c>, so it has the app's colour wherever it is.</summary>
     public static IHtmlContent Logo(MatApp app, string size = "md")
         => new HtmlString(
             $"<span class=\"mat-logo mat-logo--{size}\" data-app=\"{WebUtility.HtmlEncode(app.Id)}\" role=\"img\" aria-label=\"{WebUtility.HtmlEncode(app.Name)}\">" +

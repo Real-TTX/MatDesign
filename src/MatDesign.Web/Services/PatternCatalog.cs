@@ -87,10 +87,10 @@ public static class PatternCatalog
             ["COLOR-03", "COLOR-04", "TABLE-03", "A11Y-03", "SPACE-01"]),
 
         new("sign-in", "Sign-in page", "Account", "login",
-            "No menu: a centred card on the accent wallpaper, the logo above the title.",
+            "No menu: a centred card on the plain page background, the logo above the title.",
             "auth",
             [
-                new("Wallpaper", "The accent of the app, softly, behind a centred card.", "SHELL-11"),
+                new("Background", "The plain page background behind a centred card. No picture, no glow.", "SHELL-11"),
                 new("Logo and name", "The logo tile of the app above the title.", "IDENT-03"),
                 new("Fields", "E-mail and password with the right autocomplete values; errors at the field.", "FORM-05"),
                 new("Button", "One full-width primary button. Nothing else competes with it.", "BUTTON-02"),

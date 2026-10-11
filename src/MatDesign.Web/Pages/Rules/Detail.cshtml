@@ -3,12 +3,12 @@
 @{
     var rule = Model.Rule;
     ViewData["Title"] = rule.Id + " " + rule.Title;
+    ViewData["OwnHead"] = true;
     ViewData["Crumbs"] = Crumbs.Of(("Rules", "/Rules"), ("Rulebook", "/Rules"), (rule.Id, null));
     ViewData["Width"] = "narrow";
 }
 
 <div class="mat-page__head">
-    <span class="mat-page__icon">@Ui.Icon(Model.Area.Icon)</span>
     <div class="mat-page__title">
         <div class="mat-row"><span class="doc-rule-id">@rule.Id</span><span class="mat-pill @Ui.RuleLevelClass(rule.Level)">@rule.Level</span></div>
         <h1>@rule.Title</h1>

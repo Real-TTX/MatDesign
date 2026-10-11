@@ -22,7 +22,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 650; line-height: var(--mat-lh-tight); letter-spacing: -.01em; }
+h1, h2, h3, h4, h5, h6 { margin: 0; font-weight: 650; line-height: var(--mat-lh-tight); }
 h1 { font-size: var(--mat-fs-2xl); }
 h2 { font-size: var(--mat-fs-xl); }
 h3 { font-size: var(--mat-fs-lg); }

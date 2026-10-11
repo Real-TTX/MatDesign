@@ -85,7 +85,6 @@ public static class ShellSkeleton
 
               <main class="mat-page" id="main">
                 <div class="mat-page__head">
-                  <span class="mat-page__icon"><svg class="mat-icon"><use href="#mat-i-users"></use></svg></span>
                   <div class="mat-page__title"><h1>Accounts</h1><p class="mat-page__sub">Who may sign in.</p></div>
                 </div>
                 <!-- the content: a list with its toolbar, a form, a dashboard ... -->

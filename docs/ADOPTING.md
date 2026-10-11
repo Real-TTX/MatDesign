@@ -109,6 +109,8 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
 - **Colours:** replace literal colours and the app's own variables with the `--mat-*` tokens (`COLOR-01`). The registry lists each app's old token scheme (`TokenScheme`) to ease the search.
   Do not keep a second dark mode: the toolkit's dark set is the one (`COLOR-02`).
 - **Inline styles and inline scripts:** none (`CODE-02`). A width that is data goes into a class or is set by the script (`data-value` on `mat-meter`).
+- **Decoration:** gradients, glow around buttons, blur behind bars, cards that lift, tinted icon tiles next to titles and upper-case spaced labels go too (`COLOR-06`, `SPACE-02`,
+  `SPACE-03`, `SHELL-09`). The toolkit is flat on purpose; an app that keeps its own decoration next to it looks like two designs.
 - **Fonts:** the system stack, no web font (`TYPE-01`). **Icons:** the sprite, no icon font, no emoji (`ICON-01`).
 - **Classes:** the toolkit's `mat-*` for what it ships; the app's own classes keep the app's prefix (`CODE-02`, `CODE-04`).
 

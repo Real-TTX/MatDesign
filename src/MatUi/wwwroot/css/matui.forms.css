@@ -27,7 +27,7 @@
   background: var(--mat-surface);
   color: var(--mat-text);
   border: 1px solid var(--mat-border-strong);
-  border-radius: var(--mat-radius-sm);
+  border-radius: var(--mat-radius);
   transition: border-color var(--mat-dur-fast) var(--mat-ease), box-shadow var(--mat-dur-fast) var(--mat-ease);
 }
 .mat-textarea { padding: var(--mat-space-3); min-height: 96px; resize: vertical; line-height: var(--mat-lh); }
@@ -43,8 +43,8 @@ input[type="file"].mat-input { padding: 6px; }
 /* Prefix / suffix text or icon inside the field edge. */
 .mat-input-group { display: flex; align-items: stretch; }
 .mat-input-group > .mat-input { border-radius: 0; flex: 1 1 auto; min-width: 0; }
-.mat-input-group > :first-child { border-top-left-radius: var(--mat-radius-sm); border-bottom-left-radius: var(--mat-radius-sm); }
-.mat-input-group > :last-child { border-top-right-radius: var(--mat-radius-sm); border-bottom-right-radius: var(--mat-radius-sm); }
+.mat-input-group > :first-child { border-top-left-radius: var(--mat-radius); border-bottom-left-radius: var(--mat-radius); }
+.mat-input-group > :last-child { border-top-right-radius: var(--mat-radius); border-bottom-right-radius: var(--mat-radius); }
 .mat-input-group > * + * { margin-left: -1px; }
 .mat-input-addon { display: inline-flex; align-items: center; padding: 0 var(--mat-space-3); background: var(--mat-surface-3); border: 1px solid var(--mat-border-strong); color: var(--mat-text-muted); font-size: var(--mat-fs-sm); white-space: nowrap; }
 
@@ -180,8 +180,8 @@ input[type="file"].mat-input { padding: 6px; }
 /* ---- Input group: buttons, selects and text around a field; sizes ---- */
 .mat-input-group > .mat-btn, .mat-input-group > .mat-select { border-radius: 0; }
 .mat-input-group > .mat-select { flex: 0 0 auto; width: auto; }
-.mat-input-group > .mat-btn:first-child, .mat-input-group > .mat-select:first-child { border-top-left-radius: var(--mat-radius-sm); border-bottom-left-radius: var(--mat-radius-sm); }
-.mat-input-group > .mat-btn:last-child, .mat-input-group > .mat-select:last-child { border-top-right-radius: var(--mat-radius-sm); border-bottom-right-radius: var(--mat-radius-sm); }
+.mat-input-group > .mat-btn:first-child, .mat-input-group > .mat-select:first-child { border-top-left-radius: var(--mat-radius); border-bottom-left-radius: var(--mat-radius); }
+.mat-input-group > .mat-btn:last-child, .mat-input-group > .mat-select:last-child { border-top-right-radius: var(--mat-radius); border-bottom-right-radius: var(--mat-radius); }
 .mat-input-group--sm .mat-input, .mat-input-group--sm .mat-select, .mat-input-group--sm .mat-btn, .mat-input-group--sm .mat-input-addon { min-height: var(--mat-control-h-sm); font-size: var(--mat-fs-sm); }
 .mat-input-group--lg .mat-input, .mat-input-group--lg .mat-select, .mat-input-group--lg .mat-btn, .mat-input-group--lg .mat-input-addon { min-height: var(--mat-control-h-lg); font-size: var(--mat-fs-lg); }
 

@@ -19,8 +19,8 @@ dialog.mat-dialog {
   overflow: hidden;
 }
 dialog.mat-dialog[open] { display: flex; flex-direction: column; animation: mat-dialog-in var(--mat-dur-slow) var(--mat-ease); }
-dialog.mat-dialog::backdrop { background: var(--mat-overlay); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
-@keyframes mat-dialog-in { from { opacity: 0; transform: translateY(14px) scale(.985); } }
+dialog.mat-dialog::backdrop { background: var(--mat-overlay); }
+@keyframes mat-dialog-in { from { opacity: 0; transform: translateY(6px); } }
 
 dialog.mat-dialog--sm { width: min(420px, calc(100vw - 2 * var(--mat-space-4))); }
 dialog.mat-dialog--lg { width: min(760px, calc(100vw - 2 * var(--mat-space-4))); }
@@ -51,7 +51,7 @@ dialog.mat-dialog--xl { width: min(980px, calc(100vw - 2 * var(--mat-space-4)));
 /* A radio list for the sort dialog: one row per field, direction next to it. */
 .mat-options { display: flex; flex-direction: column; gap: var(--mat-space-1); }
 .mat-option { display: flex; align-items: center; gap: var(--mat-space-3); min-height: var(--mat-control-h); padding: 0 var(--mat-space-3); border-radius: var(--mat-radius-sm); cursor: pointer; }
-.mat-option:hover { background: var(--mat-accent-soft); }
+.mat-option:hover { background: var(--mat-surface-3); }
 .mat-option input { accent-color: var(--mat-accent); width: 18px; height: 18px; }
 .mat-option:has(input:checked) { background: var(--mat-accent-soft-strong); color: var(--mat-accent-text); font-weight: 600; }
 

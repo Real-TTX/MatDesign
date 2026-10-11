@@ -1,7 +1,6 @@
 @page "/Error"
 @{
     ViewData["Title"] = "Not found";
-    ViewData["PageIcon"] = "alert";
     ViewData["Crumbs"] = new List<(string, string?)> { ("Error", null) }.AsReadOnly() as IReadOnlyList<(string Text, string? Url)>;
     var code = Request.Query["code"].ToString();
 }

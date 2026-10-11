@@ -2,7 +2,6 @@
 @inject ToolkitFiles Toolkit
 @{
     ViewData["Title"] = "Foundations";
-    ViewData["PageIcon"] = "layers";
     ViewData["PageSub"] = "The values every control is made of. They are custom properties, so an app can never drift from them.";
     ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Foundations", "/Foundations"), ("Colour", null));
 
@@ -48,7 +47,7 @@
         <h2 id="accent-title">The accent</h2>
         <p class="mat-section__lead">
             An app sets one colour, <code>--mat-app-accent</code>. The toolkit derives the rest from it: hover and pressed (mixed with black in light mode, white in dark),
-            two tints, the text colour for links, the colour of text on the accent, the focus ring and the brand gradient. In dark mode the accent is lightened (74 % accent, 26 % white) and the text on it is dark.
+            two tints, the text colour for links, the colour of text on the accent, and the focus ring. In dark mode the accent is lightened (74 % accent, 26 % white) and the text on it is dark.
             Shown here for MatDesign's own accent, @me.App.Accent.
         </p>
     </div>

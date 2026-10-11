@@ -56,9 +56,6 @@ public partial class MarkupContractTests
     [GeneratedRegex(@"Icon\(\s*""([a-z0-9-]+)""")]
     private static partial Regex IconCall();
 
-    [GeneratedRegex(@"PageIcon""\]\s*=\s*""([a-z0-9-]+)""")]
-    private static partial Regex PageIcon();
-
     private static IReadOnlySet<string> ClassesIn(IEnumerable<string> stylesheets)
         => stylesheets
             .SelectMany(css => CssTokens.ParseBlocks(css).Select(b => b.Selector))
@@ -139,7 +136,7 @@ public partial class MarkupContractTests
         foreach (var file in Files("*.cshtml"))
         {
             var text = File.ReadAllText(file);
-            var names = IconCall().Matches(text).Select(m => m.Groups[1].Value).Concat(PageIcon().Matches(text).Select(m => m.Groups[1].Value)).Concat(SpriteReference().Matches(text).Select(m => m.Groups[1].Value));
+            var names = IconCall().Matches(text).Select(m => m.Groups[1].Value).Concat(SpriteReference().Matches(text).Select(m => m.Groups[1].Value));
             problems.AddRange(names.Distinct().Where(n => !RegistryTests.Sprite.Contains(n)).Select(n => $"{Path.GetFileName(file)}: {n}"));
         }
 

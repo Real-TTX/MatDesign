@@ -23,7 +23,7 @@ site and the tests need the numbers without a browser. A test pins `Colors.Mix` 
 registry reaches AA in light and dark**. If the CSS changes, the report must change with it; the contrast test is the alarm.
 
 **One accent per app, everything else derived.** An app sets `--mat-app-accent` (and, only if white text on it is unreadable, `--mat-app-on-accent`, and for the link colour
-`--mat-app-accent-text`). Hover, the tints, the focus ring, the brand gradient and the dark variant follow. In dark mode the accent is lightened (74 % accent, 26 % white) and the
+`--mat-app-accent-text`). Hover, the tints, the focus ring and the dark variant follow. In dark mode the accent is lightened (74 % accent, 26 % white) and the
 text on it is dark. This keeps 22 colours consistent without 22 stylesheets.
 
 ## 3. The registry is data, the rulebook is code
@@ -82,6 +82,24 @@ utility classes for spacing, display, flex, text, colour, borders and sizing. Th
 The pages Layout and Utilities are made of the same catalogue as the components (the groups `Layout` and `Utilities` of `ComponentCatalog`), so everything that is tested for a component example is
 tested for them. A `CatalogSection` says which groups a page shows, and one partial (`_DocSection`) draws the three pages. An example uses only classes of the toolkit, because it is copied into other
 apps: the demo cells of the layout pages are made of the very utilities that are shown.
+
+### A flat look, on purpose
+
+The first version looked like what a code assistant produces by default: a brand gradient on the logo and behind the hero, a glow around the primary button, glass bars with blur,
+a tinted blue-grey page, an icon in a tinted tile next to every title, 18 px corners with soft shadows, cards that lift on hover, upper-case spaced labels. None of that carries
+information, and together it makes every app look like every other app that was generated. So the toolkit is plain on purpose:
+
+- **Flat surfaces.** The logo, the avatar and the primary button are the accent colour, nothing more. No gradient backgrounds, no glow, no blur behind a bar or a dialog (`COLOR-06`).
+  A gradient is allowed only where it is data: the ramps of the colour picker, the track of a range.
+- **Lines, not shadows.** A card is a surface with a border. Only what floats (a menu, a popover, a dialog) has a shadow (`SPACE-03`). Nothing moves on hover; a link card darkens its border.
+- **Small corners.** 8 px for cards and dialogs, 6 px for buttons, inputs and menu items, 3 to 4 px for small marks; only badges, status pills and switches are round (`SPACE-02`).
+- **Neutral greys.** The page and the surfaces are warm greys in light and neutral dark greys in dark, not a tint of the accent. The accent is for what is actionable or current:
+  a button, a link, the mark at the edge of the current menu item and its icon (`SHELL-02`).
+- **Words instead of decoration.** Group labels and table headings are sentence case, not upper case with letter spacing; a page starts with its title, without an icon tile (`SHELL-09`);
+  an explanation is a paragraph, not an alert box; a coloured edge on a toast is the icon's colour instead.
+
+A test (`ToolkitCssTests`) pins the parts that are easy to slide back into: no `radial-gradient`, no `backdrop-filter`, no brand gradient token, no upper-case table headings.
+All of this is values in `matui.tokens.css` and a few rules per file, so a different decision is a small change, but it is a decision about how every app looks.
 
 ### What is deliberately not in the toolkit
 

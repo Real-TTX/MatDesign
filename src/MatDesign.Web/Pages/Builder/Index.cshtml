@@ -2,7 +2,6 @@
 @model MatDesign.Web.Pages.Builder.IndexModel
 @{
     ViewData["Title"] = "Builder";
-    ViewData["PageIcon"] = "wrench";
     ViewData["PageSub"] = "Try an accent: what the toolkit derives from it, whether the text on it is readable, whether it looks like another app, and the real screens in that colour.";
     ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), ("Builder", null));
     ViewData["Width"] = "wide";
@@ -83,7 +82,7 @@
 </section>
 
 <section class="mat-section" aria-labelledby="snippet-title">
-    <div class="mat-section__head"><h2 id="snippet-title">The snippet</h2><p class="mat-section__lead">An app sets one colour and nothing else. Hover, tints, links, the focus ring, the brand gradient and the dark mode follow.</p></div>
+    <div class="mat-section__head"><h2 id="snippet-title">The snippet</h2><p class="mat-section__lead">An app sets one colour and nothing else. Hover, tints, links, the focus ring and the dark mode follow.</p></div>
     <div class="mat-card"><div class="mat-card__body mat-stack">
         <pre class="mat-code" id="snippet"><code>@Model.Snippet</code></pre>
         <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-copy="#snippet">@Ui.Icon("copy")<span>Copy</span></button></div>

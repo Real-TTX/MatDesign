@@ -426,7 +426,7 @@ public static class ComponentCatalog
                 new("Accent card and link card", $"""
                     <div class="mat-grid">
                       <div class="mat-card mat-card--accent"><div class="mat-card__body"><strong>Highlighted</strong><p class="mat-muted">Use one accent card per page, for the thing to look at first.</p></div></div>
-                      <a class="mat-card" href="#"><div class="mat-card__body"><strong>A card that is a link</strong><p class="mat-muted">It lifts a little on hover.</p></div></a>
+                      <a class="mat-card" href="#"><div class="mat-card__body"><strong>A card that is a link</strong><p class="mat-muted">Its border darkens on hover.</p></div></a>
                     </div>
                     """),
             ],
