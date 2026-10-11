@@ -1,0 +1,44 @@
+@page "/Studio/Login"
+@model MatDesign.Web.Pages.Studio.LoginModel
+@{
+    ViewData["Title"] = "Studio sign-in";
+    Layout = "_Bare";
+    var app = AppRegistry.Get("matdesign")!;
+}
+
+<div class="mat-auth__card">
+    <div class="mat-auth__brand">
+        @Ui.Logo(app, "lg")
+        <h1>Studio</h1>
+        <p class="mat-muted">Maintain and create what MatDesign shows.</p>
+    </div>
+
+    @if (!Model.Enabled)
+    {
+        <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body"><strong>The Studio is off.</strong> @Model.Reason</div></div>
+        <div class="mat-btn-row mat-btn-row--plain">
+            <a class="mat-btn mat-btn--secondary mat-btn--block" href="/">@Ui.Icon("back")<span>Back to the site</span></a>
+        </div>
+    }
+    else
+    {
+        <form class="mat-form" method="post" novalidate>
+            <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
+            @if (Model.Error is not null)
+            {
+                <div class="mat-alert mat-alert--danger" role="alert">@Ui.Icon("alert")<div class="mat-alert__body">@Model.Error</div></div>
+            }
+            <div class="mat-field">
+                <label class="mat-label" for="Password">Password</label>
+                <input class="mat-input" id="Password" name="Password" type="password" autocomplete="current-password" autofocus required />
+                <span class="mat-error"></span>
+            </div>
+            <div class="mat-btn-row mat-btn-row--plain">
+                <button type="submit" class="mat-btn mat-btn--primary mat-btn--block">@Ui.Icon("login")<span>Sign in</span></button>
+            </div>
+            <div class="mat-btn-row mat-btn-row--plain">
+                <a class="mat-btn mat-btn--ghost mat-btn--block" href="/">@Ui.Icon("back")<span>Back to the site</span></a>
+            </div>
+        </form>
+    }
+</div>

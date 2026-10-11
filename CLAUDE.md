@@ -10,7 +10,8 @@ stable IDs), the foundations (tokens, type, icons), the shell, every control wit
 itself (CSS, one script, an icon sprite) that the apps copy. It is the place to look before building or changing any UI in the family.
 
 Stack: ASP.NET Core on **.NET 10**, C#, **Razor Pages**, plain CSS and plain JavaScript (no build step), Docker-first. Web port **8060**. The site keeps no state
-(no database, no volume, no secrets); the image runs as an unprivileged user on a read-only file system.
+(no database, no secrets); the image runs as an unprivileged user on a read-only file system. The one exception is the **Studio** (docs/STUDIO.md, built stage by stage): it writes to `/data`
+and is on only when `MATDESIGN_ADMIN_PASSWORD` is set. The development stack has it on (`studio-dev`); the browser checks use `STUDIO_PASSWORD` for it.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and [docs/ADOPTING.md](docs/ADOPTING.md) for what an app has to do to use MatUi.
 
@@ -22,7 +23,7 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
 - **Run / test the site: always rebuild the container and redeploy the stack** (project rule): `./scripts/redeploy.ps1` (`-Port` changes the host port).
   Dev stack: `docker-compose.dev.yml`, container `matdesign-dev`, port 8060, explicit subnet `10.253.60.0/24` (the development PC has all Docker address pools used up:
   `all predefined address pools have been fully subnetted`; change it with `MATDESIGN_DEV_SUBNET`). CSS, JS and cshtml are baked into the image: rebuild after a change.
-- **Release stack:** `docker-compose.yml`, image `ghcr.io/real-ttx/matdesign`, one service, no volume: keep it that simple.
+- **Release stack:** `docker-compose.yml`, image `ghcr.io/real-ttx/matdesign`, one service and one volume (for the Studio): keep it that simple.
 - **Real tests are end to end against the container:** Playwright with the installed Edge (see the `screenshots` skill), then look at the screenshot instead of trusting
   computed styles. `MSYS_NO_PATHCONV=1` for Git Bash arguments that start with `/`. Shell strings with backticks, apostrophes or `$$` get mangled: write files with
   the editor tools, not with `node -e` or heredocs. A script that merges text into a file must use a replacer function (`text.replace(a, () => b)`): in a plain replacement string
@@ -41,8 +42,11 @@ src/MatDesign.Core         no web types
   PaletteAdvisor.cs          accents that are too close, proposals
   CssTokens.cs               parser for matui.tokens.css (tokens, description from the comment, group from the heading)
   RuleBook.cs                the rules (id, area, level, source, text)
+  Studio/StudioStore.cs      what the Studio saves: an append-only log per item (studio/<kind>/<id>/<revision>.json), history, restore, activity
 src/MatDesign.Web          the site
-  Program.cs                 /ui/* (the toolkit as files, bundle, archive), /api/*, /health, Razor Pages
+  Program.cs                 /ui/* (the toolkit as files, bundle, archive), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
+  Studio/                    StudioService (on or off, the password, the lock-out), StudioFormat (words and dates of the Studio)
+  Pages/Studio/              Login, Logout, Index, Activity (StudioPageModel is the base of the pages that need the administrator)
   Services/                  ToolkitFiles, Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
                              ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)

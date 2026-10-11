@@ -83,7 +83,9 @@ docker run -d --name matdesign --restart unless-stopped -p 8060:8060 \
   ghcr.io/real-ttx/matdesign:latest
 ```
 
-The site keeps no state: no volume, no database, no secrets, no Docker socket. The image runs as an unprivileged user with a read-only file system.
+The site keeps no state: no database, no secrets, no Docker socket. The image runs as an unprivileged user with a read-only file system.
+The one exception is the **Studio** ([docs/STUDIO.md](docs/STUDIO.md)), where apps, rules and components are maintained: it is off until a volume is mounted at `/data` and
+`MATDESIGN_ADMIN_PASSWORD` is set (`MATDESIGN_ADMIN_PASSWORD=a-long-password docker compose up -d`). The development stack has it on, with the password `studio-dev`.
 
 **Development:** `./scripts/redeploy.ps1` rebuilds the image from the source and redeploys the dev stack (`-Port` changes the host port).
 Without Docker: `dotnet run --project src/MatDesign.Web --urls http://localhost:8060`. Tests: `dotnet test` (see below).

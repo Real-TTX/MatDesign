@@ -975,6 +975,71 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the Studio
+  // It needs the administrator password (STUDIO_PASSWORD, the development stack uses studio-dev). A site with the Studio off is not a failure here.
+  console.log('\nStudio');
+  {
+    const password = process.env.STUDIO_PASSWORD || 'studio-dev';
+    const { ctx, page } = await open(desktopOptions, '/Studio/Login');
+    if (await page.locator('input[type="password"]').count() === 0) {
+      console.log('  --    the Studio is off on this site (no MATDESIGN_ADMIN_PASSWORD): its checks are skipped');
+      await ctx.close();
+    } else {
+      await check('a visitor is led from a Studio page to the sign-in, which is a card without a menu', async () => {
+        await page.goto(BASE + '/Studio/Activity', { waitUntil: 'networkidle' });
+        expectTrue(page.url().includes('/Studio/Login?returnUrl='), 'not led to the sign-in: ' + page.url());
+        expect(await page.locator('.mat-nav').count(), 0, 'menus on the sign-in page');
+        expect(await page.locator('.mat-auth__card input[type="password"]').count(), 1, 'password fields');
+      });
+      await check('a wrong password stays on the page and says so; the right one leads to where the visitor wanted to go', async () => {
+        await page.fill('#Password', 'not the password');
+        await page.click('.mat-auth__card button[type="submit"]');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await page.textContent('.mat-auth__card')).includes('The password is not right.'), 'no message');
+        await page.fill('#Password', password);
+        await page.click('.mat-auth__card button[type="submit"]');
+        await page.waitForURL('**/Studio/Activity');
+        expect(await page.textContent('main h1'), 'Activity', 'the page after the sign-in');
+      });
+      await check('the Studio is a third menu behind the switcher, and the user is the administrator', async () => {
+        await page.click('.mat-switcher');
+        expect(await page.locator('#nav-switch-menu [data-nav-set]').evaluateAll(els => els.map(e => e.getAttribute('data-nav-set'))), ['design', 'toolkit', 'studio'], 'menus in the switcher');
+        await page.keyboard.press('Escape');
+        expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
+        expect(await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').allTextContents().then(t => t.map(x => x.trim())), ['Overview', 'Activity'], 'items of the Studio menu');
+      });
+      await check('the activity list has its toolbar above it and the sort dialog opens', async () => {
+        const bar = await page.locator('.mat-toolbar').boundingBox();
+        const below = await page.locator('.mat-empty, .mat-table-wrap').first().boundingBox();
+        expectTrue(bar.y < below.y, 'the toolbar is not above the list');
+        await page.click('[data-dialog-open="activity-sort"]');
+        expect(await page.locator('#activity-sort[open]').count(), 1, 'sort dialog');
+        await page.click('#activity-sort [data-dialog-close]');
+      });
+      await check('Sign out is the last entry of the user menu, ends the session and leads back to the site', async () => {
+        await page.click('.mat-user');
+        const items = await page.locator('#user-menu .mat-menu__item').allTextContents();
+        expect(items[items.length - 1].trim(), 'Sign out', 'last entry');
+        await page.click('#user-menu button.mat-menu__item');
+        await page.waitForURL(BASE + '/');
+        await page.goto(BASE + '/Studio', { waitUntil: 'networkidle' });
+        expectTrue(page.url().includes('/Studio/Login'), 'still signed in: ' + page.url());
+      });
+      await ctx.close();
+
+      const phone = await open(phoneOptions, '/Studio/Login');
+      await check('on a phone the sign-in and the Studio do not scroll sideways', async () => {
+        const wide = () => phone.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth);
+        expectTrue(await wide(), 'the sign-in page is wider than the window');
+        await phone.page.fill('#Password', password);
+        await phone.page.click('.mat-auth__card button[type="submit"]');
+        await phone.page.waitForURL('**/Studio');
+        expectTrue(await wide(), 'the Studio is wider than the window');
+      });
+      await phone.ctx.close();
+    }
+  }
+
   // ---------------------------------------------------------------------------------------------------- no page is wider than a phone
   console.log('\nPhone width');
   for (const url of ['/Components', '/Layout', '/Utilities', '/Download', '/Shell']) {

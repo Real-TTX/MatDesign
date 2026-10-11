@@ -1,8 +1,9 @@
 @inject ToolkitFiles Toolkit
+@inject MatDesign.Web.Studio.StudioService Studio
 @{
     // A page fills these in: Title, PageSub, Crumbs (the breadcrumb below the app name), Width ("narrow" or "wide"). A page that draws its own head sets OwnHead.
-    // The shell itself comes from ViewData["Shell"]; without it the site draws itself.
-    var shell = ViewData["Shell"] as ShellModel ?? ShellModel.Site();
+    // The shell itself comes from ViewData["Shell"]; without it the site draws itself, for a visitor or for the signed-in administrator of the Studio.
+    var shell = ViewData["Shell"] as ShellModel ?? ShellModel.Site(Studio.Enabled, Studio.Enabled && User.Identity?.IsAuthenticated == true);
     var app = shell.App;
     var title = ViewData["Title"] as string ?? app.Name;
     var ownHead = ViewData["OwnHead"] is true;
@@ -114,7 +115,17 @@
                 <div class="mat-menu__sep" role="separator"></div>
             }
 
-            <a class="mat-menu__item @(item.Danger ? "mat-menu__item--danger" : "")" role="menuitem" href="@item.Href">@Ui.Icon(item.Icon)<span>@item.Title</span></a>
+            if (item.Post)
+            {
+                <form method="post" action="@item.Href">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="mat-menu__item @(item.Danger ? "mat-menu__item--danger" : "")" role="menuitem">@Ui.Icon(item.Icon)<span>@item.Title</span></button>
+                </form>
+            }
+            else
+            {
+                <a class="mat-menu__item @(item.Danger ? "mat-menu__item--danger" : "")" role="menuitem" href="@item.Href">@Ui.Icon(item.Icon)<span>@item.Title</span></a>
+            }
         }
     </div>
 

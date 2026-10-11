@@ -19,6 +19,11 @@ services:
     restart: unless-stopped
     ports:
       - "${MATDESIGN_PORT:-8060}:8060"
+    environment:
+      # The Studio is on in development; this password is only for this stack (MATDESIGN_ADMIN_PASSWORD overrides it).
+      MATDESIGN_ADMIN_PASSWORD: ${MATDESIGN_ADMIN_PASSWORD:-studio-dev}
+    volumes:
+      - data:/data
     read_only: true
     tmpfs:
       - /tmp
@@ -26,6 +31,10 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+
+volumes:
+  data:
+    name: matdesign-dev-data
 
 # An explicit subnet: on a machine with many stacks Docker can run out of its default address pools
 # ("all predefined address pools have been fully subnetted"). Override with MATDESIGN_DEV_SUBNET if this range collides.

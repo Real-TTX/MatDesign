@@ -1,0 +1,55 @@
+@page "/Studio/Activity"
+@model MatDesign.Web.Pages.Studio.ActivityModel
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "Activity";
+    ViewData["PageSub"] = "Every change made in the Studio: what, when, by whom and why.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Activity", null));
+}
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Toolbar.Total == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("activity")</span>
+            <div class="mat-empty__title">Nothing has been changed yet</div>
+            <p>Every change made in the Studio is listed here.</p>
+        </div>
+    }
+    else if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No change matches</div>
+            <p>Change the search or the filters, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Activity">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Changes made in the Studio</caption>
+                <thead>
+                    <tr><th scope="col">Item</th><th scope="col">Change</th><th scope="col">When</th><th scope="col" class="mat-hide-sm">By</th><th scope="col" class="mat-hide-sm">Note</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td data-label="Item"><div class="mat-table__name"><span>@item.Id<small>@StudioFormat.KindName(item.Kind), revision @item.Revision.Number</small></span></div></td>
+                            <td data-label="Change">@StudioFormat.What(item.Revision)</td>
+                            <td data-label="When">@StudioFormat.When(item.Revision.At)</td>
+                            <td data-label="By" class="mat-hide-sm">@item.Revision.By</td>
+                            <td data-label="Note" class="mat-hide-sm mat-muted">@item.Revision.Note</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+</div>

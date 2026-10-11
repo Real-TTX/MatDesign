@@ -152,8 +152,10 @@ show the same text (a German PC printed `46,9 KB`, the container `46.9 KB`).
 
 ## 10. Security and operation
 
-The site is stateless: no database, no cookies, no secrets, no volume, no Docker socket. The image runs as the unprivileged user of the base image, the file system is read-only (a tmpfs for
-`/tmp`), all capabilities are dropped and `no-new-privileges` is set. `Preview` and `Builder` take an app id, a theme and an accent from the query string and accept only known ids, `light`/`dark`
+The site is stateless unless the Studio is on (docs/STUDIO.md): no database, no secrets in the image, no Docker socket. Without the Studio there is no cookie either. The Studio is the one thing that
+writes: into `/data` (a volume), and only when `MATDESIGN_ADMIN_PASSWORD` is set; its session is a cookie that is HttpOnly, SameSite Lax and ends after eight hours or when the password changes, a sign-in
+that fails costs half a second and five of them lock the client out for a minute, and signing out is a POST with an anti-forgery token. The image runs as the unprivileged user of the base image, the
+file system is read-only (a tmpfs for `/tmp`, the volume for `/data`), all capabilities are dropped and `no-new-privileges` is set. `Preview` and `Builder` take an app id, a theme and an accent from the query string and accept only known ids, `light`/`dark`
 and a `#rrggbb` value; everything else is ignored. A preview frame never saves its theme choice for the whole site (`data-preview`).
 
 ## 11. Versions and delivery

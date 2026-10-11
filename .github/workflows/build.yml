@@ -72,6 +72,9 @@ jobs:
       - name: End-to-end checks
         env:
           ASPNETCORE_ENVIRONMENT: Development
+          # The Studio is on for these checks: a data directory of its own and the password of the development stack.
+          MATDESIGN_DATA: ${{ runner.temp }}/matdesign-data
+          MATDESIGN_ADMIN_PASSWORD: studio-dev
         run: |
           dotnet run --project src/MatDesign.Web -c Release --no-build --urls http://localhost:8060 > /tmp/matdesign.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:8060/health && break; sleep 1; done

@@ -40,7 +40,10 @@ EXPOSE 8060
 
 COPY --from=build /app/publish .
 
-# The site keeps no state: no volume, no socket, no secrets. It runs as the unprivileged user of the base image.
+# The site keeps no state of its own. Only the Studio (docs/STUDIO.md) writes, and only into /data, which is a volume the unprivileged user may write to.
+# No socket, no secrets in the image: the administrator password of the Studio comes from the environment.
+RUN mkdir -p /data && chown $APP_UID:$APP_UID /data
+ENV MATDESIGN_DATA=/data
 USER $APP_UID
 
 # The app checks itself, so the image needs no extra tools.

@@ -4,8 +4,11 @@ using MatDesign.Core;
 
 namespace MatDesign.Web.Services;
 
-/// <summary>An entry of the user's context menu. <see cref="Danger"/> items are drawn in the danger colour; Sign out is always last.</summary>
-public sealed record UserMenuItem(string Title, string Href, string Icon, bool Danger = false, bool SeparatorBefore = false);
+/// <summary>
+/// An entry of the user's context menu. <see cref="Danger"/> items are drawn in the danger colour; Sign out is always last. A <see cref="Post"/> item
+/// changes something (Sign out), so it is a button of a small form with an anti-forgery token, not a link.
+/// </summary>
+public sealed record UserMenuItem(string Title, string Href, string Icon, bool Danger = false, bool SeparatorBefore = false, bool Post = false);
 
 /// <summary>
 /// Everything the shell (the layout) needs to draw an app: which app, its menu, the user, the version. The site draws itself with
@@ -76,20 +79,36 @@ public sealed class ShellModel
         }
     }
 
-    public static ShellModel Site() => new()
+    /// <summary>
+    /// The site as a visitor sees it, or as the administrator of the Studio does (<paramref name="signedIn"/>: a third menu, a user menu with the Studio and Sign out).
+    /// <paramref name="studioOn"/> says whether there is a Studio to sign in to.
+    /// </summary>
+    public static ShellModel Site(bool studioOn = false, bool signedIn = false) => new()
     {
         App = AppRegistry.Get("matdesign")!,
         Tagline = "Identity of the Mat apps",
-        Menus = Navigation.Sets,
-        UserName = "Visitor",
-        UserRole = "Guest",
-        UserLine = "MatDesign has no accounts",
-        UserMenu =
-        [
+        Menus = Navigation.For(signedIn),
+        UserName = signedIn ? "Admin" : "Visitor",
+        UserRole = signedIn ? "Studio" : "Guest",
+        UserLine = signedIn ? "Signed in to the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",
+        UserMenu = SiteUserMenu(signedIn),
+        Version = $"MatDesign {AppVersion.Current}",
+    };
+
+    private static List<UserMenuItem> SiteUserMenu(bool signedIn)
+    {
+        var items = new List<UserMenuItem>
+        {
+            signedIn ? new("Studio", "/Studio", "wrench") : new("Studio: sign in", "/Studio/Login", "login"),
             new("Download the toolkit", "/Download", "download"),
             new("Rulebook", "/Rules", "book"),
             new("API: version", "/api/version", "code"),
-        ],
-        Version = $"MatDesign {AppVersion.Current}",
-    };
+        };
+        if (signedIn)
+        {
+            items.Add(new("Sign out", "/Studio/Logout", "logout", Danger: true, SeparatorBefore: true, Post: true));
+        }
+
+        return items;
+    }
 }

@@ -2,6 +2,12 @@ using System.Globalization;
 using MatDesign.Core;
 using MatDesign.Web;
 using MatDesign.Web.Services;
+using MatDesign.Web.Studio;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
+using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.HttpOverrides;
 
 // Docker HEALTHCHECK: the image has no curl, so the app asks itself and exits with 0 (healthy) or 1.
@@ -17,7 +23,49 @@ CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddRazorPages();
+// The Studio (docs/STUDIO.md) is on only with a writable data directory and the administrator's password; otherwise the site is what it always was.
+// It is created when first needed, so it sees the final configuration (the tests set it after this code has run).
+builder.Services.AddSingleton(provider => new StudioService(provider.GetRequiredService<IConfiguration>()));
+builder.Services.AddDataProtection().SetApplicationName("MatDesign");
+builder.Services.AddOptions<KeyManagementOptions>().Configure<StudioService, ILoggerFactory>((options, studio, logs) =>
+{
+    // With the Studio on, the keys of the session cookie and of the anti-forgery tokens survive a restart of the container.
+    if (studio.Enabled)
+    {
+        options.XmlRepository = new FileSystemXmlRepository(new DirectoryInfo(Path.Combine(studio.DataDirectory, "keys")), logs);
+    }
+});
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
+{
+    options.Cookie.Name = "matdesign.studio";
+    options.Cookie.HttpOnly = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+    options.ExpireTimeSpan = TimeSpan.FromHours(8);
+    options.SlidingExpiration = true;
+    options.LoginPath = "/Studio/Login";
+    options.AccessDeniedPath = "/Studio/Login";
+    options.ReturnUrlParameter = "returnUrl";
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        // A session ends when the Studio is switched off or its password changes.
+        var service = context.HttpContext.RequestServices.GetRequiredService<StudioService>();
+        if (!service.Enabled || context.Principal?.FindFirst(StudioService.StampClaim)?.Value != service.Stamp)
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync();
+        }
+    };
+});
+builder.Services.AddAuthorization();
+
+builder.Services.AddRazorPages(options =>
+{
+    options.Conventions.AuthorizeFolder("/Studio");
+    options.Conventions.AllowAnonymousToPage("/Studio/Login");
+    options.Conventions.AllowAnonymousToPage("/Studio/Logout");
+});
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<ToolkitFiles>();
 builder.Services.AddSingleton<AuditData>();
@@ -42,6 +90,8 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 
 // ---- The toolkit as a download: one URL per file, so any app (or a plain HTML page) can use it. ----
 var ui = app.MapGroup("/ui");

@@ -126,8 +126,20 @@ public static class Navigation
         ]),
     ];
 
-    /// <summary>Every page of every menu (no parents).</summary>
-    public static IEnumerable<NavItem> Pages => Sets.SelectMany(s => s.Pages);
+    /// <summary>
+    /// The menu of the Studio (docs/STUDIO.md). It is a third menu behind the switcher, shown only to the signed-in administrator, so it is not one of <see cref="Sets"/>.
+    /// </summary>
+    public static NavSet StudioSet { get; } = new("studio", "Studio", "wrench",
+    [
+        new(null, [new("Overview", "/Studio", "home")]),
+        new("Maintain", [new("Activity", "/Studio/Activity", "activity")]),
+    ]);
+
+    /// <summary>The menus a visitor sees: the two of the site, and the Studio for the signed-in administrator.</summary>
+    public static IReadOnlyList<NavSet> For(bool studio) => studio ? [.. Sets, StudioSet] : Sets;
+
+    /// <summary>Every page of every menu (no parents), the Studio's included.</summary>
+    public static IEnumerable<NavItem> Pages => Sets.Append(StudioSet).SelectMany(s => s.Pages);
 
     /// <summary>
     /// The page of the menu that belongs to <paramref name="path"/>: an address that is the same, or the longest one the path continues

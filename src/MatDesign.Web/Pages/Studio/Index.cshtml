@@ -1,0 +1,67 @@
+@page "/Studio"
+@model MatDesign.Web.Pages.Studio.IndexModel
+@inject ToolkitFiles Toolkit
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "Studio";
+    ViewData["PageSub"] = "Where the apps, the rules and the components are maintained and created, and where a change becomes a release.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", null));
+}
+
+<section class="mat-section" aria-labelledby="state-title">
+    <div class="mat-section__head"><h2 id="state-title">What is here</h2></div>
+    <div class="mat-card"><div class="mat-card__body">
+        <dl class="mat-kv">
+            <dt>Built in</dt>
+            <dd>@AppRegistry.All.Count apps, @RuleBook.All.Count rules, @ComponentCatalog.All.Count components, @Toolkit.Tokens.Count tokens</dd>
+            <dt>Saved in the Studio</dt>
+            <dd>
+                @if (Model.Saved.Count == 0)
+                {
+                    <span class="mat-muted">Nothing yet.</span>
+                }
+                else
+                {
+                    @string.Join("; ", Model.Saved.Select(s => $"{s.Kind}: {StudioFormat.Count(s.Items, "item")}, {StudioFormat.Count(s.Revisions, "revision")}"))
+                }
+            </dd>
+            <dt>Data directory</dt>
+            <dd><code>@Model.DataDirectory</code></dd>
+            <dt>Version</dt>
+            <dd><code>@AppVersion.Current</code></dd>
+        </dl>
+    </div></div>
+</section>
+
+<section class="mat-section" aria-labelledby="recent-title">
+    <div class="mat-section__head"><h2 id="recent-title">The last changes</h2></div>
+    @if (Model.Recent.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("activity")</span>
+            <div class="mat-empty__title">Nothing has been changed yet</div>
+            <p>Every change made in the Studio is listed here with who made it and when.</p>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">The last changes</caption>
+                <thead><tr><th scope="col">Item</th><th scope="col">Change</th><th scope="col">When</th><th scope="col" class="mat-hide-sm">By</th></tr></thead>
+                <tbody>
+                    @foreach (var item in Model.Recent)
+                    {
+                        <tr>
+                            <td data-label="Item"><div class="mat-table__name"><span>@item.Id<small>@StudioFormat.KindName(item.Kind)</small></span></div></td>
+                            <td data-label="Change">@StudioFormat.What(item.Revision)</td>
+                            <td data-label="When">@StudioFormat.When(item.Revision.At)</td>
+                            <td data-label="By" class="mat-hide-sm">@item.Revision.By</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    <div class="mat-actions"><a class="mat-btn mat-btn--secondary" href="/Studio/Activity">@Ui.Icon("activity")<span>All activity</span></a></div>
+</section>
