@@ -277,3 +277,217 @@ th[aria-sort="descending"] .mat-icon { transform: rotate(180deg); }
 .mat-carousel__dot[aria-current="true"]::before { width: 22px; border-radius: var(--mat-radius-pill); background: var(--mat-accent); }
 .mat-carousel__bar .mat-btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
 @media (prefers-reduced-motion: reduce) { .mat-carousel__dot::before { transition: none; } }
+
+/* ---- Schedule (LIST-14): events one below another in five views (agenda, day, week, month, year); the script draws it all ----
+   The layout follows the width of the schedule itself (is-wide from 640 px, is-narrow below), not of the window. The place of a block in the hours, a bar in the
+   columns and the number of columns are set by the script as --mat-sch-* properties (no inline style in the markup). An event is tinted by its tone and always
+   has an icon or a text as well (COLOR-04); the tone is a tint with a line all around, never a bar at one side (COLOR-08). */
+.mat-schedule {
+  --mat-schedule-hour: 3rem;             /* the height of one hour in the time grid */
+  --mat-schedule-gutter: 3.5rem;         /* the column of the hours */
+  --mat-schedule-max-h: 38rem;           /* what the agenda, the day and the week grow to before they scroll inside */
+  position: relative; display: flex; flex-direction: column; gap: var(--mat-space-3); min-width: 0;
+}
+@media (pointer: coarse) { .mat-schedule { --mat-schedule-hour: 3.5rem; } }
+.mat-schedule.is-narrow[data-view="day"] { --mat-schedule-hour: 5.5rem; }
+
+/* the bar: Today and the two arrows, the title (it opens the jump to a month or year) and the views */
+.mat-schedule__bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-2) var(--mat-space-3); }
+.mat-schedule__nav { display: flex; align-items: center; gap: var(--mat-space-1); }
+.mat-schedule__nav .mat-btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+.mat-schedule__period {
+  display: inline-flex; align-items: center; gap: var(--mat-space-1); flex: 1 1 12rem; min-width: 0;
+  min-height: var(--mat-control-h); padding: 0 var(--mat-space-2);
+  border: 0; border-radius: var(--mat-radius); background: transparent; color: var(--mat-text);
+  font-size: var(--mat-fs-md); font-weight: 650; text-align: left; cursor: pointer;
+}
+.mat-schedule__period:hover { background: var(--mat-surface-3); }
+.mat-schedule__period .mat-icon { color: var(--mat-text-muted); }
+.mat-schedule__period[aria-expanded="true"] .mat-icon { transform: rotate(180deg); }
+.mat-schedule__periodtext { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mat-schedule__busy { display: inline-flex; }
+.mat-schedule__busy[hidden] { display: none; }
+.mat-schedule__views { flex: none; }
+.mat-schedule.is-wide .mat-schedule__views { margin-left: auto; }
+.mat-schedule.is-narrow .mat-schedule__period { order: -1; flex-basis: 100%; font-size: var(--mat-fs-lg); }
+.mat-schedule.is-narrow .mat-schedule__busy { position: absolute; top: var(--mat-space-3); right: var(--mat-space-3); }
+.mat-schedule.is-narrow .mat-schedule__nav { flex: 1 1 auto; }
+.mat-schedule.is-narrow .mat-schedule__prev { margin-left: auto; }
+.mat-schedule.is-narrow .mat-schedule__views { display: flex; flex: 1 1 100%; }
+.mat-schedule.is-narrow .mat-schedule__views > .mat-btn { flex: 1 1 0; min-width: 0; padding-inline: var(--mat-space-1); font-size: var(--mat-fs-sm); }
+.mat-schedule.is-narrow .mat-schedule__periodtext { white-space: normal; }
+
+/* the jump: a year with its twelve months, under the title */
+.mat-schedule__jump {
+  position: absolute; z-index: var(--mat-z-menu); top: calc(var(--mat-control-h) + var(--mat-space-2)); left: clamp(0px, var(--mat-sch-left, 0px), max(0px, calc(100% - 21rem)));
+  width: min(100%, 21rem); padding: var(--mat-space-3);
+  background: var(--mat-surface); border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius-lg); box-shadow: var(--mat-shadow-2);
+}
+.mat-schedule__jump[hidden] { display: none; }
+.mat-schedule__jumphead { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--mat-space-2); }
+.mat-schedule__jumpyear { font-size: var(--mat-fs-lg); }
+.mat-schedule__jumpmonths { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--mat-space-1); }
+.mat-schedule__jumpmonths .mat-btn { min-height: var(--mat-control-h); padding-inline: var(--mat-space-1); }
+.mat-schedule__jump .mat-btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+
+/* the body: a surface with a line; agenda, day and week scroll inside it (the headings stay), month and year have their own height */
+.mat-schedule__body {
+  position: relative; min-width: 0; overflow: hidden;
+  background: var(--mat-surface); border: 1px solid var(--mat-border); border-radius: var(--mat-radius-lg);
+  touch-action: pan-y pinch-zoom;
+}
+.mat-schedule__body:focus-visible { border-radius: var(--mat-radius-lg); }
+.mat-schedule__body.is-scroll { max-height: var(--mat-schedule-max-h); overflow-y: auto; }
+.mat-schedule.is-loading .mat-schedule__body { opacity: .55; }
+/* a page slides in from the side it was turned to; the content moves, not the body, so that the page never gets wider */
+.mat-schedule__body.is-from-next > * { animation: mat-schedule-next var(--mat-dur) var(--mat-ease); }
+.mat-schedule__body.is-from-prev > * { animation: mat-schedule-prev var(--mat-dur) var(--mat-ease); }
+@keyframes mat-schedule-next { from { opacity: 0; transform: translateX(1.5rem); } }
+@keyframes mat-schedule-prev { from { opacity: 0; transform: translateX(-1.5rem); } }
+
+/* an event: a link or a button with a tint by its tone and a line all around */
+.mat-schedule__event {
+  --mat-sch-bg: var(--mat-surface-2); --mat-sch-line: var(--mat-border-strong); --mat-sch-ink: var(--mat-text-muted);
+  position: relative; display: flex; min-width: 0; margin: 0;
+  background: var(--mat-sch-bg); border: 1px solid var(--mat-sch-line); border-radius: var(--mat-radius);
+  color: var(--mat-text); font: inherit; text-align: left; text-decoration: none; cursor: pointer;
+  transition: border-color var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-schedule__event:hover { border-color: var(--mat-text-faint); text-decoration: none; }
+.mat-schedule__event--accent { --mat-sch-bg: color-mix(in srgb, var(--mat-accent) 16%, var(--mat-surface)); --mat-sch-line: color-mix(in srgb, var(--mat-accent) 45%, transparent); --mat-sch-ink: var(--mat-accent-text); }
+.mat-schedule__event--ok { --mat-sch-bg: color-mix(in srgb, var(--mat-success) 14%, var(--mat-surface)); --mat-sch-line: color-mix(in srgb, var(--mat-success) 45%, transparent); --mat-sch-ink: var(--mat-success-text); }
+.mat-schedule__event--warn { --mat-sch-bg: color-mix(in srgb, var(--mat-warning) 16%, var(--mat-surface)); --mat-sch-line: color-mix(in srgb, var(--mat-warning) 45%, transparent); --mat-sch-ink: var(--mat-warning-text); }
+.mat-schedule__event--error { --mat-sch-bg: color-mix(in srgb, var(--mat-danger) 12%, var(--mat-surface)); --mat-sch-line: color-mix(in srgb, var(--mat-danger) 45%, transparent); --mat-sch-ink: var(--mat-danger-text); }
+.mat-schedule__event--info { --mat-sch-bg: color-mix(in srgb, var(--mat-info) 12%, var(--mat-surface)); --mat-sch-line: color-mix(in srgb, var(--mat-info) 45%, transparent); --mat-sch-ink: var(--mat-info-text); }
+.mat-schedule__mark { display: inline-flex; margin-right: var(--mat-space-1); color: var(--mat-sch-ink); vertical-align: -.1em; }
+.mat-schedule__title { min-width: 0; font-weight: 600; }
+.mat-schedule__meta { min-width: 0; color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
+.mat-schedule__time { color: var(--mat-text-muted); font-variant-numeric: tabular-nums; }
+
+/* Agenda: the days one below another, each under a heading that stays at the top while its events pass */
+.mat-schedule__day + .mat-schedule__day { border-top: 1px solid var(--mat-border); }
+.mat-schedule__dayhead {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-2);
+  min-height: 2.5rem; padding: var(--mat-space-1) var(--mat-space-4);
+  background: var(--mat-surface-2); border-bottom: 1px solid var(--mat-border);
+  font-size: var(--mat-fs-sm); font-weight: 650;
+}
+.mat-schedule__day.is-today > .mat-schedule__dayhead { background: color-mix(in srgb, var(--mat-accent) 16%, var(--mat-surface-2)); color: var(--mat-accent-text); }
+.mat-schedule__kw, .mat-schedule__count { margin-left: auto; color: var(--mat-text-muted); font-weight: 500; }
+.mat-schedule__items { list-style: none; display: flex; flex-direction: column; gap: var(--mat-space-2); padding: var(--mat-space-2) var(--mat-space-3) var(--mat-space-3); }
+.mat-schedule__none { margin: 0; padding: var(--mat-space-3) var(--mat-space-4); color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
+.mat-schedule__empty { padding: var(--mat-space-8) var(--mat-space-4); }
+.mat-schedule__event--row { flex-wrap: wrap; align-items: center; gap: var(--mat-space-2) var(--mat-space-3); width: 100%; min-height: var(--mat-control-h); padding: var(--mat-space-2) var(--mat-space-3); }
+.mat-schedule__when { display: flex; flex: 0 0 5rem; flex-direction: column; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.mat-schedule__from { font-weight: 650; }
+.mat-schedule__to { color: var(--mat-text-muted); font-size: var(--mat-fs-xs); }
+.mat-schedule__what { display: flex; flex: 1 1 9rem; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.mat-schedule__event--row .mat-schedule__meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mat-schedule__event--row .mat-pill { margin-left: auto; }
+/* narrow: the time on the left, the title under it on the right and the status under the title */
+.mat-schedule.is-narrow .mat-schedule__event--row { display: grid; grid-template-columns: 4.25rem minmax(0, 1fr); align-items: start; gap: var(--mat-space-1) var(--mat-space-3); }
+.mat-schedule.is-narrow .mat-schedule__event--row .mat-pill { grid-column: 2; justify-self: start; margin-left: 0; }
+
+/* Day and week: a time grid. The top (the days and the bars of the events that last all day or longer) stays; the blocks stand side by side where they overlap. */
+.mat-schedule__top { position: sticky; top: 0; z-index: 4; background: var(--mat-surface); border-bottom: 1px solid var(--mat-border); }
+.mat-schedule__head, .mat-schedule__band { display: grid; grid-template-columns: var(--mat-schedule-gutter) repeat(var(--mat-sch-cols, 1), minmax(0, 1fr)); }
+.mat-schedule__corner { display: grid; place-items: center; color: var(--mat-text-muted); font-size: var(--mat-fs-xs); font-weight: 600; }
+.mat-schedule__colhead { margin: 0; min-height: var(--mat-control-h-lg); border-left: 1px solid var(--mat-border); font-size: var(--mat-fs-sm); }
+.mat-schedule__colhead, .mat-schedule__dayopen { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.mat-schedule__dayopen { width: 100%; min-height: inherit; padding: var(--mat-space-1) 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.mat-schedule__dayopen:hover { background: var(--mat-surface-3); }
+.mat-schedule__dow { color: var(--mat-text-muted); font-weight: 600; }
+.mat-schedule__dnum { display: inline-grid; place-items: center; min-width: 1.75rem; height: 1.75rem; border-radius: var(--mat-radius-pill); font-size: var(--mat-fs-md); font-weight: 650; }
+.mat-schedule__colhead.is-today .mat-schedule__dnum, .mat-schedule__cell.is-today .mat-schedule__dnum { background: var(--mat-accent); color: var(--mat-on-accent); }
+.mat-schedule__band { gap: 2px; padding: 2px 0 var(--mat-space-1); border-top: 1px solid var(--mat-border); }
+.mat-schedule__bandlabel { grid-column: 1; grid-row: 1; align-self: start; overflow: hidden; padding: var(--mat-space-1) var(--mat-space-1) 0 var(--mat-space-2); color: var(--mat-text-muted); font-size: var(--mat-fs-xs); text-overflow: ellipsis; }
+.mat-schedule__event--bar { grid-column: var(--mat-sch-c1) / var(--mat-sch-c2); grid-row: var(--mat-sch-lane); align-items: center; gap: var(--mat-space-2); min-height: var(--mat-control-h-sm); padding: 0 var(--mat-space-2); border-radius: var(--mat-radius-sm); font-size: var(--mat-fs-xs); overflow: hidden; white-space: nowrap; }
+.mat-schedule__event--bar .mat-schedule__title { overflow: hidden; text-overflow: ellipsis; }
+.mat-schedule__event--bar.is-before { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.mat-schedule__event--bar.is-after { border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.mat-schedule__tbody { display: grid; grid-template-columns: var(--mat-schedule-gutter) minmax(0, 1fr); }
+.mat-schedule__hour { height: var(--mat-schedule-hour); padding: 2px var(--mat-space-2) 0 0; color: var(--mat-text-muted); font-size: var(--mat-fs-xs); font-variant-numeric: tabular-nums; text-align: right; }
+.mat-schedule__cols { position: relative; display: grid; grid-template-columns: repeat(var(--mat-sch-cols, 1), minmax(0, 1fr)); }
+.mat-schedule__lines { position: absolute; inset: 0; pointer-events: none; }
+.mat-schedule__lines > div { height: var(--mat-schedule-hour); border-top: 1px solid var(--mat-border); }
+.mat-schedule__col { position: relative; height: calc(var(--mat-sch-hours) * var(--mat-schedule-hour)); border-left: 1px solid var(--mat-border); }
+.mat-schedule__col.is-today { background: color-mix(in srgb, var(--mat-accent) 6%, transparent); }
+.mat-schedule__event--block {
+  position: absolute; z-index: 1; flex-direction: column; overflow: hidden;
+  top: calc(var(--mat-sch-top) * var(--mat-schedule-hour) + 1px); height: calc(var(--mat-sch-len) * var(--mat-schedule-hour) - 2px);
+  left: calc(100% * var(--mat-sch-lane) / var(--mat-sch-lanes) + 1px); width: calc(100% / var(--mat-sch-lanes) - 2px);
+  padding: 2px var(--mat-space-2); border-radius: var(--mat-radius-sm); font-size: var(--mat-fs-xs); line-height: 1.3;
+}
+.mat-schedule__event--block > * { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--mat-fs-xs); }
+/* half an hour is room for one line: the title and, when there is room, the time after it */
+.mat-schedule__event--block.is-short { flex-direction: row; align-items: center; gap: var(--mat-space-2); padding-block: 0; }
+.mat-schedule__event--block.is-short > .mat-schedule__title { flex: 0 1 auto; min-width: 0; }
+.mat-schedule__event--block.is-short > .mat-schedule__time { flex: 0 100 auto; min-width: 0; }
+.mat-schedule__event--block.is-short > .mat-schedule__meta { display: none; }
+/* the line of the time now, in the column of today */
+.mat-schedule__now { position: absolute; z-index: 2; left: 0; right: 0; top: calc(var(--mat-sch-top) * var(--mat-schedule-hour)); height: 2px; margin-top: -1px; background: var(--mat-accent); pointer-events: none; }
+.mat-schedule__now::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--mat-accent); }
+
+/* Month: a grid of weeks. Wide: the events are in the cells. Narrow: a day shows dots, and the chosen day is listed under the grid. */
+.mat-schedule__mgrid { display: flex; flex-direction: column; }
+.mat-schedule__row { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.mat-schedule__mgrid.is-numbered .mat-schedule__row { grid-template-columns: 2.5rem repeat(7, minmax(0, 1fr)); }
+.mat-schedule__row + .mat-schedule__row { border-top: 1px solid var(--mat-border); }
+.mat-schedule__row--head { background: var(--mat-surface-2); }
+.mat-schedule__wd, .mat-schedule__wk { display: grid; place-items: center; padding: var(--mat-space-2) var(--mat-space-1); color: var(--mat-text-muted); font-size: var(--mat-fs-xs); font-weight: 600; }
+.mat-schedule__row:not(.mat-schedule__row--head) .mat-schedule__wk { background: var(--mat-surface-2); }
+.mat-schedule__cell { min-width: 0; border-left: 1px solid var(--mat-border); }
+.mat-schedule__row > .mat-schedule__cell:first-child { border-left: 0; }
+.mat-schedule__cell.is-outside { background: var(--mat-surface-2); }
+.mat-schedule__cell.is-outside .mat-schedule__dnum, .mat-schedule__cell.is-outside .mat-schedule__daynum { color: var(--mat-text-muted); font-weight: 500; }
+.mat-schedule__cell.is-selected { background: var(--mat-accent-soft); }
+.mat-schedule__cell.is-off { opacity: .45; }
+.mat-schedule.is-wide .mat-schedule__cell { display: flex; flex-direction: column; gap: 2px; min-height: 6.5rem; padding: var(--mat-space-1); }
+.mat-schedule__daynum { display: grid; place-items: center; align-self: flex-start; min-width: 1.75rem; height: 1.75rem; padding: 0 var(--mat-space-1); border: 0; border-radius: var(--mat-radius-pill); background: transparent; color: var(--mat-text); font-size: var(--mat-fs-sm); font-weight: 600; cursor: pointer; }
+.mat-schedule__daynum:hover { background: var(--mat-surface-3); }
+.mat-schedule__cell.is-today .mat-schedule__daynum { background: var(--mat-accent); color: var(--mat-on-accent); }
+.mat-schedule__chips { list-style: none; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mat-schedule__chips > li { min-width: 0; }
+.mat-schedule__gap { min-height: 1.5rem; }
+.mat-schedule__event--chip { align-items: center; gap: 4px; width: 100%; min-height: 1.5rem; padding: 0 var(--mat-space-1); border-radius: var(--mat-radius-sm); font-size: var(--mat-fs-xs); overflow: hidden; white-space: nowrap; }
+.mat-schedule__event--chip .mat-schedule__title { overflow: hidden; text-overflow: ellipsis; font-size: var(--mat-fs-xs); }
+.mat-schedule__event--chip .mat-schedule__time { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); flex: none; font-size: var(--mat-fs-xs); }
+/* the time is drawn before the title only where a cell is wide enough for both (a week row of 780 px is cells of about 105 px); a screen reader has it always */
+.mat-schedule__row { container-type: inline-size; }
+@container (min-width: 780px) { .mat-schedule__event--chip .mat-schedule__time { position: static; width: auto; height: auto; overflow: visible; clip: auto; } }
+/* a bar over the cells it covers: as wide as they are, with the paddings and the lines between them (2 x 4 px and 1 px), and over the cells that come after it */
+.mat-schedule__event--chip[data-sch-span] { --mat-sch-more: 0px; z-index: 1; width: calc(var(--mat-sch-span) * 100% + (var(--mat-sch-span) - 1) * (var(--mat-space-1) * 2 + 1px) + var(--mat-sch-more)); }
+.mat-schedule__event--chip.is-before { --mat-sch-more: var(--mat-space-1); margin-left: calc(var(--mat-space-1) * -1); border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.mat-schedule__event--chip.is-after { --mat-sch-more: var(--mat-space-1); border-top-right-radius: 0; border-bottom-right-radius: 0; }
+.mat-schedule__event--chip.is-before.is-after { --mat-sch-more: calc(var(--mat-space-1) * 2); }
+.mat-schedule__more { min-height: 1.5rem; padding: 0 var(--mat-space-1); border: 0; border-radius: var(--mat-radius-sm); background: transparent; color: var(--mat-accent-text); font-size: var(--mat-fs-xs); font-weight: 650; cursor: pointer; }
+.mat-schedule__more:hover { background: var(--mat-surface-3); }
+.mat-schedule__daybtn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; width: 100%; min-height: 2.75rem; padding: var(--mat-space-1) 0; border: 0; background: transparent; color: var(--mat-text); cursor: pointer; }
+.mat-schedule__cell.is-selected .mat-schedule__dnum { font-weight: 800; }
+.mat-schedule__dots { display: flex; justify-content: center; gap: 3px; height: 6px; }
+.mat-schedule__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mat-text-faint); }
+.mat-schedule__dot--accent { background: var(--mat-accent); }
+.mat-schedule__dot--ok { background: var(--mat-success); }
+.mat-schedule__dot--warn { background: var(--mat-warning); }
+.mat-schedule__dot--error { background: var(--mat-danger); }
+.mat-schedule__dot--info { background: var(--mat-info); }
+.mat-schedule__daylist { border-top: 1px solid var(--mat-border); }
+.mat-schedule__daylist .mat-schedule__dayhead { border-top: 0; }
+
+/* Year: twelve small months; a day is tinted by how many events it has, a month opens the month view */
+.mat-schedule__year { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: var(--mat-space-3); padding: var(--mat-space-3); }
+.mat-schedule__month { min-width: 0; padding: var(--mat-space-2); border: 1px solid var(--mat-border); border-radius: var(--mat-radius-lg); background: var(--mat-surface); cursor: pointer; }
+.mat-schedule__month:hover { border-color: var(--mat-text-faint); }
+.mat-schedule__month.is-off { opacity: .45; cursor: not-allowed; }
+.mat-schedule__monthhead { margin: 0; font-size: var(--mat-fs-md); }
+.mat-schedule__monthname { display: block; width: 100%; min-height: var(--mat-control-h); padding: 0 var(--mat-space-1); border: 0; border-radius: var(--mat-radius-sm); background: transparent; color: var(--mat-text); font-weight: 650; text-align: left; cursor: pointer; }
+.mat-schedule__mini { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; font-size: var(--mat-fs-xs); font-variant-numeric: tabular-nums; text-align: center; }
+.mat-schedule__mwd { color: var(--mat-text-muted); font-weight: 600; }
+.mat-schedule__d { display: grid; place-items: center; aspect-ratio: 1; border-radius: var(--mat-radius-xs); }
+.mat-schedule__d.is-l1 { background: var(--mat-accent-soft); }
+.mat-schedule__d.is-l2 { background: var(--mat-accent-soft-strong); font-weight: 650; }
+.mat-schedule__d.is-l3 { background: var(--mat-accent); color: var(--mat-on-accent); font-weight: 700; }
+.mat-schedule__d.is-today { box-shadow: inset 0 0 0 2px var(--mat-text); font-weight: 700; }
+.mat-schedule__hint { margin: 0; padding: var(--mat-space-2) var(--mat-space-4) var(--mat-space-3); color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
+@media (prefers-reduced-motion: reduce) { .mat-schedule__body.is-from-next > *, .mat-schedule__body.is-from-prev > * { animation: none; } .mat-schedule__event { transition: none; } }
