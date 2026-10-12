@@ -36,9 +36,11 @@
   min-width: 280px; max-width: min(96vw, 720px); max-height: calc(100dvh - 16px);
   background: var(--mat-surface); color: var(--mat-text);
   border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius-lg); box-shadow: var(--mat-shadow-3);
-  animation: mat-menu-in var(--mat-dur) var(--mat-ease);
+  /* the panel only fades in: a panel that also moves and grows (as a menu does) looks as if it first appeared at the wrong place and then slid into its own */
+  animation: mat-picker-in var(--mat-dur-fast) var(--mat-ease);
   transform-origin: top left;
 }
+@keyframes mat-picker-in { from { opacity: 0; } }
 .mat-picker__panel[hidden] { display: none; }
 .mat-picker__head { display: none; align-items: center; gap: var(--mat-space-3); padding: var(--mat-space-3) var(--mat-space-3) var(--mat-space-3) var(--mat-space-4); border-bottom: 1px solid var(--mat-border); flex: none; }
 .mat-picker__heading { flex: 1 1 auto; min-width: 0; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -222,7 +224,7 @@
   .mat-picker__panel.mat-picker__panel--suggest {
     inset: auto; width: auto; height: auto; max-height: min(50dvh, 320px); padding: 0;
     border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius-lg); box-shadow: var(--mat-shadow-3);
-    animation: mat-menu-in var(--mat-dur) var(--mat-ease);
+    animation: mat-picker-in var(--mat-dur-fast) var(--mat-ease);
   }
   .mat-picker__panel--suggest .mat-picker__options { max-height: min(50dvh, 320px); padding: var(--mat-space-2); }
 }

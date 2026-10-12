@@ -1115,10 +1115,13 @@
     p.full = isPhone();
     p.relayout = function () { if (pickerOpen === p) { placePanel(p); } };
     var focusEl = p.spec.open(p);
+    // the panel is not drawn before it has its place, whatever the browser does between the two steps
+    p.panel.style.visibility = 'hidden';
     p.panel.hidden = false;
     p.trigger.setAttribute('aria-expanded', 'true');
     pickerOpen = p;
     placePanel(p);
+    p.panel.style.visibility = '';
     syncLock();
     if (p.spec.shown) { p.spec.shown(p); }
     if (focusEl) {

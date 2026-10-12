@@ -817,6 +817,30 @@ function expectTrue(value, what) {
     const valueOf = id => page.$eval(`#${id}`, el => el.value);
     const shown = async id => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
 
+    await check('a picker panel is drawn at its place from the first frame on and only fades in (it does not move or grow into place)', async () => {
+      for (const id of ['pk-plan', 'pk-date', 'pk-period', 'pk-time', 'pk-colour']) {
+        await page.evaluate(sel => document.querySelector(sel).scrollIntoView({ block: 'center' }), `#${id}-trigger`);
+        await page.waitForTimeout(300);
+        await page.evaluate(sel => {
+          window.__frames = [];
+          const t0 = performance.now();
+          (function tick() {
+            const panel = document.querySelector(sel + ' ~ .mat-picker__panel');
+            if (panel && !panel.hidden) { const r = panel.getBoundingClientRect(); window.__frames.push({ x: r.x, y: r.y, w: r.width, h: r.height }); }
+            if (performance.now() - t0 < 700) { requestAnimationFrame(tick); }
+          })();
+        }, `#${id}-trigger`);
+        await page.click(`#${id}-trigger`);
+        await page.waitForTimeout(800);
+        const frames = await page.evaluate(() => window.__frames);
+        expectTrue(frames.length > 3, id + ': no frames of the panel');
+        const last = frames[frames.length - 1];
+        const off = Math.max(...frames.map(f => Math.abs(f.x - last.x) + Math.abs(f.y - last.y) + Math.abs(f.w - last.w) + Math.abs(f.h - last.h)));
+        expectTrue(off < 1.5, `${id}: the panel was ${off.toFixed(1)} px away from its place on an earlier frame`);
+        await page.keyboard.press('Escape');
+      }
+    });
+
     await check('a select with details shows the chosen option in the field, opens a panel with descriptions and tags, and a click chooses and closes', async () => {
       expectTrue((await shown('pk-plan')).startsWith('Team'), 'the field does not show the chosen plan: ' + await shown('pk-plan'));
       expect(await page.getAttribute('#pk-plan-trigger', 'aria-haspopup'), 'listbox', 'aria-haspopup');
