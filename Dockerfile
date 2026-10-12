@@ -11,7 +11,7 @@ ARG BuildDate=
 WORKDIR /src
 
 # Restore first (better layer caching).
-COPY ["global.json", "Directory.Build.props", "./"]
+COPY ["global.json", "Directory.Build.props", "CHANGELOG.md", "./"]
 COPY ["src/MatUi/MatUi.csproj", "src/MatUi/"]
 COPY ["src/MatDesign.Core/MatDesign.Core.csproj", "src/MatDesign.Core/"]
 COPY ["src/MatDesign.Web/MatDesign.Web.csproj", "src/MatDesign.Web/"]

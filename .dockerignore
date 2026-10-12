@@ -12,6 +12,8 @@ tmp/
 .github/
 .claude/
 *.md
+# the changelog of the toolkit is embedded in the build (src/MatDesign.Core): it is part of what an app is told when it updates
+!CHANGELOG.md
 docs/
 tests/
 scripts/
