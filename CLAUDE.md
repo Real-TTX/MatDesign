@@ -92,6 +92,9 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour"]` around the real input `mat-picker__input`, which posts one value in a fixed
   format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone). Texts in English and German
   (`PK_TEXT`: both languages must have every key, a test checks). A hidden element that has a `display` in the CSS needs its own `[hidden]` rule (tests list them).
+- Carousel (`LIST-13`): `.mat-carousel[data-carousel]` around `.mat-carousel__track` > `.mat-carousel__slide`. The strip scrolls and snaps in CSS (a scrollable strip without the script); the script names the slides,
+  adds the bar (Previous, a dot per page, Next, Pause with `data-autoplay`), makes the slides out of view `inert` and says which page is shown. The buttons at the ends are `aria-disabled`, never `disabled` (the focus stays).
+  Autoplay waits for the pointer and the focus, stops for good after any use of a control and never starts under `prefers-reduced-motion`. Texts in `CAR_TEXT` (English and German, a test checks).
 - Layout and utilities: mobile first with `sm` 600, `md` 900, `lg` 1200 px; no `!important`; values from the tokens; the grid spans by `grid-column-end`. An example in the catalogue uses
   toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.

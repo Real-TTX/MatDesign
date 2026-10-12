@@ -908,6 +908,164 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- carousel (LIST-13)
+  console.log('\nCarousel');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#carousel');
+    const tour = 'section[aria-label="A tour of the toolkit"]';
+    const state = sel => page.$eval(sel, c => {
+      const slides = [...c.querySelectorAll('.mat-carousel__slide')];
+      const dots = [...c.querySelectorAll('.mat-carousel__dot')];
+      return {
+        slides: slides.length, dots: dots.length,
+        inert: slides.map(s => s.hasAttribute('inert')).join(','),
+        current: dots.findIndex(d => d.getAttribute('aria-current') === 'true'),
+        prev: c.querySelector('.mat-carousel__prev').getAttribute('aria-disabled'),
+        next: c.querySelector('.mat-carousel__next').getAttribute('aria-disabled'),
+        live: c.querySelector('[role=status]').textContent.trim(),
+        left: Math.round(c.querySelector('.mat-carousel__track').scrollLeft),
+      };
+    });
+    await page.evaluate(() => document.getElementById('carousel').scrollIntoView());
+
+    await check('a carousel names its slides, adds Previous, a dot per page and Next, and only the slide in view can be reached with the Tab key', async () => {
+      const s = await state(tour);
+      expect(s.slides, 4, 'slides');
+      expect(s.dots, 4, 'dots');
+      expect(s.inert, 'false,true,true,true', 'inert slides');
+      expect(s.current, 0, 'current dot');
+      expect(s.prev, 'true', 'Previous on the first page');
+      expect(s.next, 'false', 'Next on the first page');
+      expect(await page.getAttribute(`${tour} .mat-carousel__slide`, 'aria-label'), '1 of 4', 'the name of a slide');
+      expect(await page.getAttribute(`${tour} .mat-carousel__slide`, 'aria-roledescription'), 'slide', 'the role of a slide');
+      expect(await page.getAttribute(`${tour} .mat-carousel__dot >> nth=1`, 'aria-label'), 'Show 2', 'the name of a dot');
+      expect(await page.getAttribute(`${tour} .mat-carousel__prev`, 'aria-label'), 'Previous', 'the name of Previous');
+    });
+    await check('Next, a dot and the keys move the strip, the current dot follows and a screen reader is told', async () => {
+      await page.click(`${tour} .mat-carousel__next`);
+      await page.waitForTimeout(700);
+      let s = await state(tour);
+      expect(s.current, 1, 'the dot after Next');
+      expect(s.inert, 'true,false,true,true', 'inert slides after Next');
+      expect(s.prev, 'false', 'Previous after Next');
+      expect(s.live, 'Showing 2 of 4', 'the live region');
+      await page.click(`${tour} .mat-carousel__dot >> nth=3`);
+      await page.waitForTimeout(700);
+      s = await state(tour);
+      expect(s.current, 3, 'the last dot');
+      expect(s.next, 'true', 'Next on the last page');
+      expect(await page.evaluate(sel => document.activeElement === document.querySelector(sel + ' .mat-carousel__dot:nth-child(4)'), tour), true, 'the focus stays on the dot');
+      await page.focus(`${tour} .mat-carousel__track`);
+      await page.keyboard.press('Home');
+      await page.waitForTimeout(700);
+      expect((await state(tour)).current, 0, 'Home');
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(700);
+      expect((await state(tour)).current, 1, 'ArrowRight');
+      await page.keyboard.press('ArrowLeft');
+      await page.waitForTimeout(700);
+      expect((await state(tour)).current, 0, 'ArrowLeft');
+      await page.keyboard.press('End');
+      await page.waitForTimeout(700);
+      expect((await state(tour)).current, 3, 'End');
+    });
+    await check('Next on the last page does nothing without data-loop, and the button keeps the focus that is on it', async () => {
+      await page.focus(`${tour} .mat-carousel__next`);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(500);
+      expect((await state(tour)).current, 3, 'still the last page');
+      expect(await page.evaluate(sel => document.activeElement === document.querySelector(sel + ' .mat-carousel__next'), tour), true, 'the focus');
+    });
+
+    const apps = 'section[aria-label="Apps of the family"]';
+    await page.evaluate(() => document.querySelector('section[aria-label="Apps of the family"]').scrollIntoView({ block: 'center' }));
+    await check('several slides at once: three fit on a wide screen, the dots are pages of them', async () => {
+      const s = await state(apps);
+      expect(s.slides, 5, 'slides');
+      expect(s.dots, 2, 'pages');
+      expect(s.inert, 'false,false,false,true,true', 'the three in view can be reached');
+      await page.click(`${apps} .mat-carousel__dot >> nth=1`);
+      await page.waitForTimeout(700);
+      const t = await state(apps);
+      expect(t.current, 1, 'the second page');
+      expect(t.inert, 'true,true,false,false,false', 'the last three, the strip ends at the last slide');
+      expect(t.next, 'true', 'Next on the last page');
+    });
+
+    const news = 'section[aria-label="News"]';
+    await page.evaluate(() => document.querySelector('section[aria-label="News"]').scrollIntoView({ block: 'center' }));
+    await check('a show that moves by itself has a Pause button, waits for the pointer, and stops for good after a click', async () => {
+      // a copy of the example with a short interval, so that the check does not wait six seconds
+      await page.evaluate(() => {
+        const src = document.querySelector('section[aria-label="News"]');
+        const copy = src.cloneNode(true);
+        copy.setAttribute('aria-label', 'Fast news');
+        copy.setAttribute('data-autoplay', '500');
+        copy.querySelector('.mat-carousel__bar')?.remove();
+        copy.querySelector('[role=status]')?.remove();
+        delete copy._matCarousel;
+        copy.className = 'mat-carousel';
+        src.parentNode.insertBefore(copy, src);
+        window.MatUi.carousel.init(copy.parentNode);
+      });
+      const fast = 'section[aria-label="Fast news"]';
+      await page.mouse.move(0, 0);   // the pointer of an earlier click may rest over the copy, and a show waits for the pointer
+      expect(await page.getAttribute(`${fast} .mat-carousel__toggle`, 'aria-label'), 'Pause the slide show', 'the button while it plays');
+      // it moves by itself: some page other than the first is shown within two seconds
+      await page.waitForFunction(sel => [...document.querySelectorAll(sel + ' .mat-carousel__dot')].findIndex(d => d.getAttribute('aria-current') === 'true') > 0, fast, { timeout: 2500 });
+      expect((await state(fast)).live, '', 'a moving show says nothing to a screen reader');
+      // the pointer is inside: it waits (a scroll that had begun is let to end first)
+      await page.hover(`${fast} .mat-carousel__track`);
+      await page.waitForTimeout(700);
+      const held = (await state(fast)).current;
+      await page.waitForTimeout(1300);
+      expect((await state(fast)).current, held, 'the show moved while the pointer was inside');
+      // a click on Pause stops it for good, also when the pointer has left
+      await page.click(`${fast} .mat-carousel__toggle`);
+      expect(await page.getAttribute(`${fast} .mat-carousel__toggle`, 'aria-label'), 'Start the slide show', 'the button after Pause');
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(700);
+      const stopped = (await state(fast)).current;
+      await page.waitForTimeout(1300);
+      expect((await state(fast)).current, stopped, 'the show moved after Pause');
+      expect(await page.evaluate(() => document.querySelector('section[aria-label="Fast news"]')._matCarousel.playing), false, 'the show is still marked as playing');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open({ ...desktopOptions, reducedMotion: 'reduce' }, '/Components#carousel');
+    await check('for a user who asked for less motion a show does not start by itself, and the button can start it', async () => {
+      const news = 'section[aria-label="News"]';
+      await page.evaluate(() => document.querySelector('section[aria-label="News"]').scrollIntoView({ block: 'center' }));
+      await page.waitForTimeout(500);
+      expect(await page.getAttribute(`${news} .mat-carousel__toggle`, 'aria-label'), 'Start the slide show', 'the button');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#carousel');
+    await check('on a phone one slide fills the strip, every card has a dot and the page does not scroll sideways', async () => {
+      const apps = 'section[aria-label="Apps of the family"]';
+      await page.evaluate(() => document.querySelector('section[aria-label="Apps of the family"]').scrollIntoView({ block: 'center' }));
+      await page.waitForTimeout(300);
+      const s = await page.$eval(apps, c => {
+        const track = c.querySelector('.mat-carousel__track').getBoundingClientRect();
+        const slide = c.querySelector('.mat-carousel__slide').getBoundingClientRect();
+        return {
+          dots: c.querySelectorAll('.mat-carousel__dot').length, oneAtATime: Math.abs(slide.width - track.width) < 2,
+          inert: [...c.querySelectorAll('.mat-carousel__slide')].map(x => x.hasAttribute('inert')).join(','),
+          sideways: document.documentElement.scrollWidth > innerWidth,
+          dotSize: Math.round(c.querySelector('.mat-carousel__dot').getBoundingClientRect().width),
+        };
+      });
+      expect(s, { dots: 5, oneAtATime: true, inert: 'false,true,true,true,true', sideways: false, dotSize: 36 }, 'the phone');
+      await page.click(`${apps} .mat-carousel__next`);
+      await page.waitForTimeout(700);
+      expect(await page.$eval(apps, c => [...c.querySelectorAll('.mat-carousel__dot')].findIndex(d => d.getAttribute('aria-current') === 'true')), 1, 'the page after Next');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- layout and utilities
   console.log('\nLayout and utilities');
   {

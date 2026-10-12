@@ -22,6 +22,9 @@
                                             data-placeholder, data-clearable (a button that clears the value), data-min / data-max / data-week-start / data-flex (dates),
                                             data-step / data-hour12 (times), data-swatches (colours), data-search / data-multiple / data-sep (select; the options are
                                             .mat-picker__option with data-value). The texts change with data-pk-<name> on <html>, the format of dates with data-locale.
+     data-carousel                          a strip of slides (.mat-carousel__track > .mat-carousel__slide) that scrolls and snaps; the script adds Previous, the dots and Next
+                                            (LIST-13). data-loop: Next on the last page goes to the first; data-autoplay="ms": it moves by itself (Pause button; it waits
+                                            while the pointer or the focus is inside and never starts for a user who asked for less motion). The texts: data-car-<name> on <html>
      data-menu-toggle="id"                  open the context menu #id next to the button; data-menu-place="top|bottom"
      data-dialog-open="id" / data-dialog-close   open / close a <dialog class="mat-dialog">
      data-confirm="Question?"               ask in a dialog before a submit button, a form or a link goes ahead
@@ -1877,6 +1880,197 @@
     if (pickerOpen && !pickerOpen.full && !pickerOpen.panel.contains(e.target)) { pickerOpen.relayout(); }
   }, true);
 
+  // ------------------------------------------------------------------------------------------------ carousel (LIST-13, matui.lists.css)
+  // A carousel is a strip of slides that scrolls and snaps in CSS, so it is a scrollable strip without the script:
+  //   <section class="mat-carousel" data-carousel aria-label="..."><div class="mat-carousel__track"><div class="mat-carousel__slide">...</div></div></section>
+  // The script names the slides ("2 of 5"), adds a bar below the strip (Previous, a dot per page, Next, and Pause when data-autoplay="ms" is set), keeps the
+  // slides that are out of view inert (the Tab key never enters them) and says which page is shown. data-loop: Next on the last page goes to the first.
+  // Autoplay stops while the pointer or the focus is inside, after any use of a control, and never starts for a user who asked for less motion.
+  var CAR_TEXT = {
+    en: { carousel: 'carousel', slide: 'slide', slides: 'Slides', prev: 'Previous', next: 'Next', goTo: 'Show {0}', slideOf: '{0} of {1}', showing: 'Showing {0} of {1}', pages: 'Choose what to show', pause: 'Pause the slide show', play: 'Start the slide show' },
+    de: { carousel: 'Karussell', slide: 'Element', slides: 'Elemente', prev: 'Zurück', next: 'Weiter', goTo: '{0} zeigen', slideOf: '{0} von {1}', showing: '{0} von {1} wird gezeigt', pages: 'Anzeige wählen', pause: 'Diashow anhalten', play: 'Diashow starten' }
+  };
+
+  function carText(key, a, b) {
+    var table = CAR_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || CAR_TEXT.en;
+    var s = root.getAttribute('data-car-' + key.toLowerCase()) || table[key] || CAR_TEXT.en[key] || key;
+    return s.replace('{0}', function () { return a === undefined ? '' : a; }).replace('{1}', function () { return b === undefined ? '' : b; });
+  }
+  function reducedMotion() { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }
+
+  // the distance from one slide to the next, and how many fit in the strip
+  function carStep(c) {
+    var first = c.slides[0];
+    return first ? first.getBoundingClientRect().width + c.gap : 0;
+  }
+  function carLeft(c, index) { return c.slides[index].offsetLeft - c.slides[0].offsetLeft; }
+
+  function carDots(c) {
+    c.dots.textContent = '';
+    for (var i = 0; i < c.pages; i += 1) {
+      var d = doc.createElement('button');
+      d.type = 'button';
+      d.className = 'mat-carousel__dot';
+      d.setAttribute('data-page', String(i));
+      d.setAttribute('aria-label', carText('goTo', i + 1));
+      c.dots.appendChild(d);
+    }
+  }
+
+  // what is shown now: the page, the slides in view (the others are inert), the state of the buttons
+  function carUpdate(c) {
+    c.frame = 0;
+    var t = c.track, step = carStep(c), max = t.scrollWidth - t.clientWidth;
+    var atStart = t.scrollLeft <= 2, atEnd = t.scrollLeft >= max - 2;
+    var index = step > 0 ? Math.round(t.scrollLeft / step) : 0;
+    var page = atEnd ? c.pages - 1 : atStart ? 0 : Math.min(c.pages - 1, Math.floor(index / c.per));
+    var box = t.getBoundingClientRect();
+    c.slides.forEach(function (s) {
+      var r = s.getBoundingClientRect();
+      var inView = r.width > 0 && r.right > box.left + r.width / 2 && r.left < box.right - r.width / 2;
+      if (inView) { s.removeAttribute('inert'); } else { s.setAttribute('inert', ''); }
+      s.classList.toggle('is-active', inView);
+    });
+    $$('.mat-carousel__dot', c.dots).forEach(function (d, i) {
+      if (i === page) { d.setAttribute('aria-current', 'true'); } else { d.removeAttribute('aria-current'); }
+    });
+    c.prev.setAttribute('aria-disabled', !c.loop && atStart ? 'true' : 'false');
+    c.next.setAttribute('aria-disabled', !c.loop && atEnd ? 'true' : 'false');
+    if (page !== c.page) {
+      c.page = page;
+      // a screen reader is told what is shown, unless the show moves by itself
+      if (c.ready && !c.playing) { c.live.textContent = carText('showing', page + 1, c.pages); }
+    }
+  }
+  function carSchedule(c) { if (!c.frame) { c.frame = window.requestAnimationFrame(function () { carUpdate(c); }); } }
+
+  function carLayout(c) {
+    var t = c.track, step;
+    c.gap = parseFloat(getComputedStyle(t).columnGap) || 0;
+    step = carStep(c);
+    c.per = step > 0 ? Math.max(1, Math.round((t.clientWidth + c.gap) / step)) : 1;
+    var pages = Math.max(1, Math.ceil(c.slides.length / c.per));
+    if (pages !== c.pages) { c.pages = pages; carDots(c); c.page = -1; }
+    c.bar.hidden = pages <= 1 && !c.toggle;
+    carUpdate(c);
+  }
+
+  function carGo(c, page, auto) {
+    var index = Math.min(page * c.per, Math.max(0, c.slides.length - c.per));
+    c.track.scrollTo({ left: carLeft(c, index), behavior: reducedMotion() || !c.ready ? 'auto' : 'smooth' });
+    if (!auto) { carStop(c); }
+  }
+  function carMove(c, dir, auto) {
+    var page = c.page + dir;
+    if (page >= c.pages) { if (!c.loop && !auto) { return; } page = 0; }
+    else if (page < 0) { if (!c.loop) { return; } page = c.pages - 1; }
+    carGo(c, page, auto);
+  }
+
+  // ---- autoplay: the user stops it for good with any control, and it waits while the pointer or the focus is inside
+  function carToggleButton(c) {
+    if (!c.toggle) { return; }
+    c.toggle.setAttribute('aria-label', carText(c.playing ? 'pause' : 'play'));
+    c.toggle.innerHTML = icon(c.playing ? 'pause' : 'play');
+  }
+  function carStart(c) {
+    if (c.playing || !c.ms) { return; }
+    c.playing = true;
+    c.timer = setInterval(function () {
+      if (c.hover || c.focus || doc.hidden || c.track.clientWidth === 0) { return; }
+      carMove(c, 1, true);
+    }, c.ms);
+    carToggleButton(c);
+  }
+  function carStop(c) {
+    clearInterval(c.timer);
+    c.timer = 0;
+    if (c.playing) { c.playing = false; carToggleButton(c); }
+  }
+
+  function carInit(root1) {
+    if (root1._matCarousel) { return; }
+    var track = $('.mat-carousel__track', root1);
+    var slides = $$('.mat-carousel__slide', root1);
+    if (!track || slides.length === 0) { return; }
+    var c = { root: root1, track: track, slides: slides, pages: 0, page: -1, per: 1, gap: 0, playing: false, hover: false, focus: false, ready: false, frame: 0 };
+    root1._matCarousel = c;
+    c.loop = root1.hasAttribute('data-loop');
+    c.ms = parseInt(root1.getAttribute('data-autoplay'), 10) || 0;
+
+    if (!root1.getAttribute('aria-roledescription')) { root1.setAttribute('aria-roledescription', carText('carousel')); }
+    if (!root1.getAttribute('role') && root1.tagName !== 'SECTION') { root1.setAttribute('role', 'region'); }
+    track.setAttribute('tabindex', '0');
+    track.setAttribute('aria-label', carText('slides'));
+    slides.forEach(function (s, i) {
+      s.setAttribute('role', 'group');
+      s.setAttribute('aria-roledescription', carText('slide'));
+      if (!s.getAttribute('aria-label') && !s.getAttribute('aria-labelledby')) { s.setAttribute('aria-label', carText('slideOf', i + 1, slides.length)); }
+    });
+
+    c.bar = doc.createElement('div');
+    c.bar.className = 'mat-carousel__bar';
+    function button(cls, label, ic) {
+      var b = doc.createElement('button');
+      b.type = 'button';
+      b.className = 'mat-btn mat-btn--ghost mat-btn--icon ' + cls;
+      b.setAttribute('aria-label', label);
+      b.innerHTML = icon(ic);
+      return b;
+    }
+    if (c.ms) { c.toggle = button('mat-carousel__toggle', carText('pause'), 'pause'); c.bar.appendChild(c.toggle); }
+    c.prev = button('mat-carousel__prev', carText('prev'), 'chevron-left');
+    c.dots = doc.createElement('div');
+    c.dots.className = 'mat-carousel__dots';
+    c.dots.setAttribute('role', 'group');
+    c.dots.setAttribute('aria-label', carText('pages'));
+    c.next = button('mat-carousel__next', carText('next'), 'chevron-right');
+    c.bar.appendChild(c.prev);
+    c.bar.appendChild(c.dots);
+    c.bar.appendChild(c.next);
+    c.live = doc.createElement('span');
+    c.live.className = 'mat-sr-only';
+    c.live.setAttribute('role', 'status');
+    c.live.setAttribute('aria-live', 'polite');
+    root1.appendChild(c.bar);
+    root1.appendChild(c.live);
+    root1.classList.add('is-ready');
+
+    c.bar.addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) { return; }
+      if (b === c.toggle) { if (c.playing) { carStop(c); } else { carStart(c); } return; }
+      if (b === c.prev || b === c.next) { if (b.getAttribute('aria-disabled') !== 'true') { carStop(c); carMove(c, b === c.next ? 1 : -1, false); } return; }
+      if (b.hasAttribute('data-page')) { carGo(c, parseInt(b.getAttribute('data-page'), 10), false); }
+    });
+    root1.addEventListener('keydown', function (e) {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) { return; }
+      var t = e.target;
+      // the keys belong to the strip and to the buttons of the bar, not to a field inside a slide
+      if (t !== track && !c.bar.contains(t)) { return; }
+      var to = e.key === 'ArrowRight' ? 'next' : e.key === 'ArrowLeft' ? 'prev' : e.key === 'Home' ? 'first' : e.key === 'End' ? 'last' : '';
+      if (!to) { return; }
+      e.preventDefault();
+      carStop(c);
+      if (to === 'next') { carMove(c, 1, false); } else if (to === 'prev') { carMove(c, -1, false); }
+      else { carGo(c, to === 'first' ? 0 : c.pages - 1, false); }
+    });
+    root1.addEventListener('mouseenter', function () { c.hover = true; });
+    root1.addEventListener('mouseleave', function () { c.hover = false; });
+    root1.addEventListener('focusin', function () { c.focus = true; });
+    root1.addEventListener('focusout', function (e) { if (!e.relatedTarget || !root1.contains(e.relatedTarget)) { c.focus = false; } });
+    track.addEventListener('scroll', function () { carSchedule(c); }, { passive: true });
+    if (typeof ResizeObserver === 'function') { new ResizeObserver(function () { carLayout(c); }).observe(track); }
+    else { window.addEventListener('resize', function () { carLayout(c); }); }
+
+    carLayout(c);
+    c.ready = true;
+    // a show that moves by itself starts for those who have not asked for less motion; the others can start it with the button
+    if (c.ms) { if (reducedMotion()) { carToggleButton(c); } else { carStart(c); } }
+  }
+
+  function initCarousels(scope) { $$('[data-carousel]', scope).forEach(carInit); }
+
   // ------------------------------------------------------------------------------------------------------- init
   // a meter is filled by data: <div class="mat-meter__fill" data-value="63"> (no inline style in the markup)
   function fillMeters(scope) {
@@ -1887,6 +2081,7 @@
     scheduleSpy();
     initForms();
     initPickers();
+    initCarousels();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
     restoreBranches();
@@ -1922,6 +2117,7 @@
     scrollspy: { update: updateSpy },
     nav: { set: setNavSet, branch: function (key, open) { var b = $('[data-nav-branch="' + key + '"]'); if (b) { setBranch(b, open !== false, true); } } },
     picker: { init: initPickers, close: closePicker },
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); }
+    carousel: { init: initCarousels, go: function (el, page) { var c = el && el._matCarousel; if (c) { carGo(c, page, false); } } },
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initCarousels(scope); }
   };
 })();
