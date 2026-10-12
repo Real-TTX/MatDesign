@@ -234,9 +234,10 @@ public class SiteHelpersTests
     {
         Assert.True(Shell(SwitcherPlace.Top, Menu("a"), Menu("b")).SwitcherAtTop);
         Assert.Equal(SwitcherPlace.Top, new ShellModel { App = MatDesign.Core.AppRegistry.Get("matdesign")!, Menus = [Menu("a"), Menu("b")], UserName = "A", UserRole = "B", Version = "v" }.SwitcherPlace);
-        // the site itself shows it at both places
+        // the site itself has it at the foot, above the user, and not under the logo
         var site = ShellModel.Site();
-        Assert.True(site.SwitcherAtTop && site.SwitcherAtBottom);
+        Assert.True(site.SwitcherAtBottom);
+        Assert.False(site.SwitcherAtTop);
         var single = Shell(SwitcherPlace.Both, Menu("a"));
         Assert.False(single.SwitcherAtTop);
         Assert.False(single.SwitcherAtBottom);
