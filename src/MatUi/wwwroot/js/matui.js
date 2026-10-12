@@ -2936,7 +2936,8 @@
     if (c.lazy && !(first && c.events.length)) { schLoading(c, true); }
     var detail = { from: isoOf(r.from), to: isoOf(r.to), view: c.view, date: isoOf(c.date) };
     var send = function () { c.root.dispatchEvent(new CustomEvent('mat:schedule-range', { bubbles: true, detail: detail })); };
-    if (first) { setTimeout(send, 0); } else { send(); }
+    // the first one is sent when the page is ready, and not at all if the user has paged by then (that page has told the app already)
+    if (first) { setTimeout(function () { if (c.rangeKey === key) { send(); } }, 0); } else { send(); }
   }
 
   function schRender(c, o) {
