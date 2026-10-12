@@ -391,7 +391,7 @@ a.mat-listgroup__item:hover, button.mat-listgroup__item:hover { background: var(
 
 /* ---- Alerts with a title, a link and actions; skeleton shapes ---- */
 .mat-alert__title { display: block; font-weight: 650; }
-.mat-alert__body a { color: inherit; text-decoration: underline; }
+.mat-alert__body a:not(.mat-btn) { color: inherit; text-decoration: underline; }
 .mat-alert__actions { display: flex; flex-wrap: wrap; gap: var(--mat-space-2); margin-top: var(--mat-space-3); }
 .mat-skeleton--circle { width: 40px; height: 40px; border-radius: 50%; }
 .mat-skeleton--btn { width: 7rem; height: var(--mat-control-h); border-radius: var(--mat-radius); }

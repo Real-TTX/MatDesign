@@ -177,6 +177,13 @@ public partial class ToolkitCssTests
     }
 
     [Fact]
+    public void A_button_inside_an_alert_keeps_its_own_colours()
+    {
+        // The links in the text of an alert take its colour and are underlined; a link that is a button (the actions of an alert) must stay a button.
+        Assert.Contains(".mat-alert__body a:not(.mat-btn) {", Css("controls"));
+    }
+
+    [Fact]
     public void Every_dialog_is_full_screen_on_a_phone()
     {
         // DIALOG-03: below 640 px a dialog fills the screen, with no radius and no margin.
