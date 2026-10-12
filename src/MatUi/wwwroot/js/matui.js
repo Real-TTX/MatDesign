@@ -245,11 +245,15 @@
       targets.forEach(function (t) { if (t.getBoundingClientRect().top <= line) { current = t; } });
       // at the very end of the page the last section is the current one even when it is too short to reach the line
       if (box && box.scrollTop + box.clientHeight >= box.scrollHeight - 2) { current = targets[targets.length - 1]; }
+      // The index follows the page only when the section in view changes. Scrolling the index itself is a scroll event too: following on every
+      // event would pull the marked link back into view and the index could not be scrolled at all.
+      var changed = nav._spyCurrent !== current;
+      nav._spyCurrent = current;
       entries.forEach(function (e) {
         var on = e.target === current;
         e.a.classList.toggle('is-active', on);
         if (on) { e.a.setAttribute('aria-current', 'location'); } else { e.a.removeAttribute('aria-current'); }
-        if (on) { var aside = e.a.closest('.mat-toc-aside'); if (aside) { keepInView(aside, e.a); } }
+        if (on && changed) { var aside = e.a.closest('.mat-toc-aside'); if (aside) { keepInView(aside, e.a); } }
       });
     });
   }
