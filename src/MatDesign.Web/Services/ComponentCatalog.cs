@@ -1058,7 +1058,15 @@ public static class ComponentCatalog
     ];
 
     /// <summary>Every component, by group and in reading order.</summary>
-    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted([.. Core.Select(Extend), .. FormComponents.All, .. PickerComponents.All, .. ContentComponents.All, .. LayoutComponents.All]);
+    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted(
+    [
+        .. Core.Select(Extend),
+        .. FormComponents.All,
+        .. PickerComponents.All,
+        .. CodeInputComponents.All,
+        .. ContentComponents.All,
+        .. LayoutComponents.All,
+    ]);
 
     /// <summary>A component with the examples that other files add to it.</summary>
     private static ComponentDoc Extend(ComponentDoc doc)

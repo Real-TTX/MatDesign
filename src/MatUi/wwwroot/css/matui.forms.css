@@ -108,6 +108,63 @@ input[type="file"].mat-input { padding: 6px; }
 .mat-alert__list a { color: inherit; text-decoration: underline; }
 [data-validation-summary][hidden] { display: none; }
 
+/* ---- Code input (FORM-19): one box per character of a code (an authenticator or SMS code, a PIN, a recovery code) ----
+   .mat-otp[data-otp] wraps the real input (.mat-otp__input), which is what is validated, posted and reset. Without the script it is a plain text field in the look of
+   a code; matui.js hides it (.is-ready) and draws the boxes in .mat-otp__boxes (one .mat-otp__box each, .mat-otp__sep between groups) and a line for what was refused.
+   The boxes are as high as a control (a touch screen gets the taller one from the tokens), keep 16 px type or more (a phone does not zoom into them) and shrink in width
+   so that a code of any length fits the screen; they never make the page scroll sideways. */
+.mat-otp { --mat-otp-w: 2.75rem; --mat-otp-h: var(--mat-control-h-lg); --mat-otp-fs: var(--mat-fs-xl); position: relative; display: block; min-width: 0; max-width: 100%; }
+.mat-otp--sm { --mat-otp-w: 2.25rem; --mat-otp-h: var(--mat-control-h); --mat-otp-fs: 1rem; }
+.mat-otp--lg { --mat-otp-w: 3.5rem; --mat-otp-h: 4rem; --mat-otp-fs: var(--mat-fs-2xl); }
+.mat-otp__input {
+  display: block; width: 100%; max-width: 16rem; min-height: var(--mat-otp-h); padding: 0 var(--mat-space-3);
+  background: var(--mat-surface); color: var(--mat-text);
+  border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius);
+  font-family: var(--mat-mono); font-size: var(--mat-otp-fs); font-weight: 600; letter-spacing: .3em; text-align: center;
+  transition: border-color var(--mat-dur-fast) var(--mat-ease), box-shadow var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-otp__input:hover { border-color: color-mix(in srgb, var(--mat-accent) 40%, var(--mat-border-strong)); }
+.mat-otp__input:focus { border-color: var(--mat-accent); box-shadow: var(--mat-focus-ring); outline: none; }
+.mat-otp__input:disabled { background: var(--mat-surface-3); color: var(--mat-text-muted); cursor: not-allowed; }
+.mat-otp__input[readonly] { background: var(--mat-surface-2); }
+.mat-otp--center .mat-otp__input { margin-inline: auto; }
+/* with the script the real input lies over the boxes, invisible, so that a message of the browser points at the right place; whoever focuses it lands on a box */
+.mat-otp.is-ready > .mat-otp__input { position: absolute; inset: 0; width: 100%; max-width: none; height: 100%; min-height: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+
+.mat-otp__boxes { display: flex; align-items: center; gap: var(--mat-space-2); max-width: 100%; }
+.mat-otp--center .mat-otp__boxes { justify-content: center; }
+.mat-otp__box {
+  flex: 0 1 var(--mat-otp-w); width: var(--mat-otp-w); min-width: 0; height: var(--mat-otp-h); margin: 0; padding: 0;
+  background: var(--mat-surface); color: var(--mat-text);
+  border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius);
+  font-family: var(--mat-mono); font-size: var(--mat-otp-fs); font-weight: 600; line-height: 1; text-align: center;
+  caret-color: var(--mat-accent);
+  transition: border-color var(--mat-dur-fast) var(--mat-ease), box-shadow var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-otp__box:hover { border-color: color-mix(in srgb, var(--mat-accent) 40%, var(--mat-border-strong)); }
+.mat-otp__box:focus { border-color: var(--mat-accent); box-shadow: var(--mat-focus-ring); outline: none; }
+.mat-otp__box:disabled { background: var(--mat-surface-3); color: var(--mat-text-muted); cursor: not-allowed; }
+.mat-otp__box[readonly] { background: var(--mat-surface-2); }
+/* a dot box is a password field: the reveal button and the key of the browser would sit on top of the dot */
+.mat-otp__box::-ms-reveal, .mat-otp__box::-ms-clear { display: none; }
+.mat-otp__box::-webkit-credentials-auto-fill-button, .mat-otp__box::-webkit-contacts-auto-fill-button { visibility: hidden; pointer-events: none; position: absolute; right: 0; }
+/* between the groups: a gap, or a dash when the groups are written 4-4 */
+.mat-otp__sep { flex: none; align-self: stretch; display: flex; align-items: center; justify-content: center; width: var(--mat-space-3); }
+.mat-otp__sep--dash { width: 1.25rem; }
+.mat-otp__sep--dash::before { content: ""; width: .5rem; height: 2px; border-radius: 1px; background: var(--mat-text-muted); }
+.mat-otp__status { margin: var(--mat-space-1) 0 0; font-size: var(--mat-fs-sm); color: var(--mat-text-muted); }
+@media (max-width: 640px) {
+  .mat-otp__boxes { gap: var(--mat-space-1); }
+  .mat-otp__sep { width: var(--mat-space-2); }
+  .mat-otp__sep--dash { width: 1rem; }
+  .mat-otp__sep--dash::before { width: .375rem; }
+  .mat-otp--lg { --mat-otp-h: 3.5rem; }
+}
+/* the message at the field and the border in the colour of the meaning (FORM-03) */
+.mat-field.is-invalid .mat-otp__input, .mat-field.is-invalid .mat-otp__box, .mat-otp.is-invalid .mat-otp__box { border-color: var(--mat-danger); }
+.mat-field.is-invalid .mat-otp__input:focus, .mat-field.is-invalid .mat-otp__box:focus, .mat-otp.is-invalid .mat-otp__box:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--mat-danger) 35%, transparent); }
+.mat-field.is-valid .mat-otp__input, .mat-field.is-valid .mat-otp__box { border-color: var(--mat-success); }
+
 /* ---- Floating labels: the label sits in the field and moves up when the field has focus or a value ----
    The input comes first, the label after it, and the input has placeholder=" " (a space) so that :placeholder-shown knows whether it is empty. */
 .mat-field--float { position: relative; }

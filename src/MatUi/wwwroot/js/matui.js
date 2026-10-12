@@ -27,6 +27,10 @@
                                             .mat-picker__option with data-value). The texts change with data-pk-<name> on <html>, the format of dates with data-locale.
                                             tags is a field of chips and has no panel: data-sep, data-max (number of tags), data-max-length (of one tag),
                                             data-duplicates (allow a tag twice), data-strict (only the options, which are the suggestions, can be added)
+     data-otp                              a code input (FORM-19): .mat-otp around the real input (.mat-otp__input); the script draws one box per character and posts them joined.
+                                            data-length (3 to 12, default 6), data-chars (digits | letters | alphanumeric | hex | a class such as [A-Z2-7]), data-case (upper | lower),
+                                            data-mask (dots, for a PIN), data-group ("3" a gap after every 3 boxes, "4-4" two groups with a dash), data-submit (submit the form when the code is
+                                            complete, or click the button "#id"). The wrapper fires mat:otp-complete (detail.value). The texts: data-otp-<name> on <html>
      data-carousel                         a strip of slides (.mat-carousel__track > .mat-carousel__slide) that scrolls and snaps; the script adds Previous, the dots and Next
                                             (LIST-13). data-loop: Next on the last page goes to the first; data-autoplay="ms": it moves by itself (Pause button; it waits
                                             while the pointer or the focus is inside and never starts for a user who asked for less motion). The texts: data-car-<name> on <html>
@@ -2154,6 +2158,367 @@
     sync: tagsSync
   };
 
+  // ------------------------------------------------------------------------------------------------ code input (FORM-19, matui.forms.css)
+  // A code that is read from somewhere else (an authenticator or SMS code, a PIN, a recovery code) is typed into one box per character:
+  //   <div class="mat-otp" data-otp data-length="6" data-chars="digits"><input class="mat-otp__input" id="code" name="code" autocomplete="one-time-code"></div>
+  // The real input (.mat-otp__input) holds the characters joined and is what is validated, posted and reset; without the script it is a plain text field. The script hides it
+  // and draws the boxes: a group named by the label, each box named "Digit 3 of 6". An incomplete code is not valid (the message of data-msg-pattern, data-msg-incomplete or the
+  // text of the toolkit), so required, pattern and data-msg-* of the real input work as they do for any field. Options of the wrapper: data-length (3 to 12, default 6),
+  // data-chars (digits, letters, alphanumeric, hex or a class such as [A-Z2-7]; a character that is not allowed is refused with a message under the boxes), data-case
+  // (upper or lower: what is typed is converted), data-mask (the boxes show dots), data-group ("3": a gap after every 3 boxes; "4-4": groups of 4 with a dash between)
+  // and data-submit (the form is submitted with requestSubmit() when the code is complete, so validation and data-confirm still run; data-submit="#id" clicks that button).
+  // Keys: a character fills the box and moves on; Backspace clears the box (in an empty one it goes back and clears the one before); Delete clears; the arrow keys,
+  // Home and End move; a click selects the box; a pasted code ("123 456", "A1B2-C3D4") is spread over the boxes and spaces and dashes are ignored. The boxes are ONE tab stop
+  // (roving tabindex, like the buttons of a toolbar): Tab enters on the box where the code goes on, the arrow keys walk inside, Tab leaves. The first box has the
+  // autocomplete of the real input (an SMS code is offered there and spread over the boxes), the real input is hidden from the Tab order and a screen reader.
+  // The wrapper fires mat:otp-complete (bubbles, cancelable; detail.value) when the code becomes complete. API: MatUi.otp.clear / focus / setInvalid / value / init.
+  var OTP_TEXT = {
+    en: {
+      boxDigit: 'Digit {0} of {1}', boxChar: 'Character {0} of {1}', code: 'Code',
+      onlyDigits: 'Only digits are allowed.', onlyLetters: 'Only letters are allowed.', onlyAlnum: 'Only letters and digits are allowed.',
+      onlyHex: 'Only the digits 0 to 9 and the letters A to F are allowed.', onlyChars: 'That character is not allowed.',
+      incomplete: 'Please enter all {0} characters.', complete: 'Code complete'
+    },
+    de: {
+      boxDigit: 'Ziffer {0} von {1}', boxChar: 'Zeichen {0} von {1}', code: 'Code',
+      onlyDigits: 'Es sind nur Ziffern erlaubt.', onlyLetters: 'Es sind nur Buchstaben erlaubt.', onlyAlnum: 'Es sind nur Buchstaben und Ziffern erlaubt.',
+      onlyHex: 'Es sind nur die Ziffern 0 bis 9 und die Buchstaben A bis F erlaubt.', onlyChars: 'Dieses Zeichen ist nicht erlaubt.',
+      incomplete: 'Bitte alle {0} Zeichen eingeben.', complete: 'Code vollständig'
+    }
+  };
+  var OTP_KINDS = {
+    digits: { re: /^[0-9]$/, mode: 'numeric', name: 'boxDigit', only: 'onlyDigits' },
+    letters: { re: /^[A-Za-z]$/, mode: 'text', name: 'boxChar', only: 'onlyLetters' },
+    alphanumeric: { re: /^[A-Za-z0-9]$/, mode: 'text', name: 'boxChar', only: 'onlyAlnum' },
+    hex: { re: /^[0-9A-Fa-f]$/, mode: 'text', name: 'boxChar', only: 'onlyHex' }
+  };
+  // what may stand between the characters of a code that is pasted or typed: spaces and dashes (they are skipped, not refused, unless the code allows them)
+  var OTP_SEPARATOR = /^[\s\-_‐-―−]$/;
+
+  function otpText(key, a, b) {
+    var table = OTP_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || OTP_TEXT.en;
+    var s = root.getAttribute('data-otp-' + key.toLowerCase()) || table[key] || OTP_TEXT.en[key] || key;
+    return s.replace('{0}', function () { return a === undefined ? '' : a; }).replace('{1}', function () { return b === undefined ? '' : b; });
+  }
+
+  // data-chars: one of the names, or a class of characters such as [A-Z2-7] (base32); anything else, or a class that is not valid, is digits
+  function otpKind(spec) {
+    var key = (spec || 'digits').trim();
+    if (Object.prototype.hasOwnProperty.call(OTP_KINDS, key)) { return OTP_KINDS[key]; }
+    if (/^\[.+\]$/.test(key)) {
+      try {
+        var numeric = /^\[[0-9-]+\]$/.test(key);
+        return { re: new RegExp('^' + key + '$'), mode: numeric ? 'numeric' : 'text', name: numeric ? 'boxDigit' : 'boxChar', only: 'onlyChars' };
+      } catch (err) { /* not a valid class: digits */ }
+    }
+    return OTP_KINDS.digits;
+  }
+
+  // data-group: "3" is a group of 3 again and again, "4-4" or "3 3 2" are the sizes of the groups; the boxes in front of which a separator is drawn
+  function otpBreaks(spec, len) {
+    var sizes = (spec || '').split(/[^0-9]+/).filter(Boolean).map(Number).filter(function (n) { return n > 0; });
+    var breaks = [], at = 0;
+    if (sizes.length === 1) { for (at = sizes[0]; at < len; at += sizes[0]) { breaks.push(at); } }
+    else { sizes.forEach(function (n) { at += n; if (at < len) { breaks.push(at); } }); }
+    return breaks;
+  }
+
+  // the character as it is stored, or '' when it is not allowed (data-case converts first, so a lower-case letter is fine for [A-Z2-7] with data-case="upper")
+  function otpNorm(o, ch) {
+    var c = o.upper ? ch.toUpperCase() : o.lower ? ch.toLowerCase() : ch;
+    if (c.length !== ch.length) { c = ch; }
+    return o.kind.re.test(c) ? c : '';
+  }
+  function otpClean(o, text) {
+    return Array.from(text || '').map(function (ch) { return otpNorm(o, ch); }).filter(Boolean).slice(0, o.len);
+  }
+  function otpJoined(o) { return o.boxes.map(function (b) { return b.value; }).join(''); }
+  function otpCount(o) { return o.boxes.filter(function (b) { return b.value !== ''; }).length; }
+  // where the code goes on: the first empty box, or the last one when every box is filled
+  function otpHome(o) {
+    for (var i = 0; i < o.boxes.length; i += 1) { if (o.boxes[i].value === '') { return i; } }
+    return o.boxes.length - 1;
+  }
+  function otpRove(o, i) {
+    o.cur = i;
+    o.boxes.forEach(function (b, k) { b.tabIndex = k === i ? 0 : -1; });
+  }
+  function otpFocus(o, i, scroll) {
+    var b = o.boxes[i];
+    if (!b || b.disabled) { return; }
+    b.focus({ preventScroll: !scroll });
+    b.select();
+  }
+
+  // what is said to the user: a short line under the boxes for what was refused, and to a screen reader (a live region) also that the code is complete
+  function otpSay(o, text, visible) {
+    clearTimeout(o.timer);
+    o.live.textContent = text || '';
+    o.status.textContent = visible && text ? text : '';
+    o.status.hidden = !(visible && text);
+    if (text) { o.timer = setTimeout(function () { otpSay(o, ''); }, 4000); }
+  }
+
+  // an incomplete code is not valid: what the real input reports is what the form validation shows (a required and empty field says so first)
+  function otpValidity(o) {
+    var n = otpCount(o);
+    o.input.setCustomValidity(n > 0 && n < o.len ? (o.input.getAttribute('data-msg-incomplete') || otpText('incomplete', o.len)) : '');
+  }
+
+  // the state of the real input is the one of the boxes: disabled, read-only, required, and the red mark that showError() puts on it
+  function otpState(o) {
+    var invalid = o.input.getAttribute('aria-invalid') === 'true';
+    o.boxes.forEach(function (b) {
+      b.disabled = o.input.disabled;
+      b.readOnly = o.input.readOnly;
+      if (o.input.required) { b.setAttribute('aria-required', 'true'); } else { b.removeAttribute('aria-required'); }
+      if (invalid) { b.setAttribute('aria-invalid', 'true'); } else { b.removeAttribute('aria-invalid'); }
+    });
+  }
+
+  // The boxes changed: the real input gets the joined code (and says so with input and change, as a field does), and when a person typed the last
+  // character the code is complete.
+  function otpCommit(o, byUser) {
+    var v = otpJoined(o), changed = o.input.value !== v, full = otpCount(o) === o.len;
+    o.prev = o.boxes.map(function (b) { return b.value; });
+    o.input.value = v;
+    otpValidity(o);
+    o.wrap.classList.toggle('is-complete', full);
+    if (changed) {
+      o.busy = true;
+      try {
+        o.input.dispatchEvent(new Event('input', { bubbles: true }));
+        o.input.dispatchEvent(new Event('change', { bubbles: true }));
+      } finally { o.busy = false; }
+    }
+    if (full && changed && byUser) { otpDone(o, v); }
+  }
+
+  function otpDone(o, value) {
+    otpSay(o, otpText('complete'), false);
+    var go = o.wrap.dispatchEvent(new CustomEvent('mat:otp-complete', { bubbles: true, cancelable: true, detail: { value: value } }));
+    // the last character stays in sight for a moment, and a code that was changed in the meantime is not sent
+    if (go && o.wrap.hasAttribute('data-submit')) { setTimeout(function () { otpSubmit(o); }, 150); }
+  }
+  function otpSubmit(o) {
+    if (!o.wrap.isConnected || o.input.disabled || otpCount(o) !== o.len) { return; }
+    var spec = o.wrap.getAttribute('data-submit') || '';
+    var button = spec.charAt(0) === '#' ? doc.getElementById(spec.slice(1)) : null;
+    if (button) { if (!button.disabled) { button.click(); } return; }
+    if (o.input.form && typeof o.input.form.requestSubmit === 'function') { o.input.form.requestSubmit(); }
+  }
+
+  // The characters of a text go into the boxes from box `start` on. A text as long as the code, or too long to fit behind `start`, starts at the first box (a code
+  // that is pasted into the middle still fills the whole code). Characters that are not allowed are refused with a message; spaces and dashes are skipped.
+  // The focus goes behind the last box that was filled.
+  function otpFill(o, text, start) {
+    if (o.input.disabled || o.input.readOnly) { return; }
+    var chars = [], refused = false;
+    Array.from(text || '').forEach(function (raw) {
+      var c = otpNorm(o, raw);
+      if (c) { chars.push(c); } else if (!OTP_SEPARATOR.test(raw)) { refused = true; }
+    });
+    otpSay(o, refused ? (o.wrap.getAttribute('data-msg-chars') || otpText(o.kind.only)) : '', true);
+    if (!chars.length) { return; }
+    if (chars.length >= o.len || start + chars.length > o.len) { start = 0; chars = chars.slice(0, o.len); }
+    chars.forEach(function (c, k) { o.boxes[start + k].value = c; });
+    otpCommit(o, true);
+    otpFocus(o, Math.min(start + chars.length, o.len - 1));
+  }
+
+  function otpKeys(o, e, i) {
+    // Ctrl+V and the like belong to the browser; an input method (keyCode 229) is handled when its text arrives
+    if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing || e.keyCode === 229) { return; }
+    var box = o.boxes[i], k = e.key, locked = o.input.disabled || o.input.readOnly;
+    if (k === 'ArrowLeft') { e.preventDefault(); otpFocus(o, Math.max(0, i - 1)); }
+    else if (k === 'ArrowRight') { e.preventDefault(); otpFocus(o, Math.min(o.len - 1, i + 1)); }
+    else if (k === 'Home') { e.preventDefault(); otpFocus(o, 0); }
+    else if (k === 'End') { e.preventDefault(); otpFocus(o, o.len - 1); }
+    else if (k === 'Backspace') {
+      e.preventDefault();
+      // a filled box is cleared and stays; an empty one goes back and clears the box before it (so Backspace walks backwards through a code)
+      var j = box.value !== '' ? i : i - 1;
+      if (j >= 0 && !locked) { o.boxes[j].value = ''; otpSay(o, ''); otpCommit(o, true); otpFocus(o, j); }
+    } else if (k === 'Delete') {
+      e.preventDefault();
+      if (box.value !== '' && !locked) { box.value = ''; otpSay(o, ''); otpCommit(o, true); otpFocus(o, i); }
+    } else if (k.length === 1) { e.preventDefault(); otpFill(o, k, i); }
+  }
+
+  // Text that arrives without a key we could read (a phone keyboard, autofill of an SMS code, a drop, an input method): the box holds what the browser put there.
+  function otpInput(o, e, i) {
+    var box = o.boxes[i], raw = box.value, prev = o.prev[i] || '';
+    if (e.isComposing || raw === prev) { return; }
+    if (raw === '') { otpSay(o, ''); otpCommit(o, true); return; }
+    // a character typed into a box that kept its old one: the new one is the one that is not the old one
+    var typed = raw.length === 2 && prev && raw.indexOf(prev) >= 0 ? raw.replace(prev, '') : raw;
+    box.value = prev;
+    otpFill(o, typed, i);
+  }
+
+  // The boxes show the real input: when the page is built, after a reset, or when a script has set its value.
+  function otpFromInput(o) {
+    var chars = otpClean(o, o.input.value);
+    o.boxes.forEach(function (b, i) { b.value = chars[i] || ''; });
+    o.prev = o.boxes.map(function (b) { return b.value; });
+    if (o.input.value !== chars.join('')) { o.input.value = chars.join(''); }
+    otpValidity(o);
+    o.wrap.classList.toggle('is-complete', chars.length === o.len);
+    otpRove(o, otpHome(o));
+  }
+
+  function otpInit(wrap) {
+    if (wrap._matOtp) { return; }
+    var input = $('.mat-otp__input', wrap);
+    if (!input) { return; }
+    var len = clamp(parseInt(wrap.getAttribute('data-length'), 10) || 6, 3, 12), kind = otpKind(wrap.getAttribute('data-chars'));
+    var o = {
+      wrap: wrap, input: input, len: len, kind: kind, boxes: [], prev: [], cur: 0, busy: false, timer: 0,
+      upper: wrap.getAttribute('data-case') === 'upper', lower: wrap.getAttribute('data-case') === 'lower', mask: wrap.hasAttribute('data-mask')
+    };
+    wrap._matOtp = o;
+    if (!input.id) { input.id = nextId('mat-otp-in'); }
+
+    var group = doc.createElement('div');
+    group.className = 'mat-otp__boxes';
+    group.setAttribute('role', 'group');
+    var lab = $('label[for="' + input.id + '"]');
+    if (lab) { if (!lab.id) { lab.id = input.id + '-label'; } group.setAttribute('aria-labelledby', lab.id); }
+    else { group.setAttribute('aria-label', input.getAttribute('aria-label') || otpText('code')); }
+    if (input.getAttribute('aria-describedby')) { group.setAttribute('aria-describedby', input.getAttribute('aria-describedby')); }
+
+    var spec = wrap.getAttribute('data-group') || '', breaks = otpBreaks(spec, len), dash = spec.indexOf('-') >= 0;
+    var complete = input.getAttribute('autocomplete') || 'one-time-code';
+    for (var i = 0; i < len; i += 1) {
+      if (breaks.indexOf(i) >= 0) {
+        var sep = doc.createElement('span');
+        sep.className = 'mat-otp__sep' + (dash ? ' mat-otp__sep--dash' : '');
+        sep.setAttribute('aria-hidden', 'true');
+        group.appendChild(sep);
+      }
+      var box = doc.createElement('input');
+      box.type = o.mask ? 'password' : 'text';
+      box.className = 'mat-otp__box';
+      box.id = input.id + '-' + (i + 1);
+      box.tabIndex = -1;
+      box.setAttribute('inputmode', kind.mode);
+      box.setAttribute('autocomplete', i === 0 ? complete : 'off');
+      box.setAttribute('autocapitalize', o.upper ? 'characters' : 'off');
+      box.setAttribute('autocorrect', 'off');
+      box.setAttribute('spellcheck', 'false');
+      box.setAttribute('aria-label', otpText(kind.name, i + 1, len));
+      group.appendChild(box);
+      o.boxes.push(box);
+    }
+    // the real input is not offered to autofill (the first box is), not reached with the Tab key and not read out
+    input.setAttribute('autocomplete', 'off');
+    input.tabIndex = -1;
+    input.setAttribute('aria-hidden', 'true');
+    input.parentNode.insertBefore(group, input.nextSibling);
+
+    o.status = doc.createElement('p');
+    o.status.className = 'mat-otp__status';
+    o.status.setAttribute('aria-hidden', 'true');
+    o.status.hidden = true;
+    o.live = doc.createElement('span');
+    o.live.className = 'mat-sr-only';
+    o.live.setAttribute('role', 'status');
+    o.live.setAttribute('aria-live', 'polite');
+    wrap.appendChild(o.status);
+    wrap.appendChild(o.live);
+
+    function at(e) { return o.boxes.indexOf(e.target); }
+    group.addEventListener('keydown', function (e) { var i1 = at(e); if (i1 >= 0) { otpKeys(o, e, i1); } });
+    // what happens inside a box is the business of the code: the field that changes, and says so, is the real input
+    group.addEventListener('input', function (e) { var i1 = at(e); if (i1 >= 0) { e.stopPropagation(); otpInput(o, e, i1); } });
+    group.addEventListener('change', function (e) { e.stopPropagation(); });
+    group.addEventListener('compositionend', function (e) { var i1 = at(e); if (i1 >= 0) { otpInput(o, { isComposing: false }, i1); } });
+    // Backspace of a phone keyboard in an empty box (no key we could read): it clears the box before it and goes back, as the key does
+    group.addEventListener('beforeinput', function (e) {
+      var i1 = at(e);
+      if (i1 <= 0 || e.inputType !== 'deleteContentBackward' || o.boxes[i1].value !== '') { return; }
+      e.preventDefault();
+      if (o.input.disabled || o.input.readOnly) { return; }
+      o.boxes[i1 - 1].value = '';
+      otpSay(o, '');
+      otpCommit(o, true);
+      otpFocus(o, i1 - 1);
+    });
+    group.addEventListener('paste', function (e) {
+      var i1 = at(e);
+      if (i1 < 0) { return; }
+      var data = e.clipboardData || window.clipboardData;
+      e.preventDefault();
+      otpFill(o, data ? data.getData('text') : '', i1);
+    });
+    group.addEventListener('focusin', function (e) { var i1 = at(e); if (i1 >= 0) { otpRove(o, i1); e.target.select(); } });
+    group.addEventListener('click', function (e) { if (at(e) >= 0) { e.target.select(); } });
+    // a script that sets the value of the real input (and says so with input or change) is shown in the boxes
+    function follow() { if (!o.busy) { otpFromInput(o); } }
+    input.addEventListener('input', follow);
+    input.addEventListener('change', follow);
+    if (typeof MutationObserver === 'function') {
+      new MutationObserver(function () { otpState(o); }).observe(input, { attributes: true, attributeFilter: ['disabled', 'readonly', 'required', 'aria-invalid'] });
+    }
+
+    otpFromInput(o);
+    otpState(o);
+    wrap.classList.add('is-ready');
+    if (doc.activeElement === input) { otpFocus(o, otpHome(o), true); }
+  }
+
+  function initOtps(scope) { $$('.mat-otp[data-otp]', scope).forEach(otpInit); }
+
+  // ---- for an app: the code of an element (the wrapper, its real input, a box, or an id)
+  function otpOf(ref) {
+    var el = typeof ref === 'string' ? (doc.getElementById(ref) || $(ref)) : ref;
+    var wrap = el && el.closest ? el.closest('.mat-otp') : null;
+    return wrap && wrap._matOtp ? wrap._matOtp : null;
+  }
+  // The boxes are emptied, the mark and the message of an earlier error are taken away and the first box has the focus.
+  function otpClear(ref) {
+    var o = otpOf(ref);
+    if (!o) { return; }
+    o.boxes.forEach(function (b) { b.value = ''; });
+    otpSay(o, '');
+    otpSetInvalid(o.wrap, '');
+    otpCommit(o, false);
+    otpRove(o, 0);
+    otpFocus(o, 0, true);
+  }
+  function otpFocusFirst(ref) {
+    var o = otpOf(ref);
+    if (o) { otpFocus(o, otpHome(o), true); }
+  }
+  // A code that the app rejected: the red mark, aria-invalid and the message at the field (the line of .mat-error, which is a live region). An empty message takes the mark away.
+  function otpSetInvalid(ref, message) {
+    var o = otpOf(ref);
+    if (!o) { return; }
+    var text = message ? String(message) : '';
+    if (fieldOf(o.input)) { showError(o.input, text); }
+    else {
+      o.wrap.classList.toggle('is-invalid', !!text);
+      o.input.setAttribute('aria-invalid', text ? 'true' : 'false');
+      if (text) { otpSay(o, text, true); }
+    }
+    otpState(o);
+  }
+  function otpValue(ref, value) {
+    var o = otpOf(ref);
+    if (!o) { return ''; }
+    if (value !== undefined) { o.input.value = String(value); otpFromInput(o); }
+    return o.input.value;
+  }
+
+  // the real input is not drawn; whoever focuses it (a label, a message of the validation, the link in the summary) lands on the box where the code goes on
+  doc.addEventListener('focusin', function (e) {
+    var t = e.target, w = t.classList && t.classList.contains('mat-otp__input') ? t.closest('.mat-otp') : null;
+    if (w && w._matOtp) { otpFocus(w._matOtp, otpHome(w._matOtp), true); }
+  });
+  doc.addEventListener('reset', function (e) {
+    setTimeout(function () { $$('.mat-otp', e.target).forEach(function (w) { if (w._matOtp) { otpFromInput(w._matOtp); } }); }, 0);
+  }, true);
+
   // ---- the events of the pickers
   doc.addEventListener('click', function (e) {
     var t = e.target;
@@ -2459,6 +2824,7 @@
     scheduleSpy();
     initForms();
     initPickers();
+    initOtps();
     initCarousels();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
@@ -2495,7 +2861,8 @@
     scrollspy: { update: updateSpy },
     nav: { set: setNavSet, branch: function (key, open) { var b = $('[data-nav-branch="' + key + '"]'); if (b) { setBranch(b, open !== false, true); } } },
     picker: { init: initPickers, close: closePicker },
+    otp: { init: initOtps, clear: otpClear, focus: otpFocusFirst, setInvalid: otpSetInvalid, value: otpValue },
     carousel: { init: initCarousels, go: function (el, page) { var c = el && el._matCarousel; if (c) { carGo(c, page, false); } } },
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initCarousels(scope); }
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initOtps(scope); initCarousels(scope); }
   };
 })();
