@@ -62,7 +62,7 @@ src/MatDesign.Web          the site
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
   Pages/Studio/              Setup (the assistant of the first administrator), Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, IconLibrary (the optional icon library: sprite, catalogue, single icons, archive, served under /ui/iconlib/), Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
-                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
+                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, LayoutComponents, ScheduleComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
@@ -118,6 +118,11 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   `aria-valuetext`, keyboard, Tab stop) and are invisible, never `display: none`, once the script has drawn the rail, the thumbs (44 px targets), the bubbles, marks and labels (`is-ready`); without the script they are native controls.
   The script handles the pointer and the keys itself and sends `input` and `change` like the native control. `data-format="{0} GB"` is the template of every value shown; the names of the two inputs of a range come
   from the label (`SL_TEXT`, English and German, a test checks). Options: `data-min-gap`, `data-bubble="always"`, `data-ticks`, `data-tick-labels`, `data-labels="none"`, `data-output`, `data-range-format`.
+- Schedule (`LIST-14`): `.mat-schedule[data-schedule]` is an empty root with `data-events` (JSON: `id`, `title`, `start`, `end`, `tone`, `location`, `note`, `url`, `status`); the script draws the bar, the five views
+  (Agenda, Day, Week, Month, Year) and the jump to a month and year. It is **not** the date picker (`FORM-15`). The layout follows the width of the schedule (`is-wide` from 640 px, set by a `ResizeObserver`), not the window;
+  a length or a column that is data is a `--mat-sch-*` property set by the script (`data-sch-*` in the markup it draws), never an inline style. A tone is a tint with a line all around plus an icon and a text (`COLOR-04`, `COLOR-08`).
+  Events: `mat:schedule-select`, `mat:schedule-range` (lazy loading with `data-lazy`), `mat:schedule-day`; API `MatUi.schedule.setEvents|go|setLoading|get`. The calendar weeks are ISO 8601 (`isoWeek`; a test ports the formula and
+  checks it against .NET for 40 years). The examples pin the clock (`data-now`) and write their dates, so that nothing depends on the day: do the same in a test. Texts in `SCH_TEXT` (English and German, a test checks).
 - Layout and utilities: mobile first with `sm` 600, `md` 900, `lg` 1200 px; no `!important`; values from the tokens; the grid spans by `grid-column-end`. An example in the catalogue uses
   toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.

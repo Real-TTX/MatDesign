@@ -55,6 +55,12 @@
      data-carousel                         a strip of slides (.mat-carousel__track > .mat-carousel__slide) that scrolls and snaps; the script adds Previous, the dots and Next
                                             (LIST-13). data-loop: Next on the last page goes to the first; data-autoplay="ms": it moves by itself (Pause button; it waits
                                             while the pointer or the focus is inside and never starts for a user who asked for less motion). The texts: data-car-<name> on <html>
+     data-schedule                         a schedule (LIST-14): the events (data-events, JSON) one below another in the views Agenda, Day, Week, Month and Year; the script draws it all.
+                                            data-view (agenda|day|week|month|year), data-views (the ones offered, "agenda,week,month"), data-date (the day shown), data-week-start (0 to 6, 1 is
+                                            Monday), data-week-numbers (calendar weeks, ISO 8601), data-min / data-max (paging stops there), data-agenda ("week", "month" or a number of days),
+                                            data-day-start / data-day-end (the hours of the time grid), data-empty-days (the agenda lists days without events), data-heading-level (the day
+                                            headings, 3), data-lazy (a loading state until MatUi.schedule.setEvents), data-now (pins the clock: a demo or a test), data-empty (the text of an empty
+                                            schedule). Events: mat:schedule-select, mat:schedule-range, mat:schedule-day. The texts: data-sch-<name> on <html>
      data-menu-toggle="id"                  open the context menu #id next to the button; data-menu-place="top|bottom"
      data-dialog-open="id" / data-dialog-close   open / close a <dialog class="mat-dialog">
      data-confirm="Question?"               ask in a dialog before a submit button, a form or a link goes ahead
@@ -4296,6 +4302,772 @@
 
   function initCarousels(scope) { $$('[data-carousel]', scope).forEach(carInit); }
 
+  // ------------------------------------------------------------------------------------------------ schedule (LIST-14, matui.lists.css)
+  // A schedule shows events one below another and pages through time: Agenda (grouped by day under sticky headings), Day, Week, Month and Year. The author writes the root and
+  // gives the events as JSON; the script draws everything else and owns what is inside the root (what is written there is replaced: a good place for a text for readers without script):
+  //   <section class="mat-schedule" data-schedule aria-label="Practice" data-view="agenda" data-date="2026-10-12" data-week-numbers
+  //            data-events='[{"id":"a1","title":"Check-up","start":"2026-10-12T09:00","end":"2026-10-12T09:30","tone":"ok","location":"Room 2","status":"Confirmed"}]'></section>
+  // An event has an id, a title, a start and an end (a local date-time such as 2026-10-12T09:00, or a date for an all-day event: then the end date is the last day), a tone (accent, ok,
+  // warn, error, info, plain: always shown by an icon and a text as well, never by colour alone: COLOR-04), a location, a note, a url (then it is a link, otherwise a button) and a status
+  // (the text of the pill). The script fires mat:schedule-select (detail: the event; cancelable, so a link can be stopped), mat:schedule-range (detail: from, to, view, date: what is
+  // visible now, so that an app can load it; with data-lazy a loading state shows until MatUi.schedule.setEvents is called) and mat:schedule-day (the user chose a day).
+  // Paging: the buttons, the arrow keys and PageUp / PageDown (with Shift: a year), a swipe on a touch screen. In the month grid the arrow keys move from day to day (a date grid).
+  var SCH_TEXT = {
+    en: {
+      schedule: 'Schedule', views: 'View', agenda: 'Agenda', day: 'Day', week: 'Week', month: 'Month', year: 'Year', today: 'Today',
+      prevDay: 'Previous day', nextDay: 'Next day', prevWeek: 'Previous week', nextWeek: 'Next week', prevMonth: 'Previous month', nextMonth: 'Next month',
+      prevYear: 'Previous year', nextYear: 'Next year', prevDays: 'Previous {0} days', nextDays: 'Next {0} days',
+      weekNo: 'Week {0}', weekHead: 'Wk', calWeek: 'Calendar week', allDay: 'All day', dayOf: 'Day {0} of {1}', to: 'to', until: 'until',
+      oneEvent: '1 event', events: '{0} events', noEvents: 'No events', period: '{0}, {1}', more: '+{0} more', moreLabel: 'Show the day with {0} events',
+      nothing: 'Nothing planned', emptyTitle: 'Nothing planned', emptyText: 'There are no events in this period.', loading: 'Loading events',
+      jump: 'Choose a month or year', openMonth: 'Open {0}', openDay: 'Open the day', yearHint: 'A darker day has more events. Choose a month to open it.',
+      toneAccent: 'Highlighted', toneOk: 'In order', toneWarn: 'Attention', toneError: 'Problem', toneInfo: 'Information'
+    },
+    de: {
+      schedule: 'Terminkalender', views: 'Ansicht', agenda: 'Agenda', day: 'Tag', week: 'Woche', month: 'Monat', year: 'Jahr', today: 'Heute',
+      prevDay: 'Vorheriger Tag', nextDay: 'Nächster Tag', prevWeek: 'Vorherige Woche', nextWeek: 'Nächste Woche', prevMonth: 'Vorheriger Monat', nextMonth: 'Nächster Monat',
+      prevYear: 'Vorheriges Jahr', nextYear: 'Nächstes Jahr', prevDays: 'Vorherige {0} Tage', nextDays: 'Nächste {0} Tage',
+      weekNo: 'KW {0}', weekHead: 'KW', calWeek: 'Kalenderwoche', allDay: 'Ganztägig', dayOf: 'Tag {0} von {1}', to: 'bis', until: 'bis',
+      oneEvent: '1 Termin', events: '{0} Termine', noEvents: 'Keine Termine', period: '{0}, {1}', more: '+{0} weitere', moreLabel: 'Den Tag mit {0} Terminen öffnen',
+      nothing: 'Nichts geplant', emptyTitle: 'Nichts geplant', emptyText: 'In diesem Zeitraum gibt es keine Termine.', loading: 'Termine werden geladen',
+      jump: 'Monat oder Jahr wählen', openMonth: '{0} öffnen', openDay: 'Tag öffnen', yearHint: 'Ein dunklerer Tag hat mehr Termine. Wählen Sie einen Monat, um ihn zu öffnen.',
+      toneAccent: 'Hervorgehoben', toneOk: 'In Ordnung', toneWarn: 'Achtung', toneError: 'Problem', toneInfo: 'Information'
+    }
+  };
+  var SCH_VIEWS = ['agenda', 'day', 'week', 'month', 'year'];
+  // the icon that tells the tone apart from colour (COLOR-04); a plain event needs none
+  var SCH_TONES = { accent: 'star', ok: 'check-circle', warn: 'alert', error: 'x-circle', info: 'info', plain: '' };
+  var SCH_TONE_TEXT = { accent: 'toneAccent', ok: 'toneOk', warn: 'toneWarn', error: 'toneError', info: 'toneInfo' };
+  var SCH_WIDE = 640;           // from this width (of the schedule, not of the window) the week is a time grid and the month shows its events
+  var SCH_SWIPE = 48;           // the distance of a swipe in px
+  var schAll = [];
+  var schFormatsByLocale = {};
+  var schTimer = 0;
+  var schOutside = false;
+
+  function schText(c, key, a, b) {
+    var table = SCH_TEXT[c.lang] || SCH_TEXT.en;
+    var s = root.getAttribute('data-sch-' + key.toLowerCase()) || table[key] || SCH_TEXT.en[key] || key;
+    return s.replace('{0}', function () { return a === undefined ? '' : a; }).replace('{1}', function () { return b === undefined ? '' : b; });
+  }
+
+  // the language of one schedule: its own data-locale or lang, else the one of the page (a German schedule can stand in an English page)
+  function schLocale(el) {
+    var holder = el.closest('[lang]');
+    var l = el.getAttribute('data-locale') || (holder && holder.getAttribute('lang')) || pkLocale();
+    if (/^en$/i.test(l)) { l = 'en-GB'; }
+    try { Intl.DateTimeFormat(l); } catch (e) { l = 'en-GB'; }
+    return l;
+  }
+  function schFormats(c) {
+    var f = schFormatsByLocale[c.locale];
+    if (!f) {
+      var l = c.locale;
+      f = schFormatsByLocale[c.locale] = {
+        dow: new Intl.DateTimeFormat(l, { weekday: 'short' }),
+        dowLong: new Intl.DateTimeFormat(l, { weekday: 'long' }),
+        dowNarrow: new Intl.DateTimeFormat(l, { weekday: 'narrow' }),
+        dayMonth: new Intl.DateTimeFormat(l, { weekday: 'long', day: 'numeric', month: 'long' }),
+        dayMonthYear: new Intl.DateTimeFormat(l, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }),
+        monthYear: new Intl.DateTimeFormat(l, { month: 'long', year: 'numeric' }),
+        monthLong: new Intl.DateTimeFormat(l, { month: 'long' }),
+        monthShort: new Intl.DateTimeFormat(l, { month: 'short' }),
+        range: new Intl.DateTimeFormat(l, { day: 'numeric', month: 'short', year: 'numeric' }),
+        time: new Intl.DateTimeFormat(l, { hour: '2-digit', minute: '2-digit' })
+      };
+    }
+    return f;
+  }
+  function schTime(c, min) { return schFormats(c).time.format(new Date(2000, 0, 1, Math.floor(min / 60) % 24, min % 60)); }
+  function schRangeText(c, a, b) {
+    var f = schFormats(c).range;
+    return typeof f.formatRange === 'function' ? f.formatRange(a, b) : f.format(a) + ' – ' + f.format(b);
+  }
+
+  // the number of the calendar week by ISO 8601: weeks start on Monday and week 1 is the one with the first Thursday of the year
+  function isoWeek(d) {
+    var t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    t.setDate(t.getDate() - ((t.getDay() + 6) % 7) + 3);                 // the Thursday of this week
+    var jan4 = new Date(t.getFullYear(), 0, 4);
+    return 1 + Math.round(((t - jan4) / 864e5 - 3 + ((jan4.getDay() + 6) % 7)) / 7);
+  }
+  // a week of the grid that starts on any day has the number of the week that holds most of it: the one of its fourth day (a Thursday when weeks start on Monday)
+  function schWeekFrom(c, d) { return addDays(d, -((d.getDay() - c.weekStart + 7) % 7)); }
+  function schWeekNo(c, from) { return isoWeek(addDays(from, 3)); }
+  function schDays(from, n) { var out = []; for (var i = 0; i < n; i += 1) { out.push(addDays(from, i)); } return out; }
+  function schSpan(a, b) { return Math.round((b - a) / 864e5); }
+
+  // ---- the clock: the browser's, or the one that data-now pins (a demo, a test, the time of the server)
+  function schWhen(s) {
+    var m = /^(\d{4}-\d{2}-\d{2})(?:[T ](\d{2}):(\d{2}))?/.exec(String(s === undefined || s === null ? '' : s).trim());
+    var d = m && dateOf(m[1]);
+    if (!d) { return null; }
+    if (m[2] === undefined) { return { d: d, min: null }; }
+    return +m[2] < 24 && +m[3] < 60 ? { d: d, min: +m[2] * 60 + +m[3] } : null;
+  }
+  function schToday(c) { return c.now ? c.now.d : dayStart(new Date()); }
+  function schNowMin(c) { var n = new Date(); return c.now ? c.now.min || 0 : n.getHours() * 60 + n.getMinutes(); }
+
+  // ---- the events: normalised once, in the order of the day
+  function schEvents(list) {
+    var out = [];
+    (Array.isArray(list) ? list : []).forEach(function (raw) {
+      var s = raw && typeof raw === 'object' ? schWhen(raw.start) : null;
+      var title = raw && raw.title !== undefined && raw.title !== null ? String(raw.title) : '';
+      if (!s || !title) { return; }
+      var e = schWhen(raw.end);
+      var allDay = raw.allDay === true || s.min === null;
+      var ev = { raw: raw, title: title, tone: SCH_TONES.hasOwnProperty(raw.tone) ? raw.tone : 'plain', sd: s.d, ed: s.d, sm: allDay ? 0 : s.min, em: allDay ? 1440 : s.min, allDay: allDay };
+      if (e && e.d >= s.d) {
+        if (allDay || e.min === null) { ev.ed = e.d; }
+        else if (e.d.getTime() === s.d.getTime()) { ev.em = Math.max(e.min, s.min); }
+        else if (e.min === 0 && e.d.getTime() === addDays(s.d, 1).getTime()) { ev.em = 1440; }      // until midnight is still that day
+        else { ev.ed = e.d; ev.em = e.min; }
+      }
+      ev.s = isoOf(ev.sd);
+      ev.e = isoOf(ev.ed);
+      ev.days = schSpan(ev.sd, ev.ed) + 1;
+      ev.span = allDay || ev.days > 1;       // drawn as a bar above the hours
+      out.push(ev);
+    });
+    out.sort(function (a, b) { return a.s < b.s ? -1 : a.s > b.s ? 1 : (a.span ? 0 : 1) - (b.span ? 0 : 1) || a.sm - b.sm || (a.title < b.title ? -1 : a.title > b.title ? 1 : 0); });
+    out.forEach(function (ev, i) { ev.i = i; });
+    return out;
+  }
+  function schParse(text) {
+    if (!text) { return []; }
+    try { return JSON.parse(text); } catch (e) { return []; }
+  }
+  // the events of one day, all-day and multi-day first, then by time
+  function schOnDay(c, iso) {
+    var out = [];
+    for (var i = 0; i < c.events.length; i += 1) {
+      var e = c.events[i];
+      if (e.s > iso) { break; }
+      if (e.e >= iso) { out.push(e); }
+    }
+    return out.sort(function (a, b) { return (a.span ? 0 : 1) - (b.span ? 0 : 1) || a.sm - b.sm || a.i - b.i; });
+  }
+  function schCountIn(c, from, to) {
+    var a = isoOf(from), b = isoOf(to), n = 0;
+    c.events.forEach(function (e) { if (e.s <= b && e.e >= a) { n += 1; } });
+    return n;
+  }
+  function schCountText(c, n) { return n === 0 ? schText(c, 'noEvents') : n === 1 ? schText(c, 'oneEvent') : schText(c, 'events', n); }
+  function schSafeUrl(u) { return typeof u === 'string' && u && !/^\s*(javascript|data|vbscript):/i.test(u) ? u : ''; }
+
+  // ---- periods: what is visible (grid: with the days of the neighbouring months that fill the weeks), what paging stops at, and the step of a page
+  function schRange(c, d, view, grid) {
+    var a, b;
+    if (view === 'day') { a = b = d; }
+    else if (view === 'week' || (view === 'agenda' && c.agenda === 'week')) { a = schWeekFrom(c, d); b = addDays(a, 6); }
+    else if (view === 'agenda' && c.agenda !== 'month') { a = d; b = addDays(d, c.agenda - 1); }
+    else if (view === 'year') { a = new Date(d.getFullYear(), 0, 1); b = new Date(d.getFullYear(), 11, 31); }
+    else {
+      a = firstOf(d);
+      b = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+      if (grid && view === 'month') { a = schWeekFrom(c, a); b = addDays(schWeekFrom(c, b), 6); }
+    }
+    return { from: a, to: b };
+  }
+  function schStep(c, d, view, dir) {
+    if (view === 'day') { return addDays(d, dir); }
+    if (view === 'week') { return addDays(d, 7 * dir); }
+    if (view === 'month') { return addMonths(d, dir); }
+    if (view === 'year') { return addMonths(d, 12 * dir); }
+    return c.agenda === 'week' ? addDays(d, 7 * dir) : c.agenda === 'month' ? addMonths(d, dir) : addDays(d, c.agenda * dir);
+  }
+  function schAllowed(c, d, view) {
+    var r = schRange(c, d, view, false);
+    return (!c.max || r.from <= c.max) && (!c.min || r.to >= c.min);
+  }
+  function schUnit(c, view) {
+    return view === 'agenda' ? (c.agenda === 'week' ? 'Week' : c.agenda === 'month' ? 'Month' : 'Days') : view === 'day' ? 'Day' : view === 'week' ? 'Week' : view === 'month' ? 'Month' : 'Year';
+  }
+  function schTitle(c) {
+    var f = schFormats(c), v = c.view, r = schRange(c, c.date, v, false);
+    if (v === 'year') { return String(c.date.getFullYear()); }
+    if (v === 'month' || (v === 'agenda' && c.agenda === 'month')) { return f.monthYear.format(c.date); }
+    if (v === 'day') { return f.dayMonthYear.format(c.date); }
+    var text = schRangeText(c, r.from, r.to);
+    return c.weekNumbers && (v === 'week' || (v === 'agenda' && c.agenda === 'week')) ? schText(c, 'weekNo', schWeekNo(c, r.from)) + ' · ' + text : text;
+  }
+
+  // ---- markup of the parts
+  function schMark(ev) { return SCH_TONES[ev.tone] ? '<span class="mat-schedule__mark" aria-hidden="true">' + icon(SCH_TONES[ev.tone]) + '</span>' : ''; }
+  // what a reader who cannot see the colour or the icon is told: the status of the event, or the name of its tone
+  function schToneText(c, ev) {
+    var t = ev.raw.status ? String(ev.raw.status) : SCH_TONE_TEXT[ev.tone] ? schText(c, SCH_TONE_TEXT[ev.tone]) : '';
+    return t ? '<span class="mat-sr-only">' + esc(t) + '. </span>' : '';
+  }
+  function schMeta(ev) { return [ev.raw.location, ev.raw.note].filter(function (x) { return x; }).map(String).join(' · '); }
+  // the time of an event on one day: all day, day n of m, the start and the end, or only what remains of a long one
+  function schWhenText(c, ev, iso) {
+    if (ev.allDay) { return ev.days === 1 ? { a: schText(c, 'allDay') } : { a: schText(c, 'dayOf', schSpan(ev.sd, dateOf(iso)) + 1, ev.days) }; }
+    if (ev.days > 1) {
+      if (iso === ev.s) { return { a: schTime(c, ev.sm) }; }
+      return iso === ev.e ? { a: schText(c, 'until') + ' ' + schTime(c, ev.em) } : { a: schText(c, 'allDay') };
+    }
+    return ev.em > ev.sm ? { a: schTime(c, ev.sm), b: schTime(c, ev.em) } : { a: schTime(c, ev.sm) };
+  }
+  // an event is a link when it has a url and a button otherwise; the classes say where it is drawn: row, block, chip or bar
+  function schOpen(ev, mode, more, attr) {
+    var url = schSafeUrl(ev.raw.url);
+    var cls = 'mat-schedule__event mat-schedule__event--' + ev.tone + ' mat-schedule__event--' + mode + (more || '');
+    return (url ? '<a href="' + esc(url) + '"' : '<button type="button"') + ' class="' + cls + '" data-ev="' + ev.i + '"' + (attr || '') + '>';
+  }
+  function schClose(ev) { return ev.raw.url && schSafeUrl(ev.raw.url) ? '</a>' : '</button>'; }
+  function schRow(c, ev, iso) {
+    var w = schWhenText(c, ev, iso), meta = schMeta(ev), status = ev.raw.status ? String(ev.raw.status) : '';
+    var pill = status ? '<span class="mat-pill mat-pill--' + ev.tone + '">' + esc(status) + '</span>' : '';
+    return '<li class="mat-schedule__item">' + schOpen(ev, 'row', '', '') +
+      '<span class="mat-schedule__when"><span class="mat-schedule__from">' + esc(w.a) + '</span>' + (w.b ? '<span class="mat-schedule__to"><span class="mat-sr-only">' + esc(schText(c, 'to')) + ' </span>' + esc(w.b) + '</span>' : '') + '</span>' +
+      '<span class="mat-schedule__what"><span class="mat-schedule__title">' + schMark(ev) + (status ? '' : schToneText(c, ev)) + esc(ev.title) + '</span>' + (meta ? '<span class="mat-schedule__meta">' + esc(meta) + '</span>' : '') + '</span>' +
+      pill + schClose(ev) + '</li>';
+  }
+  function schEmpty(c) {
+    return '<div class="mat-empty mat-schedule__empty"><span class="mat-empty__icon" aria-hidden="true">' + icon('calendar') + '</span>' +
+      '<p class="mat-empty__title">' + esc(c.root.getAttribute('data-empty-title') || schText(c, 'emptyTitle')) + '</p><p>' + esc(c.root.getAttribute('data-empty') || schText(c, 'emptyText')) + '</p></div>';
+  }
+  function schDayText(c, d) { return (d.getFullYear() === c.date.getFullYear() ? schFormats(c).dayMonth : schFormats(c).dayMonthYear).format(d); }
+  function schWeekLabel(c, d) { return '<span class="mat-schedule__kw">' + esc(schText(c, 'weekNo', schWeekNo(c, schWeekFrom(c, d)))) + '</span>'; }
+
+  // ---- Agenda: the days one below another, each under its heading. Week on a phone is the same list with every day (rows).
+  function schAgenda(c, r, o) {
+    var today = isoOf(schToday(c)), n = schSpan(r.from, r.to) + 1, H = 'h' + c.level, out = '', any = false, lastWeek = '';
+    for (var k = 0; k < n; k += 1) {
+      var d = addDays(r.from, k), iso = isoOf(d), list = schOnDay(c, iso);
+      if (!list.length && !o.rows && !c.emptyDays) { continue; }
+      any = any || list.length > 0;
+      var id = nextId('mat-sch'), week = isoOf(schWeekFrom(c, d));
+      out += '<section class="mat-schedule__day' + (iso === today ? ' is-today' : '') + '" aria-labelledby="' + id + '">' +
+        '<' + H + ' class="mat-schedule__dayhead" id="' + id + '"><span>' + esc(schDayText(c, d)) + '</span>' +
+        (iso === today ? '<span class="mat-pill mat-pill--accent mat-pill--plain">' + esc(schText(c, 'today')) + '</span>' : '') +
+        (c.weekNumbers && week !== lastWeek ? schWeekLabel(c, d) : '') + '</' + H + '>' +
+        (list.length ? '<ul class="mat-schedule__items">' + list.map(function (ev) { return schRow(c, ev, iso); }).join('') + '</ul>' : '<p class="mat-schedule__none">' + esc(schText(c, 'nothing')) + '</p>') + '</section>';
+      lastWeek = week;
+    }
+    return any ? '<div class="mat-schedule__list">' + out + '</div>' : schEmpty(c);
+  }
+
+  // ---- Day and Week: a time grid. Events that last all day or longer are bars above the hours; the others are blocks, side by side when they overlap.
+  function schLanes(list) {
+    var cluster = [], ends = [], clusterEnd = -1;
+    function close() { cluster.forEach(function (x) { x.lanes = ends.length; }); cluster = []; ends = []; }
+    list.forEach(function (x) {
+      if (cluster.length && x.s >= clusterEnd) { close(); clusterEnd = -1; }
+      var lane = 0;
+      while (lane < ends.length && ends[lane] > x.s) { lane += 1; }
+      x.lane = lane;
+      ends[lane] = x.e;
+      clusterEnd = Math.max(clusterEnd, x.e);
+      cluster.push(x);
+    });
+    close();
+  }
+  function schBlock(c, x, h0) {
+    var ev = x.ev, meta = schMeta(ev), when = schWhenText(c, ev, ev.s);
+    var label = when.a + (when.b ? ' – ' + when.b : '') + ' · ' + ev.title + (meta ? ' · ' + meta : '');
+    return schOpen(ev, 'block', x.e - x.s <= 30 ? ' is-short' : '', ' title="' + esc(label) + '" data-sch-top="' + ((x.s - h0 * 60) / 60).toFixed(4) + '" data-sch-len="' + ((x.e - x.s) / 60).toFixed(4) + '" data-sch-lane="' + x.lane + '" data-sch-lanes="' + x.lanes + '"') +
+      '<span class="mat-schedule__title">' + schMark(ev) + schToneText(c, ev) + esc(ev.title) + '</span>' +
+      '<span class="mat-schedule__time">' + esc(when.a) + (when.b ? ' – ' + esc(when.b) : '') + '</span>' + (meta ? '<span class="mat-schedule__meta">' + esc(meta) + '</span>' : '') + schClose(ev);
+  }
+  function schGrid(c, days) {
+    var f = schFormats(c), n = days.length, H = 'h' + c.level, today = isoOf(schToday(c)), nowMin = schNowMin(c);
+    var first = isoOf(days[0]), last = isoOf(days[n - 1]), h0 = c.dayStart, h1 = c.dayEnd, spans = [], timed = [], k, out = '';
+    for (k = 0; k < n; k += 1) { timed.push([]); }
+    c.events.forEach(function (ev) {
+      if (ev.e < first || ev.s > last) { return; }
+      if (ev.span) { spans.push(ev); return; }
+      var end = Math.max(ev.em, ev.sm + 30);       // a short event still takes the room of half an hour, so that its neighbours do not cover it
+      timed[schSpan(days[0], ev.sd)].push({ ev: ev, s: ev.sm, e: end });
+      h0 = Math.min(h0, Math.floor(ev.sm / 60));
+      h1 = Math.max(h1, Math.ceil(end / 60));
+    });
+    h1 = Math.min(24, h1);
+    c.h0 = h0;
+    // the hour that the grid scrolls to: the hour before the first event, or before now when that is earlier, or the working day
+    var firstMin = 1440, todayIn = days.some(function (d) { return isoOf(d) === today; });
+    timed.forEach(function (list) { list.forEach(function (x) { firstMin = Math.min(firstMin, x.s); }); });
+    c.firstHour = Math.max(h0, Math.floor(Math.min(firstMin < 1440 ? firstMin / 60 - 0.25 : 8, todayIn && nowMin >= h0 * 60 && nowMin < h1 * 60 ? nowMin / 60 - 1.5 : 24)));
+
+    out += '<div class="mat-schedule__grid" data-sch-cols="' + n + '"><div class="mat-schedule__top"><div class="mat-schedule__head">' +
+      '<div class="mat-schedule__corner">' + (c.weekNumbers && n > 1 ? '<span aria-hidden="true">' + esc(schText(c, 'weekHead')) + ' ' + schWeekNo(c, days[0]) + '</span><span class="mat-sr-only">' + esc(schText(c, 'weekNo', schWeekNo(c, days[0]))) + '</span>' : '') + '</div>';
+    var ids = days.map(function () { return nextId('mat-sch'); });
+    days.forEach(function (d, i) {
+      var inner = '<span class="mat-schedule__dow">' + esc(f.dow.format(d)) + '</span><span class="mat-schedule__dnum">' + d.getDate() + '</span>';
+      out += '<' + H + ' class="mat-schedule__colhead' + (isoOf(d) === today ? ' is-today' : '') + '" id="' + ids[i] + '">' +
+        (n > 1 ? '<button type="button" class="mat-schedule__dayopen" data-sch-open="' + isoOf(d) + '" aria-label="' + esc(schText(c, 'openDay') + ': ' + f.dayMonthYear.format(d)) + '"' + (isoOf(d) === today ? ' aria-current="date"' : '') + '>' + inner + '</button>' : inner) + '</' + H + '>';
+    });
+    out += '</div>';
+    if (spans.length) {
+      var lanes = [];
+      out += '<div class="mat-schedule__band" data-sch-cols="' + n + '"><div class="mat-schedule__bandlabel">' + esc(schText(c, 'allDay')) + '</div>';
+      spans.forEach(function (ev) {
+        var c1 = Math.max(0, schSpan(days[0], ev.sd)), c2 = Math.min(n - 1, schSpan(days[0], ev.ed)), lane = 0;
+        while (lanes[lane] !== undefined && lanes[lane] >= c1) { lane += 1; }
+        lanes[lane] = c2;
+        var w = schWhenText(c, ev, ev.s);
+        out += schOpen(ev, 'bar', (ev.sd < days[0] ? ' is-before' : '') + (ev.ed > days[n - 1] ? ' is-after' : ''), ' data-sch-c1="' + (c1 + 2) + '" data-sch-c2="' + (c2 + 3) + '" data-sch-lane="' + (lane + 1) + '"') +
+          '<span class="mat-schedule__title">' + schMark(ev) + schToneText(c, ev) + esc(ev.title) + '</span>' + (!ev.allDay ? '<span class="mat-schedule__time">' + esc(w.a) + '</span>' : '') + schClose(ev);
+      });
+      out += '</div>';
+    }
+    out += '</div>';
+    out += '<div class="mat-schedule__tbody"><div class="mat-schedule__hours" aria-hidden="true">';
+    for (k = h0; k < h1; k += 1) { out += '<div class="mat-schedule__hour"><span>' + esc(schTime(c, k * 60)) + '</span></div>'; }
+    out += '</div><div class="mat-schedule__cols" data-sch-hours="' + (h1 - h0) + '" data-sch-cols="' + n + '"><div class="mat-schedule__lines" aria-hidden="true">';
+    for (k = h0; k < h1; k += 1) { out += '<div></div>'; }
+    out += '</div>';
+    days.forEach(function (d, i) {
+      var iso = isoOf(d);
+      schLanes(timed[i]);
+      out += '<div class="mat-schedule__col' + (iso === today ? ' is-today' : '') + '" role="group" aria-labelledby="' + ids[i] + '">' + timed[i].map(function (x) { return schBlock(c, x, h0); }).join('');
+      if (iso === today && nowMin >= h0 * 60 && nowMin < h1 * 60) { out += '<div class="mat-schedule__now" aria-hidden="true" data-sch-top="' + ((nowMin - h0 * 60) / 60).toFixed(4) + '"></div>'; }
+      out += '</div>';
+    });
+    return out + '</div></div></div>';
+  }
+
+  // ---- Month: a grid of weeks. Wide: the events are in the cells. Narrow: a day has dots, and the chosen day is listed below the grid.
+  // In a week row an event that lasts for days is one bar over the cells it covers; every bar keeps its lane, so that the bars of the days line up.
+  function schLanes7(c, rowStart) {
+    var first = isoOf(rowStart), last = isoOf(addDays(rowStart, 6)), ends = [], place = {};
+    c.events.forEach(function (ev) {
+      if (!ev.span || ev.s > last || ev.e < first) { return; }
+      var c1 = Math.max(0, schSpan(rowStart, ev.sd)), lane = 0;
+      while (ends[lane] !== undefined && ends[lane] >= c1) { lane += 1; }
+      ends[lane] = Math.min(6, schSpan(rowStart, ev.ed));
+      place[ev.i] = lane;
+    });
+    return place;
+  }
+  function schChips(c, list, iso, col, rowStart, place) {
+    var LINES = 3, lines = [], slots = [], timed = [], hidden = 0, out = '';
+    list.forEach(function (ev) { if (ev.span) { slots[place[ev.i]] = ev; } else { timed.push(ev); } });
+    for (var lane = 0; lane < slots.length; lane += 1) {
+      var ev = slots[lane];
+      if (lane >= LINES) { hidden += ev ? 1 : 0; continue; }
+      if (!ev || (col > 0 && iso > ev.s)) { lines.push(ev ? 'G' : null); continue; }        // free, or covered by the bar that began in an earlier cell
+      var span = Math.min(6, schSpan(rowStart, ev.ed)) - col + 1;
+      lines.push('<li>' + schOpen(ev, 'chip', (ev.sd < rowStart ? ' is-before' : '') + (ev.ed > addDays(rowStart, 6) ? ' is-after' : ''), ' data-sch-span="' + span + '" title="' + esc(ev.title + (schMeta(ev) ? ' \u00b7 ' + schMeta(ev) : '')) + '"') +
+        schMark(ev) + schToneText(c, ev) + '<span class="mat-schedule__title">' + esc(ev.title) + '</span>' + schClose(ev) + '</li>');
+    }
+    while (lines.length && lines[lines.length - 1] === null) { lines.pop(); }
+    lines.forEach(function (x) { out += x === null || x === 'G' ? '<li class="mat-schedule__gap" aria-hidden="true"></li>' : x; });
+    timed.forEach(function (ev) {
+      if (lines.length >= LINES) { hidden += 1; return; }
+      var when = schWhenText(c, ev, iso);
+      lines.push('');
+      out += '<li>' + schOpen(ev, 'chip', '', ' title="' + esc(when.a + ' \u00b7 ' + ev.title + (schMeta(ev) ? ' \u00b7 ' + schMeta(ev) : '')) + '"') + schMark(ev) + schToneText(c, ev) +
+        '<span class="mat-schedule__time">' + esc(when.a) + '</span><span class="mat-schedule__title">' + esc(ev.title) + '</span>' + schClose(ev) + '</li>';
+    });
+    if (hidden) { out += '<li><button type="button" class="mat-schedule__more" data-sch-open="' + iso + '" aria-label="' + esc(schText(c, 'moreLabel', list.length)) + '">' + esc(schText(c, 'more', hidden)) + '</button></li>'; }
+    return out ? '<ul class="mat-schedule__chips">' + out + '</ul>' : '';
+  }
+  function schMonth(c, r) {
+    var f = schFormats(c), today = isoOf(schToday(c)), sel = isoOf(c.sel || c.date), month = c.date.getMonth(), H = 'h' + c.level;
+    var weeks = (schSpan(r.from, r.to) + 1) / 7, out = '', i, w;
+    var inGrid = sel >= isoOf(r.from) && sel <= isoOf(r.to);
+    var stop = inGrid ? sel : isoOf(firstOf(c.date));
+    out += '<div class="mat-schedule__mgrid' + (c.weekNumbers ? ' is-numbered' : '') + '" role="grid" aria-label="' + esc(f.monthYear.format(c.date)) + '"><div class="mat-schedule__row mat-schedule__row--head" role="row">' +
+      (c.weekNumbers ? '<div class="mat-schedule__wk" role="columnheader"><span aria-hidden="true">' + esc(schText(c, 'weekHead')) + '</span><span class="mat-sr-only">' + esc(schText(c, 'calWeek')) + '</span></div>' : '');
+    for (i = 0; i < 7; i += 1) { var wd = addDays(r.from, i); out += '<div class="mat-schedule__wd" role="columnheader" title="' + esc(f.dowLong.format(wd)) + '">' + esc(f.dow.format(wd)) + '</div>'; }
+    out += '</div>';
+    for (w = 0; w < weeks; w += 1) {
+      var rowStart = addDays(r.from, w * 7), place = c.wide ? schLanes7(c, rowStart) : null;
+      out += '<div class="mat-schedule__row" role="row">' + (c.weekNumbers ? '<div class="mat-schedule__wk" role="rowheader"><span aria-hidden="true">' + schWeekNo(c, rowStart) + '</span><span class="mat-sr-only">' + esc(schText(c, 'weekNo', schWeekNo(c, rowStart))) + '</span></div>' : '');
+      for (i = 0; i < 7; i += 1) {
+        var d = addDays(rowStart, i), iso = isoOf(d), list = schOnDay(c, iso), off = (c.min && d < c.min) || (c.max && d > c.max);
+        var label = f.dayMonthYear.format(d) + ', ' + schCountText(c, list.length);
+        var cls = 'mat-schedule__cell' + (iso === today ? ' is-today' : '') + (d.getMonth() !== month ? ' is-outside' : '') + (iso === sel ? ' is-selected' : '') + (off ? ' is-off' : '');
+        var btn = ' data-sch-day="' + iso + '" tabindex="' + (iso === stop ? '0' : '-1') + '" aria-label="' + esc(label) + '"' + (iso === today ? ' aria-current="date"' : '') + (off ? ' aria-disabled="true"' : '');
+        out += '<div class="' + cls + '" role="gridcell"' + (iso === sel ? ' aria-selected="true"' : '') + '>';
+        if (c.wide) {
+          out += '<button type="button" class="mat-schedule__daynum"' + btn + '>' + d.getDate() + '</button>';
+          out += schChips(c, list, iso, i, rowStart, place);
+        } else {
+          var dots = '';
+          list.slice(0, 3).forEach(function (ev) { dots += '<i class="mat-schedule__dot mat-schedule__dot--' + ev.tone + '"></i>'; });
+          out += '<button type="button" class="mat-schedule__daybtn"' + btn + '><span class="mat-schedule__dnum">' + d.getDate() + '</span><span class="mat-schedule__dots" aria-hidden="true">' + dots + '</span></button>';
+        }
+        out += '</div>';
+      }
+      out += '</div>';
+    }
+    out += '</div>';
+    if (!c.wide) {
+      var sd = dateOf(sel), list2 = schOnDay(c, sel), hid = nextId('mat-sch');
+      out += '<div class="mat-schedule__daylist"><' + H + ' class="mat-schedule__dayhead" id="' + hid + '"><span>' + esc(schDayText(c, sd)) + '</span><span class="mat-schedule__count">' + esc(schCountText(c, list2.length)) + '</span>' +
+        '<button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-sch-open="' + sel + '">' + esc(schText(c, 'openDay')) + '</button></' + H + '>' +
+        (list2.length ? '<ul class="mat-schedule__items" aria-labelledby="' + hid + '">' + list2.map(function (ev) { return schRow(c, ev, sel); }).join('') + '</ul>' : '<p class="mat-schedule__none">' + esc(schText(c, 'nothing')) + '</p>') + '</div>';
+    }
+    return out;
+  }
+
+  // ---- Year: twelve small months, each day tinted by how many events it has (one, two, three or more); a month opens the month view
+  function schYear(c) {
+    var f = schFormats(c), y = c.date.getFullYear(), today = isoOf(schToday(c)), H = 'h' + c.level, counts = {}, perMonth = [], m, i, out = '';
+    var ya = new Date(y, 0, 1), yb = new Date(y, 11, 31);
+    for (m = 0; m < 12; m += 1) { perMonth.push(0); }
+    c.events.forEach(function (ev) {
+      var a = ev.sd < ya ? ya : ev.sd, b = ev.ed > yb ? yb : ev.ed, d, seen = {};
+      for (d = a; d <= b; d = addDays(d, 1)) {
+        var key = isoOf(d);
+        counts[key] = (counts[key] || 0) + 1;
+        if (!seen[d.getMonth()]) { seen[d.getMonth()] = 1; perMonth[d.getMonth()] += 1; }
+      }
+    });
+    out += '<div class="mat-schedule__year">';
+    for (m = 0; m < 12; m += 1) {
+      var first = new Date(y, m, 1), days = new Date(y, m + 1, 0).getDate(), lead = (first.getDay() - c.weekStart + 7) % 7;
+      var name = f.monthYear.format(first), off = (c.min && new Date(y, m + 1, 0) < c.min) || (c.max && first > c.max);
+      out += '<div class="mat-schedule__month' + (off ? ' is-off' : '') + '" data-sch-month="' + isoOf(first) + '"><' + H + ' class="mat-schedule__monthhead">' +
+        '<button type="button" class="mat-schedule__monthname" data-sch-month="' + isoOf(first) + '" aria-label="' + esc(schText(c, 'openMonth', name) + ', ' + schCountText(c, perMonth[m])) + '"' + (off ? ' aria-disabled="true"' : '') + '>' + esc(f.monthLong.format(first)) + '</button></' + H + '>' +
+        '<div class="mat-schedule__mini" aria-hidden="true">';
+      for (i = 0; i < 7; i += 1) { out += '<span class="mat-schedule__mwd">' + esc(f.dowNarrow.format(addDays(schWeekFrom(c, first), i))) + '</span>'; }
+      for (i = 0; i < lead; i += 1) { out += '<span></span>'; }
+      for (i = 1; i <= days; i += 1) {
+        var iso = isoOf(new Date(y, m, i)), n = counts[iso] || 0;
+        out += '<span class="mat-schedule__d' + (n ? ' is-l' + Math.min(3, n) : '') + (iso === today ? ' is-today' : '') + '">' + i + '</span>';
+      }
+      out += '</div></div>';
+    }
+    return out + '</div><p class="mat-schedule__hint">' + esc(schText(c, 'yearHint')) + '</p>';
+  }
+
+  // ---- drawing: the body, the bar above it, what is announced, and what an app is told
+  // a length, a place or a column that is data is set by the script (no inline style in the markup, so a strict content security policy holds)
+  function schPlace(body) {
+    var names = ['top', 'len', 'lane', 'lanes', 'hours', 'cols', 'c1', 'c2', 'span'];
+    $$('[data-sch-top],[data-sch-len],[data-sch-lane],[data-sch-lanes],[data-sch-hours],[data-sch-cols],[data-sch-c1],[data-sch-c2],[data-sch-span]', body).forEach(function (el) {
+      names.forEach(function (n) { if (el.hasAttribute('data-sch-' + n)) { el.style.setProperty('--mat-sch-' + n, el.getAttribute('data-sch-' + n)); } });
+    });
+  }
+  function schScrollTo(c, keep) {
+    if (keep >= 0) { c.body.scrollTop = keep; return; }
+    var cols = $('.mat-schedule__cols', c.body), top = $('.mat-schedule__top', c.body);
+    if (!cols) { return; }
+    var hourPx = cols.offsetHeight / (parseFloat(cols.getAttribute('data-sch-hours')) || 1);
+    var off = cols.getBoundingClientRect().top - c.body.getBoundingClientRect().top + c.body.scrollTop;
+    c.body.scrollTop = Math.max(0, off + Math.max(0, c.firstHour - c.h0) * hourPx - (top ? top.offsetHeight : 0));
+  }
+  function schBar(c, title) {
+    var dir = { prev: -1, next: 1 };
+    c.titleText.textContent = title;
+    c.body.setAttribute('aria-label', title);
+    ['prev', 'next'].forEach(function (k) {
+      var unit = schUnit(c, c.view), b = c[k];
+      b.setAttribute('aria-label', unit === 'Days' ? schText(c, k + 'Days', c.agenda) : schText(c, k + unit));
+      b.setAttribute('aria-disabled', schAllowed(c, schStep(c, c.date, c.view, dir[k]), c.view) ? 'false' : 'true');
+    });
+    c.today.setAttribute('aria-disabled', (c.min && schToday(c) < c.min) || (c.max && schToday(c) > c.max) ? 'true' : 'false');
+    $$('[data-sch-go]', c.views).forEach(function (b) {
+      var on = b.getAttribute('data-sch-go') === c.view;
+      b.classList.toggle('is-active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function schLoading(c, on) {
+    c.loading = on;
+    c.root.classList.toggle('is-loading', on);
+    c.body.setAttribute('aria-busy', on ? 'true' : 'false');
+    c.busy.hidden = !on;
+    if (on) { c.live.textContent = schText(c, 'loading'); }
+  }
+  // an app that loads its events when the period changes listens to this one (the first one is sent as soon as the page is ready)
+  function schNotify(c, r, first) {
+    var key = isoOf(r.from) + '|' + isoOf(r.to);
+    if (key === c.rangeKey) { return; }
+    c.rangeKey = key;
+    if (c.lazy && !(first && c.events.length)) { schLoading(c, true); }
+    var detail = { from: isoOf(r.from), to: isoOf(r.to), view: c.view, date: isoOf(c.date) };
+    var send = function () { c.root.dispatchEvent(new CustomEvent('mat:schedule-range', { bubbles: true, detail: detail })); };
+    // the first one is sent when the page is ready, and not at all if the user has paged by then (that page has told the app already)
+    if (first) { setTimeout(function () { if (c.rangeKey === key) { send(); } }, 0); } else { send(); }
+  }
+
+  function schRender(c, o) {
+    o = o || {};
+    var v = c.view, r = schRange(c, c.date, v, true), per = schRange(c, c.date, v, false);
+    var gridView = v === 'day' || (v === 'week' && c.wide);
+    var hadFocus = c.body.contains(doc.activeElement), top = c.body.scrollTop;
+    var keep = !o.resetScroll && c.drawn === v + (c.wide ? 'w' : 'n') && (gridView || !o.page) ? top : -1;
+    c.drawn = v + (c.wide ? 'w' : 'n');
+    c.body.innerHTML = v === 'year' ? schYear(c) : v === 'month' ? schMonth(c, r) : v === 'day' ? schGrid(c, [c.date]) : v === 'week' && c.wide ? schGrid(c, schDays(r.from, 7)) : schAgenda(c, r, { rows: v === 'week' });
+    schPlace(c.body);
+    c.body.classList.toggle('is-scroll', v === 'agenda' || v === 'day' || v === 'week');
+    c.root.setAttribute('data-view', v);
+    var title = schTitle(c);
+    schBar(c, title);
+    if (gridView) { schScrollTo(c, keep); } else { c.body.scrollTop = keep >= 0 ? keep : 0; }
+    if (o.focusDay) {
+      var b = $('[data-sch-day="' + o.focusDay + '"]', c.body);
+      if (b) { b.focus({ preventScroll: true }); }
+    } else if (hadFocus && !c.body.contains(doc.activeElement)) { c.body.focus({ preventScroll: true }); }
+    if (o.dir && !reducedMotion()) {
+      c.body.classList.remove('is-from-next', 'is-from-prev');
+      void c.body.offsetWidth;
+      c.body.classList.add(o.dir > 0 ? 'is-from-next' : 'is-from-prev');
+    }
+    if (o.announce) { c.live.textContent = schText(c, 'period', title, schCountText(c, schCountIn(c, per.from, per.to))); }
+    schNotify(c, r, o.first);
+  }
+
+  // ---- moving: to a date (and view), by one page, to today
+  function schGo(c, date, view, o) {
+    o = o || {};
+    schJumpClose(c, false);
+    if (view && c.offered.indexOf(view) >= 0) { c.view = view; }
+    c.date = limitDate(dayStart(date), c.min, c.max);
+    c.sel = o.sel || null;
+    schRender(c, o);
+  }
+  function schPage(c, dir, year) {
+    var to = year ? addMonths(c.date, 12 * dir) : schStep(c, c.date, c.view, dir);
+    if (!schAllowed(c, to, c.view)) { return false; }
+    schGo(c, to, null, { dir: dir, page: true, announce: true });
+    return true;
+  }
+  function schGoToday(c) {
+    var t = schToday(c);
+    schGo(c, t, null, { dir: t < c.date ? -1 : 1, page: true, announce: true });
+  }
+  // a day in the month grid: the focus moves with the arrow keys; past the edge of the grid the month turns
+  function schFocusDay(c, to) {
+    to = limitDate(dayStart(to), c.min, c.max);
+    var iso = isoOf(to), b = $('[data-sch-day="' + iso + '"]', c.body);
+    if (b) { b.focus(); return; }
+    schGo(c, to, null, { dir: to < c.date ? -1 : 1, page: true, announce: true, focusDay: iso });
+  }
+  function schSelectEvent(c, node, e) {
+    var ev = c.events[parseInt(node.getAttribute('data-ev'), 10)];
+    if (!ev) { return; }
+    if (!c.root.dispatchEvent(new CustomEvent('mat:schedule-select', { bubbles: true, cancelable: true, detail: ev.raw }))) { e.preventDefault(); }
+  }
+  function schChooseDay(c, iso, open) {
+    var d = dateOf(iso);
+    if (!d || (c.min && d < c.min) || (c.max && d > c.max)) { return; }
+    c.root.dispatchEvent(new CustomEvent('mat:schedule-day', { bubbles: true, detail: { date: iso, view: c.view } }));
+    if (open) { schGo(c, d, 'day', { announce: true, resetScroll: true }); return; }
+    schGo(c, c.date, null, { sel: d, focusDay: iso });
+    c.live.textContent = schText(c, 'period', schDayText(c, d), schCountText(c, schOnDay(c, iso).length));
+  }
+
+  // ---- the small panel under the title: a year, and its twelve months
+  function schJumpFill(c) {
+    var f = schFormats(c), y = c.jumpYear, out = '<div class="mat-schedule__jumphead"><button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" data-sch-year="-1" aria-label="' + esc(schText(c, 'prevYear')) + '">' + icon('chevron-left') + '</button>' +
+      '<strong class="mat-schedule__jumpyear" aria-live="polite">' + y + '</strong><button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" data-sch-year="1" aria-label="' + esc(schText(c, 'nextYear')) + '">' + icon('chevron-right') + '</button></div>' +
+      '<div class="mat-schedule__jumpmonths">';
+    for (var m = 0; m < 12; m += 1) {
+      var first = new Date(y, m, 1), off = (c.min && new Date(y, m + 1, 0) < c.min) || (c.max && first > c.max);
+      var current = y === c.date.getFullYear() && m === c.date.getMonth();
+      out += '<button type="button" class="mat-btn mat-btn--sm ' + (current ? 'is-active mat-btn--secondary' : 'mat-btn--ghost') + '" data-sch-pick="' + m + '"' + (current ? ' aria-current="date"' : '') + (off ? ' aria-disabled="true"' : '') + '>' + esc(f.monthShort.format(first)) + '</button>';
+    }
+    c.jump.innerHTML = out + '</div>';
+  }
+  function schJumpOpen(c) {
+    c.jumpYear = c.date.getFullYear();
+    schJumpFill(c);
+    c.jump.hidden = false;
+    c.jump.style.setProperty('--mat-sch-left', c.titleBtn.offsetLeft + 'px');      // under the title
+    c.titleBtn.setAttribute('aria-expanded', 'true');
+    var cur = $('[data-sch-pick][aria-current]', c.jump) || $('[data-sch-pick]', c.jump);
+    if (cur) { cur.focus(); }
+  }
+  function schJumpClose(c, focus) {
+    if (c.jump.hidden) { return; }
+    c.jump.hidden = true;
+    c.titleBtn.setAttribute('aria-expanded', 'false');
+    if (focus) { c.titleBtn.focus(); }
+  }
+  function schJumpPick(c, m) {
+    var y = c.jumpYear, last = new Date(y, m + 1, 0).getDate(), to = new Date(y, m, Math.min(c.date.getDate(), last));
+    if ((c.min && new Date(y, m + 1, 0) < c.min) || (c.max && new Date(y, m, 1) > c.max)) { return; }
+    schJumpClose(c, true);
+    schGo(c, to, c.view === 'year' ? 'month' : null, { dir: to < c.date ? -1 : 1, page: true, announce: true });
+  }
+
+  // ---- events of the user
+  function schClick(c, e) {
+    var t = e.target, b;
+    if (!t.closest) { return; }
+    if ((b = t.closest('.mat-schedule__today'))) { if (b.getAttribute('aria-disabled') !== 'true') { schGoToday(c); } return; }
+    if ((b = t.closest('.mat-schedule__prev, .mat-schedule__next'))) { if (b.getAttribute('aria-disabled') !== 'true') { schPage(c, b.classList.contains('mat-schedule__next') ? 1 : -1, false); } return; }
+    if ((b = t.closest('[data-sch-go]'))) { schGo(c, c.date, b.getAttribute('data-sch-go'), { announce: true, resetScroll: true }); return; }
+    if (t.closest('.mat-schedule__period')) { if (c.jump.hidden) { schJumpOpen(c); } else { schJumpClose(c, true); } return; }
+    if ((b = t.closest('[data-sch-year]'))) { c.jumpYear += parseInt(b.getAttribute('data-sch-year'), 10); schJumpFill(c); $('[data-sch-year="' + b.getAttribute('data-sch-year') + '"]', c.jump).focus(); return; }
+    if ((b = t.closest('[data-sch-pick]'))) { if (b.getAttribute('aria-disabled') !== 'true') { schJumpPick(c, parseInt(b.getAttribute('data-sch-pick'), 10)); } return; }
+    if (!c.body.contains(t)) { return; }
+    if ((b = t.closest('[data-ev]'))) { schSelectEvent(c, b, e); return; }
+    if ((b = t.closest('[data-sch-open]'))) { schChooseDay(c, b.getAttribute('data-sch-open'), true); return; }
+    if ((b = t.closest('[data-sch-day]'))) { if (b.getAttribute('aria-disabled') !== 'true') { schChooseDay(c, b.getAttribute('data-sch-day'), c.wide); } return; }
+    if ((b = t.closest('[data-sch-month]'))) {
+      var m = dateOf(b.getAttribute('data-sch-month'));
+      if (m && !b.classList.contains('is-off') && b.getAttribute('aria-disabled') !== 'true') { schGo(c, m, 'month', { announce: true, resetScroll: true }); }
+    }
+  }
+  function schKey(c, e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) { return; }
+    var t = e.target, k = e.key;
+    if (t.closest('.mat-schedule__jump')) {
+      if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); schJumpClose(c, true); }
+      return;
+    }
+    if (k === 'Escape' && !c.jump.hidden) { schJumpClose(c, true); return; }
+    if (t.matches && t.matches('input, textarea, select')) { return; }
+    // in the month grid the arrow keys move from day to day, and PageUp and PageDown from month to month
+    var dayBtn = c.view === 'month' && t.closest ? t.closest('[data-sch-day]') : null;
+    if (dayBtn) {
+      var d = dateOf(dayBtn.getAttribute('data-sch-day')), to = null;
+      if (k === 'ArrowLeft') { to = addDays(d, -1); } else if (k === 'ArrowRight') { to = addDays(d, 1); } else if (k === 'ArrowUp') { to = addDays(d, -7); } else if (k === 'ArrowDown') { to = addDays(d, 7); }
+      else if (k === 'Home') { to = schWeekFrom(c, d); } else if (k === 'End') { to = addDays(schWeekFrom(c, d), 6); }
+      else if (k === 'PageUp' || k === 'PageDown') { to = addMonths(d, (k === 'PageDown' ? 1 : -1) * (e.shiftKey ? 12 : 1)); }
+      if (to) { e.preventDefault(); schFocusDay(c, to); return; }
+    }
+    var dir = k === 'ArrowRight' || k === 'PageDown' ? 1 : k === 'ArrowLeft' || k === 'PageUp' ? -1 : 0;
+    if (!dir) { return; }
+    if (t.closest('.mat-schedule__views') && (k === 'ArrowLeft' || k === 'ArrowRight')) { return; }
+    e.preventDefault();
+    schPage(c, dir, e.shiftKey && (k === 'PageUp' || k === 'PageDown'));
+  }
+
+  function schSetEvents(c, list) {
+    c.events = schEvents(list);
+    schLoading(c, false);
+    var per = schRange(c, c.date, c.view, false);
+    schRender(c, {});
+    c.live.textContent = schText(c, 'period', schTitle(c), schCountText(c, schCountIn(c, per.from, per.to)));
+  }
+
+  // the clock moves: the line of the time in the day and week views, and the highlighted day at midnight
+  function schTick() {
+    schAll = schAll.filter(function (c) { return doc.documentElement.contains(c.root); });
+    schAll.forEach(function (c) {
+      if (c.now) { return; }
+      var key = isoOf(schToday(c));
+      if (key !== c.todayKey) { c.todayKey = key; schRender(c, {}); return; }
+      var line = $('.mat-schedule__now', c.body);
+      if (line) { line.setAttribute('data-sch-top', ((schNowMin(c) - c.h0 * 60) / 60).toFixed(4)); schPlace(c.body); }
+    });
+    if (!schAll.length) { clearInterval(schTimer); schTimer = 0; }
+  }
+
+  function schInit(el) {
+    if (el._matSchedule) { return; }
+    var c = { root: el, events: [], sel: null, loading: false, rangeKey: '', drawn: '', jumpYear: 0, h0: 0, firstHour: 8 };
+    el._matSchedule = c;
+    c.locale = schLocale(el);
+    c.lang = c.locale.slice(0, 2).toLowerCase();
+    c.weekStart = (parseInt(el.getAttribute('data-week-start') || root.getAttribute('data-week-start') || '1', 10) || 0) % 7;
+    c.weekNumbers = el.hasAttribute('data-week-numbers');
+    c.min = dateOf(el.getAttribute('data-min'));
+    c.max = dateOf(el.getAttribute('data-max'));
+    var agenda = el.getAttribute('data-agenda') || 'week';
+    c.agenda = agenda === 'month' || agenda === 'week' ? agenda : Math.max(1, parseInt(agenda, 10) || 7);
+    c.dayStart = clamp(isNaN(parseInt(el.getAttribute('data-day-start'), 10)) ? 7 : parseInt(el.getAttribute('data-day-start'), 10), 0, 23);
+    c.dayEnd = clamp(isNaN(parseInt(el.getAttribute('data-day-end'), 10)) ? 20 : parseInt(el.getAttribute('data-day-end'), 10), c.dayStart + 1, 24);
+    c.level = clamp(parseInt(el.getAttribute('data-heading-level'), 10) || 3, 1, 6);
+    c.lazy = el.hasAttribute('data-lazy');
+    c.emptyDays = el.hasAttribute('data-empty-days');
+    c.now = schWhen(el.getAttribute('data-now'));
+    c.todayKey = isoOf(schToday(c));
+    c.offered = (el.getAttribute('data-views') || '').split(/[\s,]+/).filter(function (v) { return SCH_VIEWS.indexOf(v) >= 0; });
+    if (!c.offered.length) { c.offered = SCH_VIEWS.slice(); }
+    c.view = c.offered.indexOf(el.getAttribute('data-view')) >= 0 ? el.getAttribute('data-view') : c.offered[0];
+    c.date = limitDate(dateOf(el.getAttribute('data-date')) || schToday(c), c.min, c.max);
+    c.events = schEvents(schParse(el.getAttribute('data-events')));
+    c.wide = el.clientWidth >= SCH_WIDE;
+
+    if (!el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby')) { el.setAttribute('aria-label', schText(c, 'schedule')); }
+    if (!el.getAttribute('role') && el.tagName !== 'SECTION') { el.setAttribute('role', 'region'); }
+    el.innerHTML = '<div class="mat-schedule__bar"><div class="mat-schedule__nav">' +
+      '<button type="button" class="mat-btn mat-btn--secondary mat-schedule__today">' + esc(schText(c, 'today')) + '</button>' +
+      '<button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-schedule__prev">' + icon('chevron-left') + '</button>' +
+      '<button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-schedule__next">' + icon('chevron-right') + '</button></div>' +
+      '<button type="button" class="mat-schedule__period" aria-haspopup="dialog" aria-expanded="false" title="' + esc(schText(c, 'jump')) + '"><span class="mat-schedule__periodtext"></span>' + icon('chevron-down') + '</button>' +
+      '<span class="mat-schedule__busy" hidden><span class="mat-spinner mat-spinner--sm" aria-hidden="true"></span></span>' +
+      '<div class="mat-btn-group mat-schedule__views" role="group" aria-label="' + esc(schText(c, 'views')) + '">' +
+      c.offered.map(function (v) { return '<button type="button" class="mat-btn mat-btn--secondary" data-sch-go="' + v + '" aria-pressed="false">' + esc(schText(c, v)) + '</button>'; }).join('') + '</div></div>' +
+      '<div class="mat-schedule__jump" role="dialog" aria-label="' + esc(schText(c, 'jump')) + '" hidden></div>' +
+      '<div class="mat-schedule__body" tabindex="0" role="region" aria-busy="false"></div>' +
+      '<span class="mat-sr-only" role="status" aria-live="polite"></span>';
+    c.today = $('.mat-schedule__today', el);
+    c.prev = $('.mat-schedule__prev', el);
+    c.next = $('.mat-schedule__next', el);
+    c.titleBtn = $('.mat-schedule__period', el);
+    c.titleText = $('.mat-schedule__periodtext', el);
+    c.busy = $('.mat-schedule__busy', el);
+    c.views = $('.mat-schedule__views', el);
+    c.jump = $('.mat-schedule__jump', el);
+    c.body = $('.mat-schedule__body', el);
+    c.live = $('[role=status]', el);
+    el.classList.toggle('is-wide', c.wide);
+    el.classList.toggle('is-narrow', !c.wide);
+
+    el.addEventListener('click', function (e) { schClick(c, e); });
+    el.addEventListener('keydown', function (e) { schKey(c, e); });
+    // the month grid has one tab stop; it moves with the focus
+    el.addEventListener('focusin', function (e) {
+      var b = e.target.closest && e.target.closest('[data-sch-day]');
+      if (b) { $$('[data-sch-day][tabindex="0"]', c.body).forEach(function (x) { x.tabIndex = -1; }); b.tabIndex = 0; }
+    });
+    // a swipe to the left shows the next period, to the right the one before (a vertical pan is the browser's: touch-action in the CSS)
+    c.body.addEventListener('pointerdown', function (e) { c.swipe = e.pointerType !== 'mouse' && e.isPrimary ? { x: e.clientX, y: e.clientY, id: e.pointerId, t: Date.now() } : null; });
+    c.body.addEventListener('pointerup', function (e) {
+      var s = c.swipe;
+      c.swipe = null;
+      if (!s || s.id !== e.pointerId || Date.now() - s.t > 900) { return; }
+      var dx = e.clientX - s.x, dy = e.clientY - s.y;
+      if (Math.abs(dx) >= SCH_SWIPE && Math.abs(dx) > Math.abs(dy) * 1.6) { schPage(c, dx < 0 ? 1 : -1, false); }
+    });
+    c.body.addEventListener('pointercancel', function () { c.swipe = null; });
+    c.body.addEventListener('animationend', function (e) { if (e.target.parentNode === c.body) { c.body.classList.remove('is-from-next', 'is-from-prev'); } });
+    // the layout follows the width of the schedule itself, not of the window: it can stand in a column of a page
+    if (typeof ResizeObserver === 'function') {
+      new ResizeObserver(function () {
+        var wide = el.clientWidth >= SCH_WIDE;
+        if (wide === c.wide || el.clientWidth === 0) { return; }
+        c.wide = wide;
+        el.classList.toggle('is-wide', wide);
+        el.classList.toggle('is-narrow', !wide);
+        schRender(c, {});
+      }).observe(el);
+    }
+
+    el.classList.add('is-ready', c.wide ? 'is-wide' : 'is-narrow');
+    schRender(c, { first: true });
+    schAll.push(c);
+    if (!schTimer) { schTimer = setInterval(schTick, 30000); }
+    if (!schOutside) {
+      schOutside = true;
+      // a click outside of the panel under the title closes it
+      // (the path is read from the event: the button that was pressed in the panel may be gone by now, the panel having drawn itself again)
+      doc.addEventListener('click', function (e) {
+        var path = e.composedPath ? e.composedPath() : [];
+        schAll.forEach(function (x) { if (!x.jump.hidden && path.indexOf(x.jump) < 0 && path.indexOf(x.titleBtn) < 0) { schJumpClose(x, false); } });
+      });
+    }
+  }
+
+  function initSchedules(scope) { $$('[data-schedule]', scope).forEach(schInit); }
+  // MatUi.schedule: the events of a schedule, a date (and a view) to show, the loading state, and what is shown now
+  var schedule = {
+    init: initSchedules,
+    setEvents: function (el, events) { var c = el && el._matSchedule; if (c) { schSetEvents(c, events); } },
+    go: function (el, date, view) {
+      var c = el && el._matSchedule, d = date instanceof Date ? dayStart(date) : dateOf(String(date || '').slice(0, 10));
+      if (c && d) { schGo(c, d, view, { announce: true, resetScroll: true }); }
+    },
+    setLoading: function (el, on) { var c = el && el._matSchedule; if (c) { schLoading(c, on !== false); } },
+    get: function (el) {
+      var c = el && el._matSchedule;
+      if (!c) { return null; }
+      var r = schRange(c, c.date, c.view, true);
+      return { view: c.view, date: isoOf(c.date), from: isoOf(r.from), to: isoOf(r.to), loading: c.loading, wide: c.wide };
+    }
+  };
+
   // ------------------------------------------------------------------------------------------------------- init
   // a meter is filled by data: <div class="mat-meter__fill" data-value="63"> (no inline style in the markup)
   function fillMeters(scope) {
@@ -4309,6 +5081,7 @@
     initOtps();
     initCalendars();
     initCarousels();
+    initSchedules();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
     restoreBranches();
@@ -4348,6 +5121,7 @@
     otp: { init: initOtps, clear: otpClear, focus: otpFocusFirst, setInvalid: otpSetInvalid, value: otpValue },
     calendar: CALENDAR_API,
     carousel: { init: initCarousels, go: function (el, page) { var c = el && el._matCarousel; if (c) { carGo(c, page, false); } } },
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); }
+    schedule: schedule,
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); }
   };
 })();

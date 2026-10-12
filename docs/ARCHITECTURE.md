@@ -122,6 +122,14 @@ list of the times of the chosen day (below it on a phone). It adds only what is 
 `MatUi.picker.setSlots`, with a loading and a failed state), the minimum notice, the shortcut to the next free appointment and the summary line. A time that has passed is never offered, and a time or a day
 that is not free says so in words, not only in a colour (`COLOR-04`). The browser checks answer the event themselves, so that no check depends on the day it runs; the documentation site answers it with
 generated days near today (`doc.js`), so that its examples keep working.
+### The schedule
+
+The schedule (`LIST-14`, `mat-schedule`) shows events in time: an agenda under sticky day headings, a day, a week, a month and a year, paged by the unit of the view (buttons, keys, a swipe). It is data in, markup out: the author writes an
+empty root and a JSON list of events (`data-events`), the script draws the rest, so that the five views, the paging and the texts are one code path. Three decisions are worth knowing. **It follows its own width**, not the window's
+(`is-wide` from 640 px, by a `ResizeObserver`): the week is a time grid or a row per day, the month shows events or dots, and the same schedule works in a narrow column of a page. **A length that is data stays out of the markup**: the place of a block
+in the hours, a bar over columns and the number of columns are `--mat-sch-*` properties that the script sets with `style.setProperty`, so a strict content security policy holds. **Time is an input**: the calendar weeks are ISO 8601 (a formula that a
+test ports and checks against .NET for forty years), today comes from the browser unless `data-now` pins it, and the examples pin it, so that neither a test nor the documentation changes with the day. An app that loads events is told what is
+visible (`mat:schedule-range`) and answers with `MatUi.schedule.setEvents`; `data-lazy` shows a loading state in between.
 
 ### Layout and utilities
 

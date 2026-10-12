@@ -12,6 +12,7 @@ public sealed record ComponentExample(string Title, string Html, string? Note = 
     [
         "mat-table-wrap", "mat-toolbar", "mat-topbar", "mat-footer", "mat-with-toc", "mat-gallery", "mat-cols", "mat-grid", "mat-form__grid", "mat-auth", "mat-pager",
         "mat-tabs--vertical", "mat-nav ", "mat-switcher", "mat-carousel",
+        "mat-schedule",
     ];
 
     /// <summary>
@@ -1066,6 +1067,7 @@ public static class ComponentCatalog
         .. CodeInputComponents.All,
         .. ContentComponents.All,
         .. LayoutComponents.All,
+        .. ScheduleComponents.All,
     ]);
 
     /// <summary>A component with the examples that other files add to it.</summary>
