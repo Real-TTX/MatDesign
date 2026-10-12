@@ -719,6 +719,131 @@ function expectTrue(value, what) {
       expect(await page.locator('#pk-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after a choice');
     });
 
+    // ---- tags
+    const chips = id => page.$$eval(`#${id} ~ .mat-tagfield .mat-chip`, els => els.map(e => e.getAttribute('data-tag')).join('|'));
+    const status = id => page.$eval(`#${id} ~ .mat-picker__status`, el => el.hidden ? '' : el.textContent.trim());
+    await page.evaluate(() => document.getElementById('tag-input').scrollIntoView());
+    await check('a tag input draws the saved tags as chips and posts them joined by a comma', async () => {
+      expect(await chips('pk-tags'), 'finance|urgent', 'chips');
+      expect(await valueOf('pk-tags'), 'finance, urgent', 'the posted value');
+      expect(await page.locator('#pk-tags ~ .mat-tagfield .mat-chip__x').first().getAttribute('aria-label'), 'Remove tag finance', 'the name of a remove button');
+      expect(await page.getAttribute('#pk-tags-entry', 'placeholder'), '', 'no placeholder while there are tags');
+    });
+    await check('Enter and a comma add a tag, a tag that is there is refused with a message, Backspace removes the last one', async () => {
+      await page.click('#pk-tags-entry');
+      await page.keyboard.type('Planning');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('review,');
+      expect(await chips('pk-tags'), 'finance|urgent|Planning|review', 'chips after Enter and a comma');
+      expect(await valueOf('pk-tags'), 'finance, urgent, Planning, review', 'the posted value');
+      await page.keyboard.type('FINANCE');
+      await page.keyboard.press('Enter');
+      expect(await chips('pk-tags'), 'finance|urgent|Planning|review', 'a tag twice');
+      expect(await status('pk-tags'), 'FINANCE is already there', 'the message');
+      expect(await page.inputValue('#pk-tags-entry'), 'FINANCE', 'the text stays so that it can be corrected');
+      await page.fill('#pk-tags-entry', '');
+      await page.keyboard.press('Backspace');
+      expect(await chips('pk-tags'), 'finance|urgent|Planning', 'Backspace in the empty field');
+      expect(await status('pk-tags'), 'Removed review', 'the message');
+    });
+    await check('an X removes a tag and the focus stays in the field; pasted text is split at commas and line breaks', async () => {
+      await page.click('#pk-tags ~ .mat-tagfield .mat-chip[data-tag="urgent"] .mat-chip__x');
+      expect(await chips('pk-tags'), 'finance|Planning', 'after the X');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-tags-entry', 'the focus');
+      await page.evaluate(() => {
+        const dt = new DataTransfer();
+        dt.setData('text', 'alpha, beta\ngamma, Planning');
+        document.getElementById('pk-tags-entry').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+      });
+      expect(await chips('pk-tags'), 'finance|Planning|alpha|beta|gamma', 'chips after the paste (Planning was there)');
+      expect(await status('pk-tags'), 'Planning is already there', 'the message about the one that was refused');
+      expect(await page.inputValue('#pk-tags-entry'), 'Planning', 'only the refused part stays in the text field');
+    });
+    await check('the arrow keys walk the remove buttons and Backspace removes the one in focus', async () => {
+      await page.fill('#pk-tags-entry', '');
+      await page.click('#pk-tags-entry');
+      await page.keyboard.press('ArrowLeft');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Remove tag gamma', 'the last remove button');
+      await page.keyboard.press('ArrowLeft');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Remove tag beta', 'the one before');
+      await page.keyboard.press('Backspace');
+      expect(await chips('pk-tags'), 'finance|Planning|alpha|gamma', 'after Backspace on a button');
+      expect(await page.evaluate(() => document.activeElement.classList.contains('mat-chip__x')), true, 'the focus stays on a remove button');
+      await page.keyboard.press('End');
+    });
+    await check('what is typed becomes a tag when the field is left', async () => {
+      await page.click('#pk-tags-entry');
+      await page.keyboard.type('last');
+      await page.keyboard.press('Tab');
+      expect(await chips('pk-tags'), 'finance|Planning|alpha|gamma|last', 'the typed text');
+      expect(await valueOf('pk-tags'), 'finance, Planning, alpha, gamma, last', 'the posted value');
+    });
+
+    await page.evaluate(() => document.getElementById('pk-labels').scrollIntoView({ block: 'center' }));
+    const suggestions = id => page.locator(`#${id} ~ .mat-picker__panel .mat-picker__option:not([hidden])`);
+    await check('suggestions: the list opens under the field, narrows while typing, the arrow keys and Enter take one and a taken one is not offered again', async () => {
+      await page.click('#pk-labels-entry');
+      expectTrue(await page.locator('#pk-labels ~ .mat-picker__panel').isVisible(), 'the list is not shown');
+      expect(await page.getAttribute('#pk-labels-entry', 'aria-expanded'), 'true', 'aria-expanded');
+      expect(await suggestions('pk-labels').count(), 5, 'the suggestions: Mail is taken');
+      await page.keyboard.type('ca');
+      expect(await suggestions('pk-labels').allTextContents(), ['Calendar'], 'the list for "ca"');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.getElementById(document.getElementById('pk-labels-entry').getAttribute('aria-activedescendant')).textContent.trim()), 'Calendar', 'the marked suggestion');
+      await page.keyboard.press('Enter');
+      expect(await chips('pk-labels'), 'Mail|Calendar', 'chips after Enter on a suggestion');
+      expect(await page.inputValue('#pk-labels-entry'), '', 'the text after the choice');
+      expect(await suggestions('pk-labels').count(), 4, 'Calendar is not offered again');
+      await page.waitForTimeout(400);   // the list fades in with a small scale: measure when it has settled
+      const field = await page.locator('#pk-labels ~ .mat-tagfield').boundingBox();
+      const panel = await page.locator('#pk-labels ~ .mat-picker__panel').boundingBox();
+      expectTrue(Math.abs(panel.width - field.width) < 3 && panel.y >= field.y + field.height - 2, 'the list is not under the field with its width');
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator('#pk-labels ~ .mat-picker__panel').isVisible()), 'Escape did not close the list');
+    });
+    await check('the limit: at five tags the sixth is refused with a message', async () => {
+      await page.click('#pk-labels ~ .mat-tagfield');
+      for (const name of ['Files', 'Photos', 'Notes']) { await page.click(`#pk-labels ~ .mat-picker__panel .mat-picker__option[data-value="${name}"]`); }
+      expect(await chips('pk-labels'), 'Mail|Calendar|Files|Photos|Notes', 'five tags');
+      await page.keyboard.type('Backups');
+      await page.keyboard.press('Enter');
+      expect(await chips('pk-labels'), 'Mail|Calendar|Files|Photos|Notes', 'the sixth');
+      expect(await status('pk-labels'), 'At most 5 tags', 'the message');
+      await page.keyboard.press('Escape');
+    });
+
+    await page.evaluate(() => document.getElementById('pk-topics').scrollIntoView({ block: 'center' }));
+    await check('only from the list: other text is refused, a required field writes its message and takes the focus into the field', async () => {
+      await page.click('form[action="/Components#tag-input"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#pk-topics').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked invalid');
+      expect((await page.locator('#pk-topics').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please add at least one topic.', 'the message');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-topics-entry', 'the focus');
+      expect(await page.getAttribute('#pk-topics-entry', 'aria-invalid'), 'true', 'aria-invalid of the text field');
+      await page.keyboard.type('zzz');
+      expect(await suggestions('pk-topics').count(), 0, 'suggestions for "zzz"');
+      expectTrue(await page.locator('#pk-topics ~ .mat-picker__panel .mat-picker__empty').isVisible(), 'no message that nothing was found');
+      await page.keyboard.press('Enter');
+      expect(await chips('pk-topics'), '', 'a tag that is not a suggestion');
+      expect(await status('pk-topics'), 'Choose one of the suggestions', 'the message');
+      await page.fill('#pk-topics-entry', 'sec');
+      await page.keyboard.press('Enter');
+      expect(await chips('pk-topics'), 'Security', 'the first match is taken by Enter');
+      expect(await page.locator('#pk-topics').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after a tag was added');
+      expect(await valueOf('pk-topics'), 'Security', 'the posted value');
+    });
+    await check('a disabled input locks the field, a read-only one has no text field', async () => {
+      const removable = await page.locator('#pk-tags ~ .mat-tagfield .mat-chip__x').count();
+      expectTrue(removable > 0, 'no remove buttons before the lock');
+      await page.evaluate(() => { document.getElementById('pk-labels').disabled = true; document.getElementById('pk-tags').readOnly = true; window.MatUi.refresh(); });
+      expect(await page.locator('#pk-labels ~ .mat-tagfield .mat-chip__x').count(), 0, 'remove buttons of a disabled field');
+      expect(await page.locator('#pk-labels-entry').isDisabled(), true, 'the text field of a disabled field');
+      expect(await page.locator('#pk-tags ~ .mat-tagfield .mat-chip__x').count(), 0, 'remove buttons of a read-only field');
+      expectTrue(!(await page.locator('#pk-tags-entry').isVisible()), 'the text field of a read-only field');
+      await page.evaluate(() => { document.getElementById('pk-labels').disabled = false; document.getElementById('pk-tags').readOnly = false; window.MatUi.refresh(); });
+      expect(await page.locator('#pk-tags ~ .mat-tagfield .mat-chip__x').count(), removable, 'remove buttons after the lock is gone');
+    });
+
     await page.evaluate(() => document.getElementById('date-picker').scrollIntoView());
     await check('a date: shown in the language of the page, posted as ISO; a click on a day chooses it; days outside the limits cannot be chosen', async () => {
       expect(await shown('pk-date'), '10 Oct 2026', 'the field');
@@ -904,6 +1029,20 @@ function expectTrue(value, what) {
       await page.click('#pk-time-trigger');
       expect(await page.evaluate(() => document.activeElement.classList.contains('mat-timecol__item')), true, 'the focus');
       await page.click('#pk-time-trigger ~ .mat-picker__panel [data-picker-close]');
+    });
+    await check('on a phone the suggestions of a tag input are a dropdown under the field, not a full-screen sheet, and the chips wrap inside the field', async () => {
+      await page.evaluate(() => document.getElementById('pk-labels').scrollIntoView({ block: 'center' }));
+      await page.click('#pk-labels-entry');
+      const panel = '#pk-labels ~ .mat-picker__panel';
+      expectTrue(await page.locator(panel).isVisible(), 'the list is not shown');
+      await page.waitForTimeout(400);   // the list fades in with a small scale: measure when it has settled
+      const state = await page.evaluate(() => {
+        const f = document.querySelector('#pk-labels ~ .mat-tagfield').getBoundingClientRect();
+        const p = document.querySelector('#pk-labels ~ .mat-picker__panel').getBoundingClientRect();
+        return { sheet: Math.round(p.height) >= innerHeight, widthOk: Math.abs(p.width - f.width) < 3, beside: p.top >= f.bottom - 2 || p.bottom <= f.top + 2, inside: p.left >= 0 && p.right <= innerWidth, noLock: !document.documentElement.classList.contains('mat-lock'), overflow: document.documentElement.scrollWidth > innerWidth };
+      });
+      expect(state, { sheet: false, widthOk: true, beside: true, inside: true, noLock: true, overflow: false }, 'the list');
+      await page.keyboard.press('Escape');
     });
     await ctx.close();
   }

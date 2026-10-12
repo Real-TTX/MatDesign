@@ -81,6 +81,63 @@ internal static class PickerComponents
                 "The label of the field names the button, and the button says what is chosen. On a phone the panel is full screen with an X at the top right (DIALOG-03).",
             ]),
 
+        new("tag-input", "Tags", "Forms", "tag",
+            "A field in which the user adds and removes tags as chips: free text, with suggestions, or only from a list. One value is posted: the tags joined by a comma.",
+            ["FORM-15", "A11Y-02", "FORM-03", "COLOR-04"],
+            [
+                new("Free tags", """
+                    <div class="mat-field">
+                      <label class="mat-label" for="pk-tags">Tags</label>
+                      <div class="mat-picker" data-picker="tags" data-placeholder="Add a tag">
+                        <input class="mat-picker__input" id="pk-tags" name="tags" value="finance, urgent" />
+                      </div>
+                      <span class="mat-hint">Enter or a comma adds what you typed, Backspace removes the last tag, an X removes one.</span>
+                    </div>
+                    """, "Click into the field and type. Text that you paste is split at commas and line breaks, a tag that is there is not added twice, and what is typed when you leave the field becomes a tag, so that nothing is lost when the form is sent."),
+                new("Suggestions and a limit", """
+                    <div class="mat-field">
+                      <label class="mat-label" for="pk-labels">Labels</label>
+                      <div class="mat-picker" data-picker="tags" data-max="5" data-placeholder="Add a label">
+                        <input class="mat-picker__input" id="pk-labels" name="labels" value="Mail" />
+                        <div class="mat-picker__options" hidden>
+                          <button type="button" class="mat-picker__option" data-value="Mail">Mail</button>
+                          <button type="button" class="mat-picker__option" data-value="Files">Files</button>
+                          <button type="button" class="mat-picker__option" data-value="Calendar">Calendar</button>
+                          <button type="button" class="mat-picker__option" data-value="Photos">Photos</button>
+                          <button type="button" class="mat-picker__option" data-value="Notes">Notes</button>
+                          <button type="button" class="mat-picker__option" data-value="Backups">Backups</button>
+                        </div>
+                      </div>
+                      <span class="mat-hint">At most five. Type to narrow the list, use the arrow keys and Enter, or click; any other text can be added too.</span>
+                    </div>
+                    """, "The options of the list are the suggestions (the same markup as the options of a select). A suggestion that is already a tag is not offered again, and a typed text that matches a suggestion takes its spelling."),
+                new("Only from the list, required", $"""
+                    <form class="mat-form" method="get" action="/Components#tag-input" novalidate>
+                      <div class="mat-field">
+                        <label class="mat-label" for="pk-topics">Topics <span class="mat-req" aria-hidden="true">*</span></label>
+                        <div class="mat-picker" data-picker="tags" data-strict data-placeholder="Choose topics">
+                          <input class="mat-picker__input" id="pk-topics" name="topics" required data-msg-required="Please add at least one topic." />
+                          <div class="mat-picker__options" hidden>
+                            <button type="button" class="mat-picker__option" data-value="News">News</button>
+                            <button type="button" class="mat-picker__option" data-value="Security">Security</button>
+                            <button type="button" class="mat-picker__option" data-value="Releases">Releases</button>
+                            <button type="button" class="mat-picker__option" data-value="Tips">Tips</button>
+                          </div>
+                        </div>
+                        <span class="mat-error" aria-live="polite"></span>
+                      </div>
+                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Continue</span></button></div>
+                    </form>
+                    """, "With data-strict only the suggestions can be added: text that is not one is refused with a message under the field. Press Continue with no topic: the message appears under the field and the focus goes into it."),
+            ],
+            [
+                "The wrapper is `mat-picker` with `data-picker=\"tags\"` around the real input (`mat-picker__input`): it holds the tags joined by `data-sep` (default a comma and a space) and is what is validated and posted. A tag cannot contain a comma.",
+                "The script draws the field, a chip per tag and the text field. Enter or a comma adds; Backspace in the empty field removes the last tag; Escape closes the suggestions; the arrow keys walk them (Down opens them) and Enter takes the marked one.",
+                "Left at the start of the text goes to the remove buttons of the chips; there the arrow keys walk and Backspace or Delete removes a tag.",
+                "`data-max` limits the number of tags (a message says so), `data-max-length` the length of one (default 48), `data-duplicates` allows a tag twice, `data-strict` allows only the suggestions. `disabled` and `readonly` on the real input lock the field.",
+                "Every remove button is named for a screen reader (\"Remove tag Finance\"); what the field refused or removed is said in a live region and under the field. The suggestions are a dropdown under the field on a phone too.",
+            ]),
+
         new("date-picker", "Date and period", "Forms", "calendar",
             "A date or a period from a calendar: the language of the page for what is shown, one fixed format (2026-10-10) for what is posted. A period shows two months on a wide screen.",
             ["FORM-15", "DIALOG-03", "A11Y-02", "FORM-12"],

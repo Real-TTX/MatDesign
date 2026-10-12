@@ -17,11 +17,13 @@
      data-indeterminate                     a checkbox that starts in the indeterminate state
      data-password-toggle="id"              the eye button of a password field: shows and hides the password (aria-pressed)
      data-selectable                        a table with data-select-row checks, a data-select-all check in its header and a [data-bulk-bar] with [data-bulk-count]
-     data-picker="select|date|daterange|time|timerange|colour"
+     data-picker="select|date|daterange|time|timerange|colour|tags"
                                             a field that is filled in a panel (FORM-15); the real input inside is .mat-picker__input. Options of the wrapper:
                                             data-placeholder, data-clearable (a button that clears the value), data-min / data-max / data-week-start / data-flex (dates),
                                             data-step / data-hour12 (times), data-swatches (colours), data-search / data-multiple / data-sep (select; the options are
                                             .mat-picker__option with data-value). The texts change with data-pk-<name> on <html>, the format of dates with data-locale.
+                                            tags is a field of chips and has no panel: data-sep, data-max (number of tags), data-max-length (of one tag),
+                                            data-duplicates (allow a tag twice), data-strict (only the options, which are the suggestions, can be added)
      data-menu-toggle="id"                  open the context menu #id next to the button; data-menu-place="top|bottom"
      data-dialog-open="id" / data-dialog-close   open / close a <dialog class="mat-dialog">
      data-confirm="Question?"               ask in a dialog before a submit button, a form or a link goes ahead
@@ -523,6 +525,8 @@
     if (input.classList.contains('mat-picker__input')) {
       var trigger = $('.mat-picker__trigger', f);
       if (trigger) { trigger.setAttribute('aria-invalid', msg ? 'true' : 'false'); }
+      var entry = $('.mat-tagfield__input', f);
+      if (entry) { entry.setAttribute('aria-invalid', msg ? 'true' : 'false'); }
     }
   }
   function messageFor(input) {
@@ -571,7 +575,8 @@
       bad[0].focus();
     }
   }, true);
-  doc.addEventListener('input', function (e) { var i = e.target; if (i.closest && i.closest('.mat-field.is-invalid') && i.checkValidity()) { showError(i, ''); } });
+  // (typing in the text field of a tag input says nothing: the value is the real input's, and it changes when a tag is added)
+  doc.addEventListener('input', function (e) { var i = e.target; if (i.closest && !i.classList.contains('mat-tagfield__input') && i.closest('.mat-field.is-invalid') && i.checkValidity()) { showError(i, ''); } });
 
   // ------------------------------------------------------------------------------------------------ form helpers (matui.forms.css)
   // range: the filled part of the track and an <output> (data-output="id"); counter: "12 / 80" (data-counter="id"); indeterminate checks;
@@ -818,10 +823,10 @@
   window.addEventListener('hashchange', scheduleSpy);
 
   // ------------------------------------------------------------------------------------------------ pickers (FORM-15, matui.pickers.css)
-  // A picker is a field that is filled in a panel. The markup is a wrapper (data-picker="select|date|daterange|time|timerange|colour") around the real
+  // A picker is a field that is filled in a panel. The markup is a wrapper (data-picker="select|date|daterange|time|timerange|colour|tags") around the real
   // input (.mat-picker__input), which holds the value that is posted, always in the same format whatever the language of the page:
   //   date 2026-10-10 · daterange 2026-10-10..2026-10-14 (and ~2 for "plus or minus two days") · time 09:30 · timerange 09:00..17:30 · colour #b4235f
-  //   select: the data-value of the option; with data-multiple the values joined by data-sep (default ", ")
+  //   select: the data-value of the option; with data-multiple the values joined by data-sep (default ", ") · tags: the tags joined by data-sep (default ", ")
   // The script adds the button that shows the value (the label of the field names it) and the panel. On a phone the panel is full screen with an X.
   var PK_TEXT = {
     en: {
@@ -833,7 +838,8 @@
       exactDates: 'Exact dates', flexible: 'Flexible dates', flexDays: '± {0} days', flexDay: '± 1 day',
       from: 'From', to: 'To', hour: 'Hour', minute: 'Minute', ampm: 'AM or PM', typeTime: 'Type a time', nextDay: 'next day', durHM: '{0} h {1} min', durH: '{0} h', durM: '{0} min',
       colours: 'Colours', hue: 'Hue', area: 'Saturation and brightness', areaValue: 'Saturation {0}%, brightness {1}%', hex: 'Hex colour',
-      whiteText: 'White text', darkText: 'Dark text', lvAAA: 'AAA', lvAA: 'AA', lvLarge: 'large text only', lvLow: 'too low'
+      whiteText: 'White text', darkText: 'Dark text', lvAAA: 'AAA', lvAA: 'AA', lvLarge: 'large text only', lvLow: 'too low',
+      phTags: 'Add a tag', removeTag: 'Remove tag {0}', tagRemoved: 'Removed {0}', tagDuplicate: '{0} is already there', tagMax: 'At most {0} tags', tagStrict: 'Choose one of the suggestions', suggestions: 'Suggestions'
     },
     de: {
       apply: 'Übernehmen', cancel: 'Abbrechen', clear: 'Löschen', close: 'Schließen', done: 'Fertig', today: 'Heute', now: 'Jetzt',
@@ -844,7 +850,8 @@
       exactDates: 'Genaue Daten', flexible: 'Flexible Daten', flexDays: '± {0} Tage', flexDay: '± 1 Tag',
       from: 'Von', to: 'Bis', hour: 'Stunde', minute: 'Minute', ampm: 'Vor- oder nachmittags', typeTime: 'Uhrzeit eintippen', nextDay: 'am nächsten Tag', durHM: '{0} Std. {1} Min.', durH: '{0} Std.', durM: '{0} Min.',
       colours: 'Farben', hue: 'Farbton', area: 'Sättigung und Helligkeit', areaValue: 'Sättigung {0} %, Helligkeit {1} %', hex: 'Hex-Farbe',
-      whiteText: 'Weiße Schrift', darkText: 'Dunkle Schrift', lvAAA: 'AAA', lvAA: 'AA', lvLarge: 'nur große Schrift', lvLow: 'zu niedrig'
+      whiteText: 'Weiße Schrift', darkText: 'Dunkle Schrift', lvAAA: 'AAA', lvAA: 'AA', lvLarge: 'nur große Schrift', lvLow: 'zu niedrig',
+      phTags: 'Tag hinzufügen', removeTag: 'Tag {0} entfernen', tagRemoved: '{0} entfernt', tagDuplicate: '{0} ist schon vorhanden', tagMax: 'Höchstens {0} Tags', tagStrict: 'Bitte einen Vorschlag wählen', suggestions: 'Vorschläge'
     }
   };
   var PK_SWATCHES = ['#dc2626', '#ea580c', '#d97706', '#ca8a04', '#65a30d', '#16a34a', '#0d9488', '#0891b2', '#0284c7', '#2563eb', '#4f46e5', '#7c3aed', '#a21caf', '#db2777', '#e11d48', '#475569', '#1f2937', '#78716c'];
@@ -857,7 +864,8 @@
   function pkText(key, a, b) {
     var table = PK_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || PK_TEXT.en;
     var s = root.getAttribute('data-pk-' + key.toLowerCase()) || table[key] || PK_TEXT.en[key] || key;
-    return s.replace('{0}', a === undefined ? '' : a).replace('{1}', b === undefined ? '' : b);
+    // function replacers: what a person typed (a tag) may hold a "$&" that a plain replacement string would expand
+    return s.replace('{0}', function () { return a === undefined ? '' : a; }).replace('{1}', function () { return b === undefined ? '' : b; });
   }
   function pkLocale() {
     if (!pkLocaleName) {
@@ -963,7 +971,7 @@
   function placeholderOf(p) {
     var own = p.wrap.getAttribute('data-placeholder');
     if (own) { return own; }
-    return pkText({ select: 'phSelect', date: 'phDate', daterange: 'phPeriod', time: 'phTime', timerange: 'phTimeRange', colour: 'phColour' }[p.kind]);
+    return pkText({ select: 'phSelect', date: 'phDate', daterange: 'phPeriod', time: 'phTime', timerange: 'phTimeRange', colour: 'phColour', tags: 'phTags' }[p.kind]);
   }
 
   function pkPanel(p) {
@@ -1002,6 +1010,8 @@
   function syncPicker(wrap) {
     var p = wrap._matPicker;
     if (!p) { return; }
+    // a picker that is a field of its own (the tags) has no button and no panel that is opened: it draws itself from the value
+    if (p.spec.inline) { p.spec.sync(p); return; }
     p.trigger.disabled = p.input.disabled;
     var out = $('.mat-picker__value', p.trigger);
     out.textContent = '';
@@ -1095,6 +1105,11 @@
     input.tabIndex = -1;
     input.setAttribute('aria-hidden', 'true');
     input.setAttribute('autocomplete', 'off');
+    if (spec.inline) {
+      spec.init(p);
+      syncPicker(wrap);
+      return;
+    }
 
     var trigger = doc.createElement('button');
     trigger.type = 'button';
@@ -1775,6 +1790,315 @@
     }
   };
 
+  // ---- tags: a field of chips that the user types into
+  // The real input holds the tags joined by data-sep (default ", "). The script draws a field (.mat-tagfield) with a chip per tag and a text field to type in.
+  // Enter or a comma adds what is typed, Backspace in the empty field removes the last chip, text that is pasted is split at commas and line breaks, and what is
+  // typed when the field is left becomes a tag, so that it is not lost when the form is sent. A tag that is there is not added again (data-duplicates allows it),
+  // data-max limits the number of tags and data-max-length the length of one. The options of the wrapper (.mat-picker__options, as in a select) are suggestions
+  // for the text field; with data-strict only they can be added. There is no panel to open: the suggestions are a list under the field.
+  var tagsOpen = null;
+
+  function tagSep(p) { return p.sep.trim() || p.sep; }
+  function tagList(p) { return p.input.value.split(tagSep(p)).map(function (s) { return s.trim(); }).filter(Boolean); }
+  // a comma or a line break always starts the next tag; the separator of the value can not be in a tag
+  function tagSplit(p, text) {
+    return text.split(/[\r\n\t,]+/).reduce(function (all, part) { return all.concat(part.split(tagSep(p))); }, []);
+  }
+  function tagClean(p, text) { return text.replace(/\s+/g, ' ').trim().slice(0, p.maxLength).trim(); }
+  function tagOptions(p) { return p.list ? $$('.mat-picker__option', p.list) : []; }
+  function tagOptionValue(o) { return o.getAttribute('data-value') || o.textContent.trim(); }
+  function tagSuggestion(p, text) {
+    var t = text.toLowerCase();
+    return tagOptions(p).filter(function (o) { return tagOptionValue(o).toLowerCase() === t; })[0] || null;
+  }
+
+  // what is said under the field, and to a screen reader
+  function tagsStatus(p, text) {
+    clearTimeout(p.statusTimer);
+    p.status.textContent = text || '';
+    p.status.hidden = !text;
+    p.live.textContent = text || '';
+    if (text) { p.statusTimer = setTimeout(function () { tagsStatus(p, ''); }, 4000); }
+  }
+
+  // The chips and the state of the field, drawn from the value of the real input (also after a reset, a script or a form that fills it).
+  function tagsSync(p) {
+    var vals = tagList(p), off = p.input.disabled, ro = p.input.readOnly, locked = off || ro;
+    $$('.mat-chip', p.field).forEach(function (c) { c.remove(); });
+    vals.forEach(function (v) {
+      var chip = doc.createElement('span');
+      chip.className = 'mat-chip';
+      chip.setAttribute('data-tag', v);
+      var text = doc.createElement('span');
+      text.className = 'mat-chip__text';
+      text.textContent = v;
+      chip.appendChild(text);
+      if (!locked) {
+        var x = doc.createElement('button');
+        x.type = 'button';
+        x.className = 'mat-chip__x';
+        x.setAttribute('aria-label', pkText('removeTag', v));
+        x.innerHTML = icon('x');
+        chip.appendChild(x);
+      }
+      p.field.insertBefore(chip, p.typing);
+    });
+    p.field.classList.toggle('is-disabled', off);
+    p.field.classList.toggle('is-readonly', ro);
+    p.field.classList.toggle('is-full', p.max > 0 && vals.length >= p.max);
+    p.typing.disabled = off;
+    p.typing.hidden = ro;
+    p.typing.placeholder = vals.length === 0 && !locked ? placeholderOf(p) : '';
+    if (locked) { tagsClose(p); }
+  }
+
+  function tagsSet(p, list) {
+    var v = list.join(p.sep);
+    if (p.input.value === v) { tagsSync(p); return; }
+    p.input.value = v;
+    tagsSync(p);
+    p.input.dispatchEvent(new Event('input', { bubbles: true }));
+    p.input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // Adds what the text holds and returns the parts that were refused, so that the caller leaves them in the text field for the user to correct;
+  // what was refused is said under the field.
+  function tagsAdd(p, text) {
+    var vals = tagList(p), refused = [], message = '', added = 0;
+    tagSplit(p, text).forEach(function (raw) {
+      var t = tagClean(p, raw);
+      if (!t) { return; }
+      var known = tagSuggestion(p, t);
+      if (p.strict && !known) { message = pkText('tagStrict'); refused.push(t); return; }
+      if (known) { t = tagOptionValue(known); }
+      if (p.unique && vals.some(function (x) { return x.toLowerCase() === t.toLowerCase(); })) { message = pkText('tagDuplicate', t); refused.push(t); return; }
+      if (p.max > 0 && vals.length >= p.max) { message = pkText('tagMax', p.max); refused.push(t); return; }
+      vals.push(t);
+      added += 1;
+    });
+    if (added) { tagsSet(p, vals); }
+    tagsStatus(p, message);
+    return refused;
+  }
+
+  // "typing": the focus goes to the text field, "x": to the next remove button (the keyboard stays where it was)
+  function tagsRemove(p, tag, focus) {
+    var vals = tagList(p), i = vals.indexOf(tag);
+    if (i < 0) { return; }
+    vals.splice(i, 1);
+    tagsSet(p, vals);
+    tagsStatus(p, pkText('tagRemoved', tag));
+    var xs = $$('.mat-chip__x', p.field);
+    (focus === 'x' && xs.length ? xs[Math.min(i, xs.length - 1)] : p.typing).focus({ preventScroll: true });
+    if (p.suggest && !p.suggest.hidden) { tagsSuggest(p); }
+  }
+
+  // ---- the suggestions
+  function tagsFilter(p) {
+    var q = p.typing.value.trim().toLowerCase();
+    var taken = tagList(p).map(function (s) { return s.toLowerCase(); }), shown = 0;
+    tagOptions(p).forEach(function (o) {
+      var v = tagOptionValue(o).toLowerCase();
+      var hit = taken.indexOf(v) < 0 && (!q || (o.textContent + ' ' + v + ' ' + (o.getAttribute('data-keywords') || '')).toLowerCase().indexOf(q) >= 0);
+      o.hidden = !hit;
+      if (hit) { shown += 1; }
+    });
+    p.empty.hidden = !(p.strict && q && shown === 0);
+    return shown;
+  }
+  function tagsVisible(p) { return $$('.mat-picker__option:not([hidden])', p.list); }
+  function tagsActive(p, o) {
+    $$('.mat-picker__option.is-active', p.list).forEach(function (x) { x.classList.remove('is-active'); x.removeAttribute('aria-selected'); });
+    if (!o) { p.typing.removeAttribute('aria-activedescendant'); return; }
+    o.classList.add('is-active');
+    o.setAttribute('aria-selected', 'true');
+    p.typing.setAttribute('aria-activedescendant', o.id);
+    keepInView(p.list, o);
+  }
+  function tagsPlace(p) {
+    var r = p.field.getBoundingClientRect(), panel = p.suggest, vw = window.innerWidth, vh = window.innerHeight;
+    panel.style.left = '0px'; panel.style.top = '0px'; panel.style.maxHeight = '';
+    panel.style.width = Math.min(r.width, vw - 16) + 'px';
+    var h = panel.offsetHeight, below = vh - r.bottom - 10, above = r.top - 10, top;
+    if (h <= below) { top = r.bottom + 4; }
+    else if (h <= above) { top = r.top - h - 4; }
+    else if (below >= above) { top = r.bottom + 4; panel.style.maxHeight = Math.max(120, below) + 'px'; }
+    else { var room = Math.max(120, above); panel.style.maxHeight = room + 'px'; top = r.top - Math.min(h, room) - 4; }
+    panel.style.left = Math.max(8, Math.min(r.left, vw - panel.offsetWidth - 8)) + 'px';
+    panel.style.top = Math.max(8, top) + 'px';
+  }
+  function tagsClose(p) {
+    if (!p.suggest) { return; }
+    p.suggest.hidden = true;
+    p.typing.setAttribute('aria-expanded', 'false');
+    p.typing.removeAttribute('aria-activedescendant');
+    if (tagsOpen === p) { tagsOpen = null; }
+  }
+  // (Re)draws the list for what is typed and opens it when there is something to show. In a strict field the first match is the one Enter takes.
+  function tagsSuggest(p) {
+    if (!p.suggest) { return; }
+    if (p.typing.disabled || p.input.readOnly) { tagsClose(p); return; }
+    var shown = tagsFilter(p);
+    if (shown === 0 && p.empty.hidden) { tagsClose(p); return; }
+    tagsActive(p, p.strict && p.typing.value.trim() && shown ? tagsVisible(p)[0] : null);
+    p.suggest.hidden = false;
+    p.typing.setAttribute('aria-expanded', 'true');
+    tagsOpen = p;
+    tagsPlace(p);
+  }
+
+  function tagsKeys(p, e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing) { return; }
+    var t = p.typing, sep = tagSep(p), isOpen = !!p.suggest && !p.suggest.hidden;
+    if (e.key === 'Enter') {
+      var act = isOpen ? $('.mat-picker__option.is-active', p.list) : null;
+      if (act) { e.preventDefault(); tagsAdd(p, tagOptionValue(act)); t.value = ''; tagsSuggest(p); }
+      else if (t.value.trim()) { e.preventDefault(); t.value = tagsAdd(p, t.value).join(', '); tagsSuggest(p); }
+      return;
+    }
+    if (e.key === ',' || (sep.length === 1 && e.key === sep)) {
+      e.preventDefault();
+      if (t.value.trim()) { t.value = tagsAdd(p, t.value).join(', '); }
+      tagsSuggest(p);
+      return;
+    }
+    if (e.key === 'Backspace' && t.value === '') {
+      var vals = tagList(p);
+      if (vals.length) { e.preventDefault(); tagsRemove(p, vals[vals.length - 1], 'typing'); }
+      return;
+    }
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && p.suggest) {
+      e.preventDefault();
+      if (!isOpen) { tagsSuggest(p); }
+      var vis = tagsVisible(p), n = vis.length, cur = vis.indexOf($('.mat-picker__option.is-active', p.list));
+      if (p.suggest.hidden || !n) { return; }
+      tagsActive(p, vis[e.key === 'ArrowDown' ? (cur < 0 ? 0 : (cur + 1) % n) : (cur < 0 ? n - 1 : (cur - 1 + n) % n)]);
+      return;
+    }
+    if (e.key === 'Escape' && isOpen) { e.preventDefault(); e.stopPropagation(); tagsClose(p); return; }
+    if (e.key === 'ArrowLeft' && t.selectionStart === 0 && t.selectionEnd === 0) {
+      var xs = $$('.mat-chip__x', p.field);
+      if (xs.length) { e.preventDefault(); xs[xs.length - 1].focus(); }
+    }
+  }
+
+  KINDS.tags = {
+    inline: true,
+    init: function (p) {
+      var wrap = p.wrap, input = p.input, id = input.id;
+      p.sep = wrap.hasAttribute('data-sep') ? wrap.getAttribute('data-sep') : ', ';
+      p.max = parseInt(wrap.getAttribute('data-max'), 10) || 0;
+      p.maxLength = parseInt(wrap.getAttribute('data-max-length'), 10) || 48;
+      p.unique = !wrap.hasAttribute('data-duplicates');
+      p.strict = wrap.hasAttribute('data-strict');
+
+      p.field = doc.createElement('div');
+      p.field.className = 'mat-input mat-tagfield';
+      p.typing = doc.createElement('input');
+      p.typing.type = 'text';
+      p.typing.className = 'mat-tagfield__input';
+      p.typing.id = id + '-entry';
+      p.typing.setAttribute('autocomplete', 'off');
+      p.typing.setAttribute('autocapitalize', 'off');
+      p.typing.setAttribute('spellcheck', 'false');
+      p.typing.setAttribute('enterkeyhint', 'done');
+      var lab = $('label[for="' + id + '"]');
+      if (lab) { if (!lab.id) { lab.id = id + '-label'; } p.typing.setAttribute('aria-labelledby', lab.id); }
+      else { p.typing.setAttribute('aria-label', placeholderOf(p)); }
+      if (input.getAttribute('aria-describedby')) { p.typing.setAttribute('aria-describedby', input.getAttribute('aria-describedby')); }
+      p.field.appendChild(p.typing);
+      input.parentNode.insertBefore(p.field, input.nextSibling);
+
+      p.status = doc.createElement('p');
+      p.status.className = 'mat-picker__status';
+      p.status.setAttribute('aria-hidden', 'true');
+      p.status.hidden = true;
+      p.live = doc.createElement('span');
+      p.live.className = 'mat-sr-only';
+      p.live.setAttribute('role', 'status');
+      p.live.setAttribute('aria-live', 'polite');
+      p.field.parentNode.insertBefore(p.status, p.field.nextSibling);
+      p.field.parentNode.insertBefore(p.live, p.status);
+
+      p.list = $('.mat-picker__options', wrap);
+      if (p.list) {
+        p.list.id = p.list.id || id + '-list';
+        p.list.setAttribute('role', 'listbox');
+        p.list.setAttribute('aria-label', pkText('suggestions'));
+        p.list.hidden = false;
+        $$('.mat-picker__option', p.list).forEach(function (o, i) {
+          o.type = 'button';
+          o.setAttribute('role', 'option');
+          o.tabIndex = -1;
+          o.id = id + '-option-' + i;
+        });
+        p.empty = doc.createElement('p');
+        p.empty.className = 'mat-picker__empty';
+        p.empty.setAttribute('role', 'status');
+        p.empty.hidden = true;
+        p.empty.textContent = pkText('noResults');
+        p.suggest = doc.createElement('div');
+        p.suggest.className = 'mat-picker__panel mat-picker__panel--list mat-picker__panel--suggest';
+        p.suggest.hidden = true;
+        var body = doc.createElement('div');
+        body.className = 'mat-picker__body';
+        body.appendChild(p.list);
+        body.appendChild(p.empty);
+        p.suggest.appendChild(body);
+        wrap.appendChild(p.suggest);
+        p.typing.setAttribute('role', 'combobox');
+        p.typing.setAttribute('aria-autocomplete', 'list');
+        p.typing.setAttribute('aria-haspopup', 'listbox');
+        p.typing.setAttribute('aria-expanded', 'false');
+        p.typing.setAttribute('aria-controls', p.list.id);
+        // a click on a suggestion must not take the focus from the text field
+        p.suggest.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        p.suggest.addEventListener('click', function (e) {
+          var o = e.target.closest('.mat-picker__option');
+          if (!o) { return; }
+          tagsAdd(p, tagOptionValue(o));
+          p.typing.value = '';
+          p.typing.focus({ preventScroll: true });
+          tagsSuggest(p);
+        });
+      }
+
+      p.field.addEventListener('click', function (e) {
+        var x = e.target.closest('.mat-chip__x');
+        if (x) { tagsRemove(p, x.closest('.mat-chip').getAttribute('data-tag'), e.detail === 0 ? 'x' : 'typing'); return; }
+        if (p.typing.disabled || p.input.readOnly) { return; }
+        p.typing.focus();
+        tagsSuggest(p);
+      });
+      p.field.addEventListener('keydown', function (e) {
+        var x = e.target.closest && e.target.closest('.mat-chip__x');
+        if (!x) { return; }
+        var xs = $$('.mat-chip__x', p.field), i = xs.indexOf(x);
+        if (e.key === 'ArrowLeft') { e.preventDefault(); if (i > 0) { xs[i - 1].focus(); } }
+        else if (e.key === 'ArrowRight') { e.preventDefault(); if (i < xs.length - 1) { xs[i + 1].focus(); } else { p.typing.focus(); } }
+        else if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); tagsRemove(p, x.closest('.mat-chip').getAttribute('data-tag'), 'x'); }
+      });
+      p.typing.addEventListener('keydown', function (e) { tagsKeys(p, e); });
+      p.typing.addEventListener('input', function () { tagsStatus(p, ''); tagsSuggest(p); });
+      p.typing.addEventListener('paste', function (e) {
+        var text = (e.clipboardData || window.clipboardData).getData('text');
+        if (!/[\r\n\t,]/.test(text) && text.indexOf(tagSep(p)) < 0) { return; }   // plain text: the field takes it as it is
+        e.preventDefault();
+        var all = p.typing.value.slice(0, p.typing.selectionStart) + text + p.typing.value.slice(p.typing.selectionEnd);
+        p.typing.value = tagsAdd(p, all).join(', ');
+        tagsSuggest(p);
+      });
+      wrap.addEventListener('focusout', function (e) {
+        if (e.relatedTarget && wrap.contains(e.relatedTarget)) { return; }
+        if (!e.relatedTarget && !doc.hasFocus()) { return; }   // the window lost the focus, not the field
+        if (p.typing.value.trim()) { tagsAdd(p, p.typing.value); }
+        p.typing.value = '';
+        tagsClose(p);
+      });
+    },
+    sync: tagsSync
+  };
+
   // ---- the events of the pickers
   doc.addEventListener('click', function (e) {
     var t = e.target;
@@ -1832,6 +2156,7 @@
   // a dialog around the picker is closed by Escape only after the picker
   doc.addEventListener('cancel', function (e) {
     if (pickerOpen && e.target.classList && e.target.classList.contains('mat-dialog')) { e.preventDefault(); closePicker(true); }
+    else if (tagsOpen && e.target.classList && e.target.classList.contains('mat-dialog')) { e.preventDefault(); tagsClose(tagsOpen); }
   }, true);
 
   // the real input is not drawn; whoever focuses it (a label, a validation message) lands on the button
@@ -1839,7 +2164,7 @@
     var t = e.target;
     if (t.classList && t.classList.contains('mat-picker__input')) {
       var p = t.closest('.mat-picker') && t.closest('.mat-picker')._matPicker;
-      if (p) { p.trigger.focus({ preventScroll: false }); }
+      if (p) { (p.spec.inline ? p.typing : p.trigger).focus({ preventScroll: false }); }
     }
   });
 
@@ -1872,9 +2197,10 @@
     area.addEventListener('pointercancel', up);
   });
 
-  window.addEventListener('resize', function () { if (pickerOpen) { pickerOpen.relayout(); syncLock(); } });
+  window.addEventListener('resize', function () { if (pickerOpen) { pickerOpen.relayout(); syncLock(); } if (tagsOpen) { tagsPlace(tagsOpen); } });
   doc.addEventListener('scroll', function (e) {
     if (pickerOpen && !pickerOpen.full && !pickerOpen.panel.contains(e.target)) { pickerOpen.relayout(); }
+    if (tagsOpen && !tagsOpen.suggest.contains(e.target)) { tagsPlace(tagsOpen); }
   }, true);
 
   // ------------------------------------------------------------------------------------------------------- init
