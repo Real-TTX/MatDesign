@@ -233,7 +233,10 @@ public class SiteHelpersTests
     public void The_switcher_is_under_the_logo_unless_the_app_says_otherwise_and_only_with_two_menus()
     {
         Assert.True(Shell(SwitcherPlace.Top, Menu("a"), Menu("b")).SwitcherAtTop);
-        Assert.Equal(SwitcherPlace.Top, ShellModel.Site().SwitcherPlace);
+        Assert.Equal(SwitcherPlace.Top, new ShellModel { App = MatDesign.Core.AppRegistry.Get("matdesign")!, Menus = [Menu("a"), Menu("b")], UserName = "A", UserRole = "B", Version = "v" }.SwitcherPlace);
+        // the site itself shows it at both places
+        var site = ShellModel.Site();
+        Assert.True(site.SwitcherAtTop && site.SwitcherAtBottom);
         var single = Shell(SwitcherPlace.Both, Menu("a"));
         Assert.False(single.SwitcherAtTop);
         Assert.False(single.SwitcherAtBottom);

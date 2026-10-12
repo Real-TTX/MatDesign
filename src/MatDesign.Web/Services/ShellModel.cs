@@ -147,6 +147,8 @@ public sealed class ShellModel
             App = design?.App("matdesign") ?? AppRegistry.Get("matdesign")!,
             Tagline = "Identity of the Mat apps",
             Menus = Navigation.For(facts, signedIn),
+            // the site shows the switcher at both places (SHELL-15), so that a visitor sees what an app can choose; SwitcherPlace.Top or Bottom would use one
+            SwitcherPlace = SwitcherPlace.Both,
             UserName = signedIn ? "Admin" : "Visitor",
             UserRole = signedIn ? "Studio" : "Guest",
             UserLine = signedIn ? "Signed in to the Studio" : needsSetup ? "Set up the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",

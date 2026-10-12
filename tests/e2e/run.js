@@ -1904,7 +1904,8 @@ function expectTrue(value, what) {
         expect(await page.textContent('main h1'), 'Activity', 'the page after the sign-in');
       });
       await check('the Studio is a third menu behind the switcher, and the user is the administrator', async () => {
-        await page.click('.mat-switcher');
+        // the site has the switcher at both places: the one under the logo
+        await page.click('.mat-nav__brand ~ .mat-nav__switch .mat-switcher');
         expect(await page.locator('#nav-switch-menu [data-nav-set]').evaluateAll(els => els.map(e => e.getAttribute('data-nav-set'))), ['design', 'toolkit', 'studio'], 'menus in the switcher');
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
