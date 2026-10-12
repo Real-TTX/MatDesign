@@ -89,6 +89,11 @@ It lives inside the wrapper, so a picker in a dialog is not cut off by it, and E
 browser message points at the right place, and whoever focuses it (a label, the validation) lands on the button. The texts are English and German (`data-pk-*` on `html` changes them; a test checks that
 both languages have every text).
 
+A **dropdown with a list of checkboxes** is the select picker with `data-multiple`: the box in front of every option is drawn by CSS, so an option stays one button. `data-select-all` adds a first row
+that is a `role="checkbox"` button (a `role="option"` has no state in between) with `aria-checked` true, false or mixed; it looks at, and acts on, the options that are shown and can be chosen, so the search
+narrows it and a disabled option is left alone. The arrow keys, Home and End walk the rows (that row first), Space is the click of the button. The field names one or two options, counts three or more and says
+All selected when every option of a list of more than two is ticked.
+
 ### Layout and utilities
 
 `matui.layout.css` is the last part before the apps: containers, a grid of twelve columns (`mat-cols`, `mat-col-N`, with `sm`, `md` and `lg` variants from 600, 900 and 1200 px, mobile first) and

@@ -26,7 +26,8 @@
                                             a field that is filled in a panel (FORM-15); the real input inside is .mat-picker__input. Options of the wrapper:
                                             data-placeholder, data-clearable (a button that clears the value), data-min / data-max / data-week-start / data-flex (dates),
                                             data-step / data-hour12 (times), data-swatches (colours), data-search / data-multiple / data-sep (select; the options are
-                                            .mat-picker__option with data-value). The texts change with data-pk-<name> on <html>, the format of dates with data-locale.
+                                            .mat-picker__option with data-value), data-select-all (select with data-multiple: a first row "Select all" with a box in three
+                                            states for the options that are shown). The texts change with data-pk-<name> on <html>, the format of dates with data-locale.
                                             tags is a field of chips and has no panel: data-sep, data-max (number of tags), data-max-length (of one tag),
                                             data-duplicates (allow a tag twice), data-strict (only the options, which are the suggestions, can be added)
      data-carousel                         a strip of slides (.mat-carousel__track > .mat-carousel__slide) that scrolls and snaps; the script adds Previous, the dots and Next
@@ -1107,6 +1108,7 @@
       prevMonth: 'Previous month', nextMonth: 'Next month',
       phSelect: 'Choose', phDate: 'Choose a date', phPeriod: 'Choose a period', phTime: 'Choose a time', phTimeRange: 'Choose a time range', phColour: 'Choose a colour',
       search: 'Search', noResults: 'Nothing found', selectedCount: '{0} selected',
+      selectAll: 'Select all', selectFound: 'Select all found', allSelected: 'All selected',
       startDate: 'Choose the start date', endDate: 'Choose the end date', daysCount: '{0} days', oneDay: '1 day',
       exactDates: 'Exact dates', flexible: 'Flexible dates', flexDays: '± {0} days', flexDay: '± 1 day',
       from: 'From', to: 'To', hour: 'Hour', minute: 'Minute', ampm: 'AM or PM', typeTime: 'Type a time', nextDay: 'next day', durHM: '{0} h {1} min', durH: '{0} h', durM: '{0} min',
@@ -1119,6 +1121,7 @@
       prevMonth: 'Vorheriger Monat', nextMonth: 'Nächster Monat',
       phSelect: 'Auswählen', phDate: 'Datum wählen', phPeriod: 'Zeitraum wählen', phTime: 'Uhrzeit wählen', phTimeRange: 'Zeitbereich wählen', phColour: 'Farbe wählen',
       search: 'Suchen', noResults: 'Nichts gefunden', selectedCount: '{0} gewählt',
+      selectAll: 'Alle auswählen', selectFound: 'Alle Treffer auswählen', allSelected: 'Alle gewählt',
       startDate: 'Startdatum wählen', endDate: 'Enddatum wählen', daysCount: '{0} Tage', oneDay: '1 Tag',
       exactDates: 'Genaue Daten', flexible: 'Flexible Daten', flexDays: '± {0} Tage', flexDay: '± 1 Tag',
       from: 'Von', to: 'Bis', hour: 'Stunde', minute: 'Minute', ampm: 'Vor- oder nachmittags', typeTime: 'Uhrzeit eintippen', nextDay: 'am nächsten Tag', durHM: '{0} Std. {1} Min.', durH: '{0} Std.', durM: '{0} Min.',
@@ -1449,7 +1452,34 @@
       if (hit) { shown += 1; }
     });
     p.empty.hidden = shown > 0;
+    selAllSync(p);
     p.relayout();
+  }
+  // The rows that the arrow keys walk: "Select all" (when it is there and shown), then the options that are shown.
+  function selRows(p) { return (p.all && !p.all.hidden ? [p.all] : []).concat(visibleOptions(p)); }
+  function focusRow(p, row) { if (row === p.all) { row.focus({ preventScroll: true }); } else { focusOption(p, row); } }
+  // The chosen values in the order of the options (a value that no option has comes first and is kept).
+  function selSet(p, vals) {
+    var order = $$('.mat-picker__option', p.list).map(function (x) { return x.getAttribute('data-value') || ''; });
+    vals.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+    setPickerValue(p, vals.join(p.sep));
+  }
+  // "Select all" (data-select-all, several choices): the box says whether all, some or none of the options that are shown (the search narrows them) are chosen,
+  // and a click chooses them all, or, when they all are chosen, takes them away. Options that cannot be chosen are left as they are.
+  function selAllSync(p) {
+    if (!p.all) { return; }
+    var shown = visibleOptions(p), vals = selValues(p);
+    var on = shown.filter(function (o) { return vals.indexOf(o.getAttribute('data-value') || '') >= 0; }).length;
+    p.all.hidden = shown.length === 0;
+    p.all.setAttribute('aria-checked', on === 0 ? 'false' : on === shown.length ? 'true' : 'mixed');
+    $('.mat-picker__all-text', p.all).textContent = pkText(p.search && p.search.value.trim() ? 'selectFound' : 'selectAll');
+  }
+  function selToggleAll(p) {
+    var keys = visibleOptions(p).map(function (o) { return o.getAttribute('data-value') || ''; }), vals = selValues(p);
+    if (!keys.length) { return; }
+    var every = keys.every(function (k) { return vals.indexOf(k) >= 0; });
+    selSet(p, every ? vals.filter(function (v) { return keys.indexOf(v) < 0; }) : vals.concat(keys.filter(function (k) { return vals.indexOf(k) < 0; })));
+    p.all.focus({ preventScroll: true });
   }
 
   KINDS.select = {
@@ -1478,6 +1508,15 @@
         p.body.appendChild(search);
         p.search = $('input', search);
       }
+      if (p.multiple && p.wrap.hasAttribute('data-select-all')) {
+        p.all = doc.createElement('button');
+        p.all.type = 'button';
+        p.all.className = 'mat-picker__all';
+        p.all.setAttribute('role', 'checkbox');
+        p.all.setAttribute('aria-checked', 'false');
+        p.all.innerHTML = '<span class="mat-picker__check" aria-hidden="true">' + icon('check') + '</span><span class="mat-picker__all-text"></span>';
+        p.body.appendChild(p.all);
+      }
       p.list.hidden = false;
       p.body.appendChild(p.list);
       p.empty = doc.createElement('p');
@@ -1490,16 +1529,18 @@
     },
     display: function (p, out) {
       var vals = selValues(p);
-      var chosen = [];
-      $$('.mat-picker__option', p.list).forEach(function (o) {
+      var chosen = [], all = $$('.mat-picker__option', p.list);
+      all.forEach(function (o) {
         var on = vals.indexOf(o.getAttribute('data-value') || '') >= 0;
         o.setAttribute('aria-selected', on ? 'true' : 'false');
         if (on) { chosen.push(o); }
       });
+      selAllSync(p);
       if (chosen.length === 0) { out.textContent = vals.length ? vals.join(p.sep) : placeholderOf(p); return; }
       if (p.multiple) {
+        // the names while there are one or two of them, "All selected" when every one of more than two is chosen, else the count
         var names = chosen.map(optionName);
-        out.textContent = chosen.length <= 2 ? names.join(', ') : pkText('selectedCount', chosen.length);
+        out.textContent = chosen.length === all.length && all.length > 2 ? pkText('allSelected') : chosen.length <= 2 ? names.join(', ') : pkText('selectedCount', chosen.length);
         return;
       }
       var img = $('.mat-picker__img', chosen[0]);
@@ -1510,6 +1551,7 @@
     },
     open: function (p) {
       if (p.search) { p.search.value = ''; filterOptions(p, ''); }
+      selAllSync(p);
       var chosen = $('.mat-picker__option[aria-selected="true"]:not([hidden])', p.list);
       var first = chosen || visibleOptions(p)[0];
       if (first) { $$('.mat-picker__option', p.list).forEach(function (x) { x.tabIndex = -1; }); first.tabIndex = 0; }
@@ -1517,39 +1559,42 @@
       return first || p.search;
     },
     click: function (p, t) {
+      if (p.all && t.closest('.mat-picker__all')) { selToggleAll(p); return; }
       var o = t.closest('.mat-picker__option');
       if (!o || o.disabled) { return; }
       var v = o.getAttribute('data-value') || '';
       if (!p.multiple) { setPickerValue(p, v); closePicker(true); return; }
       var vals = selValues(p), i = vals.indexOf(v);
       if (i >= 0) { vals.splice(i, 1); } else { vals.push(v); }
-      var order = $$('.mat-picker__option', p.list).map(function (x) { return x.getAttribute('data-value') || ''; });
-      vals.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
-      setPickerValue(p, vals.join(p.sep));
+      selSet(p, vals);
       focusOption(p, o);
     },
     input: function (p, t) { if (t === p.search) { filterOptions(p, t.value); } },
+    // Arrow keys, Home and End walk the rows ("Select all" first); Space (or Enter) on a row is the click of its button, so it toggles the option
     keys: function (p, e) {
-      var t = e.target, opts = visibleOptions(p), o = t.closest('.mat-picker__option'), i = opts.indexOf(o), to = null;
-      if (e.key === 'ArrowDown') { to = opts[Math.min(opts.length - 1, i + 1)]; }
+      var t = e.target, opts = visibleOptions(p), rows = selRows(p), o = t.closest('.mat-picker__option'), onAll = !!p.all && t === p.all;
+      var i = rows.indexOf(onAll ? p.all : o), to = null;
+      if (e.key === 'ArrowDown') { to = rows[Math.min(rows.length - 1, i + 1)]; }
       else if (e.key === 'ArrowUp') {
         if (i <= 0 && p.search) { e.preventDefault(); p.search.focus(); return; }
-        to = opts[Math.max(0, i - 1)];
+        to = rows[Math.max(0, i - 1)];
       }
-      else if (e.key === 'Home' && o) { to = opts[0]; }
-      else if (e.key === 'End' && o) { to = opts[opts.length - 1]; }
+      else if (e.key === 'Home' && (o || onAll)) { to = rows[0]; }
+      else if (e.key === 'End' && (o || onAll)) { to = rows[rows.length - 1]; }
       else if (e.key === 'Enter' && t === p.search) { e.preventDefault(); if (opts[0]) { p.spec.click(p, opts[0]); } return; }
+      else if (e.key === ' ' && !p.typed) { return; }
       else if (o && !p.search && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        // type the first letters of a title to jump to it
+        // type the first letters of a title to jump to it (a space in the middle of a word is a part of it, a space on its own is the click)
         p.typed = (p.typed || '') + e.key.toLowerCase();
         clearTimeout(p.typedTimer);
         p.typedTimer = setTimeout(function () { p.typed = ''; }, 700);
-        var hit = opts.slice(i + 1).concat(opts.slice(0, i + 1)).filter(function (x) { return optionName(x).toLowerCase().indexOf(p.typed) === 0; })[0];
+        var hit = opts.slice(opts.indexOf(o) + 1).concat(opts.slice(0, opts.indexOf(o) + 1)).filter(function (x) { return optionName(x).toLowerCase().indexOf(p.typed) === 0; })[0];
+        if (e.key === ' ') { e.preventDefault(); }
         if (hit) { e.preventDefault(); focusOption(p, hit); }
         return;
       } else { return; }
       e.preventDefault();
-      if (to) { focusOption(p, to); }
+      if (to) { focusRow(p, to); }
     }
   };
 

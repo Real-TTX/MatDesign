@@ -1110,6 +1110,185 @@ function expectTrue(value, what) {
     });
     await ctx.close();
   }
+
+  // ---------------------------------------------------------------------------------------------------- dropdown with checkboxes (FORM-15)
+  console.log('\nDropdown with checkboxes');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#checkbox-select');
+    const panel = id => `#${id}-trigger ~ .mat-picker__panel`;
+    const val = id => page.$eval(`#${id}`, el => el.value);
+    const shown = async id => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
+    const all = id => page.locator(`${panel(id)} .mat-picker__all`);
+    const allState = id => page.getAttribute(`${panel(id)} .mat-picker__all`, 'aria-checked');
+    const allLabel = async id => (await all(id).textContent()).trim();
+    const active = () => page.evaluate(() => document.activeElement.classList.contains('mat-picker__all') ? 'all' : document.activeElement.getAttribute('data-value'));
+    const countChanges = id => page.evaluate(i => { window.__changes = 0; document.getElementById(i).addEventListener('change', () => { window.__changes += 1; }); }, id);
+
+    await page.evaluate(() => document.getElementById('checkbox-select').scrollIntoView());
+    await check('Select all is the first row, a checkbox in three states: the field starts with two days ticked, so the box is in between', async () => {
+      expect(await shown('cbs-days'), 'Monday, Wednesday', 'the field names one or two entries');
+      await page.click('#cbs-days-trigger');
+      expectTrue(await page.locator(panel('cbs-days')).isVisible(), 'the panel is not shown');
+      expect(await all('cbs-days').getAttribute('role'), 'checkbox', 'role of the row');
+      expect(await allState('cbs-days'), 'mixed', 'state with some entries ticked');
+      expect(await allLabel('cbs-days'), 'Select all', 'its text');
+      expect(await page.evaluate(sel => { const a = document.querySelector(sel + ' .mat-picker__all'); return a.nextElementSibling.classList.contains('mat-picker__options') && !a.closest('.mat-picker__options'); }, panel('cbs-days')), true, 'the row stands above the list');
+      expect(await page.locator(`${panel('cbs-days')} .mat-picker__option .mat-picker__desc`).count(), 0, 'plain entries have no description');
+    });
+    await check('a click on Select all ticks every entry with one change event, says All selected, and takes them all away when all are ticked', async () => {
+      await countChanges('cbs-days');
+      await all('cbs-days').click();
+      expect(await val('cbs-days'), 'mon, tue, wed, thu, fri, sat, sun', 'the value in the order of the entries');
+      expect(await allState('cbs-days'), 'true', 'the box with everything ticked');
+      expect(await shown('cbs-days'), 'All selected', 'the field');
+      expect(await page.evaluate(() => window.__changes), 1, 'change events of one click');
+      expect(await page.locator(`${panel('cbs-days')} .mat-picker__option[aria-selected="true"]`).count(), 7, 'entries ticked');
+      expect(await active(), 'all', 'the focus stays on the row');
+      await all('cbs-days').click();
+      expect(await val('cbs-days'), '', 'the value after the second click');
+      expect(await allState('cbs-days'), 'false', 'the box with nothing ticked');
+      expect(await shown('cbs-days'), 'Choose days', 'the field shows its placeholder');
+    });
+    await check('ticking entries updates the box and the field: names for one or two, the count from three, All selected for every one', async () => {
+      await page.click(`${panel('cbs-days')} [data-value="mon"]`);
+      expect(await shown('cbs-days'), 'Monday', 'one');
+      expect(await allState('cbs-days'), 'mixed', 'the box with one of seven');
+      await page.click(`${panel('cbs-days')} [data-value="tue"]`);
+      expect(await shown('cbs-days'), 'Monday, Tuesday', 'two');
+      await page.click(`${panel('cbs-days')} [data-value="wed"]`);
+      expect(await shown('cbs-days'), '3 selected', 'three');
+      await all('cbs-days').click();
+      expect(await val('cbs-days'), 'mon, tue, wed, thu, fri, sat, sun', 'a click on a box in between ticks the rest');
+      await page.click(`${panel('cbs-days')} [data-value="sun"]`);
+      expect(await shown('cbs-days'), '6 selected', 'six of seven');
+      await page.keyboard.press('Escape');
+    });
+    await check('keys: the arrow keys, Home and End walk Select all and the entries, Space ticks, Escape gives the focus back to the field', async () => {
+      await page.$eval('#cbs-days', el => { el.value = 'mon, wed'; });
+      await page.evaluate(() => window.MatUi.refresh());
+      await page.focus('#cbs-days-trigger');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'mon', 'the focus on opening is on the first ticked entry');
+      await page.keyboard.press('Home');
+      expect(await active(), 'all', 'Home goes to Select all');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'mon', 'ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'tue', 'ArrowDown again');
+      await page.keyboard.press('Space');
+      expect(await val('cbs-days'), 'mon, tue, wed', 'Space ticks the entry');
+      expect(await active(), 'tue', 'the focus stays on the entry');
+      await page.keyboard.press('Space');
+      expect(await val('cbs-days'), 'mon, wed', 'Space unticks it');
+      await page.keyboard.press('End');
+      expect(await active(), 'sun', 'End goes to the last entry');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'sun', 'ArrowDown at the end');
+      await page.keyboard.press('ArrowUp');
+      expect(await active(), 'sat', 'ArrowUp');
+      await page.keyboard.press('Home');
+      await page.keyboard.press('Space');
+      expect(await val('cbs-days'), 'mon, tue, wed, thu, fri, sat, sun', 'Space on Select all with some ticked');
+      await page.keyboard.press('Space');
+      expect(await val('cbs-days'), '', 'Space on Select all with all ticked');
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator(panel('cbs-days')).isVisible()), 'Escape did not close the panel');
+      expect(await page.evaluate(() => document.activeElement.id), 'cbs-days-trigger', 'the focus after Escape');
+    });
+    await check('with a search Select all means what is shown, its box looks at what is shown, and the others stay as they are', async () => {
+      await page.evaluate(() => document.getElementById('cbs-countries').scrollIntoView({ block: 'center' }));
+      await page.click('#cbs-countries-trigger');
+      const search = page.locator(`${panel('cbs-countries')} input[type=search]`);
+      await page.click(`${panel('cbs-countries')} [data-value="at"]`);
+      expect(await val('cbs-countries'), 'at', 'Austria ticked');
+      await search.fill('an');
+      expect(await page.locator(`${panel('cbs-countries')} .mat-picker__option:not([hidden])`).count(), 5, 'entries shown for an');
+      expect(await allLabel('cbs-countries'), 'Select all found', 'its text while a search narrows the list');
+      expect(await allState('cbs-countries'), 'false', 'none of the shown entries is ticked');
+      await all('cbs-countries').click();
+      expect(await val('cbs-countries'), 'at, fr, de, nl, pl, ch', 'the shown entries are ticked, Austria stays');
+      expect(await allState('cbs-countries'), 'true', 'all that are shown are ticked');
+      await search.fill('');
+      expect(await allLabel('cbs-countries'), 'Select all', 'its text without a search');
+      expect(await allState('cbs-countries'), 'mixed', 'six of eleven');
+      expect(await shown('cbs-countries'), '6 selected', 'the field');
+      await search.fill('an');
+      await all('cbs-countries').click();
+      expect(await val('cbs-countries'), 'at', 'a second click takes away only what is shown');
+      expect(await shown('cbs-countries'), 'Austria', 'the field');
+      await search.fill('zzz');
+      expectTrue(!(await all('cbs-countries').isVisible()), 'Select all is shown with nothing to select');
+      expectTrue(await page.locator(`${panel('cbs-countries')} .mat-picker__empty`).isVisible(), 'no message that nothing was found');
+      await search.fill('');
+      await all('cbs-countries').click();
+      expect(await shown('cbs-countries'), 'All selected', 'everything without a search');
+      expect(await val('cbs-countries'), 'at, be, dk, fr, de, it, nl, pl, es, se, ch', 'all eleven');
+      await page.click(`${panel('cbs-countries')} [data-picker-action]`);
+      await page.click('#cbs-countries-trigger ~ .mat-picker__clear');
+      expect(await val('cbs-countries'), '', 'the value after Clear');
+    });
+    await check('the arrow keys and Select all skip an entry that cannot be chosen, which keeps its state', async () => {
+      await page.evaluate(() => document.getElementById('cbs-channels').scrollIntoView({ block: 'center' }));
+      await page.click('#cbs-channels-trigger');
+      expect(await allState('cbs-channels'), 'mixed', 'one of three that can be chosen');
+      await all('cbs-channels').click();
+      expect(await val('cbs-channels'), 'mail, push, chat', 'the entry that cannot be chosen is not ticked');
+      expect(await allState('cbs-channels'), 'true', 'all that can be chosen');
+      expect(await shown('cbs-channels'), '3 selected', 'the field');
+      await page.keyboard.press('Home');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'chat', 'the arrow keys go from push to chat');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'chat', 'and do not enter the entry that cannot be chosen');
+      expect(await page.locator(`${panel('cbs-channels')} [data-value="sms"]`).getAttribute('aria-disabled'), 'true', 'aria-disabled of the entry');
+      await page.keyboard.press('Escape');
+    });
+    await check('in a form a dropdown with nothing ticked gets its message at the field and Select all clears it', async () => {
+      await page.evaluate(() => document.getElementById('cbs-req').scrollIntoView({ block: 'center' }));
+      await page.click('form[action="/Components#checkbox-select"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#cbs-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked');
+      expect((await page.locator('#cbs-req').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose at least one day.', 'the message');
+      expect(await page.evaluate(() => document.activeElement.id), 'cbs-req-trigger', 'the focus');
+      await page.click('#cbs-req-trigger');
+      await all('cbs-req').click();
+      expect(await page.locator('#cbs-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after the choice');
+      await page.keyboard.press('Escape');
+    });
+    await check('the texts of Select all and of the field follow the language of the page', async () => {
+      await page.evaluate(() => { document.documentElement.lang = 'de'; });
+      await page.evaluate(() => document.getElementById('cbs-days').scrollIntoView({ block: 'center' }));
+      await page.click('#cbs-days-trigger');
+      expect(await allLabel('cbs-days'), 'Alle auswählen', 'the row in German');
+      await all('cbs-days').click();
+      expect(await shown('cbs-days'), 'Alle gewählt', 'the field in German');
+      await page.keyboard.press('Escape');
+      await page.evaluate(() => { document.documentElement.lang = 'en'; });
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#checkbox-select');
+    await check('on a phone the dropdown with checkboxes fills the screen, Select all is as tall as a control and a tap ticks everything', async () => {
+      await page.evaluate(() => document.getElementById('cbs-countries').scrollIntoView({ block: 'center' }));
+      await page.tap('#cbs-countries-trigger');
+      const state = await page.evaluate(() => {
+        const panel = document.querySelector('#cbs-countries-trigger ~ .mat-picker__panel');
+        const r = panel.getBoundingClientRect(), a = panel.querySelector('.mat-picker__all').getBoundingClientRect();
+        return { position: getComputedStyle(panel).position, full: Math.round(r.width) === innerWidth && Math.round(r.height) === innerHeight, tall: a.height >= 44, overflow: document.documentElement.scrollWidth > innerWidth };
+      });
+      expect(state, { position: 'fixed', full: true, tall: true, overflow: false }, 'the panel on a phone');
+      await page.tap('#cbs-countries-trigger ~ .mat-picker__panel .mat-picker__all');
+      expect((await page.textContent('#cbs-countries-trigger .mat-picker__value')).trim(), 'All selected', 'the field after a tap on Select all');
+      expect(await page.getAttribute('#cbs-countries-trigger ~ .mat-picker__panel .mat-picker__all', 'aria-checked'), 'true', 'the box');
+      await page.tap('#cbs-countries-trigger ~ .mat-picker__panel [data-picker-action]');
+      expectTrue(!(await page.locator('#cbs-countries-trigger ~ .mat-picker__panel').isVisible()), 'Done did not close the panel');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- pickers
   console.log('\nPickers');
   {
