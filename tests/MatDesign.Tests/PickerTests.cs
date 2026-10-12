@@ -19,7 +19,8 @@ public partial class PickerTests
     [GeneratedRegex(@"data-picker=""([a-z]+)""")]
     private static partial Regex KindAttribute();
 
-    [GeneratedRegex(@"(?s)\ben: \{(.*?)\n    \},\n    de: \{(.*?)\n    \}\n  \};")]
+    // (anchored on the name: other parts of the script have text tables of their own, and one of them stands before this one)
+    [GeneratedRegex(@"(?s)var PK_TEXT = \{\s*en: \{(.*?)\n    \},\n    de: \{(.*?)\n    \}\n  \};")]
     private static partial Regex Texts();
 
     [GeneratedRegex(@"\b([A-Za-z]+): '")]

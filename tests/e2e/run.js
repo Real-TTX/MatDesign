@@ -809,6 +809,307 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- number stepper (FORM-16)
+  console.log('\nNumber stepper');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#number-stepper');
+    const val = id => page.$eval(`#${id}`, el => el.value);
+    const dec = id => page.locator(`.mat-stepper:has(#${id}) > .mat-stepper__btn--dec`);
+    const inc = id => page.locator(`.mat-stepper:has(#${id}) > .mat-stepper__btn--inc`);
+    const disabledState = async (id, kind) => page.getAttribute(`.mat-stepper:has(#${id}) > .mat-stepper__btn--${kind}`, 'aria-disabled');
+    // what a person does: select the text, type, leave the field with the Tab key (the browser's change event follows)
+    const typeIn = async (id, text) => {
+      await page.focus('#' + id);
+      await page.keyboard.press('Control+A');
+      await page.keyboard.type(text);
+      await page.keyboard.press('Tab');
+    };
+    const record = id => page.evaluate(i => {
+      const input = document.getElementById(i);
+      window.__stepper = { events: [], times: [], seen: [] };
+      input.addEventListener('input', () => window.__stepper.events.push('input'));
+      input.addEventListener('change', () => { window.__stepper.events.push('change'); window.__stepper.times.push(performance.now()); window.__stepper.seen.push(input.value); });
+    }, id);
+    const recorded = () => page.evaluate(() => window.__stepper);
+
+    await page.evaluate(() => document.getElementById('number-stepper').scrollIntoView());
+    await check('a stepper has a button for less and one for more, named for a screen reader and out of the Tab order, and the native spinners are gone', async () => {
+      expect(await page.locator('.mat-stepper.is-ready').count(), 12, 'steppers that were wired');
+      expect(await page.locator('.mat-stepper__btn').count(), 24, 'buttons');
+      expect(await dec('stp-qty').getAttribute('aria-label'), 'Decrease Quantity', 'name of the button for less');
+      expect(await inc('stp-qty').getAttribute('aria-label'), 'Increase Quantity', 'name of the button for more');
+      expect(await inc('stp-qty').getAttribute('tabindex'), '-1', 'tabindex');
+      expect(await inc('stp-qty').getAttribute('type'), 'button', 'type');
+      expect(await page.$eval('#stp-qty', el => getComputedStyle(el).appearance), 'textfield', 'appearance of the field');
+      const order = await page.$eval('#stp-qty', el => [...el.parentNode.children].map(c => c.className.replace(/ .*/, '')));
+      expect(order.slice(0, 3), ['mat-stepper__btn', 'mat-input', 'mat-stepper__btn'], 'less, the field, more');
+    });
+    await check('a click changes the value by the step with an input and a change event, and a button at its limit is aria-disabled and keeps the focus', async () => {
+      await record('stp-qty');
+      await inc('stp-qty').click();
+      expect(await val('stp-qty'), '4', 'after more');
+      expect((await recorded()).events, ['input', 'change'], 'events of one press');
+      await dec('stp-qty').click();
+      await dec('stp-qty').click();
+      expect(await val('stp-qty'), '2', 'after two times less');
+      await dec('stp-qty').click();
+      expect(await val('stp-qty'), '1', 'at the lowest value');
+      expect(await disabledState('stp-qty', 'dec'), 'true', 'the button for less at the limit');
+      expect(await disabledState('stp-qty', 'inc'), 'false', 'the button for more');
+      const events = (await recorded()).events.length;
+      // (Playwright counts aria-disabled as disabled and waits for it to end: the press is forced)
+      await dec('stp-qty').click({ force: true });
+      expect(await val('stp-qty'), '1', 'a press at the limit');
+      expect((await recorded()).events.length, events, 'events of a press at the limit');
+      // a button that has the focus (a screen reader activates it) keeps it at the limit
+      await inc('stp-qty').focus();
+      for (let i = 0; i < 12; i += 1) { await page.keyboard.press('Enter'); }
+      expect(await val('stp-qty'), '10', 'after Enter on the button for more');
+      expect(await disabledState('stp-qty', 'inc'), 'true', 'the button for more at the highest value');
+      expect(await inc('stp-qty').evaluate(el => el === document.activeElement && !el.disabled), true, 'the focus and the disabled attribute');
+    });
+    await check('the arrow keys and Page up and down work in the field, with Shift and Page by ten steps, inside the limits', async () => {
+      await page.focus('#stp-gb');
+      expect(await val('stp-gb'), '20', 'storage at the start');
+      await page.keyboard.press('ArrowUp');
+      expect(await val('stp-gb'), '25', 'ArrowUp');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      expect(await val('stp-gb'), '15', 'ArrowDown twice');
+      await page.keyboard.press('PageUp');
+      expect(await val('stp-gb'), '65', 'PageUp is ten steps');
+      await page.keyboard.press('Shift+ArrowUp');
+      expect(await val('stp-gb'), '100', 'Shift and ArrowUp stop at the limit');
+      expect(await disabledState('stp-gb', 'inc'), 'true', 'the button for more at 100');
+      await page.keyboard.press('PageDown');
+      expect(await val('stp-gb'), '50', 'PageDown');
+      await page.keyboard.press('PageDown');
+      await page.keyboard.press('PageDown');
+      await page.keyboard.press('PageDown');
+      await page.keyboard.press('PageDown');
+      await page.keyboard.press('PageDown');
+      expect(await val('stp-gb'), '0', 'PageDown stops at the lowest value');
+      expect(await disabledState('stp-gb', 'dec'), 'true', 'the button for less at 0');
+    });
+    await check('Shift with a click is ten steps', async () => {
+      await typeIn('stp-gb', '20');
+      await inc('stp-gb').click({ modifiers: ['Shift'] });
+      expect(await val('stp-gb'), '70', 'twenty plus ten steps of five');
+      await dec('stp-gb').click({ modifiers: ['Shift'] });
+      expect(await val('stp-gb'), '20', 'and back');
+    });
+    await check('holding a button repeats after a short wait, faster and faster, and stops when it is released', async () => {
+      await typeIn('stp-gb', '0');
+      await record('stp-gb');
+      await inc('stp-gb').scrollIntoViewIfNeeded();
+      const box = await inc('stp-gb').boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.waitForTimeout(1600);
+      await page.mouse.up();
+      const held = await recorded();
+      const gaps = held.times.slice(1).map((t, i) => t - held.times[i]);
+      expectTrue(gaps.length >= 6, 'only ' + gaps.length + ' steps were made while the button was held');
+      expectTrue(gaps[0] >= 380, 'the first repeat came after ' + Math.round(gaps[0]) + ' ms: no short wait');
+      expectTrue(gaps[gaps.length - 1] < gaps[1] * 0.85, 'the steps do not get faster: ' + gaps.map(g => Math.round(g)).join(' '));
+      const after = await val('stp-gb');
+      await page.waitForTimeout(500);
+      expect(await val('stp-gb'), after, 'the value after the button was released');
+      expect(Number(after) % 5, 0, 'a value on the grid');
+    });
+    await check('what is typed is put inside the limits and on the grid before a listener hears of it', async () => {
+      await page.evaluate(() => { const i = document.getElementById('stp-qty'); window.__seen = []; i.addEventListener('change', () => window.__seen.push(i.value)); });
+      await typeIn('stp-qty', '99');
+      expect(await val('stp-qty'), '10', 'a value above the limit');
+      expect(await page.evaluate(() => window.__seen), ['10'], 'what a listener of change saw');
+      await typeIn('stp-qty', '0');
+      expect(await val('stp-qty'), '1', 'a value below the limit');
+      await typeIn('stp-gb', '23');
+      expect(await val('stp-gb'), '25', 'a value between two steps of five');
+      await typeIn('stp-gb', '22');
+      expect(await val('stp-gb'), '20', 'and the other way');
+    });
+    await check('decimals are exact: 0.1 plus 0.1 plus 0.1 is 0.3, data-precision keeps the decimals that are shown', async () => {
+      await page.$eval('#stp-opacity', el => { el.value = '0.1'; });
+      await inc('stp-opacity').click();
+      await inc('stp-opacity').click();
+      expect(await val('stp-opacity'), '0.3', 'three tenths');
+      await inc('stp-opacity').click();
+      expect(await val('stp-opacity'), '0.4', 'four tenths');
+      for (let i = 0; i < 6; i += 1) { await inc('stp-opacity').click(); }
+      expect(await val('stp-opacity'), '1', 'the highest value, without a trailing zero');
+      expect(await disabledState('stp-opacity', 'inc'), 'true', 'the button for more at 1');
+      await page.$eval('#stp-opacity', el => { el.value = '0.25'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+      expect(await val('stp-opacity'), '0.3', 'a typed 0.25 goes to the nearest tenth');
+      expect(await val('stp-price'), '4.50', 'price at the start');
+      await inc('stp-price').click();
+      expect(await val('stp-price'), '4.75', 'a quarter more, two decimals');
+      await dec('stp-price').click();
+      expect(await val('stp-price'), '4.50', 'and back, with its trailing zero');
+      await page.$eval('#stp-price', el => { el.value = '0.1'; });
+      await dec('stp-price').click();
+      expect(await val('stp-price'), '0.00', 'down to the lowest value');
+      expect(await disabledState('stp-price', 'dec'), 'true', 'the button for less at 0');
+      expect(await disabledState('stp-price', 'inc'), 'false', 'a field without an upper limit has no limit for more');
+    });
+    await check('the unit sits inside the field before the button for more and is read with the field', async () => {
+      const state = await page.evaluate(() => {
+        const input = document.getElementById('stp-gb');
+        const unit = document.getElementById('stp-gb-unit');
+        const ir = input.getBoundingClientRect(), ur = unit.getBoundingClientRect(), br = input.parentNode.querySelector('.mat-stepper__btn--inc').getBoundingClientRect();
+        return { text: unit.textContent, inside: ur.left > ir.left + ir.width / 2 && ur.right <= ir.right, beforeButton: ur.right <= br.left, describedby: input.getAttribute('aria-describedby') };
+      });
+      expect(state, { text: 'GB', inside: true, beforeButton: true, describedby: 'stp-gb-unit' }, 'the unit');
+    });
+    await check('stacked arrows sit at the right of the field on a mouse and step like the buttons', async () => {
+      const state = await page.evaluate(() => {
+        const input = document.getElementById('stp-pages'), wrap = input.parentNode;
+        const up = wrap.querySelector('.mat-stepper__btn--inc').getBoundingClientRect(), down = wrap.querySelector('.mat-stepper__btn--dec').getBoundingClientRect(), box = wrap.getBoundingClientRect();
+        return { stacked: up.bottom <= down.top + 1 && up.top < down.top, right: Math.abs(box.right - up.right) <= 2, narrow: up.width < 40, height: Math.round(box.height) };
+      });
+      expect(state, { stacked: true, right: true, narrow: true, height: 40 }, 'stacked arrows');
+      // the field that has the focus does not cover them
+      await page.focus('#stp-pages');
+      const covered = await page.evaluate(() => ['inc', 'dec'].filter(k => {
+        const b = document.querySelector('#stp-pages').parentNode.querySelector('.mat-stepper__btn--' + k), r = b.getBoundingClientRect();
+        return !b.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+      }));
+      expect(covered, [], 'arrows covered by the focused field');
+      await inc('stp-pages').click();
+      expect(await val('stp-pages'), '3', 'after the arrow up');
+      await dec('stp-pages').click();
+      await dec('stp-pages').click();
+      expect(await val('stp-pages'), '1', 'after two arrows down');
+      expect(await disabledState('stp-pages', 'dec'), 'true', 'the arrow down at 1');
+    });
+    await check('the sizes follow the input: 32, 40 and 48 px high, the buttons as high as the field', async () => {
+      const heights = await page.evaluate(() => ['stp-st-sm', 'stp-qty', 'stp-st-lg'].map(id => {
+        const input = document.getElementById(id);
+        return [Math.round(input.getBoundingClientRect().height), Math.round(input.parentNode.querySelector('.mat-stepper__btn--inc').getBoundingClientRect().height)];
+      }));
+      expect(heights, [[32, 32], [40, 40], [48, 48]], 'heights of the field and the button');
+    });
+    await check('a read-only stepper does not change and a disabled one has disabled buttons and is not sent', async () => {
+      await inc('stp-ro').click({ force: true });
+      await page.focus('#stp-ro');
+      await page.keyboard.press('ArrowUp');
+      expect(await val('stp-ro'), '4', 'read-only after a click and a key');
+      expect(await disabledState('stp-ro', 'inc'), 'true', 'the button of a read-only field');
+      expect(await page.$eval('.mat-stepper:has(#stp-off) > .mat-stepper__btn--inc', el => el.disabled), true, 'disabled button');
+      await inc('stp-off').click({ force: true });
+      expect(await val('stp-off'), '4', 'disabled after a click');
+      const colours = await page.evaluate(() => ['stp-off', 'stp-qty'].map(id => getComputedStyle(document.getElementById(id).parentNode.querySelector('.mat-stepper__btn--inc')).backgroundColor));
+      expectTrue(colours[0] !== colours[1], 'a disabled button looks like any other button');
+    });
+    await check('in a form: an empty required field gets its message and the border of the buttons follows, a press starts at the lowest value and takes the message away', async () => {
+      await page.evaluate(() => document.getElementById('stp-seats').scrollIntoView({ block: 'center' }));
+      await page.click('form[action="/Components#number-stepper"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#stp-seats').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked');
+      expect((await page.locator('#stp-seats').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please enter the number of seats.', 'the message');
+      expect(await page.evaluate(() => document.activeElement.id), 'stp-seats', 'the focus');
+      const colours = await page.evaluate(() => {
+        const input = document.getElementById('stp-seats');
+        return [getComputedStyle(input).borderTopColor, getComputedStyle(input.parentNode.querySelector('.mat-stepper__btn--inc')).borderTopColor];
+      });
+      expect(colours[0], colours[1], 'the border of the field and of the button');
+      await inc('stp-seats').click();
+      expect(await val('stp-seats'), '1', 'the first press of an empty field');
+      expect(await page.locator('#stp-seats').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after a valid value');
+    });
+    await check('a reset of the form puts the value back and the buttons follow', async () => {
+      await page.$eval('#stp-nights', el => { el.value = '30'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      expect(await disabledState('stp-nights', 'inc'), 'true', 'the button for more at 30');
+      await page.$eval('#stp-nights', el => el.form.reset());
+      await page.waitForTimeout(50);
+      expect(await val('stp-nights'), '2', 'the value after the reset');
+      expect(await disabledState('stp-nights', 'inc'), 'false', 'the button for more after the reset');
+    });
+    await check('the grid is the browser\'s: counted from min (else the value attribute), the largest value of the grid below max, a value outside the limits can only come back, step="any" adds one', async () => {
+      // [attributes, presses (+ more, - less, P ten steps more, M ten steps less), the value after them, the buttons that cannot go further after them]
+      const cases = [
+        ['min="-5" max="5" step="1" value="0"', '-------', '-5', 'dec'],
+        ['min="0" max="10" step="3" value="9"', '+', '9', 'inc'],
+        ['min="0" max="10" step="3" value="10"', '+', '10', 'inc'],
+        ['min="0" max="10" step="3" value="10"', '-', '9', 'inc'],
+        ['min="0" max="1" step="0.1" value="0.7"', '+++', '1', 'inc'],
+        ['min="0" max="1" step="0.01" value="0.07"', '+++', '0.1', ''],
+        ['step="any" value="1.5"', '+', '2.5', ''],
+        ['step="5" value="2"', '++', '12', ''],
+        ['min="-1" max="1" step="0.5" value="-0.5"', '++', '0.5', ''],
+        ['min="5" max="9" step="1"', '+', '5', 'dec'],
+        ['min="5" max="9" step="1"', '-', '5', 'dec'],
+        ['min="0" max="100" step="1" value="500"', '+', '500', 'inc'],
+        ['min="0" max="100" step="1" value="500"', '-', '100', 'inc'],
+        ['min="0" max="100" step="5" value="0"', 'P', '50', ''],
+        ['min="0" max="100" step="5" value="35"', 'P-', '80', ''],
+        ['min="0" step="0.25" value="0" data-precision="2"', '+', '0.25', ''],
+      ];
+      const found = await page.evaluate(cases => {
+        const host = document.createElement('div');
+        host.id = 'stp-grid';
+        document.getElementById('number-stepper').appendChild(host);
+        host.innerHTML = cases.map((c, n) => {
+          const [attrs] = c;
+          const data = /data-precision/.test(attrs) ? ' data-precision="2"' : '';
+          return `<div class="mat-stepper" data-stepper${data}><input class="mat-input" type="number" id="stp-grid-${n}" name="g${n}" ${attrs.replace(/ ?data-precision="2"/, '')} /></div>`;
+        }).join('');
+        window.MatUi.refresh();
+        return cases.map((c, n) => {
+          const input = document.getElementById('stp-grid-' + n), wrap = input.parentNode;
+          const inc = wrap.querySelector('.mat-stepper__btn--inc'), dec = wrap.querySelector('.mat-stepper__btn--dec');
+          // a click without a press (detail 0) is what the keyboard and an assistive technology make
+          const press = (b, shift) => b.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0, shiftKey: shift }));
+          c[1].split('').forEach(p => press(p === '+' || p === 'P' ? inc : dec, p === 'P' || p === 'M'));
+          const limits = ['dec', 'inc'].filter(k => wrap.querySelector('.mat-stepper__btn--' + k).getAttribute('aria-disabled') === 'true').join(',');
+          return [input.value, limits];
+        });
+      }, cases);
+      cases.forEach((c, n) => {
+        expect(found[n][0], c[2], `${c[0]}, presses ${c[1]}: the value`);
+        expect(found[n][1], c[3], `${c[0]}, presses ${c[1]}: the buttons that cannot go further`);
+      });
+      await page.evaluate(() => document.getElementById('stp-grid').remove());
+    });
+    await check('MatUi.refresh makes the buttons of a stepper that came later, with the names in the language of the page', async () => {
+      await page.evaluate(() => {
+        document.documentElement.lang = 'de';
+        const host = document.createElement('div');
+        host.className = 'mat-field';
+        host.id = 'stp-late';
+        host.innerHTML = '<label class="mat-label" for="stp-late-n">Menge</label><div class="mat-stepper" data-stepper><input class="mat-input" type="number" id="stp-late-n" name="late" min="0" max="3" step="1" value="3" /></div>';
+        document.getElementById('number-stepper').appendChild(host);
+        window.MatUi.refresh();
+      });
+      expect(await page.getAttribute('#stp-late .mat-stepper__btn--dec', 'aria-label'), 'Menge verringern', 'German name of the button for less');
+      expect(await page.getAttribute('#stp-late .mat-stepper__btn--inc', 'aria-label'), 'Menge erhöhen', 'German name of the button for more');
+      expect(await page.getAttribute('#stp-late .mat-stepper__btn--inc', 'aria-disabled'), 'true', 'at the highest value');
+      await page.evaluate(() => { document.documentElement.lang = 'en'; document.getElementById('stp-late').remove(); });
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#number-stepper');
+    await check('on a phone every stepper has buttons of the size of a control (also the stacked one), a tap steps once and nothing is wider than the screen', async () => {
+      await page.evaluate(() => document.getElementById('number-stepper').scrollIntoView());
+      const state = await page.evaluate(() => {
+        const out = { coarse: matchMedia('(pointer: coarse)').matches, overflow: document.documentElement.scrollWidth > innerWidth, small: [] };
+        document.querySelectorAll('#number-stepper .mat-stepper__btn').forEach(b => {
+          const r = b.getBoundingClientRect();
+          const sm = b.closest('.mat-stepper').querySelector('.mat-input--sm');
+          if (r.width < (sm ? 36 : 44) - 1 || r.height < (sm ? 36 : 44) - 1) { out.small.push(Math.round(r.width) + 'x' + Math.round(r.height)); }
+        });
+        out.stackedPosition = getComputedStyle(document.querySelector('#stp-pages ~ .mat-stepper__btn--inc')).position;
+        return out;
+      });
+      expect(state, { coarse: true, overflow: false, small: [], stackedPosition: 'relative' }, 'steppers on a phone');
+      await page.tap('.mat-stepper:has(#stp-qty) > .mat-stepper__btn--inc');
+      expect(await page.$eval('#stp-qty', el => el.value), '4', 'after one tap');
+      await page.tap('.mat-stepper:has(#stp-pages) > .mat-stepper__btn--inc');
+      expect(await page.$eval('#stp-pages', el => el.value), '3', 'after one tap on the stacked one');
+    });
+    await ctx.close();
+  }
   // ---------------------------------------------------------------------------------------------------- pickers
   console.log('\nPickers');
   {

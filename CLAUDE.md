@@ -94,6 +94,10 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`, the tags joined by a comma); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone; `tags` is
   `inline`: a field of chips, no button, its suggestions a dropdown under it). Texts in English and German
   (`PK_TEXT`: both languages must have every key, a test checks). A hidden element that has a `display` in the CSS needs its own `[hidden]` rule (tests list them).
+- Number stepper (`FORM-16`): `.mat-stepper[data-stepper]` around a native `input type="number"`; the script adds the two buttons, `is-ready` (which hides the browser's spinners: without the script it is the
+  native field), `data-unit` and `data-precision`. Whole-number arithmetic with the step base of the browser, a press on `pointerdown` (hold repeats and accelerates), a click with `detail` 0 steps once, the keys
+  of the field (arrows, Page up and down, Shift = ten steps). A button at a limit is `aria-disabled`, never `disabled`; the buttons are not in the Tab order. `mat-stepper--stacked` only with `(pointer: fine)`.
+  Texts in `STEP_TEXT` (English and German, a test checks). Size comes from the input (`mat-input--sm` / `--lg`).
 - Carousel (`LIST-13`): `.mat-carousel[data-carousel]` around `.mat-carousel__track` > `.mat-carousel__slide`. The strip scrolls and snaps in CSS (a scrollable strip without the script); the script names the slides,
   adds the bar (Previous, a dot per page, Next, Pause with `data-autoplay`), makes the slides out of view `inert` and says which page is shown. The buttons at the ends are `aria-disabled`, never `disabled` (the focus stays).
   Autoplay waits for the pointer and the focus, stops for good after any use of a control and never starts under `prefers-reduced-motion`. Texts in `CAR_TEXT` (English and German, a test checks).

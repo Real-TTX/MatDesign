@@ -69,6 +69,13 @@ validation summary. The catalogue of the form components is its own file (`FormC
 forms read like a manual). The script adds only what CSS cannot do: the filled part and the output of a range, a counter, the eye of a password, the names in a drop zone, an indeterminate check and the
 summary of the errors of a form; validation itself stays the browser's (`required`, `type`, `pattern`) with the messages of `data-msg-*`.
 
+The **number stepper** (`FORM-16`) is a native number field in a `mat-stepper[data-stepper]` wrapper. The script adds a button for less and one for more and marks the wrapper `is-ready`; only then
+the CSS hides the spinners of the browser, so without the script it is the native field. The arithmetic is done in whole numbers (the decimals of `step`, `min`, `max` and the value decide the scale), with the
+step base of the browser (`min`, else the `value` attribute, else 0), so a value that the script produces is one that the browser's own validation accepts. A button that cannot go further is
+`aria-disabled` and never `disabled` (the focus must not be lost); a press is handled on `pointerdown` (so that holding repeats, faster and faster) and a click without a press (`detail` 0, the keyboard or an
+assistive technology) steps once. The buttons are not in the Tab order, the field has the keys (arrows, Page up and down, Shift for ten steps). The stacked variant exists only for `(pointer: fine)`: two arrows
+that share the height of one control are too small for a finger (`MOBILE-04`), so a touch screen draws the default. The texts are in `STEP_TEXT` (English and German, a test checks).
+
 ### Pickers
 
 A picker is a field whose value is chosen in a panel: a select with pictures, descriptions and tags, a date or a period, a time or a time range, a colour (`FORM-15`). The tag input is the one

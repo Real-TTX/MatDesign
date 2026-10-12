@@ -48,6 +48,56 @@ input[type="file"].mat-input { padding: 6px; }
 .mat-input-group > * + * { margin-left: -1px; }
 .mat-input-addon { display: inline-flex; align-items: center; padding: 0 var(--mat-space-3); background: var(--mat-surface-3); border: 1px solid var(--mat-border-strong); color: var(--mat-text-muted); font-size: var(--mat-fs-sm); white-space: nowrap; }
 
+/* ---- Number stepper (FORM-16): a number field with a button for less and one for more ----
+   Without the script it is the native number field. The script adds the buttons and marks the wrapper .is-ready, which is what hides the spinners of the browser and
+   squares the corners of the field. The size is the one of the input inside it (mat-input--sm, mat-input--lg). mat-stepper--stacked: two small arrows at the right
+   of the field (a mouse); on a touch screen they would be too small to hit (MOBILE-04), so it is drawn like the default there. */
+.mat-stepper { --mat-stepper-h: var(--mat-control-h); --mat-stepper-end: var(--mat-stepper-h); position: relative; display: flex; align-items: stretch; width: 100%; }
+.mat-stepper:has(> .mat-input--sm) { --mat-stepper-h: var(--mat-control-h-sm); font-size: var(--mat-fs-sm); }
+.mat-stepper:has(> .mat-input--lg) { --mat-stepper-h: var(--mat-control-h-lg); font-size: var(--mat-fs-lg); }
+.mat-stepper.is-ready > .mat-input { flex: 1 1 auto; min-width: 0; border-radius: 0; text-align: center; font-variant-numeric: tabular-nums; appearance: textfield; -moz-appearance: textfield; }
+.mat-stepper.is-ready > .mat-input::-webkit-inner-spin-button, .mat-stepper.is-ready > .mat-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.mat-stepper.is-ready > .mat-input:focus { position: relative; z-index: 1; }
+.mat-stepper__btn {
+  position: relative; flex: none; display: grid; place-items: center;
+  width: var(--mat-stepper-h); min-height: var(--mat-stepper-h); margin: 0; padding: 0;
+  border: 1px solid var(--mat-border-strong); background: var(--mat-surface); color: var(--mat-text-muted);
+  font: inherit; cursor: pointer; user-select: none; touch-action: manipulation;
+  transition: background var(--mat-dur-fast) var(--mat-ease), color var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-stepper__btn:hover { background: var(--mat-surface-3); color: var(--mat-text); }
+.mat-stepper__btn:active { background: var(--mat-accent-soft-strong); color: var(--mat-accent-text); }
+.mat-stepper__btn:focus-visible { z-index: 1; border-color: var(--mat-accent); }
+.mat-stepper__btn--dec { margin-right: -1px; border-radius: var(--mat-radius) 0 0 var(--mat-radius); }
+.mat-stepper__btn--inc { margin-left: -1px; border-radius: 0 var(--mat-radius) var(--mat-radius) 0; }
+.mat-stepper__arrow { display: none; }
+/* a button that cannot go further is dimmed, not disabled: the focus stays on it */
+.mat-stepper__btn[aria-disabled="true"], .mat-stepper__btn:disabled { color: var(--mat-text-faint); cursor: not-allowed; }
+.mat-stepper__btn[aria-disabled="true"]:hover, .mat-stepper__btn[aria-disabled="true"]:active { background: var(--mat-surface); color: var(--mat-text-faint); }
+.mat-stepper:has(> .mat-input[readonly]) .mat-stepper__btn[aria-disabled="true"] { background: var(--mat-surface-2); }
+.mat-stepper:has(> .mat-input:disabled) .mat-stepper__btn, .mat-stepper__btn:disabled { background: var(--mat-surface-3); color: var(--mat-text-faint); cursor: not-allowed; }
+.mat-field.is-invalid .mat-stepper__btn { border-color: var(--mat-danger); }
+.mat-field.is-valid .mat-stepper__btn { border-color: var(--mat-success); }
+/* the unit sits at the right end of the field, in front of the button; the field keeps room for it on both sides so that the number stays in the middle */
+.mat-stepper__unit { position: absolute; top: 0; bottom: 0; right: calc(var(--mat-stepper-end) + var(--mat-space-3)); display: flex; align-items: center; color: var(--mat-text-muted); white-space: nowrap; pointer-events: none; }
+.mat-stepper[data-unit].is-ready > .mat-input { padding-inline: calc(var(--mat-stepper-unit, 0ch) + var(--mat-space-4)); }
+@media (pointer: fine) {
+  .mat-stepper--stacked { --mat-stepper-end: calc(var(--mat-stepper-h) * .8); display: block; }
+  .mat-stepper--stacked.is-ready > .mat-input { text-align: left; padding-inline: var(--mat-space-3) calc(var(--mat-stepper-end) + var(--mat-space-2)); }
+  .mat-stepper--stacked[data-unit].is-ready > .mat-input { padding-inline: var(--mat-space-3) calc(var(--mat-stepper-end) + var(--mat-stepper-unit, 0ch) + var(--mat-space-4)); }
+  .mat-stepper.mat-stepper--stacked .mat-stepper__btn {
+    position: absolute; z-index: 2; right: 1px; width: calc(var(--mat-stepper-end) - 1px); height: calc(50% - 1px); min-height: 0; margin: 0;
+    border: 0 solid var(--mat-border); border-left-width: 1px; border-radius: 0; background: transparent;
+  }
+  .mat-stepper.mat-stepper--stacked .mat-stepper__btn:hover { background: var(--mat-surface-3); }
+  .mat-stepper.mat-stepper--stacked .mat-stepper__btn:active { background: var(--mat-accent-soft-strong); }
+  .mat-stepper.mat-stepper--stacked .mat-stepper__btn[aria-disabled="true"], .mat-stepper.mat-stepper--stacked .mat-stepper__btn:disabled { background: transparent; }
+  .mat-stepper.mat-stepper--stacked .mat-stepper__btn--inc { top: 1px; border-top-right-radius: calc(var(--mat-radius) - 1px); }
+  .mat-stepper.mat-stepper--stacked .mat-stepper__btn--dec { bottom: 1px; border-top-width: 1px; border-bottom-right-radius: calc(var(--mat-radius) - 1px); }
+  .mat-stepper--stacked .mat-stepper__sign { display: none; }
+  .mat-stepper--stacked .mat-stepper__arrow { display: inline-flex; font-size: .85em; }
+}
+
 /* Checkbox and radio use the browser control in the accent colour; the switch is its own. */
 .mat-check { display: flex; align-items: flex-start; gap: var(--mat-space-3); min-height: var(--mat-control-h-sm); cursor: pointer; }
 .mat-check input { width: 18px; height: 18px; margin: 2px 0 0; accent-color: var(--mat-accent); flex: none; cursor: pointer; }
