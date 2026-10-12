@@ -113,6 +113,17 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
       <input class="mat-otp__input" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6}" />
     </div>
     <span class="mat-error" aria-live="polite"></span>
+  A dropdown that holds a **list of checkboxes** is the same select with plain options (a button with `data-value` and a label) and `data-multiple`; `data-select-all` adds a first row Select all
+  whose box is empty, ticked or in between and acts on the options that are shown, so `data-search` narrows it.
+- A number that people change by a step or two (a quantity, a timeout) is a **number stepper** (`FORM-16`): a native number field in `<div class="mat-stepper" data-stepper>` gets a button for less and one
+  for more from the script (`data-unit="GB"` for a suffix, `mat-stepper--stacked` for two small arrows, `mat-input--sm` / `--lg` for the size); without the script it stays the native field:
+
+  ```html
+  <div class="mat-field">
+    <label class="mat-label" for="qty">Quantity</label>
+    <div class="mat-stepper" data-stepper>
+      <input class="mat-input" type="number" id="qty" name="qty" min="1" max="10" step="1" value="3" />
+    </div>
   </div>
   ```
 

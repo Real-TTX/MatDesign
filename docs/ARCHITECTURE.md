@@ -77,6 +77,12 @@ a code is one value and Tab should go to the next field, and a screen reader get
 is not cut but spread over the boxes, and no name, so that only the real input posts; an incomplete code is made **invalid** on the real input (`setCustomValidity`), so `required`, `pattern` and the messages of the form work without a
 second validation, and the boxes follow `disabled`, `readonly` and `aria-invalid` of the real input; **nothing is sent by itself** unless the author writes `data-submit` (then `requestSubmit()`, so the validation and `data-confirm` still
 run). The type stays 16 px or more (a phone zooms into smaller type) and the boxes shrink in width instead of overflowing, so a code of twelve fits a phone.
+The **number stepper** (`FORM-16`) is a native number field in a `mat-stepper[data-stepper]` wrapper. The script adds a button for less and one for more and marks the wrapper `is-ready`; only then
+the CSS hides the spinners of the browser, so without the script it is the native field. The arithmetic is done in whole numbers (the decimals of `step`, `min`, `max` and the value decide the scale), with the
+step base of the browser (`min`, else the `value` attribute, else 0), so a value that the script produces is one that the browser's own validation accepts. A button that cannot go further is
+`aria-disabled` and never `disabled` (the focus must not be lost); a press is handled on `pointerdown` (so that holding repeats, faster and faster) and a click without a press (`detail` 0, the keyboard or an
+assistive technology) steps once. The buttons are not in the Tab order, the field has the keys (arrows, Page up and down, Shift for ten steps). The stacked variant exists only for `(pointer: fine)`: two arrows
+that share the height of one control are too small for a finger (`MOBILE-04`), so a touch screen draws the default. The texts are in `STEP_TEXT` (English and German, a test checks).
 
 ### Pickers
 
@@ -103,6 +109,10 @@ End, every key sending `input` and `change`), and a capture listener on `input` 
 shown (the bubble, the labels, the output) and `aria-valuetext` come from one template, `data-format="{0} GB"`; the two inputs of a range slider are named from the label, "Price from" and "Price to"
 (`SL_TEXT`, English and German). Two bubbles that would cover each other become one. A form reset is picked up after the event, `MatUi.refresh` and `initForms` pick up new sliders, and
 `MatUi.slider.update(wrapper)` reads a changed scale again.
+A **dropdown with a list of checkboxes** is the select picker with `data-multiple`: the box in front of every option is drawn by CSS, so an option stays one button. `data-select-all` adds a first row
+that is a `role="checkbox"` button (a `role="option"` has no state in between) with `aria-checked` true, false or mixed; it looks at, and acts on, the options that are shown and can be chosen, so the search
+narrows it and a disabled option is left alone. The arrow keys, Home and End walk the rows (that row first), Space is the click of the button. The field names one or two options, counts three or more and says
+All selected when every option of a list of more than two is ticked.
 
 ### Layout and utilities
 

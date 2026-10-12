@@ -20,6 +20,21 @@ internal static class PickerComponents
                "<span class=\"mat-picker__text\"><span class=\"mat-picker__name\">" + name + "</span><span class=\"mat-picker__desc\">" + description + "</span>" + tagHtml + "</span></button>";
     }
 
+    /// <summary>A plain option of a list of checks: just a label (a key in lower case and digits, so that the posted value stays simple).</summary>
+    private static string Check(string value, string label, bool disabled = false)
+        => "<button type=\"button\" class=\"mat-picker__option\" data-value=\"" + value + "\"" + (disabled ? " disabled" : string.Empty) + ">" + label + "</button>";
+
+    /// <summary>The options of a list of checks, one per line, indented by the given number of spaces (so that the code shown beside the example lines up). An option that starts with ! cannot be chosen.</summary>
+    private static string Checks(int indent, params (string Value, string Label)[] options)
+        => string.Join("\n", options.Select((o, i) => (i == 0 ? string.Empty : new string(' ', indent)) + Check(o.Value, o.Label.TrimStart('!'), o.Label.StartsWith('!'))));
+
+    private static string Days(int indent) => Checks(indent, ("mon", "Monday"), ("tue", "Tuesday"), ("wed", "Wednesday"), ("thu", "Thursday"), ("fri", "Friday"), ("sat", "Saturday"), ("sun", "Sunday"));
+
+    private static string Countries(int indent) => Checks(indent, ("at", "Austria"), ("be", "Belgium"), ("dk", "Denmark"), ("fr", "France"), ("de", "Germany"), ("it", "Italy"), ("nl", "Netherlands"),
+        ("pl", "Poland"), ("es", "Spain"), ("se", "Sweden"), ("ch", "Switzerland"));
+
+    private static string Channels(int indent) => Checks(indent, ("mail", "E-mail"), ("push", "Push message"), ("sms", "!Text message (not available)"), ("chat", "Chat"));
+
     public static IReadOnlyList<ComponentDoc> All { get; } =
     [
         new("rich-select", "Select with pictures and tags", "Forms", "tag",
@@ -56,7 +71,7 @@ internal static class PickerComponents
                       </div>
                       <span class="mat-hint">One value: the chosen keys, joined by a comma (<code>data-sep</code> changes the separator).</span>
                     </div>
-                    """, "The list stays open while you choose; more than two choices show their count. The search finds words in the title, the description and the tags. Done closes the panel (the check boxes are drawn, so the option stays one button)."),
+                    """, "The list stays open while you choose; more than two choices show their count (see Dropdown with checkboxes for plain entries and a row that ticks them all). The search finds words in the title, the description and the tags. Done closes the panel (the check boxes are drawn, so the option stays one button)."),
                 new("In a form: required, with the message at the field", $"""
                     <form class="mat-form" method="get" action="/Components#rich-select" novalidate>
                       <div class="mat-field">
@@ -79,6 +94,69 @@ internal static class PickerComponents
                 "The input holds the key of the option (`data-value`); with `data-multiple` it holds the keys joined by `data-sep` (default a comma and a space), so a field can change from one kind to the other without touching what it saved.",
                 "`data-search` adds a search field to the panel (on a phone it is not focused at once, so the keyboard does not cover the options); `data-keywords` on an option adds words that the search finds but the list does not show.",
                 "The label of the field names the button, and the button says what is chosen. On a phone the panel is full screen with an X at the top right (DIALOG-03).",
+            ]),
+
+        new("checkbox-select", "Dropdown with checkboxes", "Forms", "check-square",
+            "A dropdown that holds a list of checkboxes: the user ticks as many entries as they like and the field says how many. With a row that ticks them all, and a search for a long list.",
+            ["FORM-15", "FORM-03", "A11Y-02", "DIALOG-03", "COLOR-04"],
+            [
+                new("A dropdown with a list of checkboxes", $"""
+                    <div class="mat-field">
+                      <label class="mat-label" for="cbs-days">Days of the week</label>
+                      <div class="mat-picker" data-picker="select" data-multiple data-select-all data-placeholder="Choose days">
+                        <input class="mat-picker__input" id="cbs-days" name="days" value="mon, wed" />
+                        <div class="mat-picker__options" hidden>
+                          {Days(6)}
+                        </div>
+                      </div>
+                      <span class="mat-hint">Posted as the ticked keys, joined by a comma: <code>mon, wed</code>.</span>
+                    </div>
+                    """, "The first row is Select all. Its box is empty, ticked or in between, and a click ticks everything or, when everything is ticked, takes it away. The field names one or two entries, counts three or more and says All selected when every one is. The list stays open while you choose; Done closes it."),
+                new("With a search: Select all ticks what is shown", $"""
+                    <div class="mat-field">
+                      <label class="mat-label" for="cbs-countries">Countries</label>
+                      <div class="mat-picker" data-picker="select" data-multiple data-select-all data-search data-clearable data-placeholder="Choose countries">
+                        <input class="mat-picker__input" id="cbs-countries" name="countries" value="" />
+                        <div class="mat-picker__options" hidden>
+                          {Countries(6)}
+                        </div>
+                      </div>
+                      <span class="mat-hint">Type <em>an</em>, tick Select all found, clear the search: only the countries that were shown are ticked.</span>
+                    </div>
+                    """, "Select all always means the entries that are shown: with a search it says Select all found and leaves the others as they are. Its box looks at the shown entries only, so it is ticked when all of them are, however many are ticked outside the search."),
+                new("An entry that cannot be chosen", $"""
+                    <div class="mat-field">
+                      <label class="mat-label" for="cbs-channels">Tell me by</label>
+                      <div class="mat-picker" data-picker="select" data-multiple data-select-all data-placeholder="Choose how">
+                        <input class="mat-picker__input" id="cbs-channels" name="channels" value="mail" />
+                        <div class="mat-picker__options" hidden>
+                          {Channels(6)}
+                        </div>
+                      </div>
+                    </div>
+                    """, "A `disabled` entry is skipped by the arrow keys and by Select all; if it is ticked in the value it stays ticked. Space ticks and unticks the entry that has the focus, the arrow keys move, Home and End go to the first and the last row."),
+                new("In a form: required, with the message at the field", $"""
+                    <form class="mat-form" method="get" action="/Components#checkbox-select" novalidate>
+                      <div class="mat-field">
+                        <label class="mat-label" for="cbs-req">Days <span class="mat-req" aria-hidden="true">*</span></label>
+                        <div class="mat-picker" data-picker="select" data-multiple data-select-all data-placeholder="Choose days">
+                          <input class="mat-picker__input" id="cbs-req" name="open" required data-msg-required="Please choose at least one day." />
+                          <div class="mat-picker__options" hidden>
+                            {Days(8)}
+                          </div>
+                        </div>
+                        <span class="mat-error" aria-live="polite"></span>
+                      </div>
+                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Continue</span></button></div>
+                    </form>
+                    """, "Press Continue with nothing ticked: the message appears under the field, the field is marked and the focus goes to its button."),
+            ],
+            [
+                "It is the select picker of the rich select with `data-multiple`: it posts the keys of the ticked entries joined by `data-sep`. An entry can be plain: a button with `data-value` and a label, no picture and no description.",
+                "`data-select-all` adds the first row, a checkbox (`role=\"checkbox\"`, `aria-checked` true, false or mixed). It acts on the entries that are shown and can be chosen: a search narrows it, a disabled entry is left alone.",
+                "The field names the entries when one or two are ticked, says \"3 selected\" from three on and \"All selected\" when every entry of a list of more than two is ticked. `data-pk-selectall`, `data-pk-allselected` and `data-pk-selectfound` on `html` change the texts.",
+                "Keys: the arrow keys walk the rows (Select all, then the entries), Home and End go to the first and the last, Space or Enter ticks, Escape closes and gives the focus back to the field.",
+                "The box in front of every entry is drawn, so the entry stays one button; ticked is a check mark and in between is a dash, never only a colour (COLOR-04).",
             ]),
 
         new("tag-input", "Tags", "Forms", "tag",

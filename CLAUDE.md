@@ -99,6 +99,12 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   `autocomplete` of the real input) and no `name` on a box. An incomplete code is not valid (`setCustomValidity`), so `required`, `pattern` and `data-msg-*` work; the boxes follow `disabled`, `readonly` and `aria-invalid` of the real input
   (a `MutationObserver`). Completion fires `mat:otp-complete` (cancelable); the form is sent only with `data-submit` (`requestSubmit()`). 16 px type or more in every size, boxes shrink in width and never overflow. API `MatUi.otp.clear/focus/setInvalid/value`.
   Texts in `OTP_TEXT` (English and German, a test checks).
+  A dropdown with a list of checkboxes is `data-picker="select"` with `data-multiple` and plain options; `data-select-all` adds a first row, a `role="checkbox"` button with `aria-checked` true, false or
+  mixed that acts on the options that are shown (the search narrows it). Texts `selectAll`, `selectFound`, `allSelected` in `PK_TEXT`.
+- Number stepper (`FORM-16`): `.mat-stepper[data-stepper]` around a native `input type="number"`; the script adds the two buttons, `is-ready` (which hides the browser's spinners: without the script it is the
+  native field), `data-unit` and `data-precision`. Whole-number arithmetic with the step base of the browser, a press on `pointerdown` (hold repeats and accelerates), a click with `detail` 0 steps once, the keys
+  of the field (arrows, Page up and down, Shift = ten steps). A button at a limit is `aria-disabled`, never `disabled`; the buttons are not in the Tab order. `mat-stepper--stacked` only with `(pointer: fine)`.
+  Texts in `STEP_TEXT` (English and German, a test checks). Size comes from the input (`mat-input--sm` / `--lg`).
 - Carousel (`LIST-13`): `.mat-carousel[data-carousel]` around `.mat-carousel__track` > `.mat-carousel__slide`. The strip scrolls and snaps in CSS (a scrollable strip without the script); the script names the slides,
   adds the bar (Previous, a dot per page, Next, Pause with `data-autoplay`), makes the slides out of view `inert` and says which page is shown. The buttons at the ends are `aria-disabled`, never `disabled` (the focus stays).
   Autoplay waits for the pointer and the focus, stops for good after any use of a control and never starts under `prefers-reduced-motion`. Texts in `CAR_TEXT` (English and German, a test checks).

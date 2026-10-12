@@ -98,6 +98,20 @@
 /* Several choices: a box in front of every option, filled when it is chosen. */
 .mat-picker--multiple .mat-picker__check { order: -1; visibility: visible; width: 20px; height: 20px; border: 1.5px solid var(--mat-border-strong); border-radius: var(--mat-radius-xs); background: var(--mat-surface); color: transparent; }
 .mat-picker--multiple .mat-picker__option[aria-selected="true"] .mat-picker__check { background: var(--mat-accent); border-color: var(--mat-accent); color: var(--mat-on-accent); }
+/* "Select all" (data-select-all): the first row above the list, with the box in three states (all, some or none of the options that are shown are chosen). */
+.mat-picker__all {
+  display: flex; align-items: center; gap: var(--mat-space-3);
+  margin: var(--mat-space-2) var(--mat-space-2) 0; padding: var(--mat-space-2) var(--mat-space-3);
+  border: 0; border-radius: var(--mat-radius-sm); background: transparent; color: var(--mat-text);
+  font: inherit; font-weight: 650; text-align: left; cursor: pointer;
+}
+.mat-picker__all[hidden] { display: none; }
+.mat-picker__all:hover, .mat-picker__all:focus-visible { background: var(--mat-surface-3); outline: none; }
+.mat-picker__all:focus-visible { box-shadow: var(--mat-focus-ring); }
+.mat-picker__all + .mat-picker__options { margin-top: var(--mat-space-2); border-top: 1px solid var(--mat-border); }
+.mat-picker__all[aria-checked="true"] .mat-picker__check, .mat-picker__all[aria-checked="mixed"] .mat-picker__check { background: var(--mat-accent); border-color: var(--mat-accent); color: var(--mat-on-accent); }
+.mat-picker__all[aria-checked="mixed"] .mat-picker__check > .mat-icon { display: none; }
+.mat-picker__all[aria-checked="mixed"] .mat-picker__check::after { content: ""; width: 10px; height: 2px; border-radius: 1px; background: currentColor; }
 .mat-picker__empty { padding: var(--mat-space-5) var(--mat-space-4); text-align: center; color: var(--mat-text-muted); }
 .mat-picker__empty[hidden] { display: none; }
 @media (max-width: 640px) {
@@ -105,6 +119,7 @@
   .mat-picker__panel--list .mat-picker__body { padding: 0; }
   .mat-picker__options { max-height: none; flex: 1 1 auto; padding: var(--mat-space-3); }
   .mat-picker__option { padding: var(--mat-space-3); }
+  .mat-picker__all { margin: var(--mat-space-3) var(--mat-space-3) 0; padding: var(--mat-space-3); }
   .mat-picker__img { width: 52px; height: 52px; }
   .mat-picker__search { padding: var(--mat-space-3) var(--mat-space-3) 0; }
   .mat-picker__search > .mat-icon { left: calc(var(--mat-space-3) + var(--mat-space-3)); top: calc(var(--mat-space-3) + (var(--mat-control-h) - 1.25em) / 2); }

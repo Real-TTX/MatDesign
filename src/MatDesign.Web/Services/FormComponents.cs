@@ -303,6 +303,124 @@ internal static class FormComponents
                 "The value is always shown as text as well (the output, the labels at the ends or a bubble that stays): a slider alone does not say what it is set to (FORM-12). For an exact number use a number field.",
             ]),
 
+        new("number-stepper", "Number stepper", "Forms", "plus",
+            "A number field with a button for less and one for more, for a value that people change by a step or two: a quantity, a number of seats, a timeout. The native number field only has tiny spinners.",
+            ["FORM-16", "FORM-12", "FORM-03", "A11Y-02", "BUTTON-05", "MOBILE-04"],
+            [
+                new("A number with a button for less and one for more", """
+                    <div class="mat-form__grid">
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-qty">Quantity</label>
+                        <div class="mat-stepper" data-stepper>
+                          <input class="mat-input" type="number" id="stp-qty" name="qty" min="1" max="10" step="1" value="3" />
+                        </div>
+                        <span class="mat-hint">From 1 to 10. Hold a button to repeat, with Shift ten at a time.</span>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-opacity">Opacity</label>
+                        <div class="mat-stepper" data-stepper>
+                          <input class="mat-input" type="number" id="stp-opacity" name="opacity" min="0" max="1" step="0.1" value="0.3" />
+                        </div>
+                        <span class="mat-hint">In steps of a tenth: 0.3 plus 0.1 is 0.4 and never 0.30000000000000004.</span>
+                      </div>
+                    </div>
+                    """, "Click a button, or use the arrow keys in the field. Holding a button repeats and gets faster; Page up and Page down (and Shift with a button or an arrow key) move by ten steps. Without the script this is the native number field."),
+                new("With a unit and a fixed number of decimals", """
+                    <div class="mat-form__grid">
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-gb">Storage</label>
+                        <div class="mat-stepper" data-stepper data-unit="GB">
+                          <input class="mat-input" type="number" id="stp-gb" name="storage" min="0" max="100" step="5" value="20" />
+                        </div>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-min">Timeout</label>
+                        <div class="mat-stepper" data-stepper data-unit="min">
+                          <input class="mat-input" type="number" id="stp-min" name="timeout" min="1" max="60" step="1" value="15" />
+                        </div>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-price">Price</label>
+                        <div class="mat-stepper" data-stepper data-unit="EUR" data-precision="2">
+                          <input class="mat-input" type="number" id="stp-price" name="price" min="0" step="0.25" value="4.50" />
+                        </div>
+                        <span class="mat-hint">No upper limit; two decimals are always shown.</span>
+                      </div>
+                    </div>
+                    """, "`data-unit` is drawn at the right end of the field and read to a screen reader with the field. `data-precision` is the number of decimals that are shown; without it the field shows what the step needs."),
+                new("Stacked arrows, and the sizes", """
+                    <div class="mat-stack">
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-pages">Pages per sheet</label>
+                        <div class="mat-stepper mat-stepper--stacked" data-stepper>
+                          <input class="mat-input" type="number" id="stp-pages" name="pages" min="1" max="16" step="1" value="2" />
+                        </div>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-st-sm">Small</label>
+                        <div class="mat-stepper" data-stepper data-unit="px">
+                          <input class="mat-input mat-input--sm" type="number" id="stp-st-sm" name="small" min="0" max="64" step="4" value="16" />
+                        </div>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-st-lg">Large</label>
+                        <div class="mat-stepper" data-stepper>
+                          <input class="mat-input mat-input--lg" type="number" id="stp-st-lg" name="large" min="0" max="99" step="1" value="12" />
+                        </div>
+                      </div>
+                    </div>
+                    """, "The stacked variant is the compact one, for a toolbar or a table row. On a touch screen two small arrows would be too small to hit (MOBILE-04), so there it is drawn like the default. The size is the one of the input inside (`mat-input--sm`, `mat-input--lg`), like every field."),
+                new("Read-only and disabled", """
+                    <div class="mat-form__grid">
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-ro">Read-only</label>
+                        <div class="mat-stepper" data-stepper>
+                          <input class="mat-input" type="number" id="stp-ro" name="ro" min="0" max="10" step="1" value="4" readonly />
+                        </div>
+                        <span class="mat-hint">It is sent with the form; the buttons do nothing.</span>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-off">Disabled</label>
+                        <div class="mat-stepper" data-stepper>
+                          <input class="mat-input" type="number" id="stp-off" name="off" min="0" max="10" step="1" value="4" disabled />
+                        </div>
+                        <span class="mat-hint">It is not sent and cannot be focused.</span>
+                      </div>
+                    </div>
+                    """),
+                new("In a form: required, with the message at the field", $"""
+                    <form class="mat-form" method="get" action="/Components#number-stepper" novalidate>
+                      <div class="mat-form__grid">
+                        <div class="mat-field">
+                          <label class="mat-label" for="stp-seats">Seats <span class="mat-req" aria-hidden="true">*</span></label>
+                          <div class="mat-stepper" data-stepper>
+                            <input class="mat-input" type="number" id="stp-seats" name="seats" min="1" max="12" step="1" required data-msg-required="Please enter the number of seats." data-msg-range="Please enter a number from 1 to 12." />
+                          </div>
+                          <span class="mat-error" aria-live="polite"></span>
+                        </div>
+                        <div class="mat-field">
+                          <label class="mat-label" for="stp-nights">Nights <span class="mat-opt">(optional)</span></label>
+                          <div class="mat-stepper" data-stepper data-unit="nights">
+                            <input class="mat-input" type="number" id="stp-nights" name="nights" min="1" max="30" step="1" value="2" />
+                          </div>
+                          <span class="mat-error" aria-live="polite"></span>
+                        </div>
+                      </div>
+                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Continue</span></button></div>
+                    </form>
+                    """, "Press Continue with Seats empty: the message appears under the field and the field is marked. The first press of a button then starts at the lowest value (an empty field counts as 0, put inside the limits)."),
+            ],
+            [
+                "The wrapper is `mat-stepper` with `data-stepper` around a native `input type=\"number\"` (`min`, `max`, `step`), which is what is validated and posted. Without the script it is the native number field; the script adds the buttons and `is-ready`, which hides the spinners of the browser.",
+                "A press changes the value by `step`, with Shift by ten steps. Holding a button repeats after a short wait and gets faster. In the field the arrow keys do the same and Page up and Page down move ten steps.",
+                "The value stays inside `min` and `max` and on the grid of `step`, counted from `min` as the browser counts it; a value off the grid goes to the next one first. What is typed is put in order when the field is left.",
+                "The arithmetic is done in whole numbers, so 0.1 plus 0.2 is 0.3. `data-precision` sets the number of decimals that are shown; without it the field shows what the step needs.",
+                "A button that cannot go further is `aria-disabled`, never `disabled`, so the focus stays on it. The buttons are named in English and German (\"Increase Quantity\") and are not a stop of the Tab key, because the field has the keys.",
+                "A change through a button is read out, and `data-unit` is read with the field (`aria-describedby`). The unit is drawn at the right end of the field.",
+                "The value changes like the browser changes it: an `input` and a `change` event, both bubbling. `MatUi.refresh()` adds buttons to steppers that came later and reads `min`, `max` and `disabled` again.",
+                "An error is the `is-invalid` of the `mat-field`; the border of the buttons follows the border of the field. On a touch screen the stacked variant is drawn like the default (MOBILE-04).",
+            ]),
+
         new("input-groups", "Input groups", "Forms", "link",
             "Text, a select or a button attached to a field: an address with its scheme, a key with a copy button, a port with a protocol.",
             ["FORM-03", "BUTTON-04", "BUTTON-05"],
