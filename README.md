@@ -67,7 +67,8 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 
 - **The menu is always on the left, the logo above it.** At the bottom: the user next to the **3-state theme
   button** (System / Light / Dark), and the version below them. The menu scrolls on its own.
-- **The menu can have badges, submenus and more than one menu**, with a **switcher** under the logo. The header bar
+- **The menu can have badges, submenus and more than one menu**, with a **switcher** under the logo, above the user at
+  the foot, or both; the menus in its popup can be **grouped** below a parent. The header bar
   can carry **icons at its right end**, and a page can end with a **footer**.
 - **The content always has a breadcrumb above it.** A long page has an index ("On this page") – on a small window
   it is an icon in the header bar that opens a dialog.

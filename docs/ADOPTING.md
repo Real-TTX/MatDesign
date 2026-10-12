@@ -56,7 +56,8 @@ Replace the app's own frame with the shell:
 | Page head: icon, title (`h1`), one line | `SHELL-09` |
 | Badges at the right end of an item: a count (`99+` above 99) or a dot, in the tone of the meaning, with a text for screen readers | `SHELL-14` |
 | Submenus: a parent is a button that opens its children, one level deep; the branch with the current page is open | `SHELL-13` |
-| More than one menu (for example Administration): one panel of items per menu and the switcher under the logo | `SHELL-15` |
+| More than one menu (for example Administration): one panel of items per menu and the switcher, under the logo, directly above the user at the foot, or both | `SHELL-15`, `SHELL-03` |
+| Many menus: group them below a parent in the switcher's popup (a button with `data-nav-group`; the menus carry `data-nav-parent`), one level deep | `SHELL-15` |
 | A long page has an index beside it ("On this page"), an icon in the header bar that opens it in a dialog on small screens | `SHELL-16` |
 | Sign-in, setup and error pages without a menu: a centred card (`mat-auth`) | `SHELL-11` |
 

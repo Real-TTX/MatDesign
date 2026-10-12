@@ -66,7 +66,8 @@ src/MatDesign.Web          the site
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
-  Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (switcher, items, badges, submenus), _MenuSwitchPopup, _Head, _Toolbar, _Pager,
+  Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (items, badges, submenus; the switcher under the logo), _MenuSwitcher (the switcher button, under the logo or in the foot:
+                             `ShellModel.SwitcherPlace`), _MenuSwitchPopup (its popup; menus grouped below a `NavSetParent`), _Head, _Toolbar, _Pager,
                              _DocSection + _Toc + _Component + _ContextPage (the components, layout and utilities pages), _AccentSwatches, _ContrastCard, _FoundationsTabs
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory

@@ -49,10 +49,18 @@ dialogs belong to **one GET form** through the `form` attribute, so each dialog 
 The items of the menu are not markup an app writes but a model the partial `_Menu` draws: a `NavSet` (one menu: id, title, icon) holds `NavGroup`s (a small heading) of `NavItem`s
 (title, address, icon, an optional `NavBadge`, optional children). A parent has children and no address: it is a button that opens them, one level deep (`NavSet.IsValid` and a test
 check this). A `NavBadge` is a count (above 99 it reads `99+`) or a dot, in a tone that follows the status colours; a closed parent shows the sum of its children's badges in the most
-urgent tone. An app with more than one `NavSet` gets the switcher under the logo; the set that has the current page is the one drawn visible, the others are in the page with `hidden`, so
+urgent tone. An app with more than one `NavSet` gets the switcher; the set that has the current page is the one drawn visible, the others are in the page with `hidden`, so
 choosing another one in the switcher swaps them without a request. The popup of the switcher is drawn at the end of the page like the user menu, because the menu has a backdrop filter and
 that would make it the frame of a fixed popup; it names the element that holds the panels (`data-nav-scope`) so that an example in the documentation can show a menu without touching the menu
 of the page. The choice of open and closed branches is remembered in the browser per app and never overrides the branch of the current page.
+
+The switcher has two choices that belong to the app, both in the model and not in the markup an app writes: **where it sits** (`ShellModel.SwitcherPlace`: `Top` under the logo, the default;
+`Bottom` as the first thing in the foot, directly above the user, where its popup opens upwards; `Both`, the buttons stay in step because the script updates every `.mat-switcher` in the scope)
+and **whether menus are grouped** (`NavSet.Parent`, a `NavSetParent` with a title and an icon). `ShellModel.SwitcherEntries` gathers the menus of one parent below it: in the popup the parent is a
+button (`data-nav-group`, `aria-expanded`, `aria-controls`) that opens a `role="group"` with the menus (`data-nav-parent`), one level deep like the submenus of the items; it is not a menu itself.
+The group with the current menu is open when the page loads, the switcher then names the parent above the name of the menu, and a closed parent carries the dot of the menus inside it that
+need attention. The popup is placed again whenever a group is opened or closed, so that it never covers the switcher it came from. The sample app shows both with
+`/Preview?switcher=bottom|both&menus=tree`.
 
 ### Forms are a part of their own
 

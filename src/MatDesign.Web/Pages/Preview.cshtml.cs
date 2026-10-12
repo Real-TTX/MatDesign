@@ -61,6 +61,12 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
 
     public string? Area { get; private set; }
 
+    /// <summary>Where the sample draws its switcher: <c>?switcher=bottom</c> at the foot above the user, <c>both</c> at both places, otherwise under the logo.</summary>
+    private SwitcherPlace Place => Request.Query["switcher"].ToString() switch { "bottom" => SwitcherPlace.Bottom, "both" => SwitcherPlace.Both, _ => SwitcherPlace.Top };
+
+    /// <summary><c>?menus=tree</c>: the administration is two menus below one parent in the switcher.</summary>
+    private bool Tree => Request.Query["menus"].ToString() == "tree";
+
     /// <summary>The page of an area (a menu item that is not one of the basic views), or null.</summary>
     public (string Title, string Icon, IReadOnlyList<(string Text, string? Url)> Crumbs)? AreaPage
         => Area is not null && Areas.TryGetValue(Area, out var a)
@@ -80,6 +86,16 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             parts.Add($"accent={HttpUtility.UrlEncode(accent)}");
         }
 
+        if (Place != SwitcherPlace.Top)
+        {
+            parts.Add($"switcher={Place.ToString().ToLowerInvariant()}");
+        }
+
+        if (Tree)
+        {
+            parts.Add("menus=tree");
+        }
+
         return string.Join("&", parts);
     }
 
@@ -93,6 +109,29 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
         Area = Request.Query["area"].ToString() is { Length: > 0 } requested && Areas.ContainsKey(requested) ? requested : null;
         var active = View == "auth" ? string.Empty : Query(View, Area);
 
+        // The menu of the sample: a submenu with badges, and an administration behind the switcher. With ?menus=tree the administration is two menus below one
+        // parent in the switcher (SHELL-15); ?switcher=bottom|both puts the switcher at the foot of the menu, above the user.
+        var users = new NavItem("Users", Query("list", "users"), "users", NavBadge.Count(3, "warn", "invitations pending"));
+        var roles = new NavItem("Roles", Query("gallery", "roles"), "shield");
+        var settings = new NavItem("Settings", null, "settings", Children:
+        [
+            new("General", Query("settings", "general"), null),
+            new("Security", Query("form", "security"), null),
+            new("Backups", Query("dashboard", "backups"), null, NavBadge.Count(1, "error", "failed")),
+        ]);
+        var audit = new NavItem("Audit log", Query("list", "audit"), "clock");
+        var administration = new NavSetParent("Administration", "shield");
+        IReadOnlyList<NavSet> admin = Tree
+            ?
+            [
+                new("people", "People", "users", [new(null, [users, roles])], administration),
+                new("system", "System", "settings", [new(null, [settings, audit])], administration),
+            ]
+            :
+            [
+                new("admin", "Administration", "shield", [new(null, [users, roles]), new("System", [settings, audit])]),
+            ];
+
         Shell = new ShellModel
         {
             App = App,
@@ -101,9 +140,9 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             CustomAccent = customAccent,
             PreviewQuery = Base(),
             ActiveHref = active,
+            SwitcherPlace = Place,
             Menus =
             [
-                // The menu of the sample: a submenu with badges, and an administration behind the switcher.
                 new("work", "Work", "briefcase",
                 [
                     new(null, [new("Dashboard", Query("dashboard"), "dashboard")]),
@@ -123,24 +162,7 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
                         new("Sign in page", Query("auth"), "login"),
                     ]),
                 ]),
-                new("admin", "Administration", "shield",
-                [
-                    new(null,
-                    [
-                        new("Users", Query("list", "users"), "users", NavBadge.Count(3, "warn", "invitations pending")),
-                        new("Roles", Query("gallery", "roles"), "shield"),
-                    ]),
-                    new("System",
-                    [
-                        new("Settings", null, "settings", Children:
-                        [
-                            new("General", Query("settings", "general"), null),
-                            new("Security", Query("form", "security"), null),
-                            new("Backups", Query("dashboard", "backups"), null, NavBadge.Count(1, "error", "failed")),
-                        ]),
-                        new("Audit log", Query("list", "audit"), "clock"),
-                    ]),
-                ]),
+                .. admin,
             ],
             UserName = "Alex Morgan",
             UserRole = "Administrator",
@@ -204,6 +226,8 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             ["app"] = App.Id,
             ["theme"] = Request.Query["theme"].ToString(),
             ["accent"] = Request.Query["accent"].ToString(),
+            ["switcher"] = Place == SwitcherPlace.Top ? null : Place.ToString().ToLowerInvariant(),
+            ["menus"] = Tree ? "tree" : null,
             ["view"] = View,
         };
 

@@ -780,15 +780,15 @@ public static class ComponentCatalog
             ]),
 
         new("switcher", "Menu switcher", "Navigation", "toggle",
-            "More than one menu in an app, for example the everyday work and the administration: a switcher under the logo swaps the items.",
-            ["SHELL-15", "SHELL-01", "SHELL-14", "DIALOG-07"],
+            "More than one menu in an app, for example the everyday work and the administration: a switcher under the logo, or at the foot above the user, swaps the items. Menus can be grouped below a parent.",
+            ["SHELL-15", "SHELL-01", "SHELL-03", "SHELL-13", "SHELL-14", "DIALOG-07"],
             [
                 new("Work and Administration", $"""
                     <div id="switch-demo">
                       <div class="mat-nav__switch">
                         <button type="button" class="mat-switcher" data-menu-toggle="switch-demo-menu" data-menu-place="bottom" aria-haspopup="menu" aria-expanded="false">
                           <span class="mat-switcher__icon">{I("briefcase")}</span>
-                          <span class="mat-switcher__text"><small>Menu</small><span class="mat-switcher__name">Work</span></span>
+                          <span class="mat-switcher__text"><small data-nav-label="Menu">Menu</small><span class="mat-switcher__name">Work</span></span>
                           {I("chevron-down", "mat-switcher__chev")}
                           <span class="mat-switcher__dot"></span>
                         </button>
@@ -812,12 +812,96 @@ public static class ComponentCatalog
                       <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="false" data-nav-set="admin" data-nav-title="Administration" data-nav-attention>{I("shield")}<span>Administration</span><span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn"><span class="mat-sr-only">needs attention</span></span>{I("check", "mat-menu__check")}</button>
                     </div>
                     """, "Click the switcher and choose Administration. The dot on the switcher says that the other menu needs attention (an item with a warning or an error badge).", Frame: "menu"),
+                new("At the foot, above the user", $"""
+                    <div id="switch-foot-demo">
+                      <nav class="mat-nav__scroll" aria-label="Work" data-nav-panel="work">
+                        <ul class="mat-nav__list">
+                          <li><a class="mat-nav__item is-active" href="#" aria-current="page">{I("dashboard")}<span>Dashboard</span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("list")}<span>Items</span><span class="mat-nav__badge mat-nav__badge--plain">12<span class="mat-sr-only"> items</span></span></a></li>
+                        </ul>
+                      </nav>
+                      <nav class="mat-nav__scroll" aria-label="Administration" data-nav-panel="admin" hidden>
+                        <ul class="mat-nav__list">
+                          <li><a class="mat-nav__item" href="#">{I("users")}<span>Users</span><span class="mat-nav__badge mat-nav__badge--warn">3<span class="mat-sr-only"> invitations pending</span></span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("shield")}<span>Roles</span></a></li>
+                        </ul>
+                      </nav>
+                      <div class="mat-nav__foot">
+                        <div class="mat-nav__switch mat-nav__switch--foot">
+                          <button type="button" class="mat-switcher" data-menu-toggle="switch-foot-menu" data-menu-place="top" aria-haspopup="menu" aria-expanded="false">
+                            <span class="mat-switcher__icon">{I("briefcase")}</span>
+                            <span class="mat-switcher__text"><small data-nav-label="Menu">Menu</small><span class="mat-switcher__name">Work</span></span>
+                            {I("chevron-up", "mat-switcher__chev")}
+                            <span class="mat-switcher__dot"></span>
+                          </button>
+                        </div>
+                        <div class="mat-nav__account">
+                          <button type="button" class="mat-user" data-menu-toggle="switch-foot-user-menu" aria-haspopup="menu" aria-expanded="false">
+                            <span class="mat-avatar" aria-hidden="true">AM</span>
+                            <span class="mat-user__text"><span class="mat-user__name">Alex Morgan</span><span class="mat-user__role">Administrator</span></span>
+                            {I("chevron-up", "mat-user__chev")}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="mat-menu" id="switch-foot-menu" role="menu" aria-label="Menus" data-nav-scope="switch-foot-demo" hidden>
+                      <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="true" data-nav-set="work" data-nav-title="Work">{I("briefcase")}<span>Work</span>{I("check", "mat-menu__check")}</button>
+                      <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="false" data-nav-set="admin" data-nav-title="Administration" data-nav-attention>{I("shield")}<span>Administration</span><span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn"><span class="mat-sr-only">needs attention</span></span>{I("check", "mat-menu__check")}</button>
+                    </div>
+                    <div class="mat-menu" id="switch-foot-user-menu" role="menu" aria-label="Alex Morgan" hidden>
+                      <a class="mat-menu__item" role="menuitem" href="#">{I("logout")}<span>Sign out</span></a>
+                    </div>
+                    """, "The same switcher as the first example, as the first thing in the foot of the menu, directly above the user. It opens upwards (data-menu-place=\"top\"). An app can have the switcher under the logo, here, or in both places: the buttons stay in step.", Frame: "menu"),
+                new("Menus in groups", $"""
+                    <div id="switch-tree-demo">
+                      <div class="mat-nav__switch">
+                        <button type="button" class="mat-switcher" data-menu-toggle="switch-tree-menu" data-menu-place="bottom" aria-haspopup="menu" aria-expanded="false">
+                          <span class="mat-switcher__icon">{I("briefcase")}</span>
+                          <span class="mat-switcher__text"><small data-nav-label="Menu">Menu</small><span class="mat-switcher__name">Work</span></span>
+                          {I("chevron-down", "mat-switcher__chev")}
+                          <span class="mat-switcher__dot"></span>
+                        </button>
+                      </div>
+                      <nav class="mat-nav__scroll" aria-label="Work" data-nav-panel="work">
+                        <ul class="mat-nav__list">
+                          <li><a class="mat-nav__item is-active" href="#" aria-current="page">{I("dashboard")}<span>Dashboard</span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("list")}<span>Items</span></a></li>
+                        </ul>
+                      </nav>
+                      <nav class="mat-nav__scroll" aria-label="People" data-nav-panel="people" hidden>
+                        <ul class="mat-nav__list">
+                          <li><a class="mat-nav__item" href="#">{I("users")}<span>Users</span><span class="mat-nav__badge mat-nav__badge--warn">3<span class="mat-sr-only"> invitations pending</span></span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("shield")}<span>Roles</span></a></li>
+                        </ul>
+                      </nav>
+                      <nav class="mat-nav__scroll" aria-label="System" data-nav-panel="system" hidden>
+                        <ul class="mat-nav__list">
+                          <li><a class="mat-nav__item" href="#">{I("settings")}<span>Settings</span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("clock")}<span>Audit log</span></a></li>
+                        </ul>
+                      </nav>
+                    </div>
+                    <div class="mat-menu" id="switch-tree-menu" role="menu" aria-label="Menus" data-nav-scope="switch-tree-demo" hidden>
+                      <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="true" data-nav-set="work" data-nav-title="Work">{I("briefcase")}<span>Work</span>{I("check", "mat-menu__check")}</button>
+                      <button type="button" class="mat-menu__item mat-menu__parent" role="menuitem" aria-expanded="false" aria-controls="switch-tree-group" data-nav-group>
+                        {I("shield")}<span>Administration</span><span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn mat-nav__badge--sum"><span class="mat-sr-only">needs attention</span></span>{I("chevron-down", "mat-menu__chev")}
+                      </button>
+                      <div class="mat-menu__sub" id="switch-tree-group" role="group" aria-label="Administration" hidden>
+                        <button type="button" class="mat-menu__item mat-menu__item--sub" role="menuitemradio" aria-checked="false" data-nav-set="people" data-nav-title="People" data-nav-parent="Administration" data-nav-attention>{I("users")}<span>People</span><span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn"><span class="mat-sr-only">needs attention</span></span>{I("check", "mat-menu__check")}</button>
+                        <button type="button" class="mat-menu__item mat-menu__item--sub" role="menuitemradio" aria-checked="false" data-nav-set="system" data-nav-title="System" data-nav-parent="Administration">{I("settings")}<span>System</span>{I("check", "mat-menu__check")}</button>
+                      </div>
+                    </div>
+                    """, "Open the switcher, open Administration and choose People: the switcher then names the group above the menu. The parent is a button that only opens its menus; a closed parent carries the dot of the menus inside it that need attention.", Frame: "menu"),
             ],
             [
                 "The switcher appears only when an app has at least two menus; a menu the user may not use is not offered.",
                 "When a page loads, the menu that has the current page is shown. Choosing a menu only swaps the items: nothing is loaded.",
                 "The popup is a context menu drawn at the end of the page and names the element that holds the switcher and the panels (`data-nav-scope`).",
-                "Below the logo, above the items: the logo and the foot of the menu (user, theme button, version) stay where they are.",
+                "Under the logo, above the items, at the foot of the menu directly above the user, or both: the logo and the foot (user, theme button, version) stay where they are, and the switchers show the same menu.",
+                "Menus can be grouped, one level deep: the parent entry is a button (`data-nav-group`, `aria-expanded`, `aria-controls`), not a menu; the menus below it carry `data-nav-parent`.",
+                "The group with the current menu is open when the page loads, and choosing a menu opens its group.",
+                "Arrow keys in the popup: up and down walk the visible entries, right opens a parent or goes to its first menu, left closes it or goes back to the parent.",
+                "In the shell the popup is drawn by `_MenuSwitchPopup` from the `NavSet`s (a `NavSetParent` groups them); where the switcher sits is `ShellModel.SwitcherPlace`.",
             ]),
 
         new("toc", "On this page", "Navigation", "list",

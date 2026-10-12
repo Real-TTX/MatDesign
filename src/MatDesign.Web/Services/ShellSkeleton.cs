@@ -59,6 +59,7 @@ public static class ShellSkeleton
 
 
               <div class="mat-nav__foot">
+                <!-- the switcher may sit here instead of under the logo (or in both places): the same button in <div class="mat-nav__switch mat-nav__switch--foot">, data-menu-place="top" -->
                 <div class="mat-nav__account">
                   <button type="button" class="mat-user" data-menu-toggle="user-menu" aria-haspopup="menu" aria-expanded="false">
                     <span class="mat-avatar" aria-hidden="true">AM</span>
@@ -110,6 +111,7 @@ public static class ShellSkeleton
           <div class="mat-menu" id="nav-switch-menu" role="menu" aria-label="Menus" data-nav-scope="mat-nav" hidden>
             <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="true" data-nav-set="work" data-nav-title="Work"><svg class="mat-icon"><use href="#mat-i-briefcase"></use></svg><span>Work</span><svg class="mat-icon mat-menu__check"><use href="#mat-i-check"></use></svg></button>
             <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="false" data-nav-set="admin" data-nav-title="Administration" data-nav-attention><svg class="mat-icon"><use href="#mat-i-shield"></use></svg><span>Administration</span><svg class="mat-icon mat-menu__check"><use href="#mat-i-check"></use></svg></button>
+            <!-- menus in a group: a button with data-nav-group (aria-expanded, aria-controls) and below it <div class="mat-menu__sub" role="group" hidden> with the menus (data-nav-parent="Group") -->
           </div>
 
           <script src="/ui/matui.js"></script>

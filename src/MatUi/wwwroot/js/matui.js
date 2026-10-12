@@ -9,7 +9,10 @@
      data-nav-toggle / data-nav-close       open / close the menu drawer (phones)
      data-nav-branch="key"                  the parent of a submenu in the menu (aria-expanded; the choice is remembered per app)
      data-nav-set="id" / data-nav-panel="id"  the menu switcher: an entry of its menu shows the panel of items with the same id;
-                                            the menu names the element with the switcher and the panels: data-nav-scope="id"
+                                            the menu names the element with the switcher and the panels: data-nav-scope="id". There can be a switcher
+                                            under the logo and one at the foot of the menu (both in the scope, both kept in step)
+     data-nav-group                         the parent of some menus in the popup of the switcher (aria-expanded, aria-controls = the element with its menus;
+                                            the menus carry data-nav-parent="Title of the parent"); choosing a menu opens its group
      data-scrollspy                         an index of #links to sections of the page ("On this page"): the link of the section in view is marked
      data-validation-summary                an alert in a form that lists the fields with an error, each a link to its field (hidden while there are none)
      data-output="id"                       a range input writes its value into the element with this id (the filled part of the track is drawn for every .mat-range)
@@ -178,8 +181,21 @@
     });
   }
 
-  // The popup of the switcher names the element that holds the switcher and the panels (data-nav-scope="id"), so a menu in a
-  // documentation example never touches the menu of the page.
+  // The popup of the switcher names the element that holds the switcher(s) and the panels (data-nav-scope="id"), so a menu in a
+  // documentation example never touches the menu of the page. There can be two switchers in the scope (under the logo and at the foot).
+  // Menus can have a parent in the popup (data-nav-group on its button, data-nav-parent on the menus below it): one level deep, the group
+  // that has the chosen menu is open, and a closed parent carries a dot when a menu inside it (not the chosen one) asks for attention.
+  function setNavGroup(btn, open) {
+    var group = doc.getElementById(btn.getAttribute('aria-controls'));
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (group) {
+      if (!open && group.contains(doc.activeElement)) { btn.focus({ preventScroll: true }); }
+      group.hidden = !open;
+    }
+    // the popup changes its height: it is placed again, so that it never covers the switcher it opened from
+    if (openMenu && openMenu.menu.contains(btn)) { placeMenu(openMenu.menu, openMenu.btn, openMenu.btn.getAttribute('data-menu-place')); }
+  }
+
   function setNavSet(id, popup) {
     var menu = popup || $('.mat-menu[data-nav-scope]');
     var scope = menu && doc.getElementById(menu.getAttribute('data-nav-scope'));
@@ -194,16 +210,26 @@
       b.setAttribute('aria-checked', on ? 'true' : 'false');
       if (on) { chosen = b; }
     });
-    var switcher = $('.mat-switcher', scope);
-    if (switcher && chosen) {
+    var others = function (b) { return b !== chosen && b.hasAttribute('data-nav-attention'); };
+    $$('.mat-switcher', scope).forEach(function (switcher) {
+      if (!chosen) { return; }
       var name = $('.mat-switcher__name', switcher);
       if (name) { name.textContent = chosen.getAttribute('data-nav-title') || ''; }
+      var small = $('.mat-switcher__text small', switcher);
+      if (small) { small.textContent = chosen.getAttribute('data-nav-parent') || small.getAttribute('data-nav-label') || small.textContent; }
       var use = $('.mat-switcher__icon use', switcher);
       var from = $('use', chosen);
       if (use && from) { use.setAttribute('href', from.getAttribute('href')); }
       var dot = $('.mat-switcher__dot', switcher);
-      if (dot) { dot.hidden = !buttons.some(function (b) { return b !== chosen && b.hasAttribute('data-nav-attention'); }); }
-    }
+      if (dot) { dot.hidden = !buttons.some(others); }
+    });
+    $$('[data-nav-group]', menu).forEach(function (btn) {
+      var group = doc.getElementById(btn.getAttribute('aria-controls'));
+      var inside = group ? $$('[data-nav-set]', group) : [];
+      if (chosen && inside.indexOf(chosen) >= 0) { setNavGroup(btn, true); }
+      var dot = $('.mat-nav__badge--sum', btn);
+      if (dot) { dot.hidden = !inside.some(others); }
+    });
     var shown = $('[data-nav-panel]:not([hidden])', scope);
     if (shown) { shown.scrollTop = 0; }
     root.dispatchEvent(new CustomEvent('mat:navset', { detail: { set: id } }));
@@ -695,6 +721,9 @@
 
     var branchBtn = t.closest('[data-nav-branch]');
     if (branchBtn) { setBranch(branchBtn, branchBtn.getAttribute('aria-expanded') !== 'true', true); return; }
+    // the parent of some menus in the popup of the switcher only opens or closes its menus: the popup stays
+    var groupBtn = t.closest('[data-nav-group]');
+    if (groupBtn) { setNavGroup(groupBtn, groupBtn.getAttribute('aria-expanded') !== 'true'); return; }
 
     var navToggle = t.closest('[data-nav-toggle]');
     if (navToggle) { setNav(!(app() && app().classList.contains('is-nav-open')), navToggle); return; }
@@ -784,11 +813,30 @@
     }
 
     if (openMenu && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-      var items = $$('.mat-menu__item', openMenu.menu);
+      // the menus of a closed parent are not walked
+      var items = $$('.mat-menu__item', openMenu.menu).filter(function (el) { return !el.closest('[hidden]'); });
       var i = items.indexOf(doc.activeElement);
       e.preventDefault();
       items[(i + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length].focus();
       return;
+    }
+
+    // in the popup of the switcher: right opens a parent (or goes to its first menu), left closes it (or goes back to the parent)
+    if (openMenu && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+      var cur = doc.activeElement;
+      var inGroup = cur && cur.closest ? cur.closest('.mat-menu__sub') : null;
+      if (cur && cur.hasAttribute && cur.hasAttribute('data-nav-group')) {
+        var isOpen = cur.getAttribute('aria-expanded') === 'true';
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          if (!isOpen) { setNavGroup(cur, true); } else { var firstChild = $('.mat-menu__item', doc.getElementById(cur.getAttribute('aria-controls'))); if (firstChild) { firstChild.focus(); } }
+          return;
+        }
+        if (isOpen) { e.preventDefault(); setNavGroup(cur, false); return; }
+      } else if (e.key === 'ArrowLeft' && inGroup) {
+        var parent = $('[data-nav-group][aria-controls="' + inGroup.id + '"]', openMenu.menu);
+        if (parent) { e.preventDefault(); setNavGroup(parent, false); parent.focus(); return; }
+      }
     }
 
     if (!openMenu && e.target.closest && navKeys(e)) { return; }

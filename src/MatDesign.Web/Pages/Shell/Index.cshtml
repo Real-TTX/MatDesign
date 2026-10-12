@@ -7,7 +7,7 @@
     var parts = new (string Title, string Text, string Rule)[]
     {
         ("Logo and app name", "Always at the top of the menu. A click leads to the start page.", "SHELL-01"),
-        ("The menu switcher", "Directly under the logo, only when an app has more than one menu (Work, Administration). A dot says that another menu needs attention.", "SHELL-15"),
+        ("The menu switcher", "Under the logo, at the foot above the user, or both; only when an app has more than one menu (Work, Administration). A dot says that another menu needs attention; menus can be grouped below a parent.", "SHELL-15"),
         ("Menu items", "An icon and a label. The current page is marked; related items sit under small headings; a badge at the right end carries a count or a dot; a parent opens its submenu.", "SHELL-02"),
         ("The menu scrolls on its own", "The page itself never scrolls. Logo, switcher and foot stay in place while the items between them scroll.", "SHELL-07"),
         ("The user and the theme button", "The user is a button that opens a context menu (account, settings, Sign out last). Beside it the 3-state button: System, Light, Dark.", "SHELL-03"),
@@ -64,6 +64,20 @@
     </div>
     <div class="doc-frames">
         <iframe class="doc-frame" title="The administration menu with a submenu and badges" loading="lazy" src="/Preview?app=matmail&amp;view=dashboard&amp;area=backups"></iframe>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="switcher-title">
+    <div class="mat-section__head">
+        <h2 id="switcher-title">The switcher at the foot, and menus in groups</h2>
+        <p class="mat-section__lead">
+            An app chooses where the switcher sits: under the logo, directly above the user, or at both places (the buttons stay in step). Below, the sample app has it at the foot, and its administration is two menus
+            below one parent: open the switcher, open <em>Administration</em> and choose <em>People</em> or <em>System</em>. The popup opens upwards from the foot. The rule is <a href="/Rules/Detail?id=SHELL-15">SHELL-15</a>;
+            the markup is under <a href="/Components#switcher">Menu switcher</a>.
+        </p>
+    </div>
+    <div class="doc-frames">
+        <iframe class="doc-frame" title="The switcher at the foot of the menu, with grouped menus" loading="lazy" src="/Preview?app=matmail&amp;view=dashboard&amp;switcher=bottom&amp;menus=tree"></iframe>
     </div>
 </section>
 

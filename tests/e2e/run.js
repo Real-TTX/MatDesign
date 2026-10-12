@@ -443,6 +443,149 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the switcher at the foot, menus in groups (SHELL-15)
+  console.log('\nThe switcher at the foot and menus in groups');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=dashboard&switcher=bottom&menus=tree');
+    const popup = () => page.locator('#nav-switch-menu').boundingBox();
+    await check('the switcher is at the foot directly above the user and not under the logo', async () => {
+      expect(await page.locator('.mat-switcher').count(), 1, 'switchers');
+      const sw = await page.locator('.mat-nav__foot .mat-switcher').boundingBox();
+      const user = await page.locator('.mat-user').boundingBox();
+      expectTrue(sw && user && sw.y + sw.height <= user.y + 1, 'the switcher is not above the user');
+      expect(await page.locator('.mat-nav__brand ~ .mat-nav__switch').count(), 0, 'a switcher under the logo');
+    });
+    await check('its popup opens upwards and still does not cover the switcher after a group was opened or closed', async () => {
+      await page.click('.mat-switcher');
+      const btn = await page.locator('.mat-switcher').boundingBox();
+      let p = await popup();
+      expectTrue(p.y + p.height <= btn.y + 1, 'the popup is not above the button');
+      expect(await page.getAttribute('[data-nav-group]', 'aria-expanded'), 'false', 'the group of another menu is closed');
+      await page.click('[data-nav-group]');
+      await page.waitForTimeout(150);
+      p = await popup();
+      expect(await page.getAttribute('[data-nav-group]', 'aria-expanded'), 'true', 'opened by the click');
+      expectTrue(p.y + p.height <= btn.y + 1, 'the popup covers the button after a group was opened');
+      expectTrue(await page.locator('#nav-switch-menu').isVisible(), 'the parent closed the popup');
+    });
+    await check('choosing a menu of a group swaps the items and names the parent above the menu', async () => {
+      await page.click('[data-nav-set="people"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'People', 'name');
+      expect((await page.textContent('.mat-switcher__text small')).trim(), 'Administration', 'the parent');
+      expectTrue(await page.locator('[data-nav-panel="people"]').isVisible() && !(await page.locator('[data-nav-panel="work"]').isVisible()), 'panels');
+      expectTrue(!(await page.locator('#nav-switch-menu').isVisible()), 'the popup stays open after a menu was chosen');
+      await page.click('.mat-switcher');
+      await page.click('[data-nav-set="work"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('.mat-switcher__text small')).trim(), 'Menu', 'the label when the menu has no parent');
+    });
+    await check('a closed parent carries the dot of the menus inside it, an open one does not', async () => {
+      await page.click('.mat-switcher');
+      const dot = page.locator('[data-nav-group] .mat-nav__badge--sum');
+      expect(await page.getAttribute('[data-nav-group]', 'aria-expanded'), 'true', 'the group stays open');
+      expectTrue(!(await dot.isVisible()), 'a dot on an open parent');
+      await page.click('[data-nav-group]');
+      expectTrue(await dot.isVisible(), 'no dot on the closed parent');
+      await page.keyboard.press('Escape');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=dashboard&switcher=bottom&menus=tree');
+    const focused = () => page.evaluate(() => (document.activeElement.getAttribute('data-nav-set') || (document.activeElement.hasAttribute('data-nav-group') ? 'group' : '?')));
+    const expanded = () => page.getAttribute('[data-nav-group]', 'aria-expanded');
+    await check('the arrow keys walk the popup: a closed parent hides its menus, right opens it and goes in, left goes back and closes', async () => {
+      await page.click('.mat-switcher');
+      expect(await focused(), 'work', 'the first entry');
+      await page.keyboard.press('ArrowDown');
+      expect(await focused(), 'group', 'the parent');
+      await page.keyboard.press('ArrowDown');
+      expect(await focused(), 'work', 'wraps around: the menus of a closed parent are not walked');
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('ArrowRight');
+      expect(await expanded(), 'true', 'opened by ArrowRight');
+      await page.keyboard.press('ArrowRight');
+      expect(await focused(), 'people', 'first menu of the group');
+      await page.keyboard.press('ArrowDown');
+      expect(await focused(), 'system', 'next menu');
+      await page.keyboard.press('ArrowLeft');
+      expect(await focused(), 'group', 'back to the parent');
+      expect(await expanded(), 'false', 'closed by ArrowLeft');
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator('#nav-switch-menu').isVisible()), 'Escape does not close the popup');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=dashboard&area=backups&menus=tree');
+    await check('a page of a menu in a group loads with the group open and the parent named above the menu', async () => {
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'System', 'name');
+      expect((await page.textContent('.mat-switcher__text small')).trim(), 'Administration', 'the parent');
+      await page.click('.mat-switcher');
+      expect(await page.getAttribute('[data-nav-group]', 'aria-expanded'), 'true', 'the group of the current menu is open');
+      expect(await page.getAttribute('[data-nav-set="system"]', 'aria-checked'), 'true', 'the current menu is checked');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=dashboard&switcher=both');
+    await check('with the switcher at both places the two stay in step', async () => {
+      expect(await page.locator('.mat-switcher').count(), 2, 'switchers');
+      await page.locator('.mat-nav__foot .mat-switcher').click();
+      await page.click('[data-nav-set="admin"]');
+      await page.waitForTimeout(250);
+      const names = await page.locator('.mat-switcher__name').allTextContents();
+      expect(names.map(n => n.trim()).join('|'), 'Administration|Administration', 'both name the menu');
+      const above = await page.evaluate(() => { const b = document.querySelector('.mat-nav__brand ~ .mat-nav__switch .mat-switcher').getBoundingClientRect(); return b.y < document.querySelector('.mat-nav__foot .mat-switcher').getBoundingClientRect().y; });
+      expectTrue(above, 'the one under the logo is not above the one at the foot');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list&switcher=bottom&menus=tree');
+    await check('on a phone the switcher at the foot of the drawer opens its popup above the drawer, inside the screen', async () => {
+      await page.click('[data-nav-toggle]');
+      await page.waitForTimeout(450);
+      await page.click('.mat-switcher');
+      await page.click('[data-nav-group]');
+      await page.waitForTimeout(250);
+      const ok = await page.evaluate(() => {
+        const m = document.getElementById('nav-switch-menu').getBoundingClientRect();
+        const hit = document.elementFromPoint(m.x + m.width / 2, m.y + 12);
+        return !!(hit && hit.closest('#nav-switch-menu')) && m.y >= 0 && m.bottom <= window.innerHeight;
+      });
+      expectTrue(ok, 'the popup is hidden behind the drawer or leaves the screen');
+      await page.click('[data-nav-set="people"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'People', 'name');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#switcher');
+    await check('the example with a group: a parent opens its menus, choosing one names the parent', async () => {
+      await page.click('#switch-tree-demo .mat-switcher');
+      expect(await page.getAttribute('#switch-tree-menu [data-nav-group]', 'aria-expanded'), 'false', 'closed at first');
+      await page.click('#switch-tree-menu [data-nav-group]');
+      await page.click('#switch-tree-menu [data-nav-set="people"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('#switch-tree-demo .mat-switcher__name')).trim(), 'People', 'name');
+      expect((await page.textContent('#switch-tree-demo .mat-switcher__text small')).trim(), 'Administration', 'the parent');
+      expectTrue(await page.locator('#switch-tree-demo [data-nav-panel="people"]').isVisible(), 'the items of the menu');
+    });
+    await check('the example at the foot: the popup opens upwards', async () => {
+      await page.click('#switch-foot-demo .mat-switcher');
+      const btn = await page.locator('#switch-foot-demo .mat-switcher').boundingBox();
+      const p = await page.locator('#switch-foot-menu').boundingBox();
+      expectTrue(p.y + p.height <= btn.y + 1, 'the popup is not above the switcher');
+      await page.click('#switch-foot-menu [data-nav-set="admin"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('#switch-foot-demo .mat-switcher__name')).trim(), 'Administration', 'name');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- long pages: the index
   console.log('\nOn this page: the index of a long page');
   {
