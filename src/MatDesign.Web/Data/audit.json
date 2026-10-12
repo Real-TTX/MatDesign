@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-10",
+ "generated": "2026-10-12",
  "checks": [
   {
    "id": "shell.menu-left",
@@ -96,16 +96,16 @@
      "note": "Sidebar with a brand in the layout."
     },
     "shell.breadcrumb": {
-     "state": "no",
-     "note": "None found."
+     "state": "yes",
+     "note": "In the layout."
     },
     "shell.theme": {
      "state": "yes",
      "note": "Dark mode and a system option."
     },
     "shell.user": {
-     "state": "partial",
-     "note": "Account or sign-out link, but no menu around it."
+     "state": "yes",
+     "note": "Sign-out and a menu around it."
     },
     "shell.version": {
      "state": "yes",
@@ -116,16 +116,16 @@
      "note": "No browser dialogs."
     },
     "dialog.used": {
-     "state": "no",
-     "note": "No dialog elements found."
+     "state": "yes",
+     "note": "24 dialog or modal elements."
     },
     "color.tokens": {
-     "state": "partial",
-     "note": "21 literal colours outside the variables."
+     "state": "yes",
+     "note": "0 literal colours outside the variables."
     },
     "code.inline": {
-     "state": "no",
-     "note": "59 inline style attributes."
+     "state": "yes",
+     "note": "0 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -136,12 +136,12 @@
      "note": "System fonts."
     },
     "icon.inline": {
-     "state": "unknown",
-     "note": "No icons found."
+     "state": "yes",
+     "note": "Inline SVG."
     },
     "mobile.query": {
      "state": "yes",
-     "note": "3 max-width media queries."
+     "note": "23 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
@@ -241,7 +241,7 @@
     },
     "dialog.used": {
      "state": "yes",
-     "note": "24 dialog or modal elements."
+     "note": "46 dialog or modal elements."
     },
     "color.tokens": {
      "state": "yes",
@@ -265,7 +265,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "17 max-width media queries."
+     "note": "28 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
@@ -741,7 +741,7 @@
     },
     "color.tokens": {
      "state": "partial",
-     "note": "98 literal colours outside the variables."
+     "note": "106 literal colours outside the variables."
     },
     "code.inline": {
      "state": "no",
@@ -761,7 +761,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "31 max-width media queries."
+     "note": "33 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
