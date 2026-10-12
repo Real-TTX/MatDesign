@@ -27,6 +27,12 @@
                                             .mat-picker__option with data-value). The texts change with data-pk-<name> on <html>, the format of dates with data-locale.
                                             tags is a field of chips and has no panel: data-sep, data-max (number of tags), data-max-length (of one tag),
                                             data-duplicates (allow a tag twice), data-strict (only the options, which are the suggestions, can be added)
+     data-calendar                          a calendar that is always shown (FORM-18); the real input inside is .mat-calendar__input and posts 2026-10-10, a period
+                                            2026-10-10..2026-10-14 or several dates 2026-10-10,2026-10-12. data-mode="single|range|multiple", data-min / data-max (a date,
+                                            today, tomorrow, +2d, -1w, +3m, +1y), data-disabled ("2026-10-14,2026-10-20..2026-10-24"), data-disabled-weekdays ("0,6", 0 is Sunday),
+                                            data-events (JSON: {"2026-10-14": [{"title": "Lunch", "time": "12:30"}]}) with dots under the days, data-agenda (the events of
+                                            the chosen day under the calendar), data-week-numbers, data-week-start (0 Sunday, default 1), data-months (1 or 2), data-max-dates
+                                            (multiple), data-clearable. API: MatUi.calendar.init / setEvents / setDisabled / setValue / go
      data-carousel                         a strip of slides (.mat-carousel__track > .mat-carousel__slide) that scrolls and snaps; the script adds Previous, the dots and Next
                                             (LIST-13). data-loop: Next on the last page goes to the first; data-autoplay="ms": it moves by itself (Pause button; it waits
                                             while the pointer or the focus is inside and never starts for a user who asked for less motion). The texts: data-car-<name> on <html>
@@ -917,8 +923,9 @@
   var pkFormats = null;
 
   function pkText(key, a, b) {
-    var table = PK_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || PK_TEXT.en;
-    var s = root.getAttribute('data-pk-' + key.toLowerCase()) || table[key] || PK_TEXT.en[key] || key;
+    var lang = (root.lang || 'en').slice(0, 2).toLowerCase();
+    var table = PK_TEXT[lang] || PK_TEXT.en, own = CAL_TEXT[lang] || CAL_TEXT.en;
+    var s = root.getAttribute('data-pk-' + key.toLowerCase()) || table[key] || own[key] || PK_TEXT.en[key] || CAL_TEXT.en[key] || key;
     // function replacers: what a person typed (a tag) may hold a "$&" that a plain replacement string would expand
     return s.replace('{0}', function () { return a === undefined ? '' : a; }).replace('{1}', function () { return b === undefined ? '' : b; });
   }
@@ -965,6 +972,38 @@
     return x;
   }
   function limitDate(d, min, max) { return min && d < min ? min : max && d > max ? max : d; }
+  // A limit of a calendar (data-min, data-max): a date (2026-10-10), the words today, tomorrow and yesterday, or a distance from today: +2d, -1w, +3m, +1y
+  // (days, weeks, months, years). So "nobody can pick the past" is data-min="today" and "at least three days ahead" is data-min="+3d".
+  function dateExpr(text) {
+    var s = (text || '').trim().toLowerCase();
+    if (!s) { return null; }
+    var today = dayStart(new Date());
+    if (s === 'today') { return today; }
+    if (s === 'tomorrow') { return addDays(today, 1); }
+    if (s === 'yesterday') { return addDays(today, -1); }
+    var m = /^([+-])\s*(\d+)\s*([dwmy])$/.exec(s);
+    if (m) {
+      var n = (m[1] === '-' ? -1 : 1) * +m[2];
+      return m[3] === 'd' ? addDays(today, n) : m[3] === 'w' ? addDays(today, 7 * n) : addMonths(today, m[3] === 'm' ? n : 12 * n);
+    }
+    return dateOf(s);
+  }
+  // "2026-10-14, 2026-10-20..2026-10-24" -> a map of the ISO dates (a period is every day of it)
+  function dateSet(text) {
+    var set = {};
+    (text || '').split(',').forEach(function (part) {
+      var ends = part.trim().split('..'), a = dateOf(ends[0].trim()), b = ends.length > 1 ? dateOf(ends[1].trim()) : a;
+      if (!a || !b) { return; }
+      for (var d = a, i = 0; d <= b && i < 3700; d = addDays(d, 1), i += 1) { set[isoOf(d)] = true; }
+    });
+    return set;
+  }
+  // The number of the week by ISO 8601: the week of the Thursday decides the year, and the first week is the one with the 4th of January.
+  function isoWeek(date) {
+    var thursday = addDays(date, (4 - date.getDay() + 7) % 7);
+    var doy = Math.round((Date.UTC(thursday.getFullYear(), thursday.getMonth(), thursday.getDate()) - Date.UTC(thursday.getFullYear(), 0, 1)) / 86400000);
+    return Math.floor(doy / 7) + 1;
+  }
 
   // ---- times
   function timeOf(s) {
@@ -1348,8 +1387,42 @@
   function daysBetween(a, b) { return Math.round((dayStart(b) - dayStart(a)) / 86400000) + 1; }
   function rangeValue(s) { return isoOf(s.start) + '..' + isoOf(s.end) + (s.flex > 0 ? '~' + s.flex : ''); }
 
-  function calMonth(p, first, index, count) {
-    var s = p.state, f = formats(), title = f.month.format(first);
+  // ---- the month grid that three things share: the panel of the date and period pickers, the calendar that is always shown (data-calendar) and the panel of the
+  // appointment picker (data-picker="slot"). They keep a state s: mode ('single', 'range' or 'multiple'), start, end, dates (an array of ISO dates, for 'multiple'),
+  // focus (the day the keyboard is on), view (the first day of the first month that is shown), level ('days', 'months' or 'years'), min, max, weekStart, months (how
+  // many are shown) and, when the host wants them: off(date) (more days that cannot be chosen), look(date) ('unavailable' or 'absent' for such a day), marks(iso) (dots
+  // under a day), describe(iso, date, off) (what a screen reader adds to the name of a day), jump (the title opens the choice of a month and a year), weekNumbers and
+  // blocked (a map of ISO dates that a period may not run across). The host is {state, body (the element around the grid), relayout, spec.pick(host, date, event)}.
+  var calFmt = null;
+  function calFormat() {
+    if (!calFmt) { calFmt = { monthShort: new Intl.DateTimeFormat(pkLocale(), { month: 'short' }), monthLong: new Intl.DateTimeFormat(pkLocale(), { month: 'long' }) }; }
+    return calFmt;
+  }
+  function calOff(s, d) { return !!(s.min && d < s.min) || !!(s.max && d > s.max) || !!(s.off && s.off(d)); }
+  // the closest day that can be chosen, looking in the direction of dir (1 later, -1 earlier) first and then the other way; null when there is none within a year
+  function calNearest(s, d, dir) {
+    for (var way = 0; way < 2; way += 1) {
+      var step = way === 0 ? dir : -dir;
+      for (var i = way; i < 400; i += 1) {
+        var x = addDays(d, i * step);
+        if (!calOff(s, x)) { return x; }
+        if ((step > 0 && s.max && x > s.max) || (step < 0 && s.min && x < s.min)) { break; }
+      }
+    }
+    return null;
+  }
+  // a day that is delta days on, skipping the days that cannot be chosen; null when the way ends at min or max
+  function calMove(s, from, delta) {
+    var x = addDays(from, delta);
+    for (var i = 0; i < 400; i += 1, x = addDays(x, delta)) {
+      if (!calOff(s, x)) { return x; }
+      if ((delta > 0 && s.max && x > s.max) || (delta < 0 && s.min && x < s.min)) { return null; }
+    }
+    return null;
+  }
+
+  function calMonth(s, first, index, count) {
+    var f = formats(), title = f.month.format(first);
     var lead = (first.getDay() - s.weekStart + 7) % 7;
     var total = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
     function nav(dir, name, ic) {
@@ -1357,11 +1430,14 @@
       var off = dir < 0 ? s.min && new Date(first.getFullYear(), first.getMonth(), 0) < s.min : s.max && new Date(first.getFullYear(), first.getMonth() + 1, 1) > s.max;
       return '<button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" data-cal-nav="' + dir + '" aria-label="' + esc(pkText(name)) + '"' + (off ? ' disabled' : '') + '>' + icon(ic) + '</button>';
     }
+    var heading = s.jump && index === 0
+      ?'<button type="button" class="mat-cal__title mat-cal__title--button" data-cal-level="months" aria-label="' + esc(title + ', ' + pkText('jumpMonth')) + '">' + esc(title) + icon('chevron-down') + '</button>'
+      : '<span class="mat-cal__title" aria-live="polite">' + esc(title) + '</span>';
     var h = '<div class="mat-cal__month"><div class="mat-cal__head">' +
-      (index === 0 ? nav(-1, 'prevMonth', 'chevron-left') : '<span class="mat-cal__nav-gap"></span>') +
-      '<span class="mat-cal__title" aria-live="polite">' + esc(title) + '</span>' +
+      (index === 0 ? nav(-1, 'prevMonth', 'chevron-left') : '<span class="mat-cal__nav-gap"></span>') + heading +
       (index === count - 1 ? nav(1, 'nextMonth', 'chevron-right') : '<span class="mat-cal__nav-gap"></span>') +
-      '</div><div class="mat-cal__grid" role="grid" aria-label="' + esc(title) + '"><div class="mat-cal__row" role="row">';
+      '</div><div class="mat-cal__grid' + (s.weekNumbers ? ' mat-cal__grid--weeks' : '') + '" role="grid" aria-label="' + esc(title) + '"><div class="mat-cal__row" role="row">';
+    if (s.weekNumbers) { h += '<span class="mat-cal__dow" role="columnheader" aria-label="' + esc(pkText('week')) + '">' + esc(pkText('weekShort')) + '</span>'; }
     for (var w = 0; w < 7; w += 1) {
       var ref = new Date(2024, 0, 1 + (s.weekStart + 6 + w) % 7);   // 2024-01-01 is a Monday
       h += '<span class="mat-cal__dow" role="columnheader" aria-label="' + esc(f.dowLong.format(ref)) + '">' + esc(f.dow.format(ref)) + '</span>';
@@ -1369,26 +1445,95 @@
     h += '</div>';
     var cells = lead + total;
     for (var c = 0; c < Math.ceil(cells / 7) * 7; c += 1) {
-      if (c % 7 === 0) { h += '<div class="mat-cal__row" role="row">'; }
+      if (c % 7 === 0) {
+        h += '<div class="mat-cal__row" role="row">';
+        if (s.weekNumbers) {
+          var week = isoWeek(new Date(first.getFullYear(), first.getMonth(), 1 - lead + c));
+          h += '<span class="mat-cal__wk" role="rowheader" aria-label="' + esc(pkText('weekNo', week)) + '">' + week + '</span>';
+        }
+      }
       var n = c - lead + 1;
       if (n < 1 || n > total) { h += '<span class="mat-cal__blank" role="gridcell" aria-hidden="true"></span>'; }
       else {
-        var d = new Date(first.getFullYear(), first.getMonth(), n);
-        var off = (s.min && d < s.min) || (s.max && d > s.max);
-        h += '<button type="button" class="mat-cal__day" role="gridcell" data-date="' + isoOf(d) + '" tabindex="-1" aria-selected="false" aria-label="' + esc(f.full.format(d)) + '"' + (off ? ' disabled' : '') + '>' + n + '</button>';
+        var d = new Date(first.getFullYear(), first.getMonth(), n), iso = isoOf(d), off = calOff(s, d);
+        var look = off && s.look ? s.look(d) : '';
+        var marks = s.marks ? s.marks(iso) : 0;
+        var extra = s.describe ? s.describe(iso, d, off) : '';
+        h += '<button type="button" class="mat-cal__day' + (look ? ' is-' + look : '') + '" role="gridcell" data-date="' + iso + '" tabindex="-1" aria-selected="false" aria-label="' + esc(f.full.format(d) + (extra ? ', ' + extra : '')) + '"' +
+          (off ? ' disabled' : '') + (look === 'absent' ? ' aria-hidden="true"' : '') + '>' + n +
+          (marks ? '<span class="mat-cal__marks" aria-hidden="true">' + new Array(Math.min(marks, 3) + 1).join('<span class="mat-cal__mark"></span>') + '</span>' : '') + '</button>';
       }
       if (c % 7 === 6) { h += '</div>'; }
     }
     return h + '</div></div>';
   }
 
+  // the choice of a month (twelve buttons of one year) and the choice of a year (twelve years): a title that is a button leads to them
+  function calCell(value, text, name, disabled, current, today, attr) {
+    return '<button type="button" class="mat-cal__cell' + (current ? ' is-current' : '') + (today ? ' is-today' : '') + '" ' + attr + '="' + value + '" tabindex="-1" aria-label="' + esc(name) + '"' +
+      (current ? ' aria-pressed="true"' : ' aria-pressed="false"') + (disabled ? ' disabled' : '') + '>' + esc(text) + '</button>';
+  }
+  function calNavButton(dir, name, off) {
+    return '<button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" data-cal-nav="' + dir + '" aria-label="' + esc(pkText(name)) + '"' + (off ? ' disabled' : '') + '>' + icon(dir < 0 ? 'chevron-left' : 'chevron-right') + '</button>';
+  }
+  function calMonths(s) {
+    var year = s.view.getFullYear(), cf = calFormat(), now = new Date();
+    var h = '<div class="mat-cal__month"><div class="mat-cal__head">' +
+      calNavButton(-1, 'prevYear', !!s.min && new Date(year, 0, 0) < s.min) +
+      '<button type="button" class="mat-cal__title mat-cal__title--button" data-cal-level="years" aria-label="' + esc(year + ', ' + pkText('chooseYear')) + '">' + year + icon('chevron-down') + '</button>' +
+      calNavButton(1, 'nextYear', !!s.max && new Date(year + 1, 0, 1) > s.max) +
+      '</div><div class="mat-cal__pick" role="group" aria-label="' + esc(pkText('chooseMonth')) + '">';
+    for (var m = 0; m < 12; m += 1) {
+      var first = new Date(year, m, 1), last = new Date(year, m + 1, 0);
+      var off = (s.min && last < s.min) || (s.max && first > s.max);
+      h += calCell(m, cf.monthShort.format(first),cf.monthLong.format(first) + ' ' + year, off, m === s.view.getMonth(), year === now.getFullYear() && m === now.getMonth(), 'data-cal-month');
+    }
+    return h + '</div></div>';
+  }
+  function calYearBase(year) { return year - (((year % 12) + 12) % 12); }
+  function calYears(s) {
+    var base = s.yearBase, now = new Date();
+    var h = '<div class="mat-cal__month"><div class="mat-cal__head">' +
+      calNavButton(-1, 'prevYears', !!s.min && new Date(base, 0, 0) < s.min) +
+      '<span class="mat-cal__title" aria-live="polite">' + base + ' – ' + (base + 11) + '</span>' +
+      calNavButton(1, 'nextYears', !!s.max && new Date(base + 12, 0, 1) > s.max) +
+      '</div><div class="mat-cal__pick" role="group" aria-label="' + esc(pkText('chooseYear')) + '">';
+    for (var y = base; y < base + 12; y += 1) {
+      var off = (s.min && new Date(y, 11, 31) < s.min) || (s.max && new Date(y, 0, 1) > s.max);
+      h += calCell(y, String(y),String(y), off, y === s.view.getFullYear(), y === now.getFullYear(), 'data-cal-year');
+    }
+    return h + '</div></div>';
+  }
+
+  // the months and the years: one button is the one the arrow keys start from
+  function calPaintCells(p) {
+    var s = p.state, attr = s.level === 'months' ? 'data-cal-month' : 'data-cal-year';
+    var cells = $$('.mat-cal__cell', p.body), stop = null;
+    cells.forEach(function (b) { b.tabIndex = -1; if (!stop && !b.disabled && +b.getAttribute(attr) === s.cell) { stop = b; } });
+    if (!stop) { stop = cells.filter(function (b) { return !b.disabled; })[0] || null; }
+    if (stop) { stop.tabIndex = 0; s.cell = +stop.getAttribute(attr); }
+  }
+
+  function calStatus(s) {
+    var f = formats().day;
+    if (s.message) { return s.message; }
+    if (s.mode === 'range') {
+      return !s.start ? pkText('startDate') : !s.end ? pkText('endDate')
+        : f.format(s.start) + ' – ' + f.format(s.end) + ' · ' + (daysBetween(s.start, s.end) === 1 ? pkText('oneDay') : pkText('daysCount', daysBetween(s.start, s.end)));
+    }
+    if (s.mode === 'multiple') { return !s.dates.length ? pkText('chooseDates') : s.dates.length === 1 ? pkText('oneDate') : pkText('datesCount', s.dates.length); }
+    return '';
+  }
+
   function calPaint(p) {
-    var s = p.state, range = p.kind === 'daterange', today = isoOf(dayStart(new Date()));
+    var s = p.state, range = s.mode === 'range', multi = s.mode === 'multiple', today = isoOf(dayStart(new Date()));
+    if (s.level !== 'days') { calPaintCells(p); return; }
     var hi = range && s.start && !s.end && s.hover && s.hover > s.start ? s.hover : s.end;
     var startIso = s.start ? isoOf(s.start) : '', hiIso = hi ? isoOf(hi) : '', focusIso = isoOf(s.focus);
+    var stop = null, first = null;
     $$('.mat-cal__day', p.body).forEach(function (b) {
       var iso = b.getAttribute('data-date');
-      var isStart = iso === startIso, isEnd = range && iso === hiIso;
+      var isStart = multi ? s.dates.indexOf(iso) >= 0 : iso === startIso, isEnd = range && iso === hiIso;
       var inside = range && !!s.start && !!hi && iso > startIso && iso < hiIso;
       var span = range && !!hi && hiIso > startIso;
       b.classList.toggle('is-today', iso === today);
@@ -1397,14 +1542,17 @@
       b.classList.toggle('is-range-end', span && isEnd);
       b.classList.toggle('is-in-range', inside);
       b.setAttribute('aria-selected', isStart || isEnd || inside ? 'true' : 'false');
-      b.tabIndex = iso === focusIso ? 0 : -1;
+      b.tabIndex = -1;
+      if (!b.disabled) {
+        if (!first) { first = b; }
+        if (iso === focusIso) { stop = b; }
+      }
     });
+    // one day is where the Tab key arrives: the one the keyboard is on, or the first that can be chosen when that one cannot
+    stop = stop || first;
+    if (stop) { stop.tabIndex = 0; s.focus = dateOf(stop.getAttribute('data-date')); }
     var status = $('.mat-picker__status', p.body);
-    if (status && range) {
-      var f = formats().day;
-      status.textContent = !s.start ? pkText('startDate') : !s.end ? pkText('endDate')
-        : f.format(s.start) + ' – ' + f.format(s.end) + ' · ' + (daysBetween(s.start, s.end) === 1 ? pkText('oneDay') : pkText('daysCount', daysBetween(s.start, s.end)));
-    }
+    if (status && (range || multi)) { status.textContent = calStatus(s); }
     $$('[data-cal-flex]', p.body).forEach(function (b) {
       var on = +b.getAttribute('data-cal-flex') === s.flex;
       b.setAttribute('aria-checked', on ? 'true' : 'false');
@@ -1413,23 +1561,56 @@
     });
   }
 
+  // refocus: a selector of what gets the focus when the grid is drawn again (the button that was used, or the day the keyboard is on)
   function calRender(p, refocus) {
     var s = p.state, box = $('.mat-cal__months', p.body), html = '';
-    var last = addMonths(s.view, s.months - 1);
-    if (s.focus < s.view) { s.view = firstOf(s.focus); }
-    else if (s.focus >= new Date(last.getFullYear(), last.getMonth() + 1, 1)) { s.view = firstOf(addMonths(firstOf(s.focus), -(s.months - 1))); }
-    for (var i = 0; i < s.months; i += 1) { html += calMonth(p, new Date(s.view.getFullYear(), s.view.getMonth() + i, 1), i, s.months); }
+    if (s.level === 'months') { html = calMonths(s); }
+    else if (s.level === 'years') { html = calYears(s); }
+    else {
+      var last = addMonths(s.view, s.months - 1);
+      if (s.focus < s.view) { s.view = firstOf(s.focus); }
+      else if (s.focus >= new Date(last.getFullYear(), last.getMonth() + 1, 1)) { s.view = firstOf(addMonths(firstOf(s.focus), -(s.months - 1))); }
+      for (var i = 0; i < s.months; i += 1) { html += calMonth(s, new Date(s.view.getFullYear(), s.view.getMonth() + i, 1), i, s.months); }
+    }
     box.innerHTML = html;
     calPaint(p);
-    if (refocus) { var b = $(refocus, p.body); if (b) { b.focus({ preventScroll: true }); } }
-    p.relayout();
+    if (refocus) { var b = $(refocus, p.body); if (b && !b.disabled) { b.focus({ preventScroll: true }); } }
+    // the keyboard went to a month whose days were not there yet: the focus goes to a day as soon as there is one (and only if it is not somewhere else by then)
+    if (s.pendingFocus && s.level === 'days') {
+      var active = doc.activeElement, day = $(CAL_FOCUS, p.body);
+      if (day && (!active || active === doc.body || p.body.contains(active))) { s.pendingFocus = false; day.focus({ preventScroll: true }); }
+    }
+    if (p.relayout) { p.relayout(); }
+    // a host that loads what the days show (the appointment picker) learns which month is in view
+    if (s.level === 'days' && p.spec.viewed) { p.spec.viewed(p); }
+  }
+
+  // The choice of a day, without the host: single takes it, multiple adds or removes it, a period starts with it or ends with it (an end before the start, or a
+  // day behind a blocked one, starts again). False when the day was refused.
+  function calSelect(s, d) {
+    s.message = '';
+    s.focus = d;
+    if (s.mode === 'single') { s.start = d; return true; }
+    if (s.mode === 'multiple') {
+      var iso = isoOf(d), i = s.dates.indexOf(iso);
+      if (i >= 0) { s.dates.splice(i, 1); return true; }
+      if (s.maxDates > 0 && s.dates.length >= s.maxDates) { s.message = pkText('maxDates', s.maxDates); return false; }
+      s.dates.push(iso);
+      s.dates.sort();
+      return true;
+    }
+    var across = false;
+    if (s.start && !s.end && d > s.start && s.blocked) {
+      for (var x = addDays(s.start, 1); x < d && !across; x = addDays(x, 1)) { across = !!s.blocked[isoOf(x)]; }
+    }
+    if (!s.start || s.end || d < s.start || across) { s.start = d; s.end = null; s.hover = null; } else { s.end = d; }
+    return true;
   }
 
   function calPick(p, d) {
     var s = p.state;
-    s.focus = d;
+    calSelect(s, d);
     if (p.kind === 'date') { setPickerValue(p, isoOf(d)); closePicker(true); return; }
-    if (!s.start || s.end || d < s.start) { s.start = d; s.end = null; s.hover = null; } else { s.end = d; }
     calPaint(p);
     refreshFoot(p);
     // a period without flexible dates is complete with its second day
@@ -1449,10 +1630,11 @@
 
   function calOpen(p) {
     var range = p.kind === 'daterange', v = dateValue(p);
-    var min = dateOf(p.wrap.getAttribute('data-min')), max = dateOf(p.wrap.getAttribute('data-max'));
+    var min = dateExpr(p.wrap.getAttribute('data-min')), max = dateExpr(p.wrap.getAttribute('data-max'));
     var focus = limitDate(v.start || dayStart(new Date()), min, max);
     p.flexList = (p.wrap.getAttribute('data-flex') || '').split(',').map(function (x) { return parseInt(x, 10); }).filter(function (n) { return n > 0; });
     p.state = {
+      mode: range ? 'range' : 'single', level: 'days', jump: true,
       start: v.start, end: v.end, flex: v.flex, focus: focus, hover: null, min: min, max: max, view: firstOf(focus),
       weekStart: parseInt(p.wrap.getAttribute('data-week-start') || root.getAttribute('data-week-start') || '1', 10) % 7,
       months: range && !p.full ? 2 : 1
@@ -1473,20 +1655,54 @@
     return $(CAL_FOCUS, p.body);
   }
 
-  function calClick(p, t) {
+  // a day of that month near the one the keyboard is on (the same number, or the last day of a shorter month)
+  function calGoto(s, year, month) {
+    var day = Math.min(s.focus.getDate(), new Date(year, month + 1, 0).getDate());
+    s.focus = limitDate(new Date(year, month, day), s.min, s.max);
+    s.view = firstOf(s.focus);
+  }
+  var CAL_CELL = '.mat-cal__cell[tabindex="0"]';
+
+  function calClick(p, t, e) {
     var s = p.state;
     var nav = t.closest('[data-cal-nav]');
     if (nav) {
       var dir = +nav.getAttribute('data-cal-nav');
-      s.view = addMonths(s.view, dir);
-      s.focus = limitDate(addMonths(s.focus, dir), s.min, s.max);
+      if (s.level === 'months') { s.view = new Date(s.view.getFullYear() + dir, s.view.getMonth(), 1); }
+      else if (s.level === 'years') { s.yearBase += dir * 12; }
+      else { s.view = addMonths(s.view, dir); s.focus = limitDate(addMonths(s.focus, dir), s.min, s.max); }
       calRender(p, '[data-cal-nav="' + dir + '"]');
       return;
     }
     var day = t.closest('.mat-cal__day');
-    if (day && !day.disabled) { calPick(p, dateOf(day.getAttribute('data-date'))); return; }
+    if (day && !day.disabled) { p.spec.pick(p, dateOf(day.getAttribute('data-date')), e); return; }
+    var level = t.closest('[data-cal-level]');
+    if (level) {
+      s.level = level.getAttribute('data-cal-level');
+      s.cell = s.level === 'months' ? s.view.getMonth() : s.view.getFullYear();
+      if (s.level === 'years') { s.yearBase = calYearBase(s.view.getFullYear()); }
+      calRender(p, CAL_CELL);
+      return;
+    }
+    var month = t.closest('[data-cal-month]');
+    if (month && !month.disabled) {
+      calGoto(s, s.view.getFullYear(), +month.getAttribute('data-cal-month'));
+      s.level = 'days';
+      calRender(p, CAL_FOCUS);
+      return;
+    }
+    var year = t.closest('[data-cal-year]');
+    if (year && !year.disabled) {
+      s.view = new Date(+year.getAttribute('data-cal-year'), s.view.getMonth(), 1);
+      s.level = 'months';
+      s.cell = s.view.getMonth();
+      calRender(p, CAL_CELL);
+      return;
+    }
     if (t.closest('[data-cal-today]')) {
-      s.focus = limitDate(dayStart(new Date()), s.min, s.max);
+      var today = limitDate(dayStart(new Date()), s.min, s.max);
+      s.level = 'days';
+      s.focus = calNearest(s, today, 1) || today;
       s.view = firstOf(s.focus);
       calRender(p, CAL_FOCUS);
       return;
@@ -1495,22 +1711,77 @@
     if (chip) { s.flex = +chip.getAttribute('data-cal-flex'); calPaint(p); }
   }
 
-  function calKeys(p, e) {
-    var s = p.state;
-    if (!e.target.closest('.mat-cal__day')) { return; }
-    var cur = s.focus, back = (cur.getDay() - s.weekStart + 7) % 7, to;
-    if (e.key === 'ArrowLeft') { to = addDays(cur, -1); }
-    else if (e.key === 'ArrowRight') { to = addDays(cur, 1); }
-    else if (e.key === 'ArrowUp') { to = addDays(cur, -7); }
-    else if (e.key === 'ArrowDown') { to = addDays(cur, 7); }
-    else if (e.key === 'Home') { to = addDays(cur, -back); }
-    else if (e.key === 'End') { to = addDays(cur, 6 - back); }
-    else if (e.key === 'PageUp') { to = addMonths(cur, e.shiftKey ? -12 : -1); }
-    else if (e.key === 'PageDown') { to = addMonths(cur, e.shiftKey ? 12 : 1); }
+  // the first of these that exists and can be reached gets the focus: the day the keyboard is on, the title, an arrow
+  function calFocus(p) {
+    var b = $(CAL_FOCUS, p.body) || $('[data-cal-level]', p.body) || $('[data-cal-nav]:not(:disabled)', p.body);
+    if (b) { b.focus({ preventScroll: true }); }
+    return b;
+  }
+
+  // The first or the last day of the week that can be chosen.
+  function calWeekEdge(s, from, dir) {
+    for (var i = 0; i < 7; i += 1) {
+      var x = addDays(from, i * dir);
+      if (!calOff(s, x)) { return x; }
+    }
+    return null;
+  }
+
+  // months and years: three by four buttons, the arrow keys walk them, the page keys change the year (or twelve years)
+  function calCellKeys(p, e) {
+    var s = p.state, cell = e.target.closest('.mat-cal__cell');
+    if (!cell) { return; }
+    var attr = s.level === 'months' ? 'data-cal-month' : 'data-cal-year';
+    var cells = $$('.mat-cal__cell:not(:disabled)', p.body), i = cells.indexOf(cell), to = null;
+    if (e.key === 'ArrowLeft') { to = cells[Math.max(0, i - 1)]; }
+    else if (e.key === 'ArrowRight') { to = cells[Math.min(cells.length - 1, i + 1)]; }
+    else if (e.key === 'ArrowUp') { to = cells[i - 3 >= 0 ? i - 3 : i]; }
+    else if (e.key === 'ArrowDown') { to = cells[i + 3 < cells.length ? i + 3 : i]; }
+    else if (e.key === 'Home') { to = cells[0]; }
+    else if (e.key === 'End') { to = cells[cells.length - 1]; }
+    else if (e.key === 'PageUp' || e.key === 'PageDown') {
+      var by = e.key === 'PageUp' ? -1 : 1;
+      if (s.level === 'months') { s.view = new Date(s.view.getFullYear() + by, s.view.getMonth(), 1); } else { s.yearBase += by * 12; }
+      e.preventDefault();
+      calRender(p, CAL_CELL);
+      return;
+    }
     else { return; }
     e.preventDefault();
-    s.focus = limitDate(to, s.min, s.max);
-    if (p.kind === 'daterange' && s.start && !s.end) { s.hover = s.focus; }
+    if (to) { s.cell = +to.getAttribute(attr); calPaintCells(p); to.focus({ preventScroll: true }); }
+  }
+
+  function calKeys(p, e) {
+    var s = p.state;
+    if (s.level !== 'days') { calCellKeys(p, e); return; }
+    if (!e.target.closest('.mat-cal__day')) { return; }
+    var cur = s.focus, back = (cur.getDay() - s.weekStart + 7) % 7, to, page = 0;
+    // a day that cannot be chosen is stepped over
+    if (e.key === 'ArrowLeft') { to = calMove(s, cur, -1); }
+    else if (e.key === 'ArrowRight') { to = calMove(s, cur, 1); }
+    else if (e.key === 'ArrowUp') { to = calMove(s, cur, -7); }
+    else if (e.key === 'ArrowDown') { to = calMove(s, cur, 7); }
+    else if (e.key === 'Home') { to = calWeekEdge(s, addDays(cur, -back), 1); }
+    else if (e.key === 'End') { to = calWeekEdge(s, addDays(cur, 6 - back), -1); }
+    else if (e.key === 'PageUp' || e.key === 'PageDown') {
+      page = (e.shiftKey ? 12 : 1) * (e.key === 'PageUp' ? -1 : 1);
+      to = limitDate(addMonths(cur, page), s.min, s.max);
+      if (calOff(s, to)) { to = calNearest(s, to, page); }
+    }
+    else { return; }
+    e.preventDefault();
+    if (!to && page) {
+      // a month in which nothing can be chosen (yet, when its days are being loaded): it is shown and the focus waits at the title until there is a day
+      s.focus = limitDate(addMonths(cur, page), s.min, s.max);
+      s.view = firstOf(s.focus);
+      s.pendingFocus = true;
+      calRender(p, null);
+      calFocus(p);
+      return;
+    }
+    if (!to) { return; }
+    s.focus = to;
+    if (s.mode === 'range' && s.start && !s.end) { s.hover = s.focus; }
     var end = addMonths(s.view, s.months);
     if (s.focus >= s.view && s.focus < new Date(end.getFullYear(), end.getMonth(), 1)) {
       calPaint(p);
@@ -1521,7 +1792,7 @@
 
   function calHover(p, t) {
     var s = p.state, day = t.closest && t.closest('.mat-cal__day');
-    if (!day || p.kind !== 'daterange' || !s.start || s.end) { return; }
+    if (!day || s.mode !== 'range' || s.level !== 'days' || !s.start || s.end) { return; }
     var d = dateOf(day.getAttribute('data-date'));
     if (!sameHover(s.hover, d)) { s.hover = d; calPaint(p); }
   }
@@ -1533,6 +1804,7 @@
     display: calDisplay,
     open: calOpen,
     click: calClick,
+    pick: calPick,
     keys: calKeys,
     hover: calHover,
     ready: function () { return true; },
@@ -1544,6 +1816,7 @@
     display: calDisplay,
     open: calOpen,
     click: calClick,
+    pick: calPick,
     keys: calKeys,
     hover: calHover,
     ready: function (p) { return !!p.state && !!p.state.start && !!p.state.end; },
@@ -1844,6 +2117,256 @@
       to.focus({ preventScroll: true });
     }
   };
+
+  // ---- calendar: a month grid that is always shown (FORM-18)
+  // <div class="mat-calendar" data-calendar data-mode="single|range|multiple"><input class="mat-calendar__input" id="..." name="..." value="..."></div>
+  // The real input holds the value in the fixed formats of the pickers: 2026-10-10, a period 2026-10-10..2026-10-14 (empty until it has both ends) or several
+  // days 2026-10-10,2026-10-12; it gets input and change events like any field. The script draws the grid (the one of the date picker) into the element.
+  //   data-min / data-max      the first and the last day that can be chosen: a date, today, tomorrow, +2d, -1w, +3m, +1y
+  //   data-disabled            days that cannot be chosen: "2026-10-14,2026-10-20..2026-10-24"; a period may not run across them
+  //   data-disabled-weekdays   "0,6": no Sundays and Saturdays (0 is Sunday); a period may run across them
+  //   data-events              {"2026-10-14": [{"title": "Team lunch", "time": "12:30", "end": "13:30"}, "A day with a title only"]} or [{"date": ..., "title": ...}]:
+  //                            a dot under the day for each event (up to three); data-agenda lists the events of the chosen day under the calendar
+  //   data-week-numbers, data-week-start (0 Sunday, default 1), data-months (1 or 2), data-max-dates (multiple), data-clearable
+  // The title of the month is a button: it leads to a choice of the month and then of the year. MatUi.calendar.setEvents / setDisabled / setValue / go change it later.
+  var CAL_TEXT = {
+    en: {
+      jumpMonth: 'choose month and year', chooseMonth: 'Choose a month', chooseYear: 'Choose a year',
+      prevYear: 'Previous year', nextYear: 'Next year', prevYears: 'Earlier years', nextYears: 'Later years',
+      week: 'Week', weekShort: 'Wk', weekNo: 'Week {0}',
+      chooseDates: 'Choose one or more days', oneDate: '1 day chosen', datesCount: '{0} days chosen', maxDates: 'At most {0} days', unavailable: 'unavailable',
+      eventOne: '1 event', eventCount: '{0} events', noEvents: 'Nothing on this day', agendaChoose: 'Choose a day to see what is on it', allDay: 'All day'
+    },
+    de: {
+      jumpMonth: 'Monat und Jahr wählen', chooseMonth: 'Monat wählen', chooseYear: 'Jahr wählen',
+      prevYear: 'Vorheriges Jahr', nextYear: 'Nächstes Jahr', prevYears: 'Frühere Jahre', nextYears: 'Spätere Jahre',
+      week: 'Woche', weekShort: 'KW', weekNo: 'Kalenderwoche {0}',
+      chooseDates: 'Einen oder mehrere Tage wählen', oneDate: '1 Tag gewählt', datesCount: '{0} Tage gewählt', maxDates: 'Höchstens {0} Tage', unavailable: 'nicht verfügbar',
+      eventOne: '1 Termin', eventCount: '{0} Termine', noEvents: 'An diesem Tag steht nichts an', agendaChoose: 'Tag wählen, um zu sehen, was ansteht', allDay: 'Ganztägig'
+    }
+  };
+
+  function setCalValue(c, v) {
+    if (c.input.value === v) { return; }
+    c.input.value = v;
+    c.input.dispatchEvent(new Event('input', { bubbles: true }));
+    c.input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  // {"2026-10-14": [...]} or [{"date": "2026-10-14", ...}], as an object or as JSON text -> {iso: [{title, time, end}]}, in the order of the time (a day long event first)
+  function calEventMap(src) {
+    var data = src, map = {};
+    if (typeof src === 'string') { try { data = JSON.parse(src); } catch (err) { data = null; } }
+    function add(iso, item) {
+      var ev = typeof item === 'string' ? { title: item } : item;
+      if (!dateOf(iso) || !ev || !ev.title) { return; }
+      (map[iso] = map[iso] || []).push({ title: String(ev.title), time: ev.time ? String(ev.time) : '', end: ev.end ? String(ev.end) : '' });
+    }
+    if (Array.isArray(data)) { data.forEach(function (ev) { if (ev && ev.date) { add(ev.date, ev); } }); }
+    else if (data && typeof data === 'object') { Object.keys(data).forEach(function (iso) { [].concat(data[iso]).forEach(function (item) { add(iso, item); }); }); }
+    Object.keys(map).forEach(function (iso) { map[iso].sort(function (a, b) { return a.time < b.time ? -1 : a.time > b.time ? 1 : 0; }); });
+    return map;
+  }
+
+  // what the attributes say about the days that cannot be chosen (read again when MatUi.calendar.setDisabled changes them)
+  function calcLimits(c) {
+    var el = c.el, s = c.state, off = dateSet(el.getAttribute('data-disabled')), week = {};
+    (el.getAttribute('data-disabled-weekdays') || '').split(',').forEach(function (x) { var n = parseInt(x, 10); if (n >= 0 && n <= 6) { week[n] = true; } });
+    s.min = dateExpr(el.getAttribute('data-min'));
+    s.max = dateExpr(el.getAttribute('data-max'));
+    s.off = function (d) { return !!off[isoOf(d)] || !!week[d.getDay()]; };
+    s.blocked = off;
+  }
+
+  // the value of the real input into the state
+  function calcRead(c) {
+    var s = c.state, raw = (c.input.value || '').trim(), parts;
+    s.start = null; s.end = null; s.dates = [];
+    if (s.mode === 'multiple') {
+      s.dates = raw.split(',').map(function (x) { return x.trim(); }).filter(function (x, i, all) { return !!dateOf(x) && all.indexOf(x) === i; }).sort();
+    } else if (s.mode === 'range') {
+      parts = raw.split('..');
+      s.start = dateOf(parts[0]); s.end = dateOf(parts[1]);
+      if (!s.end) { s.start = null; }
+    } else { s.start = dateOf(raw); }
+  }
+  function calcValue(s) {
+    if (s.mode === 'multiple') { return s.dates.join(','); }
+    if (s.mode === 'range') { return s.start && s.end ? isoOf(s.start) + '..' + isoOf(s.end) : ''; }
+    return s.start ? isoOf(s.start) : '';
+  }
+
+  function calcEventTime(ev) {
+    if (!ev.time) { return pkText('allDay'); }
+    var a = timeOf(ev.time), b = ev.end ? timeOf(ev.end) : null, h12 = new Intl.DateTimeFormat(pkLocale(), { hour: 'numeric' }).resolvedOptions().hour12;
+    if (!a) { return ev.time; }
+    return timeText({ hour12: h12 }, a) + (b ? ' – ' + timeText({ hour12: h12 }, b) : '');
+  }
+
+  // the events of the chosen day (the last day that was clicked, for a period or several days)
+  function calcAgenda(c) {
+    var box = $('.mat-calendar__agenda', c.el), iso = c.state.agendaDate;
+    if (!box) { return; }
+    var d = iso ? dateOf(iso) : null, list = d ? c.events[iso] || [] : [];
+    var h = '<p class="mat-calendar__agenda-title">' + esc(d ? formats().full.format(d) : pkText('agendaChoose')) + '</p>';
+    if (d && list.length) {
+      h += '<ul class="mat-calendar__events">' + list.map(function (ev) {
+        return '<li class="mat-calendar__event"><span class="mat-calendar__time">' + esc(calcEventTime(ev)) + '</span><span class="mat-calendar__what">' + esc(ev.title) + '</span></li>';
+      }).join('') + '</ul>';
+    } else if (d) { h += '<p class="mat-calendar__none">' + esc(pkText('noEvents')) + '</p>'; }
+    box.innerHTML = h;
+  }
+
+  // The state is drawn again, with the month in view where it was (after the events or the limits changed), or from the value: the month of the chosen day, or of today.
+  function calcRefresh(c, fromValue) {
+    var s = c.state;
+    if (fromValue) {
+      var start = s.mode === 'multiple' ? dateOf(s.dates[s.dates.length - 1]) : s.start;
+      var want = limitDate(start || dayStart(new Date()), s.min, s.max);
+      s.focus = calNearest(s, want, 1) || want;
+      s.view = firstOf(s.focus);
+      s.level = 'days';
+    }
+    calRender(c, null);
+    calcAgenda(c);
+  }
+
+  var CALCTL = { pick: calcPick };
+
+  function calcPick(c, d) {
+    var s = c.state, ok = calSelect(s, d);
+    s.agendaDate = isoOf(d);
+    calPaint(c);
+    if (ok) { setCalValue(c, calcValue(s)); }
+    calcAgenda(c);
+  }
+
+  function calInit(el) {
+    if (el._matCalendar) { return; }
+    var input = $('.mat-calendar__input', el);
+    if (!input) { return; }
+    var mode = el.getAttribute('data-mode') === 'range' ? 'range' : el.getAttribute('data-mode') === 'multiple' ? 'multiple' : 'single';
+    var c = { el: el, input: input, kind: 'calendar', spec: CALCTL, body: el, events: calEventMap(el.getAttribute('data-events')) };
+    c.state = {
+      mode: mode, level: 'days', jump: true, hover: null, message: '', start: null, end: null, dates: [], agendaDate: '',
+      months: el.getAttribute('data-months') === '2' ? 2 : 1,
+      weekStart: parseInt(el.getAttribute('data-week-start') || root.getAttribute('data-week-start') || '1', 10) % 7,
+      weekNumbers: el.hasAttribute('data-week-numbers'),
+      maxDates: Math.max(0, parseInt(el.getAttribute('data-max-dates') || '0', 10) || 0)
+    };
+    var s = c.state;
+    s.marks = function (iso) { return (c.events[iso] || []).length; };
+    s.describe = function (iso, d, off) {
+      var n = (c.events[iso] || []).length, parts = [];
+      if (n) { parts.push(n === 1 ? pkText('eventOne') : pkText('eventCount', n)); }
+      if (off) { parts.push(pkText('unavailable')); }
+      return parts.join(', ');
+    };
+    el._matCalendar = c;
+    if (!input.id) { input.id = nextId('mat-cal-in'); }
+    input.tabIndex = -1;
+    input.setAttribute('aria-hidden', 'true');
+    input.setAttribute('autocomplete', 'off');
+    if (!el.hasAttribute('aria-label') && !el.hasAttribute('aria-labelledby')) { el.setAttribute('aria-label', labelOf(input) || input.name || pkText('phDate')); }
+    el.setAttribute('role', 'group');
+    el.insertAdjacentHTML('beforeend', '<div class="mat-cal"><div class="mat-cal__months"></div>' +
+      (mode === 'single' ? '' : '<p class="mat-picker__status" role="status"></p>') +
+      '<div class="mat-cal__tools"><button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-cal-today>' + esc(pkText('today')) + '</button>' +
+      (el.hasAttribute('data-clearable') ? '<button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-cal-clear>' + esc(pkText('clear')) + '</button>' : '') + '</div></div>' +
+      (el.hasAttribute('data-agenda') ? '<div class="mat-calendar__agenda" aria-live="polite"></div>' : ''));
+    calcLimits(c);
+    calcSync(c);
+  }
+
+  // The state from the value of the real input (at the start, after a reset or when a script changed it).
+  function calcSync(c) {
+    var s = c.state;
+    calcRead(c);
+    s.agendaDate = s.mode === 'multiple' ? s.dates[s.dates.length - 1] || '' : s.start ? isoOf(s.start) : '';
+    s.message = '';
+    calcRefresh(c, true);
+  }
+
+  function initCalendars(scope) { $$('[data-calendar]', scope).forEach(calInit); }
+
+  function calendarOf(ref) {
+    var el = typeof ref === 'string' ? $(ref) : ref;
+    el = el && el.closest ? el.closest('.mat-calendar') : null;
+    return el && el._matCalendar;
+  }
+
+  var CALENDAR_API = {
+    init: initCalendars,
+    // the events of the days: {"2026-10-14": [{"title": "...", "time": "09:30"}]}, or an array of {"date": ..., "title": ...}
+    setEvents: function (ref, events) { var c = calendarOf(ref); if (c) { c.events = calEventMap(events); calcRefresh(c); } },
+    // {dates: "2026-10-14,2026-10-20..2026-10-24" (or an array), weekdays: [0, 6], min: "today", max: "+90d"}: what is given replaces what was there
+    setDisabled: function (ref, o) {
+      var c = calendarOf(ref);
+      if (!c || !o) { return; }
+      var names = { dates: 'data-disabled', weekdays: 'data-disabled-weekdays', min: 'data-min', max: 'data-max' };
+      Object.keys(names).forEach(function (k) {
+        if (o[k] === undefined) { return; }
+        var v = Array.isArray(o[k]) ? o[k].join(',') : o[k];
+        if (v === null || v === '') { c.el.removeAttribute(names[k]); } else { c.el.setAttribute(names[k], String(v)); }
+      });
+      calcLimits(c);
+      calcRefresh(c);
+    },
+    // like assigning the value of the input, without the events
+    setValue: function (ref, value) { var c = calendarOf(ref); if (c) { c.input.value = value || ''; calcSync(c); } },
+    // shows the month of a date (an ISO date or a Date)
+    go: function (ref, date) {
+      var c = calendarOf(ref), d = date instanceof Date ? dayStart(date) : dateOf(date);
+      if (!c || !d) { return; }
+      var s = c.state;
+      s.focus = limitDate(d, s.min, s.max);
+      s.view = firstOf(s.focus);
+      s.level = 'days';
+      calRender(c, null);
+    }
+  };
+
+  doc.addEventListener('click', function (e) {
+    var t = e.target, c = calendarOf(t.closest ? t.closest('.mat-calendar') : null);
+    if (!c) { return; }
+    if (t.closest('[data-cal-clear]')) {
+      var s = c.state;
+      s.start = null; s.end = null; s.dates = []; s.agendaDate = ''; s.message = '';
+      calPaint(c);
+      setCalValue(c, '');
+      calcAgenda(c);
+      return;
+    }
+    calClick(c, t, e);
+  });
+  doc.addEventListener('mouseover', function (e) {
+    var c = calendarOf(e.target.closest ? e.target.closest('.mat-calendar') : null);
+    if (c) { calHover(c, e.target); }
+  });
+  doc.addEventListener('keydown', function (e) {
+    var c = calendarOf(e.target.closest ? e.target.closest('.mat-calendar') : null);
+    if (!c || e.ctrlKey || e.metaKey || e.altKey) { return; }
+    // Escape in the choice of a month or a year goes back to the days
+    if (e.key === 'Escape' && c.state.level !== 'days') {
+      e.preventDefault();
+      e.stopPropagation();
+      c.state.level = 'days';
+      calRender(c, CAL_FOCUS);
+      return;
+    }
+    calKeys(c, e);
+  });
+  // the real input is not drawn; whoever focuses it (a label, a validation message) lands on the day the keyboard is on
+  doc.addEventListener('focusin', function (e) {
+    var t = e.target;
+    if (t.classList && t.classList.contains('mat-calendar__input')) {
+      var c = calendarOf(t);
+      if (c) { calFocus(c); }
+    }
+  });
+  doc.addEventListener('reset', function (e) {
+    setTimeout(function () { $$('.mat-calendar', e.target).forEach(function (el) { if (el._matCalendar) { calcSync(el._matCalendar); } }); }, 0);
+  }, true);
 
   // ---- tags: a field of chips that the user types into
   // The real input holds the tags joined by data-sep (default ", "). The script draws a field (.mat-tagfield) with a chip per tag and a text field to type in.
@@ -2459,6 +2982,7 @@
     scheduleSpy();
     initForms();
     initPickers();
+    initCalendars();
     initCarousels();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
@@ -2495,7 +3019,8 @@
     scrollspy: { update: updateSpy },
     nav: { set: setNavSet, branch: function (key, open) { var b = $('[data-nav-branch="' + key + '"]'); if (b) { setBranch(b, open !== false, true); } } },
     picker: { init: initPickers, close: closePicker },
+    calendar: CALENDAR_API,
     carousel: { init: initCarousels, go: function (el, page) { var c = el && el._matCarousel; if (c) { carGo(c, page, false); } } },
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initCarousels(scope); }
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initCalendars(scope); initCarousels(scope); }
   };
 })();

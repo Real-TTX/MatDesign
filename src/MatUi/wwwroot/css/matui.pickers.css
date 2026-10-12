@@ -135,6 +135,7 @@
 @media (max-width: 640px) {
   .mat-cal__month { min-width: 0; }
   .mat-cal__day { height: 44px; }
+  .mat-cal .mat-cal__pick { min-height: 20rem; }
 }
 
 /* ---- Time: columns of hours and minutes, and a field to type in ---- */
@@ -226,3 +227,50 @@
   }
   .mat-picker__panel--suggest .mat-picker__options { max-height: min(50dvh, 320px); padding: var(--mat-space-2); }
 }
+
+/* ---- The month grid, shared by the date picker, the calendar and the appointment picker (FORM-18) ----
+   A day can carry dots (events, free appointments), a day that cannot be chosen is dimmed (and struck through, or absent), the title of the month is a button that
+   leads to the choice of a month and then of a year, and a column of week numbers can stand in front of the rows. */
+.mat-cal__day { position: relative; }
+.mat-cal__marks { position: absolute; left: 0; right: 0; bottom: 4px; display: flex; justify-content: center; gap: 2px; pointer-events: none; }
+.mat-cal__mark { width: 4px; height: 4px; border-radius: 50%; background: var(--mat-accent); }
+.mat-cal__day.is-selected .mat-cal__mark { background: currentColor; }
+/* what cannot be chosen says so in a second way besides its colour (COLOR-04): a line through the number */
+.mat-cal__day.is-unavailable { text-decoration: line-through; }
+.mat-cal__day.is-absent { visibility: hidden; }
+.mat-cal__grid--weeks { grid-template-columns: 2.25rem repeat(7, minmax(0, 1fr)); }
+.mat-cal__wk { display: grid; place-items: center; font-size: var(--mat-fs-xs); color: var(--mat-text-muted); font-variant-numeric: tabular-nums; }
+.mat-cal__title--button {
+  flex: 0 1 auto; display: inline-flex; align-items: center; justify-content: center; gap: var(--mat-space-1);
+  min-height: var(--mat-control-h-sm); padding: 0 var(--mat-space-2);
+  border: 0; border-radius: var(--mat-radius-sm); background: transparent; color: inherit; font: inherit; font-weight: 650; cursor: pointer;
+}
+.mat-cal__title--button:hover { background: var(--mat-surface-3); }
+.mat-cal__title--button:focus-visible { outline: none; box-shadow: var(--mat-focus-ring); }
+.mat-cal__title--button > .mat-icon { flex: none; color: var(--mat-text-muted); }
+.mat-cal__pick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(48px, 1fr); gap: var(--mat-space-2); min-height: 17rem; padding-top: var(--mat-space-2); }
+.mat-cal__cell {
+  min-width: 0; padding: 0; border: 1.5px solid transparent; border-radius: var(--mat-radius-sm);
+  background: transparent; color: var(--mat-text); font: inherit; font-variant-numeric: tabular-nums; text-transform: capitalize; cursor: pointer;
+}
+.mat-cal__cell:hover:not(:disabled) { background: var(--mat-accent-soft-strong); }
+.mat-cal__cell:focus-visible { outline: none; box-shadow: var(--mat-focus-ring); }
+.mat-cal__cell.is-today { border-color: var(--mat-accent); }
+.mat-cal__cell.is-current { background: var(--mat-accent-soft-strong); font-weight: 650; }
+.mat-cal__cell:disabled { color: var(--mat-text-faint); cursor: not-allowed; }
+
+/* ---- Calendar: always shown (data-calendar) ----
+   A surface with a line around it, like a card. The real input is not drawn; it lies over the calendar so that a browser message points at it. */
+.mat-calendar { position: relative; display: block; width: 100%; max-width: 22.5rem; padding: var(--mat-space-3); background: var(--mat-surface); border: 1px solid var(--mat-border); border-radius: var(--mat-radius-lg); }
+.mat-calendar[data-months="2"] { max-width: 40rem; }
+.mat-calendar__input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+.mat-calendar .mat-cal__months { flex-wrap: wrap; }
+.mat-calendar[data-months="2"] .mat-cal__month { min-width: min(252px, 100%); }
+.mat-field.is-invalid .mat-calendar { border-color: var(--mat-danger); }
+.mat-calendar__agenda { display: flex; flex-direction: column; gap: var(--mat-space-2); margin-top: var(--mat-space-3); padding-top: var(--mat-space-3); border-top: 1px solid var(--mat-border); }
+.mat-calendar__agenda-title { margin: 0; font-weight: 650; }
+.mat-calendar__events { display: flex; flex-direction: column; gap: var(--mat-space-1); margin: 0; padding: 0; list-style: none; }
+.mat-calendar__event { display: flex; align-items: baseline; gap: var(--mat-space-3); padding: var(--mat-space-2) var(--mat-space-3); border-radius: var(--mat-radius-sm); background: var(--mat-surface-2); }
+.mat-calendar__time { flex: none; min-width: 5.5rem; font-size: var(--mat-fs-sm); font-variant-numeric: tabular-nums; color: var(--mat-text-muted); }
+.mat-calendar__what { min-width: 0; overflow-wrap: anywhere; }
+.mat-calendar__none { margin: 0; font-size: var(--mat-fs-sm); color: var(--mat-text-muted); }

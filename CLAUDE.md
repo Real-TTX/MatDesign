@@ -94,6 +94,9 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`, the tags joined by a comma); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone; `tags` is
   `inline`: a field of chips, no button, its suggestions a dropdown under it). Texts in English and German
   (`PK_TEXT`: both languages must have every key, a test checks). A hidden element that has a `display` in the CSS needs its own `[hidden]` rule (tests list them).
+- Calendar (`FORM-18`): `.mat-calendar[data-calendar]` around the real input `mat-calendar__input` (`data-mode="single|range|multiple"`, `data-min`/`data-max` as a date, `today` or `+3d`, `data-disabled`,
+  `data-disabled-weekdays`, `data-events` JSON with `data-agenda`, `data-week-numbers`). It draws the **month grid that the date picker shares** (one `calMonth`, `calPaint`, `calKeys`, driven by a state
+  object): never copy the grid, change it there. Its texts are in `CAL_TEXT` (both languages, a test checks), found through `pkText`. API: `MatUi.calendar.setEvents/setDisabled/setValue/go`.
 - Carousel (`LIST-13`): `.mat-carousel[data-carousel]` around `.mat-carousel__track` > `.mat-carousel__slide`. The strip scrolls and snaps in CSS (a scrollable strip without the script); the script names the slides,
   adds the bar (Previous, a dot per page, Next, Pause with `data-autoplay`), makes the slides out of view `inert` and says which page is shown. The buttons at the ends are `aria-disabled`, never `disabled` (the focus stays).
   Autoplay waits for the pointer and the focus, stops for good after any use of a control and never starts under `prefers-reduced-motion`. Texts in `CAR_TEXT` (English and German, a test checks).

@@ -89,6 +89,16 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
   </div>
   ```
 
+- A month that is **always shown** (`FORM-18`) is a calendar: `mat-calendar` with `data-calendar` around the real input `mat-calendar__input`, for one day, a period (`data-mode="range"`) or several days
+  (`data-mode="multiple"`). It posts `2026-10-10`, `2026-10-10..2026-10-14` or `2026-10-10,2026-10-12`. `data-min="today"` (also `tomorrow`, `+3d`, `-1w`) means nobody can pick the past, `data-disabled`
+  and `data-disabled-weekdays="0,6"` close days, `data-events` (JSON) marks days with dots and `data-agenda` lists the events of the chosen day. The date picker takes the same `data-min` and `data-max`.
+
+  ```html
+  <div class="mat-calendar" data-calendar data-min="today" data-disabled-weekdays="0,6">
+    <input class="mat-calendar__input" id="visit" name="visit" />
+  </div>
+  ```
+
 ## 4a. Layout and utilities
 
 - **Containers and the grid:** a page inside the shell is `mat-page`; one without it (sign-in, a shared link) is `mat-container`. For a layout you have decided use the twelve columns

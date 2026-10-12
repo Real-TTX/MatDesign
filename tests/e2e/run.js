@@ -1205,6 +1205,398 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- calendar (FORM-18)
+  // The checks do not depend on the day they run: what is about today is computed from the clock of the machine, the rest happens in March 2030.
+  console.log('\nCalendar');
+  const calPad = n => String(n).padStart(2, '0');
+  const calIso = d => `${d.getFullYear()}-${calPad(d.getMonth() + 1)}-${calPad(d.getDate())}`;
+  const calDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const calPlus = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + n); return d; };
+  // puts markup into the page (below the examples) and wires it, like an app that adds a calendar later
+  const calPut = (page, html) => page.evaluate(h => {
+    let box = document.getElementById('e2e-box');
+    if (!box) { box = document.createElement('div'); box.id = 'e2e-box'; document.querySelector('.mat-main').appendChild(box); }
+    box.innerHTML = h;
+    window.MatUi.refresh(box);
+  }, html);
+  const calField = (id, attrs, label = 'Day', extra = '') => `<div class="mat-field"><label class="mat-label" for="${id}">${label}</label><div class="mat-calendar" data-calendar ${attrs}><input class="mat-calendar__input" id="${id}" name="${id}" ${extra} /></div></div>`;
+  const calLog = (page, id) => page.evaluate(i => {
+    window.__events = [];
+    const el = document.getElementById(i);
+    ['input', 'change'].forEach(t => el.addEventListener(t, () => window.__events.push(t + ':' + el.value)));
+  }, id);
+  const calEvents = page => page.evaluate(() => window.__events);
+  const calGo = (page, id, day) => page.evaluate(([i, d]) => window.MatUi.calendar.go(document.getElementById(i), d), [id, day]);
+  const calDays = (page, root) => page.$$eval(`${root} .mat-cal__day`, els => els.map(b => ({ date: b.getAttribute('data-date'), off: b.disabled, cls: b.className, label: b.getAttribute('aria-label'), tab: b.tabIndex, marks: b.querySelectorAll('.mat-cal__mark').length })));
+  // the first day that can be chosen, looking at this month and at the next two
+  const calFirstOpen = async (page, root) => {
+    for (let i = 0; i < 3; i += 1) {
+      const open = (await calDays(page, root)).filter(d => !d.off)[0];
+      if (open) { return open.date; }
+      await page.click(`${root} [data-cal-nav="1"]`);
+    }
+    return null;
+  };
+  const calTitle = (page, root) => page.$eval(`${root} .mat-cal__title`, el => el.textContent.trim());
+  const calActive = page => page.evaluate(() => document.activeElement.getAttribute('data-date') || document.activeElement.getAttribute('data-cal-month') || document.activeElement.getAttribute('data-cal-year') || document.activeElement.className);
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#calendar');
+    const calRoot = '#e2e-box .mat-calendar';
+
+    await check('a calendar names itself after its label, shows one month from Monday with today marked, and posts nothing before a choice', async () => {
+      await calPut(page, calField('e2e-c1', '', 'Day of the visit'));
+      expect(await page.getAttribute(calRoot, 'aria-label'), 'Day of the visit', 'the name of the group');
+      expect(await page.getAttribute(calRoot, 'role'), 'group', 'the role');
+      expect(await page.locator(`${calRoot} .mat-cal__month`).count(), 1, 'months');
+      expect((await page.$$eval(`${calRoot} .mat-cal__dow`, els => els.map(e => e.textContent.trim()))).join(' '), 'Mon Tue Wed Thu Fri Sat Sun', 'the week days');
+      expect(await page.$$eval(`${calRoot} .mat-cal__day.is-today`, els => els.map(e => e.getAttribute('data-date'))), [calIso(calPlus(0))], 'today');
+      expect(await page.$eval('#e2e-c1', el => el.value), '', 'the value');
+      expect((await calDays(page, calRoot)).filter(d => d.tab === 0).length, 1, 'days that the Tab key stops at');
+      expectTrue(/\d{4}$/.test(await page.getAttribute(`${calRoot} .mat-cal__day.is-today`, 'aria-label')), 'a day is named with its full date');
+    });
+
+    await check('data-min="today" and data-max take the past and the far future away, closed weekdays are disabled, and a click posts one ISO date with input and change', async () => {
+      await calPut(page, calField('e2e-c2', 'data-min="today" data-max="+20d" data-disabled-weekdays="0,6"'));
+      await calLog(page, 'e2e-c2');
+      const today = calPlus(0), last = calPlus(20);
+      const wanted = d => { const x = calDate(d); return x < today || x > last || x.getDay() === 0 || x.getDay() === 6; };
+      const wrong = [];
+      for (let step = 0; step < 3; step += 1) {
+        (await calDays(page, calRoot)).forEach(d => { if (d.off !== wanted(d.date)) { wrong.push(d.date); } });
+        if (await page.locator(`${calRoot} [data-cal-nav="1"]`).isDisabled()) { break; }
+        await page.click(`${calRoot} [data-cal-nav="1"]`);
+      }
+      expect(wrong, [], 'days with the wrong state');
+      expect(await page.locator(`${calRoot} [data-cal-nav="1"]`).isDisabled(), true, 'no way to a month after data-max');
+      await calGo(page, 'e2e-c2', calIso(today));
+      expect(await page.locator(`${calRoot} [data-cal-nav="-1"]`).isDisabled(), true, 'no way to a month before data-min');
+      const first = await calFirstOpen(page, calRoot);
+      expectTrue(first !== null && calDate(first) >= today, 'a day that can be chosen: ' + first);
+      await page.click(`${calRoot} [data-date="${first}"]`);
+      expect(await page.$eval('#e2e-c2', el => el.value), first, 'the posted value');
+      expect(await calEvents(page), [`input:${first}`, `change:${first}`], 'the events of the real input');
+      expect(await page.getAttribute(`${calRoot} [data-date="${first}"]`, 'aria-selected'), 'true', 'aria-selected');
+      await page.click(`${calRoot} [data-date="${first}"]`);
+      expect(await page.$eval('#e2e-c2', el => el.value), first, 'a second click on the day keeps it (no event twice)');
+      expect((await calEvents(page)).length, 2, 'events after the second click');
+    });
+
+    await check('a limit can be a word or a distance: tomorrow, +3d and -1w', async () => {
+      await calPut(page, calField('e2e-c3', 'data-min="+3d" data-max="+3m"'));
+      // the first day that can be chosen is three days from now (in this month, or else in the next one, to which the arrow leads)
+      expect(await calFirstOpen(page, calRoot), calIso(calPlus(3)), 'the first day that can be chosen');
+      await calPut(page, calField('e2e-c3', 'data-min="tomorrow" data-max="today"'));
+      expect((await calDays(page, calRoot)).filter(d => !d.off).length, 0, 'tomorrow after today leaves no day');
+      await calPut(page, calField('e2e-c3', 'data-min="-1w" data-max="today"'));
+      const open = (await calDays(page, calRoot)).filter(d => !d.off).map(d => d.date);
+      expectTrue(open.every(d => calDate(d) >= calPlus(-7) && calDate(d) <= calPlus(0)), 'days outside the week behind today are open: ' + open.join(','));
+    });
+
+    await check('a period: the first click is the start, the pointer previews, the second completes it, a click before the start begins again', async () => {
+      await calPut(page, calField('e2e-c4', 'data-mode="range" data-clearable'));
+      await calLog(page, 'e2e-c4');
+      await calGo(page, 'e2e-c4', '2030-03-01');
+      const day = d => `${calRoot} [data-date="${d}"]`;
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), 'Choose the start date', 'the line before the start');
+      await page.click(day('2030-03-12'));
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), 'Choose the end date', 'the line after the start');
+      await page.hover(day('2030-03-15'));
+      expect(await page.$$eval(`${calRoot} .is-in-range`, els => els.map(e => e.getAttribute('data-date'))), ['2030-03-13', '2030-03-14'], 'the preview up to the pointer');
+      expect(await page.$eval('#e2e-c4', el => el.value), '', 'nothing is posted before both ends are chosen');
+      await page.click(day('2030-03-15'));
+      expect(await page.$eval('#e2e-c4', el => el.value), '2030-03-12..2030-03-15', 'the period');
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).replace(/\s+/g, ' ').trim(), '12 Mar 2030 – 15 Mar 2030 · 4 days', 'the line under the month');
+      expect(await page.$$eval(`${calRoot} .is-selected`, els => els.map(e => e.getAttribute('data-date'))), ['2030-03-12', '2030-03-15'], 'the ends');
+      await page.click(day('2030-03-05'));
+      expect(await page.$eval('#e2e-c4', el => el.value), '', 'a day before the start begins again');
+      await page.click(day('2030-03-07'));
+      expect(await page.$eval('#e2e-c4', el => el.value), '2030-03-05..2030-03-07', 'the new period');
+      expect((await calEvents(page)).filter(e => e.startsWith('change')), ['change:2030-03-12..2030-03-15', 'change:', 'change:2030-03-05..2030-03-07'], 'a change event for every change of the value (an unfinished period is an empty value)');
+      await page.click(`${calRoot} [data-cal-clear]`);
+      expect(await page.$eval('#e2e-c4', el => el.value), '', 'Clear');
+      expect(await page.$$eval(`${calRoot} .is-selected`, els => els.length), 0, 'nothing is marked after Clear');
+    });
+
+    await check('a period does not run across a taken day but runs across closed weekdays', async () => {
+      await calPut(page, calField('e2e-c5', 'data-mode="range" data-disabled="2030-03-14" data-disabled-weekdays="0,6"'));
+      await calGo(page, 'e2e-c5', '2030-03-01');
+      const day = d => `${calRoot} [data-date="${d}"]`;
+      await page.click(day('2030-03-11'));
+      await page.click(day('2030-03-15'));
+      expect(await page.$eval('#e2e-c5', el => el.value), '', 'the day behind a taken day only starts a new period');
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), 'Choose the end date', 'the line');
+      await page.click(day('2030-03-18'));
+      expect(await page.$eval('#e2e-c5', el => el.value), '2030-03-15..2030-03-18', 'a period across a weekend');
+      expect(await page.locator(day('2030-03-14')).isDisabled(), true, 'the taken day');
+      expect(await page.locator(day('2030-03-16')).isDisabled(), true, 'a Saturday');
+    });
+
+    await check('several days: a click adds or removes, the value is sorted, the count is told and data-max-dates refuses one more', async () => {
+      await calPut(page, calField('e2e-c6', 'data-mode="multiple" data-max-dates="3"', 'Days', 'value="2030-03-20"'));
+      await calLog(page, 'e2e-c6');
+      const day = d => `${calRoot} [data-date="${d}"]`;
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), '1 day chosen', 'the start (the value was read)');
+      await page.click(day('2030-03-05'));
+      await page.click(day('2030-03-12'));
+      expect(await page.$eval('#e2e-c6', el => el.value), '2030-03-05,2030-03-12,2030-03-20', 'sorted');
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), '3 days chosen', 'the count');
+      await page.click(day('2030-03-25'));
+      expect(await page.$eval('#e2e-c6', el => el.value), '2030-03-05,2030-03-12,2030-03-20', 'the fourth day is refused');
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), 'At most 3 days', 'the message');
+      await page.click(day('2030-03-12'));
+      expect(await page.$eval('#e2e-c6', el => el.value), '2030-03-05,2030-03-20', 'a chosen day is taken away by a second click');
+      expect(await page.getAttribute(day('2030-03-12'), 'aria-selected'), 'false', 'aria-selected after that');
+      expect((await calEvents(page)).length, 6, 'input and change for each of the three changes');
+    });
+
+    await check('days and periods in data-disabled and the weekdays can be changed with MatUi.calendar.setDisabled', async () => {
+      await calPut(page, calField('e2e-c7', 'data-disabled="2030-03-14,2030-03-20..2030-03-22"'));
+      await calGo(page, 'e2e-c7', '2030-03-01');
+      const off = async () => (await calDays(page, calRoot)).filter(d => d.off).map(d => d.date);
+      expect(await off(), ['2030-03-14', '2030-03-20', '2030-03-21', '2030-03-22'], 'what the attribute says');
+      await page.evaluate(() => window.MatUi.calendar.setDisabled(document.getElementById('e2e-c7'), { dates: ['2030-03-05'], weekdays: [0, 6] }));
+      expect((await off()).filter(d => calDate(d).getDay() !== 0 && calDate(d).getDay() !== 6), ['2030-03-05'], 'the days after setDisabled (the weekends apart)');
+      expect((await off()).length, 11, 'one day and the ten days of the weekends of March 2030');
+      await page.evaluate(() => window.MatUi.calendar.setDisabled(document.getElementById('e2e-c7'), { dates: null, weekdays: '', max: '2030-03-10' }));
+      expect((await calDays(page, calRoot)).filter(d => !d.off).map(d => d.date).at(-1), '2030-03-10', 'data-max through the API');
+    });
+
+    await check('days with events carry dots (up to three) and say how many in their name, and the agenda lists the events of the chosen day', async () => {
+      const events = JSON.stringify({
+        '2030-03-05': [{ title: 'Dentist', time: '09:00', end: '09:45' }, { title: 'Team lunch', time: '12:30' }, 'Hand in the form'],
+        '2030-03-12': [{ title: 'One' }, { title: 'Two' }, { title: 'Three' }, { title: 'Four', time: '07:00' }],
+        '2030-03-20': [{ title: 'Backup check', time: '08:00' }],
+      });
+      await calPut(page, calField('e2e-c8', `data-agenda data-events='${events}'`, 'Day', 'value="2030-03-05"'));
+      const days = Object.fromEntries((await calDays(page, calRoot)).map(d => [d.date, d]));
+      expect([days['2030-03-05'].marks, days['2030-03-12'].marks, days['2030-03-20'].marks, days['2030-03-21'].marks], [3, 3, 1, 0], 'dots');
+      expectTrue(days['2030-03-12'].label.endsWith(', 4 events') && days['2030-03-20'].label.endsWith(', 1 event'), 'the names of the days: ' + days['2030-03-12'].label);
+      const agenda = () => page.$eval(`${calRoot} .mat-calendar__agenda`, el => ({ title: el.querySelector('.mat-calendar__agenda-title').textContent.trim(), items: [...el.querySelectorAll('.mat-calendar__event')].map(li => li.innerText.replace(/\s+/g, ' ').trim()), none: !!el.querySelector('.mat-calendar__none') }));
+      expect((await agenda()).items, ['All day Hand in the form', '09:00 – 09:45 Dentist', '12:30 Team lunch'], 'the events of the chosen day in the order of the time (a day long event first)');
+      expectTrue(/March 2030/.test((await agenda()).title), 'the agenda names the day: ' + (await agenda()).title);
+      await page.click(`${calRoot} [data-date="2030-03-12"]`);
+      expect((await agenda()).items, ['All day One', 'All day Two', 'All day Three', '07:00 Four'], 'the events of the next day (the ones without a time first, in the order they were given)');
+      await page.click(`${calRoot} [data-date="2030-03-13"]`);
+      expect(await agenda(), { title: (await agenda()).title, items: [], none: true }, 'a day without events');
+      expect((await page.textContent(`${calRoot} .mat-calendar__none`)).trim(), 'Nothing on this day', 'the text');
+      await page.evaluate(() => window.MatUi.calendar.setEvents(document.getElementById('e2e-c8'), [{ date: '2030-03-13', title: 'Added later', time: '10:15' }]));
+      expect((await agenda()).items, ['10:15 Added later'], 'the agenda after setEvents');
+      const after = Object.fromEntries((await calDays(page, calRoot)).map(d => [d.date, d.marks]));
+      expect([after['2030-03-13'], after['2030-03-05']], [1, 0], 'the dots after setEvents (the old events are replaced)');
+    });
+
+    await check('week numbers are ISO weeks in a column of their own, and the first weekday can be Sunday', async () => {
+      await calPut(page, calField('e2e-c9', 'data-week-numbers'));
+      await calGo(page, 'e2e-c9', '2030-03-01');
+      // the ISO week by the rule of the Thursday, written down again here
+      const iso = s => { const d = calDate(s); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7)); return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 86400000 + 1) / 7); };
+      const weeks = await page.$$eval(`${calRoot} .mat-cal__wk`, els => els.map(e => +e.textContent));
+      expect(weeks, ['2030-03-01', '2030-03-04', '2030-03-11', '2030-03-18', '2030-03-25'].map(iso), 'the weeks of March 2030');
+      expect(await page.$$eval(`${calRoot} .mat-cal__dow`, els => els[0].textContent.trim()), 'Wk', 'the heading of the column');
+      await calPut(page, calField('e2e-c10', 'data-week-start="0"'));
+      expect((await page.$$eval(`${calRoot} .mat-cal__dow`, els => els.map(e => e.textContent.trim()))).join(' '), 'Sun Mon Tue Wed Thu Fri Sat', 'the week starts on Sunday');
+    });
+
+    await check('the title leads to the months and the years: a date of birth is a few clicks, Escape goes back, limits disable what is outside', async () => {
+      await calPut(page, calField('e2e-c11', 'data-min="2029-05-10" data-max="2031-09-20"'));
+      await calGo(page, 'e2e-c11', '2030-03-15');
+      expect(await calTitle(page, calRoot), 'March 2030', 'the title');
+      await page.click(`${calRoot} [data-cal-level="months"]`);
+      expect(await page.locator(`${calRoot} [data-cal-month]`).count(), 12, 'months');
+      expect(await page.getAttribute(`${calRoot} [data-cal-month="2"]`, 'aria-pressed'), 'true', 'the month that is shown');
+      expect(await calActive(page), '2', 'the focus is on that month');
+      await page.click(`${calRoot} [data-cal-nav="1"]`);
+      expect(await calTitle(page, calRoot), '2031', 'the year after the arrow');
+      expect(await page.$$eval(`${calRoot} [data-cal-month]`, els => els.filter(e => e.disabled).map(e => e.getAttribute('data-cal-month')).join(',')), '9,10,11', 'the months after data-max');
+      await page.click(`${calRoot} [data-cal-level="years"]`);
+      expect(await page.locator(`${calRoot} [data-cal-year]`).count(), 12, 'years');
+      expect(await page.$$eval(`${calRoot} [data-cal-year]`, els => els.filter(e => e.disabled).map(e => e.getAttribute('data-cal-year')).join(',')), '2028,2032,2033,2034,2035,2036,2037,2038,2039', 'the years outside the limits (twelve years from 2028)');
+      await page.click(`${calRoot} [data-cal-year="2029"]`);
+      expect(await page.$$eval(`${calRoot} [data-cal-month]`, els => els.filter(e => e.disabled).map(e => e.getAttribute('data-cal-month')).join(',')), '0,1,2,3', 'the months before data-min');
+      await page.click(`${calRoot} [data-cal-month="7"]`);
+      expect(await calTitle(page, calRoot), 'August 2029', 'back at the days');
+      expect(await page.evaluate(() => /^2029-08-/.test(document.activeElement.getAttribute('data-date') || '')), true, 'the focus is on a day of that month');
+      await page.keyboard.press('Escape');
+      await page.click(`${calRoot} [data-cal-level="months"]`);
+      await page.keyboard.press('Escape');
+      expect(await page.locator(`${calRoot} [data-cal-month]`).count(), 0, 'Escape in the months goes back to the days');
+      expect(await page.locator(`${calRoot} .mat-cal__day`).count() > 27, true, 'the days are there');
+    });
+
+    await check('the months and the years are walked with the arrow keys and the page keys', async () => {
+      await calGo(page, 'e2e-c11', '2030-03-15');
+      await page.click(`${calRoot} [data-cal-level="months"]`);
+      await page.keyboard.press('ArrowRight');
+      expect(await calActive(page), '3', 'a month on');
+      await page.keyboard.press('ArrowDown');
+      expect(await calActive(page), '6', 'a row down');
+      await page.keyboard.press('PageDown');
+      expect(await calTitle(page, calRoot), '2031', 'a year on');
+      await page.keyboard.press('Enter');
+      expect(await calTitle(page, calRoot), 'July 2031', 'Enter takes the month (the same cell stays the focus after the page key)');
+    });
+
+    await check('a calendar is a grid for the keyboard: arrows, Home and End, Page up and down (with Shift the year), disabled days are stepped over', async () => {
+      await calPut(page, calField('e2e-c12', 'data-disabled-weekdays="0,6" data-disabled="2030-03-19"'));
+      await calGo(page, 'e2e-c12', '2030-03-15');
+      await page.click(`${calRoot} [data-date="2030-03-15"]`);
+      await page.keyboard.press('ArrowRight');
+      expect(await calActive(page), '2030-03-18', 'Friday and one to the right: the weekend is stepped over');
+      await page.keyboard.press('ArrowLeft');
+      expect(await calActive(page), '2030-03-15', 'and back');
+      await page.keyboard.press('ArrowDown');
+      expect(await calActive(page), '2030-03-22', 'a week down');
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('ArrowUp');
+      expect(await calActive(page), '2030-03-08', 'two weeks up');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowRight');
+      expect(await calActive(page), '2030-03-18', 'Friday the 15th to the Monday');
+      await page.keyboard.press('ArrowRight');
+      expect(await calActive(page), '2030-03-20', 'the taken Tuesday is stepped over too');
+      await page.keyboard.press('End');
+      expect(await calActive(page), '2030-03-22', 'End: the last day of the week that can be chosen (Friday)');
+      await page.keyboard.press('Home');
+      expect(await calActive(page), '2030-03-18', 'Home: the first one (Monday)');
+      await page.keyboard.press('PageDown');
+      expect(await calTitle(page, calRoot), 'April 2030', 'a month on');
+      expect(await calActive(page), '2030-04-18', 'the same day number');
+      await page.keyboard.press('Shift+PageUp');
+      expect(await calTitle(page, calRoot), 'April 2029', 'a year back');
+      await page.keyboard.press('Enter');
+      expect(await page.$eval('#e2e-c12', el => el.value), '2029-04-18', 'Enter chose the day');
+    });
+
+    await check('Today goes to the month of today and the focus to today (or the next day that can be chosen)', async () => {
+      await calPut(page, calField('e2e-c13', 'data-min="today"'));
+      await calGo(page, 'e2e-c13', '2030-03-15');
+      await page.click(`${calRoot} [data-cal-today]`);
+      const today = calPlus(0);
+      expect(await calTitle(page, calRoot), new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(today), 'the month');
+      expect(await calActive(page), calIso(today), 'the focus');
+    });
+
+    await check('a required calendar writes its message at the field, takes the focus to a day and forgets the choice on reset', async () => {
+      await calPut(page, `<form class="mat-form" id="e2e-form" method="get" action="/Components#calendar" novalidate>${calField('e2e-c14', 'data-min="today"', 'Day', 'required data-msg-required="Please choose a day."').replace('</div></div>', '</div><span class="mat-error" aria-live="polite"></span></div>')}<button type="submit" class="mat-btn mat-btn--primary" id="e2e-send">Continue</button><button type="reset" class="mat-btn mat-btn--secondary" id="e2e-reset">Reset</button></form>`);
+      const calmBorder = await page.$eval(calRoot, el => getComputedStyle(el).borderTopColor);
+      await page.click('#e2e-send');
+      await page.waitForTimeout(150);
+      expect(await page.$eval('#e2e-c14', el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked');
+      expect((await page.$eval('#e2e-c14', el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose a day.', 'the message');
+      expectTrue(await page.evaluate(() => !!document.activeElement.getAttribute('data-date')), 'the focus is on a day');
+      expectTrue((await page.$eval(calRoot, el => getComputedStyle(el).borderTopColor)) !== calmBorder, 'the line of the calendar turns red');
+      const first = await calFirstOpen(page, calRoot);
+      await page.click(`${calRoot} [data-date="${first}"]`);
+      expect(await page.$eval('#e2e-c14', el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after a choice');
+      await page.click('#e2e-reset');
+      await page.waitForTimeout(100);
+      expect(await page.$eval('#e2e-c14', el => el.value), '', 'the value after Reset');
+      expect(await page.$$eval(`${calRoot} .is-selected`, els => els.length), 0, 'no day is marked after Reset');
+    });
+
+    await check('the date picker takes the same limits (a distance from today) and the same jump to a month and a year', async () => {
+      await page.evaluate(() => {
+        const box = document.getElementById('e2e-box');
+        box.innerHTML = '<div class="mat-field"><label class="mat-label" for="e2e-dp">Delivery</label><div class="mat-picker" data-picker="date" data-min="+3d" data-max="+400d"><input class="mat-picker__input" id="e2e-dp" name="dp" /></div></div>';
+        window.MatUi.refresh(box);
+      });
+      await page.click('#e2e-dp-trigger');
+      const panel = '#e2e-dp-trigger ~ .mat-picker__panel';
+      const open = (await page.$$eval(`${panel} .mat-cal__day`, els => els.filter(b => !b.disabled).map(b => b.getAttribute('data-date'))));
+      expectTrue(open.length === 0 || open[0] >= calIso(calPlus(3)), 'the first day that can be chosen is not before three days from now: ' + open[0]);
+      expect(await page.locator(`${panel} [data-cal-level="months"]`).count(), 1, 'the title is a button');
+      await page.click(`${panel} [data-cal-level="months"]`);
+      await page.click(`${panel} [data-cal-level="years"]`);
+      const target = calPlus(300);
+      for (let i = 0; i < 3 && (await page.locator(`${panel} [data-cal-year="${target.getFullYear()}"]`).count()) === 0; i += 1) { await page.click(`${panel} [data-cal-nav="1"]`); }
+      await page.click(`${panel} [data-cal-year="${target.getFullYear()}"]`);
+      await page.click(`${panel} [data-cal-month="${target.getMonth()}"]`);
+      const iso = calIso(target);
+      await page.click(`${panel} [data-date="${calIso(new Date(target.getFullYear(), target.getMonth(), 15))}"]`);
+      expect(await page.$eval('#e2e-dp', el => el.value), calIso(new Date(target.getFullYear(), target.getMonth(), 15)), 'the posted value after a jump (' + iso + ')');
+      expectTrue(!(await page.locator(panel).isVisible()), 'the panel is closed');
+    });
+
+    await check('the examples of the page are alive: the events example shows its agenda and the rental example posts a period', async () => {
+      await page.evaluate(() => document.getElementById('cal-events').closest('.mat-field').scrollIntoView({ block: 'center' }));
+      expect(await page.locator('#cal-events').evaluate(el => el.closest('.mat-calendar').querySelectorAll('.mat-calendar__event').length), 3, 'the events of the 14th');
+      expect(await page.locator('#cal-days').evaluate(el => el.closest('.mat-calendar').querySelector('.mat-picker__status').textContent.trim()), '2 days chosen', 'the days off');
+    });
+
+    await check('a calendar names its days, has no second Tab stop inside the grid and puts the real input out of the way', async () => {
+      await calPut(page, calField('e2e-c15', 'data-min="today"'));
+      const tabStops = await page.$$eval(`${calRoot} .mat-cal__day`, els => els.filter(b => b.tabIndex === 0).length);
+      expect(tabStops, 1, 'Tab stops');
+      const input = await page.$eval('#e2e-c15', el => { const s = getComputedStyle(el); return { opacity: s.opacity, pointer: s.pointerEvents, hidden: el.getAttribute('aria-hidden'), tab: el.tabIndex }; });
+      expect(input, { opacity: '0', pointer: 'none', hidden: 'true', tab: -1 }, 'the real input');
+      await page.focus('#e2e-c15');
+      expectTrue(await page.evaluate(() => !!document.activeElement.getAttribute('data-date')), 'a label that focuses the input lands on a day');
+    });
+
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#calendar');
+    const calRoot = '#e2e-box .mat-calendar';
+    await check('on a phone a calendar fits the screen, its days are 44 px high, two months are one above the other and a click works with a touch', async () => {
+      await calPut(page, calField('e2e-p1', 'data-mode="range" data-months="2"') + calField('e2e-p2', 'data-agenda data-week-numbers'));
+      const sizes = await page.evaluate(() => {
+        const cal = document.querySelector('#e2e-box .mat-field:first-child .mat-calendar').getBoundingClientRect();
+        const day = document.querySelector('#e2e-box .mat-field:first-child .mat-cal__day').getBoundingClientRect();
+        const months = [...document.querySelectorAll('#e2e-box .mat-field:first-child .mat-cal__month')].map(m => m.getBoundingClientRect());
+        return { day: Math.round(day.height), within: cal.left >= 0 && cal.right <= innerWidth, stacked: months.length === 2 && months[1].top > months[0].bottom - 1, overflow: document.documentElement.scrollWidth > innerWidth };
+      });
+      expect(sizes, { day: 44, within: true, stacked: true, overflow: false }, 'the calendar on a phone');
+      await calGo(page, 'e2e-p1', '2030-03-01');
+      await page.tap('#e2e-box .mat-field:first-child [data-date="2030-03-12"]');
+      await page.tap('#e2e-box .mat-field:first-child [data-date="2030-04-02"]');
+      expect(await page.$eval('#e2e-p1', el => el.value), '2030-03-12..2030-04-02', 'a period over two months');
+    });
+    await check('on a phone the title leads to the months and the arrows are touch targets', async () => {
+      const box = await page.$eval('#e2e-box .mat-field:last-child .mat-cal__head [data-cal-nav="1"]', el => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; });
+      expectTrue(box.w >= 36 && box.h >= 36, `the arrow is ${box.w} x ${box.h} px`);
+      await page.tap('#e2e-box .mat-field:last-child [data-cal-level="months"]');
+      expect(await page.locator('#e2e-box .mat-field:last-child [data-cal-month]').count(), 12, 'months');
+      const cell = await page.$eval('#e2e-box .mat-field:last-child [data-cal-month="0"]', el => Math.round(el.getBoundingClientRect().height));
+      expectTrue(cell >= 44, `a month is ${cell} px high`);
+    });
+    await ctx.close();
+  }
+
+  {
+    // the language of the page: the texts and the names of the months come in German when the page says lang="de"
+    const ctx = await browser.newContext({ ...desktopOptions, locale: 'de-DE' });
+    const page = await ctx.newPage();
+    page.on('pageerror', e => consoleErrors.push('/Components (de): ' + e.message));
+    await page.route('**/Components', async route => {
+      const response = await route.fetch();
+      await route.fulfill({ response, body: (await response.text()).replace('<html lang="en"', '<html lang="de"') });
+    });
+    await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+    await check('in German the calendar speaks German: days, months, buttons, the line under a period', async () => {
+      await calPut(page, calField('e2e-de1', 'data-min="today" data-clearable data-week-numbers data-mode="multiple"'));
+      const root = '#e2e-box .mat-calendar';
+      const dow = d => new Intl.DateTimeFormat('de-DE', { weekday: 'short' }).format(new Date(2024, 0, d));   // 1 January 2024 is a Monday
+      expect((await page.$$eval(`${root} .mat-cal__dow`, els => els.map(e => e.textContent.trim()))).slice(0, 3), ['KW', dow(1), dow(2)], 'the week days');
+      expect(await calTitle(page, root), new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(calPlus(0)), 'the month in German');
+      expect((await page.textContent(`${root} [data-cal-today]`)).trim(), 'Heute', 'Today');
+      expect((await page.textContent(`${root} [data-cal-clear]`)).trim(), 'Löschen', 'Clear');
+      expect(await page.getAttribute(`${root} [data-cal-nav="-1"]`, 'aria-label'), 'Vorheriger Monat', 'the arrow');
+      await page.click(`${root} [data-cal-level="months"]`);
+      expect(await page.getAttribute(`${root} [data-cal-nav="1"]`, 'aria-label'), 'Nächstes Jahr', 'the arrow of the years');
+      expect((await page.textContent(`${root} [data-cal-month="2"]`)).trim().toLowerCase().startsWith('mär'), true, 'a month');
+      await page.click(`${root} [data-cal-level="years"]`);
+      expect(await page.getAttribute(`${root} [data-cal-nav="1"]`, 'aria-label'), 'Spätere Jahre', 'the arrow of a block of years');
+      await page.click(`${root} [data-cal-year="${calPlus(0).getFullYear()}"]`);
+      await page.click(`${root} [data-cal-month="${calPlus(0).getMonth()}"]`);
+      expect((await page.textContent(`${root} .mat-picker__status`)).trim(), 'Einen oder mehrere Tage wählen', 'the line under the month');
+      await page.click(`${root} [data-date="${calIso(calPlus(0))}"]`);
+      expect((await page.textContent(`${root} .mat-picker__status`)).trim(), '1 Tag gewählt', 'one day');
+      expect(await page.$eval('#e2e-de1', el => el.value), calIso(calPlus(0)), 'the posted value is the same in every language');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- carousel (LIST-13)
   console.log('\nCarousel');
   {

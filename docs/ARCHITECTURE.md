@@ -82,6 +82,10 @@ It lives inside the wrapper, so a picker in a dialog is not cut off by it, and E
 browser message points at the right place, and whoever focuses it (a label, the validation) lands on the button. The texts are English and German (`data-pk-*` on `html` changes them; a test checks that
 both languages have every text).
 
+The month grid of the date picker is shared, not copied (`FORM-18`): one `calMonth`, one `calPaint`, one set of keys, driven by a **state** (mode `single`, `range` or `multiple`; min and max; `off(date)` for
+days that cannot be chosen; marks, a level of days, months or years). The calendar that is always shown (`mat-calendar[data-calendar]`, with a real input `mat-calendar__input`) draws the same grid into the
+page; the picker only adds a button and a panel. A limit is a date, `today` or a distance (`dateExpr`: `+3d`). Texts that only the calendar needs live in their own table (`CAL_TEXT`), found through `pkText`.
+
 ### Layout and utilities
 
 `matui.layout.css` is the last part before the apps: containers, a grid of twelve columns (`mat-cols`, `mat-col-N`, with `sm`, `md` and `lg` variants from 600, 900 and 1200 px, mobile first) and

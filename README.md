@@ -304,7 +304,7 @@ place that could.
 |---|---|---|
 | Toolkit | MatUi (ten CSS parts, one script, the icon sprite), colour maths, rulebook, app registry | ✅ |
 | Site | Rulebook, foundations, shell, identity, builder, download – tests, container, CI | ✅ |
-| Components | Menu badges, submenus and switcher, forms, **pickers** (select, date and period, time, colour, **tags**), content components (with a **carousel**), **layout system**, utilities | ✅ |
+| Components | Menu badges, submenus and switcher, forms, **pickers** (select, date and period, time, colour, **tags**), a **calendar** that is always shown, content components (with a **carousel**), **layout system**, utilities | ✅ |
 | Flat look | No gradients, glow or blur; selected is a tint (`COLOR-08`); toolbar with search field | ✅ |
 | Studio 1–2 | Data store, sign-in, **apps** | ✅ |
 | Studio 3–4 | **Rules** and **components** with live examples | ✅ |

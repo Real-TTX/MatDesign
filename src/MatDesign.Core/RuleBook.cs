@@ -242,6 +242,13 @@ public static class RuleBook
         new("FORM-15", "FORM", "Pickers",
             "A value that the native control cannot show well is chosen in a picker: an option with a picture and a description, a date or a period, a time or a time range, a colour. The picker is a button that looks like a field and shows the value in the language of the page; the panel opens under it and, on a phone, fills the screen with an X at the top right like every dialog. The field posts one value in a fixed format (2026-10-10, 2026-10-10..2026-10-14, 09:30, 09:00..17:30, #b4235f), whatever the language. Everything can be done with the keyboard, and a picker that can be typed (time, colour) accepts typing. A native control stays the choice when it is enough. Tags are the one picker that is a field of its own: the user types, Enter or a comma makes a chip, an X or Backspace removes it, suggestions are a list under the field (also on a phone), and one value is posted, the tags joined by a comma.",
             RuleLevel.Should, MatCms, Do: "<div class=\"mat-picker\" data-picker=\"date\"><input class=\"mat-picker__input\" id=\"due\" name=\"due\" value=\"2026-10-10\"></div>", Dont: "a text field where the user types a date in a format nobody told them"),
+        new("FORM-18", "FORM", "Calendar",
+            "A calendar that is always shown (`mat-calendar`) chooses one day, a period or several days and posts them in the formats of FORM-15 (2026-10-10, 2026-10-10..2026-10-14, 2026-10-10,2026-10-12). It can limit the days (`data-min=\"today\"`: nobody can pick the past), close days and weekdays, mark days with events and list the events of the chosen day, and it is a grid that the arrow keys walk, with touch targets of 44 px on a phone. The date picker draws the same grid.",
+            RuleLevel.Should, Design,
+            Why: "A month that is already on the page needs no button and no panel; the same grid in the picker and on the page means one behaviour to learn and one to maintain.",
+            Do: "<div class=\"mat-calendar\" data-calendar data-min=\"today\"><input class=\"mat-calendar__input\" id=\"visit\" name=\"visit\"></div>",
+            Dont: "a calendar in which the past can be chosen when it cannot be used, a second month grid that is a copy of the first",
+            Check: "Test (script and CSS contract) and browser"),
 
         // ------------------------------------------------------------------------------------------------- BUTTON
         new("BUTTON-01", "BUTTON", "Four kinds",
