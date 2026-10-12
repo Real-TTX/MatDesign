@@ -898,6 +898,17 @@ function expectTrue(value, what) {
       expectTrue((await title(empty)).startsWith('Week 43') === false && /19 ?[–-] ?25 Oct 2026$/.test(await title(empty)), 'the next week: ' + await title(empty));
       await go(empty, '2026-10-14', 'agenda');
     });
+    await check('without data-now the clock of the browser decides which day is today (the check asks the page what day it is, so it does not depend on the day it runs)', async () => {
+      await create('sched-clock', { 'data-view': 'month' });
+      const expected = await page.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+      expect(await page.$$eval('#sched-clock .mat-schedule__cell.is-today [data-sch-day]', bs => bs.map(b => b.getAttribute('data-sch-day'))), [expected], 'the day that is marked');
+      expect(await page.$eval('#sched-clock .mat-schedule__period', b => b.getAttribute('title')).then(Boolean), true, 'the schedule is drawn');
+      expect(await page.$eval('#sched-clock .mat-schedule__body', b => b.getAttribute('aria-label')), norm(await title('#sched-clock')), 'the region is named by the period');
+      await go('#sched-clock', '2000-02-29', 'month');
+      expect(await title('#sched-clock'), 'February 2000', 'a date far from today');
+      await page.click('#sched-clock .mat-schedule__today');
+      expect(await page.$$eval('#sched-clock .mat-schedule__cell.is-today [data-sch-day]', bs => bs.map(b => b.getAttribute('data-sch-day'))), [expected], 'Today comes back to the real today');
+    });
     await check('an app that loads events is told what is visible; data-lazy shows a loading state until it answers', async () => {
       await page.evaluate(() => { window.__lazy = []; document.addEventListener('mat:schedule-range', e => { if (e.target.id === 'sched-lazy') { window.__lazy.push(e.detail); } }); });
       await create('sched-lazy', { 'data-lazy': '', 'data-view': 'week', 'data-date': '2026-03-04', 'data-now': '2026-03-04T10:00' });
