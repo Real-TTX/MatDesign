@@ -586,6 +586,429 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- schedule (LIST-14)
+  console.log('\nSchedule');
+  // known dates and the ISO 8601 calendar week they are in (a unit test checks this list against .NET)
+  const weekCases = [['2026-10-12', 42], ['2021-01-03', 53], ['2024-12-30', 1], ['2026-12-31', 53], ['2027-01-01', 53], ['2027-01-04', 1], ['2020-12-31', 53], ['2025-12-29', 1], ['2016-01-03', 53], ['2026-01-01', 1], ['2026-03-29', 13], ['2026-10-25', 43]];
+  const norm = s => s.replace(/[   ]/g, ' ').replace(/\s+/g, ' ').trim();
+  // a schedule of the page is shown (and a new one made) from its own state, so nothing depends on the day the check runs: the examples pin their clock with data-now
+  const schedulePage = async (page) => {
+    await page.evaluate(() => {
+      window.__ranges = []; window.__picks = []; window.__days = [];
+      document.addEventListener('mat:schedule-range', e => window.__ranges.push(Object.assign({ id: e.target.id }, e.detail)));
+      document.addEventListener('mat:schedule-select', e => window.__picks.push({ id: e.target.id, event: e.detail }));
+      document.addEventListener('mat:schedule-day', e => window.__days.push(Object.assign({ id: e.target.id }, e.detail)));
+    });
+    const title = sel => page.$eval(`${sel} .mat-schedule__periodtext`, e => e.textContent).then(norm);
+    const go = (sel, date, view) => page.evaluate(([s, d, v]) => window.MatUi.schedule.go(document.querySelector(s), d, v), [sel, date, view || null]);
+    const view = sel => page.getAttribute(sel, 'data-view');
+    const pressed = sel => page.$$eval(`${sel} [data-sch-go]`, bs => bs.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.getAttribute('data-sch-go')));
+    const lastRange = () => page.evaluate(() => window.__ranges.at(-1));
+    const active = () => page.evaluate(() => { const a = document.activeElement; return a ? (a.getAttribute('data-sch-day') || a.className) : null; });
+    // a schedule that is made here: at the top of the content, from the events of the practice example
+    const create = (id, attrs, copyEvents) => page.evaluate(([id, attrs, copyEvents]) => {
+      const el = document.createElement('section');
+      el.className = 'mat-schedule'; el.id = id; el.setAttribute('data-schedule', ''); el.setAttribute('aria-label', id);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      if (copyEvents) { el.setAttribute('data-events', document.querySelector('#sched-practice').getAttribute('data-events')); }
+      document.querySelector('.mat-with-toc__main').prepend(el);
+      window.MatUi.schedule.init(el.parentNode);
+    }, [id, attrs, !!copyEvents]);
+    return { title, go, view, pressed, lastRange, active, create };
+  };
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#schedule');
+    const { title, go, view, pressed, lastRange, active, create } = await schedulePage(page);
+    const practice = '#sched-practice', school = '#sched-school', project = '#sched-project';
+    const next = sel => `${sel} .mat-schedule__next`, prev = sel => `${sel} .mat-schedule__prev`, today = sel => `${sel} .mat-schedule__today`;
+
+    await check('the agenda lists the days that have events, each under a heading that stays; today is marked and the calendar week told', async () => {
+      const s = await page.$eval(practice, root => {
+        const heads = [...root.querySelectorAll('.mat-schedule__dayhead')];
+        return {
+          heads: heads.map(h => h.querySelector('span').textContent.trim()), level: [...new Set(heads.map(h => h.tagName))],
+          sticky: heads.every(h => getComputedStyle(h).position === 'sticky'), today: heads.filter(h => h.querySelector('.mat-pill')).map(h => h.querySelector('span').textContent.trim()),
+          kw: [...root.querySelectorAll('.mat-schedule__kw')].map(k => k.textContent.trim()), rows: root.querySelectorAll('.mat-schedule__event--row').length,
+          wide: root.classList.contains('is-wide'), labelled: root.getAttribute('aria-label'),
+        };
+      });
+      expect(s.heads.length, 5, 'days with events in the week');
+      expectTrue(/^Monday,? 12 October$/.test(s.heads[0]), 'the first heading: ' + s.heads[0]);
+      expect(s.level, ['H3'], 'the level of the headings');
+      expect(s.sticky, true, 'the headings stay at the top (position: sticky)');
+      expect(s.today.length, 1, 'the marked day');
+      expectTrue(/^Wednesday,? 14 October$/.test(s.today[0]), 'today is Wednesday 14 October (the clock is pinned): ' + s.today[0]);
+      expect(s.kw, ['Week 42'], 'the calendar week');
+      expect(s.rows, 22, 'rows: the 21 events of the week, and the one that lasts two days on both of its days');
+      expect(s.wide, true, 'a schedule of 685 px is wide');
+      expect(s.labelled, 'Practice agenda', 'the name of the region');
+      expectTrue(/^Week 42 · 12 ?[–-] ?18 Oct 2026$/.test(await title(practice)), 'the title names the week: ' + await title(practice));
+      expect(await pressed(practice), ['agenda'], 'the pressed view');
+    });
+    await check('a tone is never the only sign: every event that has one has an icon, and a text (the status, or the name of the tone for a screen reader)', async () => {
+      const rows = await page.$$eval(`${practice} .mat-schedule__event--row`, list => list.map(r => ({
+        tone: [...r.classList].find(c => /--(accent|ok|warn|error|info|plain)$/.test(c)).split('--')[1], mark: !!r.querySelector('.mat-schedule__mark svg'),
+        text: !!r.querySelector('.mat-pill') || !!r.querySelector('.mat-sr-only'),
+      })));
+      expect([...new Set(rows.map(r => r.tone))].sort(), ['accent', 'error', 'info', 'ok', 'plain', 'warn'], 'the tones of the example');
+      expectTrue(rows.filter(r => r.tone !== 'plain').every(r => r.mark && r.text), 'a tone without an icon or a text');
+      expectTrue(rows.filter(r => r.tone === 'plain').every(r => !r.mark), 'a plain event has no icon');
+      expect(await page.locator(`${practice} .mat-schedule__event--row`, { hasText: 'J. Maier' }).locator('.mat-pill').textContent(), 'Cancelled', 'the status of the error');
+    });
+    await check('the views are switched by a row of buttons (aria-pressed): each draws what its name says', async () => {
+      const shape = sel => page.$eval(sel, root => ({
+        list: root.querySelectorAll('.mat-schedule__list').length, cols: root.querySelectorAll('.mat-schedule__col').length, rows: root.querySelectorAll('.mat-schedule__row:not(.mat-schedule__row--head)').length,
+        months: root.querySelectorAll('.mat-schedule__month').length, band: root.querySelectorAll('.mat-schedule__band').length,
+      }));
+      const want = { agenda: { list: 1, cols: 0, rows: 0, months: 0, band: 0 }, day: { list: 0, cols: 1, rows: 0, months: 0, band: 0 }, week: { list: 0, cols: 7, rows: 0, months: 0, band: 1 }, month: { list: 0, cols: 0, rows: 5, months: 0, band: 0 }, year: { list: 0, cols: 0, rows: 0, months: 12, band: 0 } };
+      for (const v of ['day', 'week', 'month', 'year', 'agenda']) {
+        await page.click(`${practice} [data-sch-go="${v}"]`);
+        expect(await view(practice), v, 'data-view after ' + v);
+        expect(await pressed(practice), [v], 'the pressed button after ' + v);
+        expect(await shape(practice), want[v], 'what ' + v + ' draws');
+      }
+    });
+    await check('Previous and Next move by the unit of the view (a week, a day, a week, a month, a year), the range of what is visible is sent, and Today comes back', async () => {
+      const cases = [
+        ['agenda', /^Week 43 · 19 ?[–-] ?25 Oct 2026$/, '2026-10-19', '2026-10-25'], ['day', /^Thursday,? 15 October 2026$/, '2026-10-15', '2026-10-15'],
+        ['week', /^Week 43 · 19 ?[–-] ?25 Oct 2026$/, '2026-10-19', '2026-10-25'], ['month', /^November 2026$/, '2026-10-26', '2026-12-06'], ['year', /^2027$/, '2027-01-01', '2027-12-31'],
+      ];
+      for (const [v, expected, from, to] of cases) {
+        await go(practice, '2026-10-14', v);
+        const before = await title(practice);
+        await page.click(next(practice));
+        const after = await title(practice);
+        expectTrue(expected.test(after), `${v}: the title after Next is ${after}`);
+        expect((({ id, from, to, view }) => ({ id, from, to, view }))(await lastRange()), { id: 'sched-practice', from, to, view: v }, `${v}: the range after Next`);
+        await page.click(prev(practice));
+        expect(await title(practice), before, `${v}: Previous goes back`);
+        await page.click(next(practice));
+        await page.click(today(practice));
+        expect(await title(practice), before, `${v}: Today comes back`);
+      }
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('after a page a live region says the period and how many events it has, and the focus stays on the button that was used', async () => {
+      await page.focus(next(practice));
+      await page.keyboard.press('Enter');
+      expect(norm(await page.textContent(`${practice} [role=status]`)).replace(/ ?[–-] ?/, '-'), 'Week 43 · 19-25 Oct 2026, 3 events', 'the live region');
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__next')), true, 'the focus after Enter on Next');
+      await page.click(prev(practice));
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__prev')), true, 'the focus after a click on Previous');
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('the calendar weeks are ISO 8601 for known dates (the end and the start of a year, a day that is a Sunday, the changes of the clock)', async () => {
+      await create('sched-wk', { 'data-view': 'week', 'data-week-numbers': '', 'data-now': '2026-10-14T10:20' });
+      for (const [date, week] of weekCases) {
+        await go('#sched-wk', date);
+        expectTrue((await title('#sched-wk')).startsWith(`Week ${week} · `), `${date} is in week ${week}, the title says ${await title('#sched-wk')}`);
+      }
+      // the week number is on the grid too, and a week that starts on Sunday has the number of the week that holds most of it
+      await go('#sched-wk', '2026-10-14');
+      expect(norm(await page.textContent('#sched-wk .mat-schedule__corner [aria-hidden]')), 'Wk 42', 'the number at the corner of the week');
+      await create('sched-sun', { 'data-view': 'week', 'data-week-numbers': '', 'data-week-start': '0', 'data-date': '2026-10-14', 'data-now': '2026-10-14T10:20' });
+      expectTrue(/^Week 42 · 11 ?[–-] ?17 Oct 2026$/.test(await title('#sched-sun')), 'a week from Sunday 11 to Saturday 17 October: ' + await title('#sched-sun'));
+      expect(await page.$eval('#sched-sun .mat-schedule__dow', e => e.textContent), 'Sun', 'the first day of the week');
+      expect(await page.$$eval(`${school} .mat-schedule__row:not(.mat-schedule__row--head) .mat-schedule__wk [aria-hidden]`, ns => ns.map(n => n.textContent)), ['40', '41', '42', '43', '44'], 'the weeks of October 2026 in the month');
+    });
+    await check('the arrow keys and PageUp and PageDown page, Shift with them pages by a year, and Escape closes what is open', async () => {
+      await go(practice, '2026-10-14', 'agenda');
+      await page.focus(`${practice} .mat-schedule__body`);
+      await page.keyboard.press('ArrowRight');
+      expectTrue((await title(practice)).startsWith('Week 43'), 'ArrowRight');
+      await page.keyboard.press('ArrowLeft');
+      expectTrue((await title(practice)).startsWith('Week 42'), 'ArrowLeft');
+      await page.keyboard.press('PageDown');
+      expectTrue((await title(practice)).startsWith('Week 43'), 'PageDown');
+      await page.keyboard.press('PageUp');
+      expectTrue((await title(practice)).startsWith('Week 42'), 'PageUp');
+      await page.keyboard.press('Shift+PageDown');
+      expectTrue((await title(practice)).includes('2027'), 'Shift+PageDown goes a year on: ' + await title(practice));
+      await page.keyboard.press('Shift+PageUp');
+      expectTrue((await title(practice)).startsWith('Week 42') && (await title(practice)).includes('2026'), 'Shift+PageUp goes a year back');
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__body')), true, 'the focus stays on the body that was paged');
+      await page.focus(prev(practice));
+      await page.keyboard.press('ArrowRight');
+      expectTrue((await title(practice)).startsWith('Week 43'), 'the arrow keys page from the buttons too');
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__prev')), true, 'the focus stays on the button');
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('the title opens a jump to a month and a year: the focus goes into it, a month is chosen, Escape and a click elsewhere close it', async () => {
+      await go(practice, '2026-10-14', 'month');
+      await page.click(`${practice} .mat-schedule__period`);
+      expectTrue(await page.locator(`${practice} .mat-schedule__jump`).isVisible(), 'the jump is shown');
+      expect(await page.getAttribute(`${practice} .mat-schedule__period`, 'aria-expanded'), 'true', 'aria-expanded');
+      expect(await page.locator(`${practice} [data-sch-pick]`).count(), 12, 'months');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('aria-current') && document.activeElement.textContent.trim()), 'Oct', 'the focus is on the month that is shown');
+      await page.click(`${practice} [data-sch-year="1"]`);
+      expect(await page.textContent(`${practice} .mat-schedule__jumpyear`), '2027', 'the year of the jump');
+      await page.click(`${practice} [data-sch-pick="1"]`);
+      expect(await title(practice), 'February 2027', 'the month chosen');
+      expectTrue(!(await page.locator(`${practice} .mat-schedule__jump`).isVisible()), 'the jump closes when a month is chosen');
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__period')), true, 'the focus goes back to the title');
+      await page.click(`${practice} .mat-schedule__period`);
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator(`${practice} .mat-schedule__jump`).isVisible()), 'Escape closes the jump');
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__period')), true, 'the focus is back on the title after Escape');
+      await page.click(`${practice} .mat-schedule__period`);
+      await page.click('h1');
+      expectTrue(!(await page.locator(`${practice} .mat-schedule__jump`).isVisible()), 'a click elsewhere closes the jump');
+      await go(practice, '2026-10-14', 'year');
+      await page.click(`${practice} .mat-schedule__period`);
+      await page.click(`${practice} [data-sch-pick="4"]`);
+      expect([await view(practice), await title(practice)], ['month', 'May 2026'], 'a month chosen in the year view opens that month');
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('in the month grid the arrow keys move from day to day, Home and End to the ends of the week and PageDown to the next month; Enter opens the day', async () => {
+      await go(practice, '2026-10-14', 'month');
+      expect(await page.locator(`${practice} [data-sch-day][tabindex="0"]`).count(), 1, 'one tab stop in the grid');
+      await page.focus(`${practice} [data-sch-day="2026-10-14"]`);
+      await page.keyboard.press('ArrowRight');
+      expect(await active(), '2026-10-15', 'ArrowRight');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), '2026-10-22', 'ArrowDown');
+      await page.keyboard.press('Home');
+      expect(await active(), '2026-10-19', 'Home');
+      await page.keyboard.press('End');
+      expect(await active(), '2026-10-25', 'End');
+      expect(await page.locator(`${practice} [data-sch-day][tabindex="0"]`).count(), 1, 'still one tab stop');
+      await page.keyboard.press('PageDown');
+      expect(await title(practice), 'November 2026', 'PageDown turns the month');
+      expect(await active(), '2026-11-25', 'the focus follows to the same day of the next month');
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('Enter');
+      expect(await view(practice), 'day', 'Enter on a day opens it');
+      expectTrue(/^Thursday,? 26 November 2026$/.test(await title(practice)), 'the day: ' + await title(practice));
+      expect((await page.evaluate(() => window.__days.at(-1))).date, '2026-11-26', 'mat:schedule-day');
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('an event is a button that sends mat:schedule-select with the event, also from the keyboard; one with a url is a link that a listener can stop', async () => {
+      await go(practice, '2026-10-14', 'agenda');
+      const keller = page.locator(`${practice} .mat-schedule__event--row`, { hasText: 'Check-up, M. Keller' });
+      expect(await keller.evaluate(e => e.tagName), 'BUTTON', 'an event without a url');
+      await keller.click();
+      let pick = await page.evaluate(() => window.__picks.at(-1));
+      expect([pick.id, pick.event.id, pick.event.title, pick.event.tone, pick.event.location], ['sched-practice', 'p1', 'Check-up, M. Keller', 'ok', 'Room 1'], 'the event of a click');
+      await page.locator(`${practice} .mat-schedule__event--row`, { hasText: 'Wound care' }).focus();
+      await page.keyboard.press('Enter');
+      expect((await page.evaluate(() => window.__picks.at(-1))).event.id, 'p8', 'Enter on an event');
+      await page.locator(`${practice} .mat-schedule__event--row`, { hasText: 'Team meeting' }).first().focus();
+      await page.keyboard.press(' ');
+      expect((await page.evaluate(() => window.__picks.at(-1))).event.id, 'p5', 'Space on an event');
+      await go(project, '2026-11-13', 'week');
+      const link = page.locator(`${project} a.mat-schedule__event`);
+      expect(await link.getAttribute('href'), '#sched-project', 'the url of the event');
+      await page.evaluate(() => { window.__stop = e => e.preventDefault(); document.addEventListener('mat:schedule-select', window.__stop); });
+      const hash = await page.evaluate(() => location.hash);
+      await link.click();
+      pick = await page.evaluate(() => window.__picks.at(-1));
+      expect([pick.id, pick.event.id], ['sched-project', 't7'], 'the link was chosen');
+      expect(await page.evaluate(() => location.hash), hash, 'a listener that stops the event keeps the page where it is');
+      await page.evaluate(() => document.removeEventListener('mat:schedule-select', window.__stop));
+      await link.click();
+      expect(await page.evaluate(() => location.hash), '#sched-project', 'without a listener the link goes where it points');
+    });
+    await check('the week is a time grid: events that overlap stand side by side, one that does not is as wide as the column, a line shows the time now, an event of two days is a bar over two columns', async () => {
+      await go(practice, '2026-10-12', 'day');
+      const blocks = await page.$$eval(`${practice} .mat-schedule__event--block`, list => list.map(b => { const r = b.getBoundingClientRect(); return { t: b.getAttribute('title'), l: r.left, r: r.right, w: r.width }; }));
+      const by = text => blocks.find(b => b.t.includes(text));
+      const a = by('Blood test'), b = by('Hygiene training'), alone = by('Check-up, M. Keller');
+      expectTrue(Math.abs(a.w - b.w) < 2 && a.r <= b.l + 3, `the two that overlap are side by side: ${JSON.stringify([a, b])}`);
+      expectTrue(alone.w > a.w * 1.8, 'an event that overlaps none has the whole column');
+      expect(await page.locator(`${practice} .mat-schedule__now`).count(), 0, 'no line of the time on another day than today');
+      await go(practice, '2026-10-14', 'day');
+      const line = await page.evaluate(() => {
+        const now = document.querySelector('#sched-practice .mat-schedule__now').getBoundingClientRect();
+        const lines = [...document.querySelectorAll('#sched-practice .mat-schedule__lines > div')].map(l => l.getBoundingClientRect());
+        return (now.top + 1 - lines[0].top) / lines[0].height;
+      });
+      expectTrue(Math.abs(line - (3 + 20 / 60)) < 0.04, `the line of 10:20 is 3 1/3 hours below the first hour (07:00), it is ${line}`);
+      await go(practice, '2026-10-14', 'week');
+      const bar = await page.evaluate(() => {
+        const bar = document.querySelector('#sched-practice .mat-schedule__event--bar').getBoundingClientRect();
+        const head = document.querySelector('#sched-practice .mat-schedule__colhead').getBoundingClientRect();
+        return { bar: bar.width, col: head.width, left: bar.left - head.left };
+      });
+      expectTrue(Math.abs(bar.bar - 2 * bar.col) < 6, `an event of two days is a bar of two columns: ${JSON.stringify(bar)}`);
+      expect(await page.locator(`${practice} .mat-schedule__colhead.is-today`).count(), 1, 'today is marked in the head');
+      expect(await page.locator(`${practice} .mat-schedule__col`).evaluateAll(cols => cols.map(c => c.getAttribute('role'))), Array(7).fill('group'), 'every column is a named group');
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('the month shows its events in the cells: a long event is one bar over its days, a crowded day says how many more, and the week numbers are in the first column', async () => {
+      await go(school, '2026-10-14', 'month');
+      const bars = await page.$$eval(`${school} .mat-schedule__event--chip[data-sch-span]`, list => list.filter(b => /Klassenarbeitswoche|Herbstferien|Klassenfahrt/.test(b.textContent)).map(b => ({ t: b.textContent.trim().replace(/\s+/g, ' '), span: b.getAttribute('data-sch-span'), w: Math.round(b.getBoundingClientRect().width) })));
+      expect(bars.map(b => b.span).sort(), ['3', '5', '5'], 'the span of the bars of 3 and 5 days');
+      expectTrue(bars.every(b => b.w > 150), 'a bar is wider than a cell: ' + JSON.stringify(bars));
+      await go(practice, '2026-10-14', 'month');
+      const more = page.locator(`${practice} .mat-schedule__more`).first();
+      expect((await more.textContent()).trim(), '+2 more', 'a crowded day says how many are not shown');
+      await more.click();
+      expect(await view(practice), 'day', '+n more opens the day');
+      expectTrue(/^Monday,? 12 October 2026$/.test(await title(practice)), 'the day: ' + await title(practice));
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('data-min and data-max stop the paging: the arrow is dimmed (aria-disabled), a click does nothing, and the days outside are dimmed in the month', async () => {
+      await go(project, '2026-11-30', 'week');
+      const at = await title(project);
+      expect(await page.getAttribute(next(project), 'aria-disabled'), 'true', 'Next in the last week');
+      await page.click(next(project), { force: true });
+      expect(await title(project), at, 'the title after a click on a dimmed Next');
+      await go(project, '2026-11-02', 'week');
+      expect(await page.getAttribute(prev(project), 'aria-disabled'), 'false', 'Previous in the first week, which has the first of November');
+      await page.click(prev(project));
+      expectTrue((await title(project)).startsWith('Week 44'), 'the week that holds the first of November');
+      expect(await page.getAttribute(prev(project), 'aria-disabled'), 'true', 'Previous in the week before the first one');
+      await go(project, '2026-12-24', 'week');
+      expectTrue((await title(project)).includes('30 Nov'), 'a date past the limit is brought back: ' + await title(project));
+      await go(project, '2026-11-15', 'month');
+      expect(await page.locator(`${project} .mat-schedule__cell.is-off`).count(), 12, 'the days of the grid that lie outside of November');
+      await go(project, '2026-11-11', 'week');
+    });
+    await check('the year has twelve months with a tint per day by how many events it has; a month opens the month view', async () => {
+      await go(school, '2026-10-14', 'year');
+      const s = await page.$eval(school, root => ({
+        months: root.querySelectorAll('.mat-schedule__month').length, l1: root.querySelectorAll('.mat-schedule__d.is-l1').length, l2: root.querySelectorAll('.mat-schedule__d.is-l2').length,
+        today: root.querySelectorAll('.mat-schedule__d.is-today').length, hint: root.querySelector('.mat-schedule__hint').textContent, aria: root.querySelector('.mat-schedule__mini').getAttribute('aria-hidden'),
+        name: root.querySelectorAll('.mat-schedule__monthname')[9].getAttribute('aria-label'),
+      }));
+      expect([s.months, s.l1 > 80, s.l2 > 0, s.today], [12, true, true, 1], 'months, days with one event, days with two, today');
+      expect(s.name, 'Oktober 2026 öffnen, 7 Termine', 'the name of a month says its number of events');
+      await page.click(`${school} .mat-schedule__monthname >> nth=9`);
+      expect([await view(school), await title(school)], ['month', 'Oktober 2026'], 'the month opened from the year');
+      await go(school, '2026-10-14', 'month');
+    });
+    await check('the texts and the formats follow the language: the school calendar has lang="de", the others are English', async () => {
+      const s = await page.$eval(school, root => ({
+        today: root.querySelector('.mat-schedule__today').textContent, views: [...root.querySelectorAll('[data-sch-go]')].map(b => b.textContent), wd: root.querySelector('.mat-schedule__wd').textContent,
+        kw: root.querySelector('.mat-schedule__wk [aria-hidden]').textContent, prev: root.querySelector('.mat-schedule__prev').getAttribute('aria-label'), area: root.querySelector('.mat-schedule__mgrid').getAttribute('aria-label'),
+      }));
+      expect(s, { today: 'Heute', views: ['Monat', 'Agenda', 'Jahr'], wd: 'Mo', kw: 'KW', prev: 'Vorheriger Monat', area: 'Oktober 2026' }, 'the German schedule');
+      await go(school, '2026-10-14', 'agenda');
+      expectTrue(/^KW 42 · 12\.? ?[–-] ?18\. Okt\.? 2026$/.test(await title(school)), 'the title in German: ' + await title(school));
+      expect(await page.$eval(`${school} .mat-schedule__day.is-today .mat-pill`, e => e.textContent), 'Heute', 'the mark of today');
+      await go(school, '2026-10-14', 'month');
+      expect(await page.$eval(`${practice} .mat-schedule__today`, e => e.textContent), 'Today', 'the English one');
+    });
+    await check('an empty period says so with a sentence of its own, and can still be paged', async () => {
+      const empty = '#sched-empty';
+      expect(await page.locator(`${empty} .mat-schedule__dayhead`).count(), 0, 'no day headings');
+      expect(norm(await page.textContent(`${empty} .mat-empty__title`)), 'Nothing planned', 'the title');
+      expect(norm(await page.textContent(`${empty} .mat-empty p:last-child`)), 'Nothing is booked this week. New appointments appear here as soon as they are made.', 'data-empty');
+      await page.click(next(empty));
+      expectTrue((await title(empty)).startsWith('Week 43') === false && /19 ?[–-] ?25 Oct 2026$/.test(await title(empty)), 'the next week: ' + await title(empty));
+      await go(empty, '2026-10-14', 'agenda');
+    });
+    await check('an app that loads events is told what is visible; data-lazy shows a loading state until it answers', async () => {
+      await page.evaluate(() => { window.__lazy = []; document.addEventListener('mat:schedule-range', e => { if (e.target.id === 'sched-lazy') { window.__lazy.push(e.detail); } }); });
+      await create('sched-lazy', { 'data-lazy': '', 'data-view': 'week', 'data-date': '2026-03-04', 'data-now': '2026-03-04T10:00' });
+      await page.waitForFunction(() => window.__lazy.length === 1, null, { timeout: 2000 });
+      expect(await page.evaluate(() => window.__lazy[0]), { from: '2026-03-02', to: '2026-03-08', view: 'week', date: '2026-03-04' }, 'the first range');
+      const busy = () => page.$eval('#sched-lazy', r => ({ cls: r.classList.contains('is-loading'), aria: r.querySelector('.mat-schedule__body').getAttribute('aria-busy'), spinner: !r.querySelector('.mat-schedule__busy').hidden }));
+      expect(await busy(), { cls: true, aria: 'true', spinner: true }, 'the loading state before the events come');
+      await page.evaluate(() => window.MatUi.schedule.setEvents(document.querySelector('#sched-lazy'), [{ id: 'x1', title: 'Loaded one', start: '2026-03-04T09:00', end: '2026-03-04T10:00', tone: 'ok' }]));
+      expect(await busy(), { cls: false, aria: 'false', spinner: false }, 'the state after setEvents');
+      expect(await page.locator('#sched-lazy .mat-schedule__event--block', { hasText: 'Loaded one' }).count(), 1, 'the event that was loaded is drawn');
+      await page.click(next('#sched-lazy'));
+      expect(await page.evaluate(() => window.__lazy.at(-1)), { from: '2026-03-09', to: '2026-03-15', view: 'week', date: '2026-03-11' }, 'the range after Next');
+      expect((await busy()).aria, 'true', 'loading again after a page');
+      await page.click('#sched-lazy [data-sch-go="agenda"]');
+      expect(await page.evaluate(() => window.__lazy.length), 2, 'a view that shows the same days does not ask again');
+      await page.click('#sched-lazy [data-sch-go="month"]');
+      expect(await page.evaluate(() => window.__lazy.at(-1)), { from: '2026-02-23', to: '2026-04-05', view: 'month', date: '2026-03-11' }, 'the month asks for the weeks of its grid');
+      await page.evaluate(() => window.MatUi.schedule.setLoading(document.querySelector('#sched-lazy'), false));
+      expect((await busy()).cls, false, 'setLoading(false) ends the state without events');
+      expect(await page.evaluate(() => window.MatUi.schedule.get(document.querySelector('#sched-lazy')).view), 'month', 'MatUi.schedule.get');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#schedule');
+    const { title, go, view, pressed, create, active } = await schedulePage(page);
+    // the schedule of a phone has the whole width of the content (358 px), unlike the examples, which sit in a box of the documentation
+    await create('sched-ph', { 'data-view': 'agenda', 'data-date': '2026-10-14', 'data-now': '2026-10-14T10:20', 'data-week-numbers': '' }, true);
+    const ph = '#sched-ph';
+    const height = sel => page.$eval(sel, e => Math.round(e.getBoundingClientRect().height));
+    await check('on a phone nothing scrolls sideways in any view, and the layout is the narrow one', async () => {
+      expect(await page.$eval(ph, r => r.clientWidth), 358, 'the width of the schedule');
+      expect(await page.$eval(ph, r => r.classList.contains('is-narrow')), true, 'narrow');
+      for (const v of ['agenda', 'day', 'week', 'month', 'year']) {
+        await go(ph, '2026-10-14', v);
+        const s = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, win: innerWidth, body: document.querySelector('#sched-ph .mat-schedule__body').scrollWidth - document.querySelector('#sched-ph .mat-schedule__body').clientWidth }));
+        expectTrue(s.page <= s.win && s.body <= 1, `${v}: the page is ${s.page} px wide in ${s.win} px, the body overflows by ${s.body} px`);
+      }
+    });
+    await check('on a phone a week is a row per day and a month is a compact grid with the chosen day listed under it', async () => {
+      await go(ph, '2026-10-14', 'week');
+      const week = await page.$eval(ph, r => ({ days: r.querySelectorAll('.mat-schedule__day').length, grid: r.querySelectorAll('.mat-schedule__grid').length, heads: r.querySelectorAll('h3.mat-schedule__dayhead').length }));
+      expect(week, { days: 7, grid: 0, heads: 7 }, 'the week of a phone');
+      await go(ph, '2026-10-14', 'month');
+      const month = await page.$eval(ph, r => ({ cells: r.querySelectorAll('.mat-schedule__daybtn').length, dots: r.querySelectorAll('.mat-schedule__dot').length, list: r.querySelectorAll('.mat-schedule__daylist .mat-schedule__event--row').length, chips: r.querySelectorAll('.mat-schedule__chips').length }));
+      expect(month.cells, 35, 'days');
+      expectTrue(month.dots > 10 && month.chips === 0, 'dots, no events in the cells');
+      expect(month.list, 6,'the events of the 14th are listed under the grid');
+      await page.click(`${ph} [data-sch-day="2026-10-13"]`);
+      expect(await page.$$eval(`${ph} .mat-schedule__daylist .mat-schedule__event--row`, rs => rs.length), 4, 'the day that was chosen is listed');
+      expectTrue((await page.textContent(`${ph} .mat-schedule__daylist .mat-schedule__dayhead`)).includes('4 events'), 'the heading of the list counts');
+      expect(await active(), '2026-10-13', 'the focus stays on the day');
+      expect(await page.getAttribute(`${ph} [data-sch-day="2026-10-13"]`, 'aria-label'), 'Tuesday, 13 October 2026, 4 events', 'the name of a day');
+      expect((await page.evaluate(() => window.__days.at(-1))).date, '2026-10-13', 'mat:schedule-day');
+    });
+    await check('on a phone the controls are 44 px high (the views, the arrows, Today, the title, a day, an event)', async () => {
+      await go(ph, '2026-10-14', 'month');
+      for (const sel of ['.mat-schedule__today', '.mat-schedule__prev', '.mat-schedule__next', '.mat-schedule__period', '[data-sch-go="week"]', '.mat-schedule__daybtn']) {
+        expectTrue(await height(`${ph} ${sel}`) >= 44, `${sel} is ${await height(`${ph} ${sel}`)} px high`);
+      }
+      await go(ph, '2026-10-14', 'agenda');
+      expectTrue(await height(`${ph} .mat-schedule__event--row`) >= 44, 'an event of the agenda');
+      const wide = await page.$eval(`${ph} .mat-schedule__views`, v => [...v.children].map(b => Math.round(b.getBoundingClientRect().width)));
+      expectTrue(wide.every(w => w >= 60), 'the five views fit in a row: ' + wide);
+    });
+    await check('a swipe to the left shows the next period, to the right the one before; a vertical pan does not page and the page does not move sideways', async () => {
+      await go(ph, '2026-10-14', 'agenda');
+      expect(await page.$eval(`${ph} .mat-schedule__body`, b => getComputedStyle(b).touchAction), 'pan-y pinch-zoom', 'touch-action of the body');
+      await page.evaluate(() => document.querySelector('#sched-ph .mat-schedule__body').scrollIntoView({ block: 'start' }));
+      const box = await page.locator(`${ph} .mat-schedule__body`).boundingBox();
+      const cdp = await ctx.newCDPSession(page);
+      const swipe = async (x0, y0, x1, y1) => {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
+        for (let i = 1; i <= 6; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + (x1 - x0) * i / 6, y: y0 + (y1 - y0) * i / 6 }] }); }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await page.waitForTimeout(120);
+      };
+      const y = Math.min(box.y + 160, 700);
+      await swipe(320, y, 80, y + 10);
+      expectTrue((await title(ph)).startsWith('Week 43'), 'a swipe to the left: ' + await title(ph));
+      await swipe(60, y, 300, y - 10);
+      expectTrue((await title(ph)).startsWith('Week 42'), 'a swipe to the right: ' + await title(ph));
+      await swipe(200, y + 200, 190, y - 120);
+      expectTrue((await title(ph)).startsWith('Week 42'), 'a vertical pan pages nothing: ' + await title(ph));
+      await swipe(300, y, 280, y);
+      expectTrue((await title(ph)).startsWith('Week 42'), 'a short move pages nothing');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page did not move sideways');
+      await go(ph, '2026-10-14', 'year');
+      await swipe(320, 400, 60, 400);
+      expect(await title(ph), '2027', 'a swipe in the year view turns the year');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open({ ...desktopOptions, reducedMotion: 'reduce' }, '/Components#schedule');
+    await check('for a user who asked for less motion a page does not slide', async () => {
+      await page.click('#sched-practice .mat-schedule__next');
+      expect(await page.$eval('#sched-practice .mat-schedule__body', b => b.classList.contains('is-from-next') || b.classList.contains('is-from-prev')), false, 'the class of the slide');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#schedule');
+    await check('a page slides in from the side it was turned to, for a user who did not ask for less motion', async () => {
+      await page.click('#sched-practice .mat-schedule__next');
+      await page.waitForFunction(() => document.querySelector('#sched-practice .mat-schedule__body').classList.contains('is-from-next'), null, { timeout: 500 });
+      await page.waitForFunction(() => !document.querySelector('#sched-practice .mat-schedule__body').classList.contains('is-from-next'), null, { timeout: 1500 });
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- long pages: the index
   console.log('\nOn this page: the index of a long page');
   {
