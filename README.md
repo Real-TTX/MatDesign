@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **109 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **110 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -304,7 +304,7 @@ place that could.
 |---|---|---|
 | Toolkit | MatUi (ten CSS parts, one script, the icon sprite), colour maths, rulebook, app registry | ✅ |
 | Site | Rulebook, foundations, shell, identity, builder, download – tests, container, CI | ✅ |
-| Components | Menu badges, submenus and switcher, forms, **pickers** (select, date and period, time, colour, **tags**), content components, **layout system**, utilities | ✅ |
+| Components | Menu badges, submenus and switcher, forms, **pickers** (select, date and period, time, colour, **tags**), content components (with a **carousel**), **layout system**, utilities | ✅ |
 | Flat look | No gradients, glow or blur; selected is a tint (`COLOR-08`); toolbar with search field | ✅ |
 | Studio 1–2 | Data store, sign-in, **apps** | ✅ |
 | Studio 3–4 | **Rules** and **components** with live examples | ✅ |

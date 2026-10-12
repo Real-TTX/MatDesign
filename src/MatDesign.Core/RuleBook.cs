@@ -192,6 +192,9 @@ public static class RuleBook
         new("LIST-12", "LIST", "Counts",
             "The toolbar shows how many items the list has (and how many match, when a tool is in effect).",
             RuleLevel.May, Design),
+        new("LIST-13", "LIST", "A carousel for what is looked at one after another",
+            "Pictures, the steps of a tour or a few cards that are looked at one after another may be shown as a carousel: a strip of slides that scrolls and snaps, with Previous and Next buttons and one dot per page below it. Without the script it is a strip you scroll. It never moves by itself unless the author asks for it; then it has a Pause button, waits while the pointer or the focus is inside and does not start for a user who asked for less motion (A11Y-05). The region is named, every slide says which one of how many it is, the slides that are out of view cannot be reached with the Tab key, and a screen reader is told which page is shown. What people search, sort or compare is a list or a table (LIST-01), not a carousel.",
+            RuleLevel.May, Design, Why: "A strip that people swipe is familiar on a phone, but a show that moves by itself, hides content behind a control that nobody finds or traps the keyboard is worse than a row of cards.", Do: "<section class=\"mat-carousel\" data-carousel aria-label=\"Tour\"><div class=\"mat-carousel__track\"><div class=\"mat-carousel__slide\">...</div></div></section>", Dont: "a show that starts by itself and cannot be paused, the one important thing on the third slide, a carousel for a list that people search", Check: "Test (markup contract, script) and browser"),
 
         // -------------------------------------------------------------------------------------------------- FORM
         new("FORM-01", "FORM", "Buttons are always under the content",

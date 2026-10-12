@@ -11,7 +11,7 @@ public sealed record ComponentExample(string Title, string Html, string? Note = 
     private static readonly string[] WideClasses =
     [
         "mat-table-wrap", "mat-toolbar", "mat-topbar", "mat-footer", "mat-with-toc", "mat-gallery", "mat-cols", "mat-grid", "mat-form__grid", "mat-auth", "mat-pager",
-        "mat-tabs--vertical", "mat-nav ", "mat-switcher",
+        "mat-tabs--vertical", "mat-nav ", "mat-switcher", "mat-carousel",
     ];
 
     /// <summary>

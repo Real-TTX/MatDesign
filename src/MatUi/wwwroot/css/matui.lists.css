@@ -246,3 +246,34 @@ th[aria-sort="descending"] .mat-icon { transform: rotate(180deg); }
 .mat-popover { max-width: min(92vw, 20rem); padding: var(--mat-space-4); }
 .mat-popover__title { font-weight: 650; margin-bottom: var(--mat-space-1); }
 .mat-popover p { color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
+
+/* ---- Carousel (LIST-13): a strip of slides that scrolls and snaps; the script adds the bar below it ----
+   Without the script it is a strip you scroll. --mat-carousel-per-view is how many slides fit (--2 and --3 from 600 and 900 px); the gap is part of the width of a slide. */
+.mat-carousel { --mat-carousel-per-view: 1; --mat-carousel-gap: var(--mat-space-3); display: flex; flex-direction: column; gap: var(--mat-space-3); min-width: 0; }
+.mat-carousel__track {
+  display: flex; gap: var(--mat-carousel-gap);
+  overflow-x: auto; overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+}
+.mat-carousel.is-ready .mat-carousel__track { scrollbar-width: none; }
+.mat-carousel.is-ready .mat-carousel__track::-webkit-scrollbar { display: none; }
+.mat-carousel__slide {
+  flex: 0 0 calc((100% - (var(--mat-carousel-per-view) - 1) * var(--mat-carousel-gap)) / var(--mat-carousel-per-view));
+  min-width: 0; scroll-snap-align: start;
+}
+.mat-carousel__slide > .mat-card { height: 100%; }
+.mat-carousel__slide img { display: block; width: 100%; height: auto; border-radius: var(--mat-radius); }
+@media (min-width: 600px) { .mat-carousel--2, .mat-carousel--3 { --mat-carousel-per-view: 2; } }
+@media (min-width: 900px) { .mat-carousel--3 { --mat-carousel-per-view: 3; } }
+/* the buttons stay at the two ends; with many pages it is the dots that wrap. The dots need no gap: each has its own 36 px. */
+.mat-carousel__bar { display: flex; align-items: center; justify-content: center; }
+.mat-carousel__bar[hidden] { display: none; }
+.mat-carousel__bar > .mat-btn { flex: none; }
+.mat-carousel__dots { display: flex; flex: 0 1 auto; flex-wrap: wrap; align-items: center; justify-content: center; min-width: 0; }
+/* a dot is 10 px wide in a button of 36 px (MOBILE-04); the current page is longer, so that colour is not the only sign (COLOR-04) */
+.mat-carousel__dot { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.mat-carousel__dot::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--mat-border-strong); transition: width var(--mat-dur) var(--mat-ease), background var(--mat-dur-fast) var(--mat-ease); }
+.mat-carousel__dot:hover::before { background: var(--mat-text-faint); }
+.mat-carousel__dot[aria-current="true"]::before { width: 22px; border-radius: var(--mat-radius-pill); background: var(--mat-accent); }
+.mat-carousel__bar .mat-btn[aria-disabled="true"] { opacity: .45; cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) { .mat-carousel__dot::before { transition: none; } }

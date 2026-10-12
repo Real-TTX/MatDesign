@@ -142,6 +142,50 @@ internal static class ContentComponents
                 "Do not hide what must be seen (an error, a required field) in a closed item.",
             ]),
 
+        new("carousel", "Carousel", "Content", "image",
+            "A strip of slides that scrolls and snaps: the steps of a tour, a few cards, pictures. It is a scrollable strip without the script; the script adds the buttons and the dots.",
+            ["LIST-13", "A11Y-02", "A11Y-05", "MOBILE-04", "COLOR-04"],
+            [
+                new("A tour, one card at a time", $"""
+                    <section class="mat-carousel" aria-roledescription="carousel" aria-label="A tour of the toolkit" data-carousel>
+                      <div class="mat-carousel__track">
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__head">{I("layers")}<h3 class="mat-card__title">One toolkit</h3></div><div class="mat-card__body"><p>One stylesheet, one script and one icon sprite: copy them into an app and it looks like the others.</p></div></div></div>
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__head">{I("book")}<h3 class="mat-card__title">The rules</h3></div><div class="mat-card__body"><p>Every rule has an id that a review can cite, and a test that holds it where a test can.</p></div></div></div>
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__head">{I("palette")}<h3 class="mat-card__title">An accent for every app</h3></div><div class="mat-card__body"><p>The accent is the one colour that differs; the status colours mean the same everywhere.</p></div></div></div>
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__head">{I("smartphone")}<h3 class="mat-card__title">Made for a phone too</h3></div><div class="mat-card__body"><p>Every page is checked at 390 px: dialogs fill the screen and tables become cards.</p></div></div></div>
+                      </div>
+                    </section>
+                    """, "Swipe or scroll the strip, press Previous, Next or a dot, or use the arrow keys, Home and End. The current page is the longer dot. Previous is dimmed on the first page and Next on the last (it stays in the tab order, so the focus is not lost)."),
+                new("Several cards at once", $"""
+                    <section class="mat-carousel mat-carousel--3" aria-roledescription="carousel" aria-label="Apps of the family" data-carousel>
+                      <div class="mat-carousel__track">
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__body"><strong>Mail</strong><p class="mat-muted">Mailboxes, aliases and a webmail.</p></div></div></div>
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__body"><strong>Files</strong><p class="mat-muted">Files and shares for the family.</p></div></div></div>
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__body"><strong>Calendar</strong><p class="mat-muted">Appointments that sync with a phone.</p></div></div></div>
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__body"><strong>Photos</strong><p class="mat-muted">Albums that stay on your server.</p></div></div></div>
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__body"><strong>Notes</strong><p class="mat-muted">Short notes that you find again.</p></div></div></div>
+                      </div>
+                    </section>
+                    """, "mat-carousel--2 and mat-carousel--3 show two and three cards at once from 600 and 900 px wide; a phone shows one. A dot is a page of cards, not one card."),
+                new("A slide show that plays by itself", $"""
+                    <section class="mat-carousel" aria-roledescription="carousel" aria-label="News" data-carousel data-loop data-autoplay="6000">
+                      <div class="mat-carousel__track">
+                        <div class="mat-carousel__slide"><div class="mat-card mat-card--accent"><div class="mat-card__body"><strong>Backups run every night</strong><p class="mat-muted">The last copy of every app is kept for 30 days.</p></div></div></div>
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__body"><strong>Certificates renew themselves</strong><p class="mat-muted">You hear from the proxy only when one fails.</p></div></div></div>
+                        <div class="mat-carousel__slide"><div class="mat-card"><div class="mat-card__body"><strong>Updates wait for you</strong><p class="mat-muted">Nothing changes until you press Update.</p></div></div></div>
+                      </div>
+                    </section>
+                    """, "It moves every six seconds and starts again at the first slide. It waits while the pointer or the focus is inside, stops for good when any button is used or Pause is pressed, and does not start at all for someone who asked for less motion (then Start begins it). Use this only for something that nobody has to read."),
+            ],
+            [
+                "The strip is CSS: `overflow-x` and `scroll-snap`. The script adds the bar below it: Previous, one dot per page, Next and, with `data-autoplay`, Pause. With one page the bar is not drawn.",
+                "`mat-carousel--2` and `mat-carousel--3` show two and three slides at once; a dot is a page, and the last page may hold fewer slides.",
+                "`data-loop`: Next on the last page goes to the first and Previous on the first goes to the last. `data-autoplay=\"6000\"` moves by itself every six seconds (LIST-13).",
+                "The region is named (`aria-label`), the slides say `1 of 4`, and slides that are not in view are `inert`: the Tab key never enters them. A live region says which page is shown, except while the show moves by itself.",
+                "Arrow keys, Home and End work on the strip and on the buttons. The texts come in English and German; `data-car-<name>` on `<html>` changes one.",
+                "Put what matters on the first slide: not everyone sees the others (LIST-13).",
+            ]),
+
         new("list-group", "List group", "Content", "list",
             "Rows of one list as links, buttons or plain text, with an icon, a second line, a badge or a check; the current row marked.",
             ["TABLE-03", "COLOR-04", "A11Y-02", "MOBILE-04"],
