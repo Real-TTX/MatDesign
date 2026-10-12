@@ -1363,6 +1363,365 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- slider and range slider (FORM-17)
+  console.log('\nSlider and range slider');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#slider');
+    await page.evaluate(() => document.getElementById('slider').scrollIntoView());
+    await page.evaluate(() => {
+      window.__events = [];
+      for (const type of ['input', 'change']) {
+        document.addEventListener(type, e => { if (e.target.classList && e.target.classList.contains('mat-slider__input')) { window.__events.push(type + ':' + e.target.id); } });
+      }
+    });
+    const events = () => page.evaluate(() => window.__events.splice(0));
+    // what a slider looks like at the moment: the value, the thumb of the input, its bubble
+    const info = id => page.$eval('#' + id, input => {
+      const w = input.closest('.mat-slider');
+      w.scrollIntoView({ block: 'center', behavior: 'instant' });
+      const thumb = w.querySelectorAll('.mat-slider__thumb')[[...w.querySelectorAll('.mat-slider__input')].indexOf(input)];
+      const rail = w.querySelector('.mat-slider__rail').getBoundingClientRect();
+      const t = thumb.getBoundingClientRect();
+      const bubble = thumb.querySelector('.mat-slider__bubble');
+      return {
+        value: input.value, min: +input.min, max: +input.max, valuetext: input.getAttribute('aria-valuetext'), name: input.getAttribute('aria-label'),
+        railLeft: rail.left, railWidth: rail.width, railY: rail.top + rail.height / 2, thumbX: t.left + t.width / 2, thumbW: Math.round(t.width), thumbH: Math.round(t.height),
+        bubble: getComputedStyle(bubble).opacity, bubbleText: bubble.textContent, top: thumb.classList.contains('is-top'), z: getComputedStyle(thumb).zIndex, key: thumb.classList.contains('is-key'),
+        fill: [w.style.getPropertyValue('--mat-slider-from'), w.style.getPropertyValue('--mat-slider-to')],
+      };
+    });
+    const value = id => page.$eval('#' + id, el => el.value);
+    const at = async (id, v) => { const i = await info(id); return i.railLeft + (i.railWidth * (v - i.min)) / (i.max - i.min); };
+    const drag = async (id, to, steps = 6) => {
+      const i = await info(id);
+      await page.mouse.move(i.thumbX, i.railY);
+      await page.mouse.down();
+      await page.mouse.move(await at(id, to), i.railY, { steps });
+    };
+
+    await check('a slider is dressed by the script and keeps its native input: a thumb with a bubble, labels at the ends, the value as text', async () => {
+      const s = await page.$eval('#sl-vol', input => {
+        const w = input.closest('.mat-slider');
+        input.focus();
+        return {
+          ready: w.classList.contains('is-ready'), thumbs: w.querySelectorAll('.mat-slider__thumb').length, ends: [...w.querySelectorAll('.mat-slider__end')].map(e => e.textContent),
+          opacity: getComputedStyle(input).opacity, focus: document.activeElement === input, valuetext: input.getAttribute('aria-valuetext'),
+          out: document.getElementById('sl-vol-out').textContent, railHidden: w.querySelector('.mat-slider__rail').getAttribute('aria-hidden'),
+        };
+      });
+      expect(s, { ready: true, thumbs: 1, ends: ['0 %', '100 %'], opacity: '0', focus: true, valuetext: '40 %', out: '40 %', railHidden: 'true' }, 'the slider');
+      expect((await info('sl-vol')).fill, ['0%', '40%'], 'the filled part');
+    });
+
+    await check('dragging the thumb with the mouse sets the value, sends input while it moves and one change at the end, and the bubble shows while it is dragged', async () => {
+      await events();
+      await drag('sl-vol', 60);
+      await page.waitForTimeout(250);
+      const during = await info('sl-vol');
+      expect({ value: during.value, bubble: during.bubble, text: during.bubbleText }, { value: '60', bubble: '1', text: '60 %' }, 'while dragging');
+      await page.mouse.up();
+      const ev = await events();
+      expectTrue(ev.filter(e => e === 'input:sl-vol').length >= 2, 'input is sent while the thumb moves: ' + ev.join());
+      expect(ev.filter(e => e.startsWith('change')), ['change:sl-vol'], 'one change at the end');
+      const after = await info('sl-vol');
+      expect({ valuetext: after.valuetext, out: await page.textContent('#sl-vol-out'), fill: after.fill }, { valuetext: '60 %', out: '60 %', fill: ['0%', '60%'] }, 'after the drag');
+    });
+
+    await check('a press on the track moves the thumb there; a press on the thumb beside its centre moves nothing', async () => {
+      const g = await info('sl-vol');
+      await page.mouse.click(await at('sl-vol', 10), g.railY);
+      expect(await value('sl-vol'), '10', 'after a press on the track');
+      const k = await info('sl-vol');
+      await page.mouse.move(k.thumbX + 8, k.railY);
+      await page.mouse.down();
+      await page.mouse.up();
+      expect(await value('sl-vol'), '10', 'a press on the thumb');
+    });
+
+    await check('keys: the arrows move by a step, Page Up and Page Down by a tenth, Home and End to the ends, and every key sends input and change', async () => {
+      await page.focus('#sl-vol');
+      await events();
+      const steps = [['ArrowRight', '11'], ['ArrowUp', '12'], ['ArrowLeft', '11'], ['ArrowDown', '10'], ['PageUp', '20'], ['PageDown', '10'], ['End', '100'], ['Home', '0']];
+      for (const [key, expected] of steps) {
+        await page.keyboard.press(key);
+        expect(await value('sl-vol'), expected, key);
+      }
+      const ev = await events();
+      expect([ev.filter(e => e.startsWith('input')).length, ev.filter(e => e.startsWith('change')).length], [8, 8], 'input and change per key');
+      // a tenth of the scale, but at least one step
+      await page.focus('#sl-bright');
+      await page.keyboard.press('PageUp');
+      expect(await value('sl-bright'), '75', 'Page Up on 0..100 in steps of 5');
+      await page.focus('#sl-keep');
+      await page.keyboard.press('PageUp');
+      expect(await value('sl-keep'), '21', 'Page Up on 7..28 in steps of 7: one step');
+      await page.keyboard.press('End');
+      await page.keyboard.press('ArrowRight');
+      expect(await value('sl-keep'), '28', 'nothing beyond the maximum');
+    });
+
+    await check('the bubble shows with the focus (the ring only for the keyboard) and stays where data-bubble="always" says so', async () => {
+      await page.evaluate(() => document.activeElement.blur());
+      await page.waitForTimeout(250);
+      expect([(await info('sl-vol')).bubble, (await info('sl-bright')).bubble], ['0', '1'], 'the bubbles at rest');
+      await page.focus('#sl-vol');
+      await page.keyboard.press('Tab');
+      await page.waitForTimeout(250);
+      const b = await info('sl-bright');
+      expect([b.key, (await info('sl-vol')).bubble, (await info('sl-vol')).key], [true, '0', false], 'the keyboard moved the focus to the next slider');
+      const ring = await page.$eval('#sl-bright', input => getComputedStyle(input.closest('.mat-slider').querySelector('.mat-slider__thumb'), '::before').boxShadow);
+      expectTrue(ring.includes('3px'), 'the ring of the focus: ' + ring);
+    });
+
+    await check('data-format reaches the bubble, the labels, the output and what a screen reader says; marks and labels follow data-ticks', async () => {
+      const s = await page.$eval('#sl-disk', input => {
+        const w = input.closest('.mat-slider');
+        return {
+          valuetext: input.getAttribute('aria-valuetext'), bubble: w.querySelector('.mat-slider__bubble').textContent, out: document.getElementById('sl-disk-out').textContent,
+          ticks: w.querySelectorAll('.mat-slider__tick').length, on: w.querySelectorAll('.mat-slider__tick.is-on').length, labels: [...w.querySelectorAll('.mat-slider__tick-label')].map(l => l.textContent),
+        };
+      });
+      expect(s, { valuetext: '40 GB', bubble: '40 GB', out: '40 GB', ticks: 10, on: 4, labels: ['10 GB', '40 GB', '70 GB', '100 GB'] }, 'the storage slider');
+      await page.focus('#sl-disk');
+      await page.keyboard.press('ArrowRight');
+      expect(await page.textContent('#sl-disk-out'), '50 GB', 'the output follows');
+    });
+
+    await check('a disabled slider cannot be moved with the pointer or focused, and is dimmed', async () => {
+      const g = await info('sl-off');
+      await page.mouse.click(await at('sl-off', 10), g.railY);
+      const s = await page.$eval('#sl-off', input => { input.focus(); return { value: input.value, focused: document.activeElement === input, opacity: getComputedStyle(input.closest('.mat-slider')).opacity }; });
+      expect(s, { value: '70', focused: false, opacity: '0.5' }, 'the disabled slider');
+    });
+
+    await check('a range slider is one track with two thumbs; each input is named from the label, says its value with its unit and the output reads From 20 € to 80 €', async () => {
+      const a = await info('sl-price-from'), b = await info('sl-price-to');
+      expect([a.name, b.name, a.valuetext, b.valuetext], ['Price from', 'Price to', '20 €', '80 €'], 'names and values');
+      const s = await page.$eval('#sl-price-from', el => {
+        const w = el.closest('.mat-slider');
+        return { role: w.getAttribute('role'), label: w.getAttribute('aria-label'), thumbs: w.querySelectorAll('.mat-slider__thumb').length, rails: w.querySelectorAll('.mat-slider__rail').length, out: document.getElementById('sl-price-out').textContent };
+      });
+      expect(s, { role: 'group', label: 'Price', thumbs: 2, rails: 1, out: 'From 20 € to 80 €' }, 'the wrapper');
+      expect(a.fill, ['10%', '40%'], 'the filled part is between the thumbs');
+    });
+
+    await check('a press on the track moves the nearest thumb', async () => {
+      const g = await info('sl-price-from');
+      await page.mouse.click(await at('sl-price-from', 40), g.railY);
+      expect([await value('sl-price-from'), await value('sl-price-to')], ['40', '80'], 'nearer to the left thumb');
+      await page.mouse.click(await at('sl-price-from', 100), g.railY);
+      expect([await value('sl-price-from'), await value('sl-price-to')], ['40', '100'], 'nearer to the right thumb');
+    });
+
+    await check('the thumbs cannot cross: a thumb that is dragged past the other stops a gap before it, and the two bubbles become one', async () => {
+      await drag('sl-price-from', 190, 10);
+      await page.waitForTimeout(250);
+      expect([await value('sl-price-from'), await value('sl-price-to')], ['90', '100'], 'from stops at to minus the gap of 10');
+      const s = await page.$eval('#sl-price-from', el => {
+        const w = el.closest('.mat-slider'), [from, to] = [...w.querySelectorAll('.mat-slider__bubble')];
+        return { merged: w.classList.contains('is-merged'), from: getComputedStyle(from).opacity, to: getComputedStyle(to).opacity, text: to.textContent };
+      });
+      expect(s, { merged: true, from: '0', to: '1', text: '90 € – 100 €' }, 'one bubble for both');
+      await page.mouse.up();
+      expect(await page.textContent('#sl-price-out'), 'From 90 € to 100 €', 'the output');
+    });
+
+    await check('the keys of a range slider stop at the other thumb too; Home on the right thumb goes to the left one, not past it', async () => {
+      const g = await info('sl-price-from');
+      await page.mouse.click(await at('sl-price-from', 150), g.railY);
+      expect(await value('sl-price-to'), '150', 'the right thumb went to the press');
+      await page.focus('#sl-price-to');
+      await page.keyboard.press('Home');
+      expect([await value('sl-price-from'), await value('sl-price-to')], ['90', '100'], 'Home on the right thumb: the left one plus the gap');
+      await page.keyboard.press('End');
+      await page.focus('#sl-price-from');
+      await page.keyboard.press('End');
+      expect([await value('sl-price-from'), await value('sl-price-to')], ['190', '200'], 'End on the left thumb: the right one minus the gap');
+      await page.keyboard.press('Home');
+      expect(await value('sl-price-from'), '0', 'Home on the left thumb');
+      expect((await info('sl-price-from')).valuetext, '0 €', 'what a screen reader says');
+    });
+
+    await check('a bubble at an end stays inside the slider', async () => {
+      const s = await page.$eval('#sl-price-from', el => {
+        const w = el.closest('.mat-slider'), box = w.getBoundingClientRect(), [from, to] = [...w.querySelectorAll('.mat-slider__bubble')].map(b => b.getBoundingClientRect());
+        return { left: from.left >= box.left - 1, right: to.right <= box.right + 1, merged: w.classList.contains('is-merged') };
+      });
+      expect(s, { left: true, right: true, merged: false }, 'bubbles at 0 and 200');
+    });
+
+    // a range slider without a gap, added after the page was drawn
+    await page.evaluate(() => {
+      document.getElementById('sl-price-from').closest('.mat-field').insertAdjacentHTML('afterend',
+        '<div class="mat-field" id="sl-dyn"><label class="mat-label" for="sl-dyn-from">Weight</label>' +
+        '<div class="mat-slider mat-slider--range" data-slider data-format="{0} kg"><input class="mat-slider__input" type="range" id="sl-dyn-from" name="wf" min="0" max="100" value="50" />' +
+        '<input class="mat-slider__input" type="range" id="sl-dyn-to" name="wt" min="0" max="100" value="50" /></div></div>');
+      window.MatUi.refresh(document.getElementById('sl-dyn'));
+    });
+    await page.evaluate(() => document.getElementById('sl-dyn').scrollIntoView({ block: 'center' }));
+
+    await check('MatUi.refresh picks up a slider that was added later; its names come from the label', async () => {
+      const s = await page.$eval('#sl-dyn-from', el => ({ ready: el.closest('.mat-slider').classList.contains('is-ready'), from: el.getAttribute('aria-label'), to: document.getElementById('sl-dyn-to').getAttribute('aria-label') }));
+      expect(s, { ready: true, from: 'Weight from', to: 'Weight to' }, 'the new slider');
+    });
+
+    await check('with both thumbs at one value a press beside them takes the one on that side and the thumb that moved last is on top', async () => {
+      const g = await info('sl-dyn-from');
+      await page.mouse.click(await at('sl-dyn-from', 20), g.railY);
+      expect([await value('sl-dyn-from'), await value('sl-dyn-to')], ['20', '50'], 'a press left of both');
+      await page.mouse.click(await at('sl-dyn-from', 80), g.railY);
+      expect([await value('sl-dyn-from'), await value('sl-dyn-to')], ['20', '80'], 'a press right of both');
+      await drag('sl-dyn-from', 100, 8);
+      await page.mouse.up();
+      const a = await info('sl-dyn-from'), b = await info('sl-dyn-to');
+      expect([a.value, b.value, a.top, b.top, a.z, b.z], ['80', '80', true, false, '2', '1'], 'the left thumb reached the right one: it is on top');
+      // both at 80: the thumbs are pressed and the first movement says which one is meant
+      await page.mouse.move(a.thumbX, a.railY);
+      await page.mouse.down();
+      await page.mouse.move(a.thumbX - 60, a.railY, { steps: 6 });
+      await page.mouse.up();
+      expect([Number(await value('sl-dyn-from')) < 80, await value('sl-dyn-to')], [true, '80'], 'a movement to the left takes the left thumb');
+      const from = await value('sl-dyn-from');
+      await drag('sl-dyn-to', 0, 8);
+      await page.mouse.up();
+      expect([await value('sl-dyn-from'), await value('sl-dyn-to'), (await info('sl-dyn-to')).top], [from, from, true], 'the right thumb stops at the left one and is on top now');
+      const c = await info('sl-dyn-to');
+      await page.mouse.move(c.thumbX, c.railY);
+      await page.mouse.down();
+      await page.mouse.move(c.thumbX + 40, c.railY, { steps: 6 });
+      await page.mouse.up();
+      expect([await value('sl-dyn-from'), Number(await value('sl-dyn-to')) > Number(from)], [from, true], 'a movement to the right takes the right thumb');
+    });
+
+    await check('MatUi.slider.update reads a changed scale again: the labels at the ends and the thumbs follow', async () => {
+      await page.evaluate(() => {
+        for (const id of ['sl-dyn-from', 'sl-dyn-to']) { document.getElementById(id).max = '50'; }
+        window.MatUi.slider.update(document.getElementById('sl-dyn-from').closest('.mat-slider'));
+      });
+      const s = await page.$eval('#sl-dyn-from', el => {
+        const w = el.closest('.mat-slider');
+        return { ends: [...w.querySelectorAll('.mat-slider__end')].map(e => e.textContent), to: document.getElementById('sl-dyn-to').value, at: getComputedStyle(w.querySelectorAll('.mat-slider__thumb')[1]).left };
+      });
+      expect(s.ends, ['0 kg', '50 kg'], 'the labels at the ends');
+      expectTrue(Number(s.to) <= 50, 'the value is inside the new scale: ' + s.to);
+    });
+
+    await check('the names are German on a German page, and the bubble is readable in light and dark', async () => {
+      const s = await page.evaluate(() => {
+        document.documentElement.lang = 'de';
+        document.getElementById('sl-dyn').insertAdjacentHTML('afterend',
+          '<div class="mat-field" id="sl-de"><label class="mat-label" for="sl-de-from">Preis</label><div class="mat-slider mat-slider--range" data-slider>' +
+          '<input class="mat-slider__input" type="range" id="sl-de-from" name="df" value="20" /><input class="mat-slider__input" type="range" id="sl-de-to" name="dt" value="60" /></div></div>');
+        window.MatUi.refresh(document.getElementById('sl-de'));
+        document.documentElement.lang = 'en';
+        return [document.getElementById('sl-de-from').getAttribute('aria-label'), document.getElementById('sl-de-to').getAttribute('aria-label')];
+      });
+      expect(s, ['Preis von', 'Preis bis'], 'German names');
+      const contrast = theme => page.evaluate(t => {
+        document.documentElement.setAttribute('data-theme', t);
+        const rgb = c => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+        const lum = c => { const [r, g, b] = rgb(c).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+        const b = getComputedStyle(document.querySelector('#sl-bright').closest('.mat-slider').querySelector('.mat-slider__bubble'));
+        const [l1, l2] = [lum(b.color), lum(b.backgroundColor)].sort((x, y) => y - x);
+        return (l1 + 0.05) / (l2 + 0.05);
+      }, theme);
+      for (const theme of ['light', 'dark']) { expectTrue((await contrast(theme)) >= 4.5, 'the bubble in ' + theme); }
+      await page.evaluate(() => document.documentElement.removeAttribute('data-theme'));
+    });
+
+    await check('the values go into the form and a reset puts the markup back: the thumbs, the bubbles, the output and the words for a screen reader are drawn again', async () => {
+      await page.evaluate(() => document.getElementById('sl-f-from').scrollIntoView({ block: 'center' }));
+      await page.focus('#sl-f-from');
+      await page.keyboard.press('End');
+      await page.keyboard.press('ArrowLeft');
+      await page.focus('#sl-f-rating');
+      await page.keyboard.press('End');
+      const sent = await page.$eval('#sl-f-from', el => Object.fromEntries(new FormData(el.form)));
+      expect(sent, { price_from: '65', price_to: '80', rating: '5' }, 'what the form sends');
+      expect(await page.textContent('#sl-f-price-out'), 'From 65 € to 80 €', 'the output');
+      await page.click('form:has(#sl-f-from) button[type=reset]');
+      await page.waitForTimeout(150);
+      const s = await page.$eval('#sl-f-from', el => {
+        const f = el.form, w = id => document.getElementById(id).closest('.mat-slider');
+        return {
+          sent: Object.fromEntries(new FormData(f)), price: [w('sl-f-from').style.getPropertyValue('--mat-slider-from'), w('sl-f-from').style.getPropertyValue('--mat-slider-to')], rating: w('sl-f-rating').style.getPropertyValue('--mat-slider-to'),
+          out: document.getElementById('sl-f-price-out').textContent, out2: document.getElementById('sl-f-rating-out').textContent, text: document.getElementById('sl-f-rating').getAttribute('aria-valuetext'),
+        };
+      });
+      expect(s, { sent: { price_from: '20', price_to: '80', rating: '3' }, price: ['10%', '40%'], rating: '50%', out: 'From 20 € to 80 €', out2: '3 / 5', text: '3 / 5' }, 'after the reset');
+    });
+
+    await check('a slider in a dialog is placed right when the dialog opens: the thumbs, the bubbles, no sideways scroll', async () => {
+      await page.evaluate(() => document.querySelector('[data-dialog-open="sl-dialog"]').scrollIntoView({ block: 'center' }));
+      await page.click('[data-dialog-open="sl-dialog"]');
+      await page.waitForTimeout(450);
+      const from = await info('sl-d-from'), to = await info('sl-d-to');
+      expectTrue(from.railWidth > 100, 'the rail has a width: ' + from.railWidth);
+      expectTrue(Math.abs(from.thumbX - (from.railLeft + from.railWidth * 0.1)) < 1.5 && Math.abs(to.thumbX - (to.railLeft + to.railWidth * 0.7)) < 1.5, 'the thumbs are at 10% and 70% of the rail');
+      expect([from.bubble, to.bubble, await page.$eval('#sl-d-from', el => el.closest('.mat-slider').classList.contains('is-merged'))], ['1', '1', false], 'two bubbles');
+      expect(await page.$eval('#sl-dialog .mat-dialog__body', b => b.scrollWidth <= b.clientWidth + 1), true, 'no sideways scroll in the dialog');
+      await page.keyboard.press('Escape');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#slider');
+    await page.evaluate(() => document.getElementById('slider').scrollIntoView());
+    await check('on a phone the thumb is a target of 44 px (a small slider 36 px), and nothing scrolls sideways, also with every thumb at an end (MOBILE-04)', async () => {
+      const sizes = await page.evaluate(() => {
+        const size = id => { const t = document.getElementById(id).closest('.mat-slider').querySelector('.mat-slider__thumb').getBoundingClientRect(); return [Math.round(t.width), Math.round(t.height)]; };
+        return { sm: size('sl-sm'), md: size('sl-md'), lg: size('sl-lg'), touch: getComputedStyle(document.querySelector('#sl-md').closest('.mat-slider').querySelector('.mat-slider__rail')).touchAction };
+      });
+      expect(sizes, { sm: [36, 36], md: [44, 44], lg: [52, 52], touch: 'pan-y' }, 'targets');
+      for (const edge of ['min', 'max']) {
+        await page.evaluate(which => document.querySelectorAll('#slider .mat-slider__input:not(:disabled)').forEach((input, n) => {
+          input.value = (which === 'min') === (n % 2 === 0) ? input.min : input.max;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }), edge);
+        const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth, thumbs: [...document.querySelectorAll('#slider .mat-slider__thumb')].filter(t => t.getBoundingClientRect().right > innerWidth || t.getBoundingClientRect().left < 0).length }));
+        expect(widths, { page: 390, window: 390, thumbs: 0 }, 'width with the thumbs at ' + edge);
+      }
+    });
+    await check('a tap on the track moves the nearest thumb, a touch drag follows the finger with the bubble above it, and one change is sent when the finger lifts', async () => {
+      await page.evaluate(() => document.getElementById('sl-price-from').scrollIntoView({ block: 'center' }));
+      await page.evaluate(() => {
+        for (const [id, v] of [['sl-price-from', 20], ['sl-price-to', 80]]) { const i = document.getElementById(id); i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); }
+        window.__events = [];
+        for (const type of ['input', 'change']) { document.addEventListener(type, e => { if (e.target.id && e.target.id.startsWith('sl-price')) { window.__events.push(type + ':' + e.target.id); } }); }
+      });
+      const info2 = id => page.$eval('#' + id, input => {
+        const w = input.closest('.mat-slider'), rail = w.querySelector('.mat-slider__rail').getBoundingClientRect();
+        const t = w.querySelectorAll('.mat-slider__thumb')[[...w.querySelectorAll('.mat-slider__input')].indexOf(input)];
+        const r = t.getBoundingClientRect();
+        return { value: input.value, left: rail.left, width: rail.width, y: rail.top + rail.height / 2, x: r.left + r.width / 2, bubble: getComputedStyle(t.querySelector('.mat-slider__bubble')).opacity };
+      });
+      const g = await info2('sl-price-from');
+      await page.touchscreen.tap(g.left + g.width * 0.6, g.y);
+      expect([await page.$eval('#sl-price-from', el => el.value), await page.$eval('#sl-price-to', el => el.value)], ['20', '120'], 'a tap nearer to the right thumb moves it');
+      const cdp = await ctx.newCDPSession(page);
+      const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+      await page.evaluate(() => { window.__events.length = 0; });
+      const f = await info2('sl-price-from');
+      await touch('touchStart', f.x, f.y);
+      for (let k = 1; k <= 6; k++) { await touch('touchMove', f.x + k * 18, f.y); }
+      await page.waitForTimeout(250);
+      // the bubble of the thumb that is touched is shown (or the one that two near thumbs share), with the value in it
+      const mid = await page.$eval('#sl-price-from', input => {
+        const w = input.closest('.mat-slider');
+        return [...w.querySelectorAll('.mat-slider__bubble')].filter(b => getComputedStyle(b).opacity === '1').map(b => b.textContent).join('|');
+      });
+      expectTrue(mid.includes(await page.$eval('#sl-price-from', el => el.value) + ' €'), 'the bubble while the finger is down: ' + mid);
+      await touch('touchEnd');
+      const end = await info2('sl-price-from');
+      expectTrue(Number(end.value) > 20 && Number(end.value) <= 120 - 10, 'the thumb followed the finger: ' + end.value);
+      expectTrue(Math.abs(end.x - (f.x + 108)) < f.width / 40 + 4, `the thumb is under the finger: ${end.x} against ${f.x + 108}`);
+      const ev = await page.evaluate(() => window.__events.splice(0));
+      expect(ev.filter(e => e.startsWith('change')), ['change:sl-price-from'], 'one change');
+      expectTrue(ev.filter(e => e.startsWith('input')).length >= 2, 'input while the finger moves');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- layout and utilities
   console.log('\nLayout and utilities');
   {
