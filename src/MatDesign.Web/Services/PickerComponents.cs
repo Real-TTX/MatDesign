@@ -2,7 +2,8 @@ namespace MatDesign.Web.Services;
 
 /// <summary>
 /// The pickers (FORM-15): a select with pictures, descriptions and tags, a date and a period, a time and a time range, a colour. They are fields that
-/// are filled in a panel; on a phone the panel is full screen. The real input inside holds the value in a fixed format.
+/// are filled in a panel; on a phone the panel is full screen. The real input inside holds the value in a fixed format. The calendar that is always shown and
+/// the appointment picker (a day and a time to book) are FORM-18.
 /// </summary>
 internal static class PickerComponents
 {
@@ -258,7 +259,8 @@ internal static class PickerComponents
             ],
             [
                 "The field posts `2026-10-10` for a date and `2026-10-10..2026-10-14` for a period (with `~2` for the flexible days), whatever the language of the page. What the button shows follows `lang` of the page (or `data-locale` on `html`): 10 Oct 2026, 10.10.2026.",
-                "`data-min` and `data-max` (a date each) disable the days outside them; `data-week-start` (0 Sunday to 6, default 1 for Monday) is read from the wrapper or from `html`.",
+                "`data-min` and `data-max` (a date, `today`, `tomorrow` or a distance such as `+3d`, `-1w`) disable the days outside them; `data-week-start` (0 Sunday to 6, default 1 for Monday) is read from the wrapper or from `html`.",
+                "The title of the month (of the first one, when two are shown) is a button that leads to the choice of a month and a year (the grid is the one of the calendar, FORM-18).",
                 "Each day has its full date as its name for a screen reader, the days are a grid that the arrow keys walk, and the months have a live title that is read when they change. On a phone the panel is full screen and shows one month.",
                 "A date in a table filter or a form that only needs the phone's own picker can stay `input type=\"date\"`; the picker is for what the native control cannot do (a period, limits, the same look everywhere).",
             ]),
@@ -328,6 +330,122 @@ internal static class PickerComponents
                 "The field posts `#rrggbb` in lower case, without transparency. Typing in the hex field accepts three or six digits, with or without `#`.",
                 "The area is a slider for the keyboard: left and right change the saturation, up and down the brightness (with Shift in tens); the hue is a slider too. The swatches are one group for the arrow keys.",
                 "The name of a swatch is the name of the button; without a name it is the hex value. The colour is never the only information: the field shows the hex value next to the chip (COLOR-04).",
+            ]),
+
+        new("calendar", "Calendar", "Forms", "calendar",
+            "A month that is always shown, to choose one day, a period or several days: the grid of the date picker without a button and a panel. Days can be limited (nobody can pick the past), closed, marked with events and listed in an agenda.",
+            ["FORM-18", "FORM-15", "A11Y-02", "COLOR-04", "MOBILE-04", "FORM-03"],
+            [
+                new("A day from today on", """
+                    <div class="mat-field">
+                      <label class="mat-label" for="cal-visit">Day of the visit</label>
+                      <div class="mat-calendar" data-calendar data-min="today" data-max="+90d" data-disabled-weekdays="0,6" data-clearable>
+                        <input class="mat-calendar__input" id="cal-visit" name="visit" value="" />
+                      </div>
+                      <span class="mat-hint">From today to 90 days ahead, closed on Saturdays and Sundays. Posted as <code>2026-10-14</code>.</span>
+                    </div>
+                    """, "`data-min` and `data-max` take a date, `today`, `tomorrow` or a distance from today (`+2d`, `-1w`, `+3m`, `+1y`), so nobody can pick the past. A day that cannot be chosen is dimmed and disabled; Today goes to the month of today."),
+                new("Events and an agenda", """
+                    <div class="mat-field">
+                      <label class="mat-label" for="cal-events">Day</label>
+                      <div class="mat-calendar" data-calendar data-agenda data-week-numbers data-events='{"2026-10-14":[{"title":"Dentist","time":"09:00","end":"09:45"},{"title":"Team lunch","time":"12:30","end":"13:30"},{"title":"Read the release notes","time":"16:00"}],"2026-10-16":[{"title":"Hand in the tax form"}],"2026-10-20":[{"title":"Backup check","time":"08:00"}],"2026-10-23":[{"title":"Parents evening","time":"18:30"},{"title":"Server maintenance","time":"22:00","end":"23:30"}],"2026-10-28":[{"title":"Quarterly review","time":"10:00","end":"11:30"}]}'>
+                        <input class="mat-calendar__input" id="cal-events" name="day" value="2026-10-14" />
+                      </div>
+                      <span class="mat-hint">A dot under a day for each event, up to three. The events of the chosen day are listed below.</span>
+                    </div>
+                    """, "The events are JSON in `data-events` (an object with the days as keys, or a list with a `date` in every item) and can be replaced later with `MatUi.calendar.setEvents(element, events)`. An item is a title, or a title with `time` and `end`; one without a time is shown as \"All day\". `data-week-numbers` puts the ISO week in front of each row."),
+                new("A period of two months", """
+                    <div class="mat-field">
+                      <label class="mat-label" for="cal-rental">Rental period</label>
+                      <div class="mat-calendar" data-calendar data-mode="range" data-months="2" data-min="+3d" data-max="+1y" data-disabled="2026-12-24..2026-12-26" data-clearable>
+                        <input class="mat-calendar__input" id="cal-rental" name="rental" value="" />
+                      </div>
+                      <span class="mat-hint">At least three days from now. The 24th to 26th of December are taken, and a period does not run across them. Posted as <code>2026-10-16..2026-10-20</code> once both days are chosen.</span>
+                    </div>
+                    """, "The first click is the start, the second the end (a day before the start, or one behind a taken day, begins a new period). While only the start is chosen nothing is posted, so a required field still asks for the end. A closed weekday (`data-disabled-weekdays`) does not stop a period, a taken day (`data-disabled`) does."),
+                new("Several days", """
+                    <div class="mat-field">
+                      <label class="mat-label" for="cal-days">Days off</label>
+                      <div class="mat-calendar" data-calendar data-mode="multiple" data-max-dates="4" data-week-start="0" data-clearable>
+                        <input class="mat-calendar__input" id="cal-days" name="days" value="2026-10-14,2026-10-21" />
+                      </div>
+                      <span class="mat-hint">At most four days, the week starts on Sunday. Posted as <code>2026-10-14,2026-10-21</code>, in the order of the calendar.</span>
+                    </div>
+                    """, "A click adds a day or takes it away again; the line under the month counts them and says when the limit is reached."),
+                new("In a form: required", $"""
+                    <form class="mat-form" method="get" action="/Components#calendar" novalidate>
+                      <div class="mat-field">
+                        <label class="mat-label" for="cal-req">Day <span class="mat-req" aria-hidden="true">*</span></label>
+                        <div class="mat-calendar" data-calendar data-min="today">
+                          <input class="mat-calendar__input" id="cal-req" name="day" required data-msg-required="Please choose a day." />
+                        </div>
+                        <span class="mat-error" aria-live="polite"></span>
+                      </div>
+                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Continue</span></button></div>
+                    </form>
+                    """, "Press Continue with no day chosen: the message appears under the calendar, its line turns red and the focus goes to the day the keyboard is on."),
+            ],
+            [
+                "The wrapper is `mat-calendar` with `data-calendar` around the real input (`mat-calendar__input`), which holds the value and is validated and posted. The script draws the grid into the wrapper and names it after the label. `input` and `change` fire on the real input.",
+                "`data-mode` is `single` (default, `2026-10-10`), `range` (`2026-10-10..2026-10-14`, empty until both days are chosen) or `multiple` (`2026-10-10,2026-10-12`; `data-max-dates` limits them). The formats are those of FORM-15, whatever the language of the page.",
+                "`data-min` and `data-max` take a date, `today`, `tomorrow` or a distance (`+2d`, `-1w`, `+3m`, `+1y`). `data-disabled` takes days and periods (`2026-10-14,2026-10-20..2026-10-24`), `data-disabled-weekdays` weekdays (`0,6`; 0 is Sunday).",
+                "`data-week-start` is the first weekday (default 1, Monday), `data-week-numbers` adds the ISO weeks, `data-months=\"2\"` shows two months side by side (they wrap on a phone), `data-clearable` adds Clear next to Today.",
+                "A period may run across closed weekdays but not across a day of `data-disabled`; it posts nothing until both days are chosen. `data-max-dates` refuses a further day with a message under the month.",
+                "The title of the month is a button: it opens the choice of a month and then of a year, so a date of birth is not twenty clicks away. Escape goes back one step.",
+                "The grid is a table of buttons: the arrow keys walk the days (days that cannot be chosen are stepped over), Home and End go to the start and end of the week, Page up and down change the month (with Shift the year), Enter or Space chooses.",
+                "Every day is named with its full date, plus the number of its events or that it is unavailable. On a phone the days are 44 px high.",
+                "`data-events` is JSON: an object with the days as keys (each a list of titles or `{title, time, end}`) or a list of items with a `date`. A dot per event (up to three) marks a day; `data-agenda` lists the events of the chosen day under the grid.",
+                "From a script: `MatUi.calendar.setEvents(el, events)`, `setDisabled(el, {dates, weekdays, min, max})`, `setValue(el, value)` (no events) and `go(el, date)`; `MatUi.refresh(scope)` wires new calendars.",
+                "The date picker uses the same grid: it shares `data-min` and `data-max` (with `today` and distances) and the jump to a month and a year.",
+            ]),
+
+        new("slot-picker", "Appointment picker", "Forms", "calendar",
+            "A day and a time to book, as in a doctor's practice: a month in which only the days with a free appointment can be chosen, then the times of the day, taken ones marked, and a shortcut to the next free appointment. One value is posted: 2026-10-14T09:30.",
+            ["FORM-18", "FORM-15", "DIALOG-03", "A11Y-02", "COLOR-04", "FORM-03"],
+            [
+                new("A doctor's practice", """
+                    <div class="mat-field">
+                      <label class="mat-label" for="pk-slot">Appointment</label>
+                      <div class="mat-picker" data-picker="slot" data-min="today" data-min-notice="2h" data-duration="15" data-group data-clearable data-placeholder="Choose an appointment">
+                        <input class="mat-picker__input" id="pk-slot" name="appointment" value="" />
+                      </div>
+                      <span class="mat-hint">Appointments of 15 minutes, none sooner than two hours from now, closed at weekends. Posted as <code>2026-10-14T09:30..09:45</code>.</span>
+                    </div>
+                    """, "The times of a month are asked for when the month is shown (the page answers `mat:slots-needed` with `MatUi.picker.setSlots`; here the script of this site plays the server). Days without a free appointment are struck through and cannot be chosen, the others carry a dot. Next free appointment chooses the first free time."),
+                new("Days without a free time are left out", """
+                    <div class="mat-field">
+                      <label class="mat-label" for="pk-pickup">Pick-up of the rental car</label>
+                      <div class="mat-picker" data-picker="slot" data-min="+3d" data-max="+60d" data-unavailable="hide" data-hour12="true" data-placeholder="Choose a time">
+                        <input class="mat-picker__input" id="pk-pickup" name="pickup" value="" />
+                      </div>
+                      <span class="mat-hint">At least three days ahead and at most 60. Taken times are not listed. With 12 hours it is still posted as <code>2026-10-17T14:45</code>.</span>
+                    </div>
+                    """, "With `data-unavailable=\"hide\"` a day that has no free time is not drawn at all, and a taken time is not listed; with `mark` (the default) they are dimmed, struck through and say \"Taken\"."),
+                new("In a form: required", $"""
+                    <form class="mat-form" method="get" action="/Components#slot-picker" novalidate>
+                      <div class="mat-field">
+                        <label class="mat-label" for="pk-slot-req">Appointment <span class="mat-req" aria-hidden="true">*</span></label>
+                        <div class="mat-picker" data-picker="slot" data-min="tomorrow" data-placeholder="Choose an appointment">
+                          <input class="mat-picker__input" id="pk-slot-req" name="visit" required data-msg-required="Please choose an appointment." />
+                        </div>
+                        <span class="mat-error" aria-live="polite"></span>
+                      </div>
+                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Book</span></button></div>
+                    </form>
+                    """, "From tomorrow on. Press Book with nothing chosen: the message appears under the field and the focus goes to its button."),
+            ],
+            [
+                "The wrapper is `mat-picker` with `data-picker=\"slot\"` around the real input. It posts `2026-10-14T09:30`; with `data-duration` (minutes) the end too, `2026-10-14T09:30..09:45` (an end before the start is the next day, as in a time range).",
+                "The button shows the choice in the language of the page (Wed 14 Oct 2026 · 09:30 – 09:45); the times use the clock of the page (`data-hour12=\"true|false\"`). A line above the buttons of the panel says what is chosen; Apply takes it.",
+                "Availability is data: `data-slots='{\"2026-10-14\": [\"09:00\", \"09:15\"]}'` lists the free times of a day. `{\"free\": [...], \"taken\": [...]}` for a day lists the taken ones too.",
+                "A taken time is disabled and says \"Taken\" (never only a colour), or is left out with `data-unavailable=\"hide\"`. A day without a free time is struck through and cannot be chosen (absent with `hide`); a day with one carries a dot.",
+                "Without `data-slots` (or with `data-lazy`) a month is asked for when it is shown and not known: the wrapper fires `mat:slots-needed` (it bubbles; `detail.month` is `2026-10`, plus `from`, `to` and `picker`).",
+                "The page answers with `MatUi.picker.setSlots(detail.picker, data, detail.month)` (the same JSON) or `MatUi.picker.slotsFailed(detail.picker, detail.month)`, which shows a message with Try again. Meanwhile the panel says it is loading.",
+                "`data-min` and `data-max` take a date, `today`, `tomorrow` or a distance (`+2d`); nothing before today is ever offered. `data-min-notice` (`2h`, `30m`, `1d`) hides what starts sooner than now plus the notice.",
+                "`data-group` groups the times into morning, afternoon and evening; `data-duration` shows the length of an appointment; `data-clearable` adds Clear.",
+                "Next free appointment looks from the first day that may be booked, asks for the following months when they are not known (for a year, or up to `data-max`) and chooses the first free time.",
+                "Keyboard: the arrow keys walk the days of the month, Enter chooses a day and moves the focus to its times, the arrow keys walk the times like a grid, Escape closes the panel.",
+                "On a wide screen the month and the times sit side by side; on a phone the panel is a full-screen sheet with an X (DIALOG-03), the month above the times.",
             ]),
     ];
 }

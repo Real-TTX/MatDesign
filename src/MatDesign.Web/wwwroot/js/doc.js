@@ -179,4 +179,35 @@
     download.setAttribute('href', '/ui/iconlib/svg/' + encodeURIComponent(name) + '.svg');
     download.setAttribute('download', name + '.svg');
   });
+
+  // The "server" of the appointment examples (data-picker="slot" without data-slots asks for a month when it shows it: the event mat:slots-needed). A practice
+  // that is open on weekdays, on Wednesday only in the morning, with appointments of 15 minutes of which some are taken and a day now and then is fully booked. It
+  // answers after a moment, like a server, and with days that are always near today, so the examples keep working. A page that answers the event itself stops it.
+  function slotHash(text) {
+    var h = 0;
+    for (var i = 0; i < text.length; i += 1) { h = (h * 31 + text.charCodeAt(i)) | 0; }
+    return Math.abs(h);
+  }
+  function two(n) { return (n < 10 ? '0' : '') + n; }
+  function demoSlots(month) {
+    var year = +month.slice(0, 4), index = +month.slice(5, 7) - 1, days = new Date(year, index + 1, 0).getDate(), out = {};
+    for (var day = 1; day <= days; day += 1) {
+      var weekday = new Date(year, index, day).getDay();
+      if (weekday === 0 || weekday === 6) { continue; }
+      var iso = month + '-' + two(day), free = [], taken = [];
+      (weekday === 3 ? [[8, 12]] : [[8, 12], [14, 17]]).forEach(function (block) {
+        for (var at = block[0] * 60; at < block[1] * 60; at += 15) {
+          var time = two(Math.floor(at / 60)) + ':' + two(at % 60);
+          (slotHash(iso + time) % 100 < 35 ? taken : free).push(time);
+        }
+      });
+      if (day % 9 === 0) { taken = taken.concat(free); free = []; }
+      out[iso] = { free: free, taken: taken };
+    }
+    return out;
+  }
+  document.addEventListener('mat:slots-needed', function (e) {
+    var need = e.detail;
+    setTimeout(function () { window.MatUi.picker.setSlots(need.picker, demoSlots(need.month), need.month); }, 400);
+  });
 })();

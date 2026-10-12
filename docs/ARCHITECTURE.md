@@ -86,12 +86,12 @@ that share the height of one control are too small for a finger (`MOBILE-04`), s
 
 ### Pickers
 
-A picker is a field whose value is chosen in a panel: a select with pictures, descriptions and tags, a date or a period, a time or a time range, a colour (`FORM-15`). The tag input is the one
+A picker is a field whose value is chosen in a panel: a select with pictures, descriptions and tags, a date or a period, a time or a time range, a colour, an appointment (`FORM-15`, `FORM-18`). The tag input is the one
 picker that is a field of its own and has no panel to open (`KINDS.tags` is `inline`: no button, it draws chips and a text field from the value; its suggestions are the options of a select, as a
 dropdown under the field on every screen size, never a full-screen sheet, because the keyboard stays in the field). They are a part of their own
 (`matui.pickers.css`) and one section of `matui.js`; the select and the calendar were taken over from MatCMS, the time and the colour were made in the same style. The markup is a wrapper
 `mat-picker[data-picker]` around the real input (`mat-picker__input`), which is what is validated, posted and reset. It holds the value in a **fixed format** (`2026-10-10`,
-`2026-10-10..2026-10-14~2`, `09:30`, `09:00..17:30`, `#b4235f`, the keys of the options), whatever the language of the page; the script adds the button that shows it in the language of the
+`2026-10-10..2026-10-14~2`, `09:30`, `09:00..17:30`, `#b4235f`, `2026-10-14T09:30`, the keys of the options), whatever the language of the page; the script adds the button that shows it in the language of the
 page (`Intl`) and the panel. The panel is `position: fixed` next to the button (below, above, or covering it when neither side has room) and full screen with an X on a phone, like every dialog.
 It lives inside the wrapper, so a picker in a dialog is not cut off by it, and Escape closes the picker first and the dialog second. The real input is invisible but lies over the button, so a
 browser message points at the right place, and whoever focuses it (a label, the validation) lands on the button. The texts are English and German (`data-pk-*` on `html` changes them; a test checks that
@@ -113,6 +113,15 @@ A **dropdown with a list of checkboxes** is the select picker with `data-multipl
 that is a `role="checkbox"` button (a `role="option"` has no state in between) with `aria-checked` true, false or mixed; it looks at, and acts on, the options that are shown and can be chosen, so the search
 narrows it and a disabled option is left alone. The arrow keys, Home and End walk the rows (that row first), Space is the click of the button. The field names one or two options, counts three or more and says
 All selected when every option of a list of more than two is ticked.
+The month grid of the date picker is shared, not copied (`FORM-18`): one `calMonth`, one `calPaint`, one set of keys, driven by a **state** (mode `single`, `range` or `multiple`; min and max; `off(date)` for
+days that cannot be chosen; marks, a level of days, months or years). The calendar that is always shown (`mat-calendar[data-calendar]`, with a real input `mat-calendar__input`) draws the same grid into the
+page; the picker only adds a button and a panel. A limit is a date, `today` or a distance (`dateExpr`: `+3d`). Texts that only the calendar needs live in their own table (`CAL_TEXT`), found through `pkText`.
+
+The appointment picker (`KINDS.slot`, one value `2026-10-14T09:30`, with the length `..09:45`) is a panel picker whose panel holds that grid, with a dot on the days that have a free time, next to the
+list of the times of the chosen day (below it on a phone). It adds only what is its own: the availability (`data-slots`, or asked for per month through the event `mat:slots-needed` and answered with
+`MatUi.picker.setSlots`, with a loading and a failed state), the minimum notice, the shortcut to the next free appointment and the summary line. A time that has passed is never offered, and a time or a day
+that is not free says so in words, not only in a colour (`COLOR-04`). The browser checks answer the event themselves, so that no check depends on the day it runs; the documentation site answers it with
+generated days near today (`doc.js`), so that its examples keep working.
 
 ### Layout and utilities
 

@@ -127,6 +127,33 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
   </div>
   ```
 
+- A month that is **always shown** (`FORM-18`) is a calendar: `mat-calendar` with `data-calendar` around the real input `mat-calendar__input`, for one day, a period (`data-mode="range"`) or several days
+  (`data-mode="multiple"`). It posts `2026-10-10`, `2026-10-10..2026-10-14` or `2026-10-10,2026-10-12`. `data-min="today"` (also `tomorrow`, `+3d`, `-1w`) means nobody can pick the past, `data-disabled`
+  and `data-disabled-weekdays="0,6"` close days, `data-events` (JSON) marks days with dots and `data-agenda` lists the events of the chosen day. The date picker takes the same `data-min` and `data-max`.
+
+  ```html
+  <div class="mat-calendar" data-calendar data-min="today" data-disabled-weekdays="0,6">
+    <input class="mat-calendar__input" id="visit" name="visit" />
+  </div>
+  ```
+
+- An **appointment** (a doctor's practice, a rental pick-up) is booked with the appointment picker (`data-picker="slot"`, `FORM-18`): a month in which the days with a free time carry a dot and the others cannot
+  be chosen, then the times of the chosen day, taken ones disabled with the word "Taken". It posts `2026-10-14T09:30` (with `data-duration="15"`: `2026-10-14T09:30..09:45`). The availability is data:
+  `data-slots='{"2026-10-14": ["09:00", "09:15"]}'`, or the page answers `mat:slots-needed` per month (the event carries the month) with `MatUi.picker.setSlots(detail.picker, data, detail.month)`, so that a
+  server decides. `data-min="today"`, `data-min-notice="2h"`, `data-unavailable="hide"` and `data-group` shape it; Next free appointment jumps to the first free time.
+
+  ```html
+  <div class="mat-picker" data-picker="slot" data-min="today" data-min-notice="2h" data-duration="15">
+    <input class="mat-picker__input" id="appointment" name="appointment" />
+  </div>
+  <script>
+    document.addEventListener('mat:slots-needed', async e => {
+      const data = await (await fetch('/api/slots?month=' + e.detail.month)).json();   // { "2026-10-14": ["09:00", ...] }
+      MatUi.picker.setSlots(e.detail.picker, data, e.detail.month);
+    });
+  </script>
+  ```
+
 ## 4a. Layout and utilities
 
 - **Containers and the grid:** a page inside the shell is `mat-page`; one without it (sign-in, a shared link) is `mat-container`. For a layout you have decided use the twelve columns
