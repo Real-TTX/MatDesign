@@ -89,6 +89,20 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
   </div>
   ```
 
+- A **code** that is read from somewhere else (an authenticator or SMS code, a PIN, a recovery code) is a **code input** (`FORM-19`): one box per character, drawn by the script around a real input that posts the code joined.
+  `data-chars` is `digits` (the default), `letters`, `alphanumeric`, `hex` or a class such as `[A-Z2-7]`; `data-mask` shows dots; `data-group="4-4"` draws groups; a form is sent with the last character only if you write `data-submit`.
+  An app that rejects a code calls `MatUi.otp.clear(el)` and `MatUi.otp.setInvalid(el, "Message")`:
+
+  ```html
+  <div class="mat-field">
+    <label class="mat-label" for="code">Authentication code</label>
+    <div class="mat-otp" data-otp data-length="6" data-chars="digits" data-submit>
+      <input class="mat-otp__input" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6}" />
+    </div>
+    <span class="mat-error" aria-live="polite"></span>
+  </div>
+  ```
+
 ## 4a. Layout and utilities
 
 - **Containers and the grid:** a page inside the shell is `mat-page`; one without it (sign-in, a shared link) is `mat-container`. For a layout you have decided use the twelve columns
