@@ -613,6 +613,21 @@ function expectTrue(value, what) {
       expect(await page.getAttribute('.mat-toc-aside a[href="#dialogs"]', 'aria-current'), 'location', 'dialogs');
       expectTrue(!(await page.locator('.mat-toc-aside a[href="#table"]').getAttribute('aria-current')), 'table is still marked');
     });
+    await check('the index can be scrolled by the user: it follows the page when the section changes, and does not jump back while it is scrolled', async () => {
+      const top = () => page.evaluate(() => Math.round(document.querySelector('.mat-toc-aside').scrollTop));
+      await page.evaluate(() => { const m = document.querySelector('.mat-main'); m.scrollTop = m.scrollHeight; });
+      await page.waitForTimeout(600);
+      const followed = await top();
+      expectTrue(followed > 200, 'the index did not follow the page to the last section (scrollTop ' + followed + ')');
+      const box = await page.locator('.mat-toc-aside').boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.wheel(0, -300);
+      await page.waitForTimeout(400);
+      const up = await top();
+      expectTrue(up < followed - 100, 'the index jumped back when it was scrolled up: ' + followed + ' -> ' + up);
+      await page.waitForTimeout(500);
+      expectTrue(Math.abs((await top()) - up) < 4, 'the index moved again by itself after it was scrolled: ' + up + ' -> ' + (await top()));
+    });
     await check('the example inside a component works: a dependent field of a form example', async () => {
       await page.evaluate(() => document.getElementById('form-layout').scrollIntoView());
       expectTrue(await page.locator('#fl-mail').isVisible(), 'the e-mail field is hidden while the switch is on');
