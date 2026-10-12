@@ -69,6 +69,15 @@ validation summary. The catalogue of the form components is its own file (`FormC
 forms read like a manual). The script adds only what CSS cannot do: the filled part and the output of a range, a counter, the eye of a password, the names in a drop zone, an indeterminate check and the
 summary of the errors of a form; validation itself stays the browser's (`required`, `type`, `pattern`) with the messages of `data-msg-*`.
 
+### The code input
+
+A code that is read from somewhere else (an authenticator or SMS code, a PIN, a recovery code, a key) is one box per character (`mat-otp`, `FORM-19`). Like a picker it is a wrapper around a **real input** that is
+validated, posted and reset; the script hides it and draws the boxes, and without the script it is a text field. The decisions: the boxes are **one tab stop** with the arrow keys inside (roving tabindex, like a toolbar), because
+a code is one value and Tab should go to the next field, and a screen reader gets one group named by the label with each box named by its place; the boxes have **no `maxlength`**, so that an SMS code that arrives whole on the first box
+is not cut but spread over the boxes, and no name, so that only the real input posts; an incomplete code is made **invalid** on the real input (`setCustomValidity`), so `required`, `pattern` and the messages of the form work without a
+second validation, and the boxes follow `disabled`, `readonly` and `aria-invalid` of the real input; **nothing is sent by itself** unless the author writes `data-submit` (then `requestSubmit()`, so the validation and `data-confirm` still
+run). The type stays 16 px or more (a phone zooms into smaller type) and the boxes shrink in width instead of overflowing, so a code of twelve fits a phone.
+
 ### Pickers
 
 A picker is a field whose value is chosen in a panel: a select with pictures, descriptions and tags, a date or a period, a time or a time range, a colour (`FORM-15`). The tag input is the one

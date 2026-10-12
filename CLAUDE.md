@@ -62,7 +62,7 @@ src/MatDesign.Web          the site
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
   Pages/Studio/              Setup (the assistant of the first administrator), Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, IconLibrary (the optional icon library: sprite, catalogue, single icons, archive, served under /ui/iconlib/), Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
-                             ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
+                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
@@ -94,6 +94,11 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`, the tags joined by a comma); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone; `tags` is
   `inline`: a field of chips, no button, its suggestions a dropdown under it). Texts in English and German
   (`PK_TEXT`: both languages must have every key, a test checks). A hidden element that has a `display` in the CSS needs its own `[hidden]` rule (tests list them).
+- Code input (`FORM-19`): `.mat-otp[data-otp data-length data-chars data-case data-mask data-group data-submit]` around the real input `.mat-otp__input` (a text field without the script; it is what is validated, posted and reset). The script hides it
+  and draws one `.mat-otp__box` per character in a `role="group"` named by the label (`Digit 3 of 6`), **one tab stop** (roving tabindex, the arrow keys walk inside), no `maxlength` (an SMS code arrives whole on the first box, which has the
+  `autocomplete` of the real input) and no `name` on a box. An incomplete code is not valid (`setCustomValidity`), so `required`, `pattern` and `data-msg-*` work; the boxes follow `disabled`, `readonly` and `aria-invalid` of the real input
+  (a `MutationObserver`). Completion fires `mat:otp-complete` (cancelable); the form is sent only with `data-submit` (`requestSubmit()`). 16 px type or more in every size, boxes shrink in width and never overflow. API `MatUi.otp.clear/focus/setInvalid/value`.
+  Texts in `OTP_TEXT` (English and German, a test checks).
 - Carousel (`LIST-13`): `.mat-carousel[data-carousel]` around `.mat-carousel__track` > `.mat-carousel__slide`. The strip scrolls and snaps in CSS (a scrollable strip without the script); the script names the slides,
   adds the bar (Previous, a dot per page, Next, Pause with `data-autoplay`), makes the slides out of view `inert` and says which page is shown. The buttons at the ends are `aria-disabled`, never `disabled` (the focus stays).
   Autoplay waits for the pointer and the focus, stops for good after any use of a control and never starts under `prefers-reduced-motion`. Texts in `CAR_TEXT` (English and German, a test checks).
