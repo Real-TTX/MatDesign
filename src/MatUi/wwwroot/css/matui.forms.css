@@ -243,3 +243,84 @@ input[type="file"].mat-input { padding: 6px; }
 .mat-setting__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; cursor: pointer; }
 .mat-setting__text small { color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
 .mat-switch--bare { gap: 0; flex: none; }
+
+/* ==========================================================================
+   Slider and range slider (FORM-17)
+   A native range input in a wrapper (.mat-slider), or two of them (.mat-slider--range, from and to). Without the script they are the native controls, the two
+   of a range slider one under the other. With it (.is-ready) the inputs stay in place but invisible, and the script draws one track, a thumb per input with
+   a target of 44 px, a bubble with the value, the marks and the labels, and moves the thumbs itself. The script sets --mat-slider-from, --mat-slider-to
+   (the filled part, in percent) and, per thumb, --mat-slider-at. Sizes: --sm (a compact control: 36 px), the default (44 px) and --lg.
+   ========================================================================== */
+.mat-slider {
+  --mat-slider-knob: 20px; --mat-slider-track: 6px; --mat-slider-hit: 44px;
+  --mat-slider-from: 0%; --mat-slider-to: 0%;
+  position: relative; display: block; isolation: isolate;
+  width: 100%; min-width: 0;
+}
+.mat-slider--sm { --mat-slider-knob: 16px; --mat-slider-track: 4px; --mat-slider-hit: 36px; }
+.mat-slider--lg { --mat-slider-knob: 26px; --mat-slider-track: 8px; --mat-slider-hit: 52px; }
+
+/* ---- Without the script: the native control, in the look of the toolkit (the filled part needs the script, except in Firefox) ---- */
+.mat-slider__input { display: block; width: 100%; height: var(--mat-slider-hit); margin: 0; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; }
+.mat-slider__input::-webkit-slider-runnable-track { height: var(--mat-slider-track); border-radius: var(--mat-radius-pill); background: var(--mat-surface-3); box-shadow: inset 0 0 0 1px var(--mat-border); }
+.mat-slider__input::-moz-range-track { height: var(--mat-slider-track); border-radius: var(--mat-radius-pill); background: var(--mat-surface-3); box-shadow: inset 0 0 0 1px var(--mat-border); }
+.mat-slider__input::-moz-range-progress { height: var(--mat-slider-track); border-radius: var(--mat-radius-pill); background: var(--mat-accent); }
+.mat-slider__input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; box-sizing: border-box; width: var(--mat-slider-knob); height: var(--mat-slider-knob); margin-top: calc((var(--mat-slider-track) - var(--mat-slider-knob)) / 2); border-radius: 50%; background: var(--mat-thumb); border: 2px solid var(--mat-accent); box-shadow: var(--mat-shadow-1); }
+.mat-slider__input::-moz-range-thumb { box-sizing: border-box; width: var(--mat-slider-knob); height: var(--mat-slider-knob); border-radius: 50%; background: var(--mat-thumb); border: 2px solid var(--mat-accent); box-shadow: var(--mat-shadow-1); }
+.mat-slider__input:focus-visible { outline: none; }
+.mat-slider__input:focus-visible::-webkit-slider-thumb { box-shadow: var(--mat-focus-ring); }
+.mat-slider__input:focus-visible::-moz-range-thumb { box-shadow: var(--mat-focus-ring); }
+.mat-slider__input:disabled { cursor: not-allowed; }
+.mat-slider--range:not(.is-ready) { display: flex; flex-direction: column; gap: var(--mat-space-1); }
+
+/* ---- With the script: the inputs are invisible (not hidden: they keep the focus, the keyboard and the screen reader) and lie over the slider ---- */
+.mat-slider.is-ready .mat-slider__input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+.mat-slider.is-ready[data-bubble="always"] { padding-top: 20px; }
+
+/* The rail is as wide as the way the centre of a thumb goes; a press on it is handled by the script (touch-action: the page can still be scrolled up and down). */
+.mat-slider__rail { position: relative; height: var(--mat-slider-hit); margin-inline: calc(var(--mat-slider-knob) / 2); cursor: pointer; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+.mat-slider__track { position: absolute; inset-inline: 0; top: 50%; height: var(--mat-slider-track); transform: translateY(-50%); border-radius: var(--mat-radius-pill); background: var(--mat-surface-3); box-shadow: inset 0 0 0 1px var(--mat-border); }
+.mat-slider__fill { position: absolute; top: 0; bottom: 0; left: var(--mat-slider-from); right: calc(100% - var(--mat-slider-to)); border-radius: var(--mat-radius-pill); background: var(--mat-accent); }
+
+/* The thumb is the target (as wide as it is high: 44 px); the knob that is seen is smaller. */
+.mat-slider__thumb { position: absolute; top: 50%; left: var(--mat-slider-at, 0%); z-index: 1; width: var(--mat-slider-hit); height: var(--mat-slider-hit); transform: translate(-50%, -50%); }
+.mat-slider__thumb.is-top { z-index: 2; }
+.mat-slider__thumb::before {
+  content: ""; position: absolute; top: 50%; left: 50%;
+  box-sizing: border-box; width: var(--mat-slider-knob); height: var(--mat-slider-knob); margin: calc(var(--mat-slider-knob) / -2) 0 0 calc(var(--mat-slider-knob) / -2);
+  border-radius: 50%; background: var(--mat-thumb); border: 2px solid var(--mat-accent); box-shadow: var(--mat-shadow-1);
+}
+.mat-slider__thumb.is-key::before, .mat-slider__thumb.is-drag::before { box-shadow: var(--mat-focus-ring); }
+
+/* The bubble shows the value above the thumb while it is dragged or has the focus, or always (data-bubble="always"); two near thumbs share one (is-merged). */
+.mat-slider__bubble {
+  position: absolute; left: 50%; bottom: calc(50% + var(--mat-slider-knob) / 2 + 6px);
+  transform: translateX(calc(-50% + var(--mat-slider-shift, 0px)));
+  min-width: 2.25em; padding: 3px var(--mat-space-2); border-radius: var(--mat-radius-xs);
+  background: var(--mat-text); color: var(--mat-bg);
+  font-size: var(--mat-fs-xs); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.3; text-align: center; white-space: nowrap;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-slider__thumb.is-focus > .mat-slider__bubble, .mat-slider__thumb.is-drag > .mat-slider__bubble, .mat-slider[data-bubble="always"] .mat-slider__bubble { opacity: 1; }
+.mat-slider.is-merged .mat-slider__thumb--from > .mat-slider__bubble { opacity: 0; }
+
+/* Marks under the track (the ones inside the filled part in the accent colour) and the labels: under every few marks, or the minimum and the maximum at the ends. */
+.mat-slider__ticks { position: absolute; inset: 0; pointer-events: none; }
+.mat-slider__tick { position: absolute; top: calc(50% + var(--mat-slider-track) / 2 + 4px); left: var(--mat-slider-at); width: 2px; height: 6px; margin-left: -1px; border-radius: 1px; background: var(--mat-border-strong); }
+.mat-slider__tick.is-on { background: var(--mat-accent); }
+.mat-slider__scale { position: relative; height: 1.25rem; margin: -6px calc(var(--mat-slider-knob) / 2) 0; font-size: var(--mat-fs-xs); color: var(--mat-text-muted); font-variant-numeric: tabular-nums; pointer-events: none; }
+.mat-slider__end, .mat-slider__tick-label { position: absolute; top: 0; white-space: nowrap; }
+.mat-slider__end--min { left: calc(var(--mat-slider-knob) / -2); }
+.mat-slider__end--max { right: calc(var(--mat-slider-knob) / -2); }
+.mat-slider__tick-label { left: var(--mat-slider-at); transform: translateX(-50%); }
+
+/* Disabled: every input of the slider is (a fieldset can disable them as well). */
+.mat-slider:not(:has(.mat-slider__input:enabled)) { opacity: .5; }
+.mat-slider:not(:has(.mat-slider__input:enabled)) .mat-slider__rail { cursor: not-allowed; }
+
+/* Forced colours (a high-contrast mode): backgrounds are dropped there, so the filled part and the bubble get what they need from the system colours. */
+@media (forced-colors: active) {
+  .mat-slider__fill { background: Highlight; }
+  .mat-slider__track, .mat-slider__bubble { border: 1px solid CanvasText; }
+}

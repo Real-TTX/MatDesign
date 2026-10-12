@@ -16,6 +16,11 @@
      data-scrollspy                         an index of #links to sections of the page ("On this page"): the link of the section in view is marked
      data-validation-summary                an alert in a form that lists the fields with an error, each a link to its field (hidden while there are none)
      data-output="id"                       a range input writes its value into the element with this id (the filled part of the track is drawn for every .mat-range)
+     data-slider                            a slider (.mat-slider around a native range input) or, with .mat-slider--range, a range slider (two inputs, from and to); the script draws the
+                                            track, the thumbs and the bubbles (FORM-17). Options: data-format="{0} GB" (every value shown), data-bubble="always", data-ticks="10"
+                                            (marks; empty: one per step), data-tick-labels="5" (a label under every fifth mark), data-labels="none" (no minimum and maximum at the ends),
+                                            data-output="id" on the wrapper (the value; for a range data-range-format="From {0} to {1}"), data-min-gap (range: the least distance between
+                                            the thumbs), data-min / data-max / data-step (copied to the inputs). The texts of the names: data-sl-<name> on <html>
      data-counter="id"                      a text field writes "length / maxlength" into the element with this id
      data-indeterminate                     a checkbox that starts in the indeterminate state
      data-password-toggle="id"              the eye button of a password field: shows and hides the password (aria-pressed)
@@ -632,6 +637,7 @@
   function initForms(scope) {
     $$('input[data-indeterminate]', scope).forEach(function (i) { i.indeterminate = true; });
     $$('input.mat-range', scope).forEach(updateRange);
+    initSliders(scope);
     $$('[data-counter]', scope).forEach(updateCounter);
     $$('[data-selectable]', scope).forEach(updateSelection);
   }
@@ -2261,6 +2267,323 @@
     if (tagsOpen && !tagsOpen.suggest.contains(e.target)) { tagsPlace(tagsOpen); }
   }, true);
 
+  // ------------------------------------------------------------------------------------------------ slider and range slider (FORM-17, matui.forms.css)
+  // A slider is a native <input type="range"> in a wrapper: it posts its value, has the keyboard and the role of the browser and works without the script.
+  //   <div class="mat-slider" data-slider data-format="{0} GB"><input class="mat-slider__input" type="range" id="q" name="q" min="0" max="100" step="10" value="40"></div>
+  // A range slider is the same with two native inputs (name="from" and name="to") in one wrapper, .mat-slider--range, and data-min-gap for the least distance between them.
+  // The script draws one track with the filled part, a thumb for each input (a target of 44 px) with a bubble that shows its value, the minimum and the maximum at the
+  // ends and the marks, and it moves the thumbs itself: a press on the track moves the nearest thumb, thumbs cannot cross, the one moved last is on top. The native inputs
+  // stay where they are, invisible but focusable, and stay the truth: the value, the validity, the form and what a screen reader reads (aria-valuetext) come from them, and
+  // they send input and change like any range input. A form reset and MatUi.refresh are picked up. The texts of the names are English and German (a test checks).
+  var SL_TEXT = {
+    en: { from: 'from', to: 'to', range: '{0} – {1}' },
+    de: { from: 'von', to: 'bis', range: '{0} – {1}' }
+  };
+
+  function slFill(text, a, b) {
+    return text.replace(/\{0\}/g, function () { return a === undefined ? '' : a; }).replace(/\{1\}/g, function () { return b === undefined ? '' : b; });
+  }
+  function slRaw(key) {
+    var table = SL_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || SL_TEXT.en;
+    return root.getAttribute('data-sl-' + key.toLowerCase()) || table[key] || SL_TEXT.en[key] || key;
+  }
+  function slText(key, a, b) { return slFill(slRaw(key), a, b); }
+  function slNumber(v, fallback) { var n = parseFloat(v); return isNaN(n) ? fallback : n; }
+  function slDecimals(n) { var t = String(n), e = /e-(\d+)$/.exec(t), i = t.indexOf('.'); return e ? +e[1] : i < 0 ? 0 : t.length - i - 1; }
+  function slRound(v, decimals) { return Number(v.toFixed(Math.min(decimals, 20))); }
+  function slEl(tag, cls) { var e = doc.createElement(tag); e.className = cls; return e; }
+  function slOf(el) { var w = el && el.closest ? el.closest('.mat-slider') : null; return w && w._matSlider ? w._matSlider : null; }
+
+  // the scale (the range, the step, the decimals, the least gap, the template of what is shown): read again by MatUi.slider.update
+  function slScale(s) {
+    var first = s.inputs[0], step = slNumber(first.step, 1);
+    s.min = slNumber(first.min, 0);
+    s.max = Math.max(s.min, slNumber(first.max, 100));
+    s.any = first.step === 'any';
+    s.step = s.any ? ((s.max - s.min) / 100 || 1) : step > 0 ? step : 1;
+    s.decimals = s.any ? 2 : Math.max(slDecimals(s.step), slDecimals(s.min));
+    s.gap = s.range ? clamp(slNumber(s.el.getAttribute('data-min-gap'), 0), 0, s.max - s.min) : 0;
+    s.format = s.el.getAttribute('data-format') || '{0}';
+    try { s.nf = new Intl.NumberFormat(pkLocale(), { minimumFractionDigits: s.decimals, maximumFractionDigits: s.decimals }); } catch (e) { s.nf = null; }
+  }
+  function slPct(s, v) { return s.max === s.min ? 0 : ((v - s.min) / (s.max - s.min)) * 100; }
+  function slRead(s, i) { return slNumber(s.inputs[i].value, s.min); }
+  function slFormat(s, v) { return slFill(s.format, s.nf ? s.nf.format(v) : String(v)); }
+
+  // a value on the grid of the steps (mode -1 rounds down and 1 up: the end of a gap that is not a multiple of the step); never beyond what the input can have
+  function slGrid(s, v, mode) {
+    if (s.any) { return clamp(slRound(v, s.decimals), s.min, s.max); }
+    var n = (v - s.min) / s.step;
+    n = mode < 0 ? Math.floor(n + 1e-9) : mode > 0 ? Math.ceil(n - 1e-9) : Math.round(n);
+    return slRound(s.min + clamp(n, 0, Math.floor((s.max - s.min) / s.step + 1e-9)) * s.step, s.decimals);
+  }
+  // the value a thumb may have: on the grid, and (range) not nearer to the other thumb than the gap, so the thumbs never cross
+  function slConstrain(s, i, v) {
+    v = slGrid(s, v, 0);
+    if (!s.range) { return v; }
+    var other = slRead(s, 1 - i);
+    return i === 0 ? Math.min(v, slGrid(s, other - s.gap, -1)) : Math.max(v, slGrid(s, other + s.gap, 1));
+  }
+  // values from the markup or after a reset: on the grid and not closer than the gap (silently: nothing is sent)
+  function slNormalize(s) {
+    s.inputs.forEach(function (input, i) {
+      var v = slGrid(s, slRead(s, i), 0);
+      if (input.value !== String(v)) { input.value = String(v); }
+    });
+    if (s.range && slRead(s, 1) - slRead(s, 0) < s.gap - 1e-9) {
+      var to = Math.max(slRead(s, 1), slGrid(s, slRead(s, 0) + s.gap, 1));
+      var from = Math.min(slRead(s, 0), slGrid(s, to - s.gap, -1));
+      s.inputs[0].value = String(from);
+      s.inputs[1].value = String(to);
+    }
+  }
+  // a value of a thumb, as if it had been typed: input is sent (change is the caller's business); false when nothing changed
+  function slSet(s, i, v) {
+    v = slConstrain(s, i, v);
+    if (slRead(s, i) === v) { return false; }
+    s.inputs[i].value = String(v);
+    s.inputs[i].dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }
+
+  // the bubbles: kept inside the slider, and one for both thumbs ("20 – 30") while they are so near that two would cover each other
+  function slBubbles(s) {
+    var width = s.el.clientWidth;
+    if (!width) { return; }
+    var railWidth = s.rail.clientWidth, inset = s.rail.offsetLeft;
+    var at = s.inputs.map(function (input, i) { return inset + (slPct(s, slRead(s, i)) / 100) * railWidth; });
+    var merged = false;
+    if (s.range && s.el.getAttribute('data-bubble') === 'always') {
+      merged = at[1] - at[0] < (s.bubbles[0].offsetWidth + s.bubbles[1].offsetWidth) / 2 + 6;
+      if (merged) { s.bubbles[1].textContent = slText('range', slFormat(s, slRead(s, 0)), slFormat(s, slRead(s, 1))); }
+    }
+    s.el.classList.toggle('is-merged', merged);
+    s.bubbles.forEach(function (b, i) {
+      var centre = merged ? (at[0] + at[1]) / 2 : at[i], half = b.offsetWidth / 2;
+      var shift = (merged ? centre - at[i] : 0) + Math.max(0, half - centre) - Math.max(0, centre + half - width);
+      b.style.setProperty('--mat-slider-shift', shift + 'px');
+    });
+  }
+
+  // what shows the values: the filled part, the thumbs, their bubbles and names for a screen reader (aria-valuetext), the marks that are inside the filled part, the output
+  function slSync(s) {
+    var a = slRead(s, 0), b = s.range ? slRead(s, 1) : a;
+    var lo = s.range ? slPct(s, a) : 0, hi = slPct(s, b);
+    s.el.style.setProperty('--mat-slider-from', lo + '%');
+    s.el.style.setProperty('--mat-slider-to', hi + '%');
+    s.inputs.forEach(function (input, i) {
+      var v = i === 0 ? a : b, text = slFormat(s, v);
+      s.thumbs[i].style.setProperty('--mat-slider-at', slPct(s, v) + '%');
+      s.thumbs[i].classList.toggle('is-top', i === s.last);
+      s.bubbles[i].textContent = text;
+      input.setAttribute('aria-valuetext', text);
+    });
+    s.ticks.forEach(function (t) { t.el.classList.toggle('is-on', t.pct >= lo - 1e-9 && t.pct <= hi + 1e-9); });
+    var id = s.el.getAttribute('data-output') || s.inputs[0].getAttribute('data-output');
+    var out = id ? doc.getElementById(id) : null;
+    if (out) { out.textContent = s.range ? slFill(s.el.getAttribute('data-range-format') || slRaw('range'), slFormat(s, a), slFormat(s, b)) : slFormat(s, a); }
+    slBubbles(s);
+  }
+
+  // what depends on the scale: the marks (data-ticks="10": ten parts; empty: a mark at every step), the labels under them (data-tick-labels="5": every fifth) or the labels at the ends
+  function slBuild(s) {
+    $$('.mat-slider__ticks, .mat-slider__scale', s.el).forEach(function (n) { n.remove(); });
+    s.ticks = [];
+    var attr = s.el.getAttribute('data-ticks'), every = parseInt(s.el.getAttribute('data-tick-labels'), 10) || 0, marks = 0, asked = parseInt(attr, 10);
+    if (attr !== null) {
+      marks = asked > 0 ? Math.min(asked, 200) : s.any ? 10 : (s.max - s.min) / s.step <= 100 ? Math.round((s.max - s.min) / s.step) : 0;
+    }
+    var scale = null, k, pct;
+    if (marks > 0) {
+      var ticks = slEl('div', 'mat-slider__ticks');
+      for (k = 0; k <= marks; k += 1) {
+        var tick = slEl('span', 'mat-slider__tick');
+        pct = (k / marks) * 100;
+        tick.style.setProperty('--mat-slider-at', pct + '%');
+        ticks.appendChild(tick);
+        s.ticks.push({ el: tick, pct: pct });
+      }
+      s.rail.insertBefore(ticks, s.thumbs[0]);
+      if (every > 0) {
+        scale = slEl('div', 'mat-slider__scale');
+        for (k = 0; k <= marks; k += every) {
+          var name = slEl('span', 'mat-slider__tick-label');
+          name.textContent = slFormat(s, slRound(s.min + ((s.max - s.min) * k) / marks, s.decimals));
+          name.style.setProperty('--mat-slider-at', ((k / marks) * 100) + '%');
+          scale.appendChild(name);
+        }
+      }
+    }
+    if (!scale && s.el.getAttribute('data-labels') !== 'none') {
+      scale = slEl('div', 'mat-slider__scale');
+      var lowest = slEl('span', 'mat-slider__end mat-slider__end--min'), highest = slEl('span', 'mat-slider__end mat-slider__end--max');
+      lowest.textContent = slFormat(s, s.min);
+      highest.textContent = slFormat(s, s.max);
+      scale.appendChild(lowest);
+      scale.appendChild(highest);
+    }
+    if (scale) { scale.setAttribute('aria-hidden', 'true'); s.el.appendChild(scale); }
+  }
+
+  function slInit(el) {
+    if (el._matSlider) { return; }
+    var range = el.classList.contains('mat-slider--range');
+    var inputs = $$('input[type=range]', el).slice(0, range ? 2 : 1);
+    if (inputs.length < (range ? 2 : 1)) { return; }
+    // data-min, data-max and data-step on the wrapper are copied to the inputs, which can carry them as well (and then work without the script)
+    ['min', 'max', 'step'].forEach(function (name) {
+      var v = el.getAttribute('data-' + name);
+      if (v !== null) { inputs.forEach(function (input) { input.setAttribute(name, v); }); }
+    });
+    var s = { el: el, inputs: inputs, range: range, thumbs: [], bubbles: [], ticks: [], last: range ? 1 : 0 };
+    el._matSlider = s;
+    slScale(s);
+    slNormalize(s);
+    // each input of a range slider has a name of its own: "Price from" and "Price to", from the label of the first
+    if (range) {
+      var name = labelOf(inputs[0]) || inputs[0].name;
+      if (!el.hasAttribute('role')) { el.setAttribute('role', 'group'); }
+      if (!el.hasAttribute('aria-label') && !el.hasAttribute('aria-labelledby')) { el.setAttribute('aria-label', name); }
+      inputs.forEach(function (input, i) {
+        if (!input.hasAttribute('aria-label') && !input.hasAttribute('aria-labelledby')) { input.setAttribute('aria-label', name + ' ' + slText(i === 0 ? 'from' : 'to')); }
+      });
+    }
+    s.rail = slEl('div', 'mat-slider__rail');
+    s.rail.setAttribute('aria-hidden', 'true');
+    var track = slEl('div', 'mat-slider__track');
+    track.appendChild(slEl('div', 'mat-slider__fill'));
+    s.rail.appendChild(track);
+    inputs.forEach(function (input, i) {
+      var thumb = slEl('span', 'mat-slider__thumb' + (range ? ' mat-slider__thumb--' + (i === 0 ? 'from' : 'to') : ''));
+      var bubble = slEl('span', 'mat-slider__bubble');
+      thumb.appendChild(bubble);
+      s.rail.appendChild(thumb);
+      s.thumbs.push(thumb);
+      s.bubbles.push(bubble);
+    });
+    el.appendChild(s.rail);
+    slBuild(s);
+    el.classList.add('is-ready');
+    slSync(s);
+    // a slider in a dialog that is closed has no width: the bubbles are placed again when it has one
+    if (typeof ResizeObserver === 'function') { new ResizeObserver(function () { slBubbles(s); }).observe(el); }
+  }
+
+  function initSliders(scope) { $$('[data-slider]', scope).forEach(slInit); }
+
+  function slUpdate(el) {
+    var s = el && el._matSlider;
+    if (!s) { return; }
+    slScale(s);
+    slNormalize(s);
+    slBuild(s);
+    slSync(s);
+  }
+
+  // whatever changes a value (a screen reader, a script that sets it and sends input) is made right before anybody reads it, hence the capture phase
+  doc.addEventListener('input', function (e) {
+    var s = e.target && e.target.classList && e.target.classList.contains('mat-slider__input') ? slOf(e.target) : null;
+    if (!s) { return; }
+    var i = s.inputs.indexOf(e.target), v = slConstrain(s, i, slRead(s, i));
+    if (v !== slRead(s, i)) { e.target.value = String(v); }
+    s.last = i;
+    slSync(s);
+  }, true);
+
+  // arrows by one step, Page Up and Page Down by a tenth of the scale, Home and End to the ends; every key sends input and change like the native control
+  doc.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if (e.ctrlKey || e.metaKey || e.altKey || !t.classList || !t.classList.contains('mat-slider__input')) { return; }
+    var s = slOf(t);
+    if (!s) { return; }
+    var i = s.inputs.indexOf(t), v = slRead(s, i), big = Math.max(s.step, (s.max - s.min) / 10), next;
+    switch (e.key) {
+      case 'ArrowRight': case 'ArrowUp': next = v + s.step; break;
+      case 'ArrowLeft': case 'ArrowDown': next = v - s.step; break;
+      case 'PageUp': next = v + big; break;
+      case 'PageDown': next = v - big; break;
+      case 'Home': next = s.min; break;
+      case 'End': next = s.max; break;
+      default: return;
+    }
+    e.preventDefault();
+    if (slSet(s, i, next)) { t.dispatchEvent(new Event('change', { bubbles: true })); }
+  });
+
+  // the bubble and the ring of a thumb follow the focus of its input
+  function slFocus(t, on) {
+    var s = t && t.classList && t.classList.contains('mat-slider__input') ? slOf(t) : null;
+    if (!s) { return; }
+    var thumb = s.thumbs[s.inputs.indexOf(t)], key = false;
+    if (on) { try { key = t.matches(':focus-visible'); } catch (err) { key = true; } }
+    thumb.classList.toggle('is-focus', on);
+    thumb.classList.toggle('is-key', key);
+  }
+  doc.addEventListener('focusin', function (e) { slFocus(e.target, true); });
+  doc.addEventListener('focusout', function (e) { slFocus(e.target, false); });
+
+  // a press on the rail takes the nearest thumb (both at one value: the side of the press; on the thumbs the first movement says which), a press on a thumb grabs it
+  // where it is, one beside it moves it there; the thumb follows the pointer and change is sent when the pointer lets go
+  doc.addEventListener('pointerdown', function (e) {
+    if (e.button !== 0 || e.isPrimary === false) { return; }
+    var rail = e.target.closest ? e.target.closest('.mat-slider__rail') : null, s = rail && slOf(rail), live = [];
+    if (!s) { return; }
+    s.inputs.forEach(function (input, i) { if (!input.matches(':disabled')) { live.push(i); } });
+    var rect = rail.getBoundingClientRect();
+    if (live.length === 0 || rect.width <= 0) { return; }
+    // text is not selected and the focus is not taken by a mouse press; a touch keeps its default (the page can still be scrolled up and down)
+    if (e.pointerType !== 'touch') { e.preventDefault(); }
+    var x = e.clientX - rect.left, reach = s.thumbs[0].getBoundingClientRect().width / 2;
+    function centre(i) { return (slPct(s, slRead(s, i)) / 100) * rect.width; }
+    var n = live[0], pending = false;
+    if (live.length === 2 && slRead(s, 0) === slRead(s, 1)) {
+      if (Math.abs(x - centre(0)) <= reach) { pending = true; n = s.last; } else { n = x < centre(0) ? 0 : 1; }
+    } else if (live.length === 2) {
+      n = Math.abs(x - centre(0)) <= Math.abs(x - centre(1)) ? 0 : 1;
+    }
+    var d = { n: n, pending: pending, id: e.pointerId, startX: e.clientX, grab: Math.abs(x - centre(n)) <= reach ? x - centre(n) : 0, start: slRead(s, n) };
+
+    function activate(i) {
+      d.n = i;
+      s.last = i;
+      s.thumbs.forEach(function (thumb, k) { thumb.classList.toggle('is-drag', k === i); });
+      s.inputs[i].focus({ preventScroll: true });
+      slSync(s);
+    }
+    function drive(ev) {
+      if (d.pending) {
+        if (Math.abs(ev.clientX - d.startX) < 2) { return; }
+        d.pending = false;
+        activate(ev.clientX < d.startX ? 0 : 1);
+      }
+      var r = rail.getBoundingClientRect();
+      slSet(s, d.n, s.min + clamp((ev.clientX - r.left - d.grab) / r.width, 0, 1) * (s.max - s.min));
+    }
+    function move(ev) { if (ev.pointerId === d.id) { drive(ev); } }
+    function end(ev) {
+      if (ev.pointerId !== d.id) { return; }
+      ['pointermove', 'pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (name) { rail.removeEventListener(name, name === 'pointermove' ? move : end); });
+      s.thumbs.forEach(function (thumb) { thumb.classList.remove('is-drag'); });
+      s.el.classList.remove('is-dragging');
+      if (slRead(s, d.n) !== d.start) { s.inputs[d.n].dispatchEvent(new Event('change', { bubbles: true })); }
+    }
+    activate(n);
+    s.el.classList.add('is-dragging');
+    try { rail.setPointerCapture(e.pointerId); } catch (err) { /* the pointer is gone: the press is over */ }
+    ['pointermove', 'pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (name) { rail.addEventListener(name, name === 'pointermove' ? move : end); });
+    drive(e);
+  });
+
+  // a reset puts the values of the markup back after the event, so the sliders are drawn again right after it
+  doc.addEventListener('reset', function (e) {
+    setTimeout(function () {
+      $$('[data-slider]').forEach(function (el) {
+        var s = el._matSlider;
+        if (s && s.inputs[0].form === e.target) { slNormalize(s); slSync(s); }
+      });
+    }, 0);
+  });
+
   // ------------------------------------------------------------------------------------------------ carousel (LIST-13, matui.lists.css)
   // A carousel is a strip of slides that scrolls and snaps in CSS, so it is a scrollable strip without the script:
   //   <section class="mat-carousel" data-carousel aria-label="..."><div class="mat-carousel__track"><div class="mat-carousel__slide">...</div></div></section>
@@ -2498,6 +2821,7 @@
     scrollspy: { update: updateSpy },
     nav: { set: setNavSet, branch: function (key, open) { var b = $('[data-nav-branch="' + key + '"]'); if (b) { setBranch(b, open !== false, true); } } },
     picker: { init: initPickers, close: closePicker },
+    slider: { init: initSliders, update: slUpdate },
     carousel: { init: initCarousels, go: function (el, page) { var c = el && el._matCarousel; if (c) { carGo(c, page, false); } } },
     refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initCarousels(scope); }
   };

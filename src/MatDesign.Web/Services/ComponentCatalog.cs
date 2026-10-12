@@ -1048,7 +1048,7 @@ public static class ComponentCatalog
     private static readonly string[] Order =
     [
         "buttons", "button-group", "dropdown", "button-row",
-        "fields", "input-types", "selects", "checks", "choices", "range", "input-groups", "special-inputs", "rich-select", "date-picker", "time-picker", "colour-picker", "floating-labels", "form-layout", "form-grid", "validation",
+        "fields", "input-types", "selects", "checks", "choices", "range", "slider", "input-groups", "special-inputs", "rich-select", "date-picker", "time-picker", "colour-picker", "floating-labels", "form-layout", "form-grid", "validation",
         "toolbar", "table", "pager", "gallery",
         "typography", "cards", "list-group", "accordion", "avatars", "stat", "pills", "kv", "meter", "empty", "code",
         "tabs", "menu", "breadcrumb", "topbar", "steps", "navmenu", "switcher", "toc", "footer",

@@ -97,6 +97,10 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - Carousel (`LIST-13`): `.mat-carousel[data-carousel]` around `.mat-carousel__track` > `.mat-carousel__slide`. The strip scrolls and snaps in CSS (a scrollable strip without the script); the script names the slides,
   adds the bar (Previous, a dot per page, Next, Pause with `data-autoplay`), makes the slides out of view `inert` and says which page is shown. The buttons at the ends are `aria-disabled`, never `disabled` (the focus stays).
   Autoplay waits for the pointer and the focus, stops for good after any use of a control and never starts under `prefers-reduced-motion`. Texts in `CAR_TEXT` (English and German, a test checks).
+- Slider and range slider (`FORM-17`): `.mat-slider[data-slider]` around a native `input.mat-slider__input[type=range]`, or `.mat-slider--range` around two (`from`, `to`). The native inputs stay the truth (value, form, validity,
+  `aria-valuetext`, keyboard, Tab stop) and are invisible, never `display: none`, once the script has drawn the rail, the thumbs (44 px targets), the bubbles, marks and labels (`is-ready`); without the script they are native controls.
+  The script handles the pointer and the keys itself and sends `input` and `change` like the native control. `data-format="{0} GB"` is the template of every value shown; the names of the two inputs of a range come
+  from the label (`SL_TEXT`, English and German, a test checks). Options: `data-min-gap`, `data-bubble="always"`, `data-ticks`, `data-tick-labels`, `data-labels="none"`, `data-output`, `data-range-format`.
 - Layout and utilities: mobile first with `sm` 600, `md` 900, `lg` 1200 px; no `!important`; values from the tokens; the grid spans by `grid-column-end`. An example in the catalogue uses
   toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.
