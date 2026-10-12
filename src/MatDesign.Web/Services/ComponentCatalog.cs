@@ -12,6 +12,7 @@ public sealed record ComponentExample(string Title, string Html, string? Note = 
     [
         "mat-table-wrap", "mat-toolbar", "mat-topbar", "mat-footer", "mat-with-toc", "mat-gallery", "mat-cols", "mat-grid", "mat-form__grid", "mat-auth", "mat-pager",
         "mat-tabs--vertical", "mat-nav ", "mat-switcher", "mat-carousel",
+        "mat-schedule",
     ];
 
     /// <summary>
@@ -1058,7 +1059,11 @@ public static class ComponentCatalog
     ];
 
     /// <summary>Every component, by group and in reading order.</summary>
-    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted([.. Core.Select(Extend), .. FormComponents.All, .. PickerComponents.All, .. ContentComponents.All, .. LayoutComponents.All]);
+    public static IReadOnlyList<ComponentDoc> All { get; } = Sorted(
+    [
+        .. Core.Select(Extend), .. FormComponents.All, .. PickerComponents.All, .. ContentComponents.All, .. LayoutComponents.All,
+        .. ScheduleComponents.All,
+    ]);
 
     /// <summary>A component with the examples that other files add to it.</summary>
     private static ComponentDoc Extend(ComponentDoc doc)
