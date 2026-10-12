@@ -731,6 +731,419 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the code input
+  console.log('\nCode input');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#code-input');
+    await page.evaluate(() => {
+      window.__otp = [];
+      document.addEventListener('mat:otp-complete', e => window.__otp.push(e.target.querySelector('.mat-otp__input').id + ':' + e.detail.value));
+    });
+    const boxSel = id => `#${id} ~ .mat-otp__boxes .mat-otp__box`;
+    const vals = id => page.$$eval(boxSel(id), els => els.map(e => e.value).join('|'));
+    const real = id => page.$eval('#' + id, e => e.value);
+    const active = () => page.evaluate(() => document.activeElement.id);
+    const status = id => page.$eval('#' + id, el => { const s = el.closest('.mat-otp').querySelector('.mat-otp__status'); return s.hidden ? '' : s.textContent; });
+    const live = id => page.$eval('#' + id, el => el.closest('.mat-otp').querySelector('[role=status]').textContent);
+    const events = id => page.evaluate(id => window.__otp.filter(x => x.startsWith(id + ':')), id);
+    const paste = (id, text) => page.$eval('#' + id, (el, text) => {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    }, text);
+
+    await check('the script draws one named box per character in a group named by the label and puts the real input out of the way', async () => {
+      const s = await page.evaluate(() => {
+        const input = document.getElementById('otp-totp');
+        const group = input.nextElementSibling;
+        const boxes = [...group.querySelectorAll('.mat-otp__box')];
+        return {
+          role: group.getAttribute('role'),
+          label: document.getElementById(group.getAttribute('aria-labelledby')).textContent.replace(/\s+/g, ' ').trim(),
+          names: boxes.map(b => b.getAttribute('aria-label')),
+          autocomplete: boxes.map(b => b.getAttribute('autocomplete')).join(','),
+          mode: boxes[0].getAttribute('inputmode'),
+          font: Math.min(...boxes.map(b => parseFloat(getComputedStyle(b).fontSize))),
+          stops: boxes.filter(b => b.tabIndex === 0).length,
+          posting: boxes.some(b => b.name),
+          real: { hidden: input.getAttribute('aria-hidden'), tab: input.tabIndex, opacity: getComputedStyle(input).opacity, autocomplete: input.getAttribute('autocomplete') },
+        };
+      });
+      expect(s.role, 'group', 'role');
+      expect(s.label, 'Authentication code *', 'the group is named by the label');
+      expect(s.names, ['Digit 1 of 6', 'Digit 2 of 6', 'Digit 3 of 6', 'Digit 4 of 6', 'Digit 5 of 6', 'Digit 6 of 6'], 'the names of the boxes');
+      expect(s.autocomplete, 'one-time-code,off,off,off,off,off', 'the SMS code is offered on the first box only');
+      expect(s.mode, 'numeric', 'the keyboard of a phone');
+      expectTrue(s.font >= 16, 'a phone would zoom into a box with type of ' + s.font + ' px');
+      expect(s.stops, 1, 'boxes that are a tab stop');
+      expect(s.posting, false, 'the boxes must not post a value of their own');
+      expect(s.real, { hidden: 'true', tab: -1, opacity: '0', autocomplete: 'off' }, 'the real input');
+    });
+    await check('typing fills a box and moves on, Backspace clears and goes back, Delete clears; the real input posts the digits joined', async () => {
+      await page.click('#otp-totp-1');
+      await page.keyboard.type('123');
+      expect(await vals('otp-totp'), '1|2|3|||', 'boxes after typing');
+      expect(await real('otp-totp'), '123', 'the posted value');
+      expect(await active(), 'otp-totp-4', 'the focus moves on');
+      await page.keyboard.press('Backspace');
+      expect(await vals('otp-totp'), '1|2||||', 'Backspace in an empty box clears the one before');
+      expect(await active(), 'otp-totp-3', 'and goes back');
+      await page.keyboard.type('9');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('Backspace');
+      expect(await vals('otp-totp'), '1|2||||', 'Backspace in a filled box clears it');
+      expect(await active(), 'otp-totp-3', 'and stays');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('Delete');
+      expect(await vals('otp-totp'), '1|||||', 'Delete clears the box');
+      expect(await active(), 'otp-totp-2', 'and stays');
+      expect(await real('otp-totp'), '1', 'the posted value follows');
+    });
+    await check('a character that is not allowed is refused with a message under the boxes and to a screen reader; a space is skipped without a word', async () => {
+      await page.keyboard.type('a');
+      expect(await vals('otp-totp'), '1|||||', 'boxes after a letter');
+      expect(await status('otp-totp'), 'Only digits are allowed.', 'the message under the boxes');
+      expect(await live('otp-totp'), 'Only digits are allowed.', 'the live region');
+      expect(await active(), 'otp-totp-2', 'the focus stays');
+      await page.keyboard.type(' ');
+      expect(await status('otp-totp'), '', 'a space says nothing');
+      await page.keyboard.type('-');
+      expect(await vals('otp-totp'), '1|||||', 'boxes after a space and a dash');
+    });
+    await check('the arrow keys, Home and End move between the boxes and a click selects the box, so that typing replaces it', async () => {
+      await page.keyboard.press('Home');
+      expect(await active(), 'otp-totp-1', 'Home');
+      await page.keyboard.press('ArrowLeft');
+      expect(await active(), 'otp-totp-1', 'ArrowLeft in the first box');
+      await page.keyboard.press('ArrowRight');
+      expect(await active(), 'otp-totp-2', 'ArrowRight');
+      await page.keyboard.press('End');
+      expect(await active(), 'otp-totp-6', 'End');
+      await page.click('#otp-totp-1');
+      expect(await page.$eval('#otp-totp-1', e => [e.selectionStart, e.selectionEnd]), [0, 1], 'the selection after a click');
+      await page.keyboard.type('7');
+      expect(await vals('otp-totp'), '7|||||', 'typing replaced the digit');
+      expect(await active(), 'otp-totp-2', 'and moved on');
+    });
+    await check('the boxes are one stop for the Tab key: Tab leaves them, Shift+Tab comes back to the box where it was', async () => {
+      expect(await page.$$eval(boxSel('otp-totp'), els => els.filter(b => b.tabIndex === 0).length), 1, 'boxes in the tab order');
+      await page.focus('#otp-totp-3');
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => ({ inside: !!document.activeElement.closest('.mat-otp'), text: document.activeElement.textContent.trim() })), { inside: false, text: 'Verify' }, 'after Tab');
+      await page.keyboard.press('Shift+Tab');
+      expect(await active(), 'otp-totp-3', 'after Shift+Tab');
+    });
+    await check('the focus ring of a box is the accent ring (A11Y-01), and the real input hands the focus to a box (a label, a message of the validation)', async () => {
+      await page.focus('#otp-totp-3');
+      const ring = await page.$eval('#otp-totp-3', e => getComputedStyle(e).boxShadow);
+      expectTrue(ring && ring !== 'none', 'a focused box has no ring');
+      await page.click('label[for="otp-lg"]');
+      expect(await active(), 'otp-lg-1', 'a click on the label');
+      await page.evaluate(() => { document.getElementById('otp-md').focus(); });
+      expect(await active(), 'otp-md-1', 'focus() on the real input');
+    });
+
+    await check('a pasted code is spread over the boxes, spaces and dashes are skipped, and the code is complete once', async () => {
+      await page.click('#otp-md-3');
+      await paste('otp-md-3', '123 456');
+      expect(await vals('otp-md'), '1|2|3|4|5|6', 'boxes after the paste');
+      expect(await real('otp-md'), '123456', 'the posted value');
+      expect(await events('otp-md'), ['otp-md:123456'], 'the events of completion');
+      await paste('otp-recovery-1', 'a1b2-c3d4');
+      expect(await vals('otp-recovery'), 'A|1|B|2|C|3|D|4', 'a recovery code with a dash, converted to upper case');
+      expect(await real('otp-recovery'), 'A1B2C3D4', 'the posted value');
+      await page.evaluate(() => MatUi.otp.clear('otp-md'));
+      await page.keyboard.type('12');
+      await paste('otp-md-3', '34');
+      expect(await vals('otp-md'), '1|2|3|4||', 'a part of a code goes in behind what is there');
+      await paste('otp-md-1', 'x-9');
+      expect(await status('otp-md'), 'Only digits are allowed.', 'a character in a pasted text is refused');
+      expect(await vals('otp-md'), '9|2|3|4||', 'and the others are taken');
+    });
+    await check('a class of characters is the rule: [A-Z2-7] with data-case upper converts, refuses 1 and 8 and fills the boxes from the real input', async () => {
+      expect(await vals('otp-base32'), 'J|B|S|W|Y|3|D|P', 'the value of the real input fills the boxes');
+      await page.evaluate(() => MatUi.otp.clear('otp-base32'));
+      await page.keyboard.type('a');
+      expect(await vals('otp-base32'), 'A|||||||', 'a lower-case letter is converted');
+      await page.keyboard.type('1');
+      expect(await vals('otp-base32'), 'A|||||||', 'a 1 is refused');
+      expect(await status('otp-base32'), 'That character is not allowed.', 'the message of a class');
+      await page.keyboard.type('8');
+      expect(await vals('otp-base32'), 'A|||||||', 'an 8 is refused');
+      await page.keyboard.type('7');
+      expect(await vals('otp-base32'), 'A|7||||||', 'a 7 is taken');
+      await paste('otp-base32-2', 'jbsw y3dp');
+      expect(await vals('otp-base32'), 'J|B|S|W|Y|3|D|P', 'a pasted key, converted, without the space');
+      expect(await real('otp-base32'), 'JBSWY3DP', 'the posted value');
+    });
+    await check('text that arrives without a key (a phone keyboard, autofill of an SMS code, an input method) is taken the same way', async () => {
+      // the box holds what the browser put there, and an input event says so
+      const arrive = (id, value, inputType) => page.$eval('#' + id, (el, a) => { el.value = a.value; el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: a.inputType, data: a.value })); }, { value, inputType });
+      await arrive('otp-lg-1', '7', 'insertText');
+      expect(await vals('otp-lg'), '7|||||', 'one character from a keyboard');
+      expect(await active(), 'otp-lg-2', 'the focus moves on');
+      await arrive('otp-lg-1', '77', 'insertText');
+      expect(await vals('otp-lg'), '7|||||', 'a second 7 typed into a box that kept its 7 is not a second box');
+      await arrive('otp-lg-1', '', 'deleteContentBackward');
+      expect(await vals('otp-lg'), '|||||', 'a deletion');
+      await arrive('otp-lg-1', 'q', 'insertText');
+      expect(await vals('otp-lg'), '|||||', 'a letter is refused');
+      expect(await status('otp-lg'), 'Only digits are allowed.', 'with the message');
+      await arrive('otp-lg-1', '135 790', 'insertReplacementText');
+      expect(await vals('otp-lg'), '1|3|5|7|9|0', 'the whole code of an SMS, with a space, is spread over the boxes');
+      expect(await real('otp-lg'), '135790', 'the posted value');
+      expect(await events('otp-lg'), ['otp-lg:135790'], 'and the code is complete');
+      // Backspace of a phone keyboard in an empty box arrives as beforeinput only
+      await page.evaluate(() => MatUi.otp.clear('otp-lg'));
+      await page.keyboard.type('24');
+      await page.$eval('#otp-lg-3', el => el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'deleteContentBackward' })));
+      expect(await vals('otp-lg'), '2|||||', 'Backspace in an empty box clears the box before it');
+      expect(await active(), 'otp-lg-2', 'and goes back');
+      await page.evaluate(() => MatUi.otp.clear('otp-lg'));
+    });
+    await check('groups: a gap after every fourth box, or two groups of four with a dash', async () => {
+      const seps = id => page.$eval('#' + id, el => [...el.nextElementSibling.children].map(c => c.classList.contains('mat-otp__sep') ? (c.classList.contains('mat-otp__sep--dash') ? '-' : '.') : 'b').join(''));
+      expect(await seps('otp-recovery'), 'bbbb-bbbb', 'groups 4-4');
+      expect(await seps('otp-base32'), 'bbbb.bbbb', 'groups 4');
+      expect(await seps('otp-md'), 'bbbbbb', 'no groups');
+      const dash = await page.$eval('#otp-recovery', el => { const s = el.nextElementSibling.querySelector('.mat-otp__sep--dash'); const r = s.getBoundingClientRect(); const d = getComputedStyle(s, '::before'); return { wide: r.width >= 12, line: d.height }; });
+      expect(dash, { wide: true, line: '2px' }, 'the dash');
+    });
+    await check('data-mask draws dots: the boxes are password fields, the real input still posts the digits, and a PIN is not sent by itself', async () => {
+      const url = page.url();
+      await page.click('#otp-pin-1');
+      await page.keyboard.type('1234');
+      expect(await page.$$eval(boxSel('otp-pin'), els => els.map(e => e.type).join(',')), 'password,password,password,password', 'the type of the boxes');
+      expect(await real('otp-pin'), '1234', 'the posted value');
+      await page.waitForTimeout(400);
+      expect(page.url(), url, 'a PIN has no data-submit: nothing was sent');
+      expect(await events('otp-pin'), ['otp-pin:1234'], 'the code is complete');
+      expect(await active(), 'otp-pin-4', 'the focus stays in the last box');
+    });
+    await check('completion fires mat:otp-complete with the value and tells a screen reader; it fires again for a changed code but not for the same one', async () => {
+      await page.click('#otp-sm-1');
+      await page.keyboard.type('123456');
+      expect(await events('otp-sm'), ['otp-sm:123456'], 'after the sixth digit');
+      expect(await live('otp-sm'), 'Code complete', 'the live region');
+      expect(await page.$eval('#otp-sm', e => e.closest('.mat-otp').classList.contains('is-complete')), true, 'is-complete');
+      await page.click('#otp-sm-3');
+      await page.keyboard.type('9');
+      expect(await events('otp-sm'), ['otp-sm:123456', 'otp-sm:129456'], 'a changed code');
+      await page.click('#otp-sm-3');
+      await page.keyboard.type('9');
+      expect((await events('otp-sm')).length, 2, 'the same digit again is no change');
+      await page.keyboard.press('Backspace');
+      expect(await page.$eval('#otp-sm', e => e.closest('.mat-otp').classList.contains('is-complete')), false, 'no longer complete');
+    });
+    await check('a disabled code input cannot be focused; a read-only one can be walked but not changed', async () => {
+      expect(await page.$$eval(boxSel('otp-off'), els => els.every(b => b.disabled)), true, 'the boxes of a disabled input');
+      expect(await vals('otp-off'), '4|8|2|9|1|3', 'its value');
+      expect(await page.$$eval(boxSel('otp-ro'), els => els.every(b => b.readOnly && !b.disabled)), true, 'the boxes of a read-only input');
+      await page.click('#otp-ro-2');
+      await page.keyboard.type('5');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Delete');
+      expect(await vals('otp-ro'), '4|8|2|9|1|3', 'a read-only code does not change');
+    });
+    await check('a code that a server rejected is drawn red with aria-invalid on every box', async () => {
+      const state = await page.evaluate(() => {
+        const probe = document.createElement('i');
+        probe.style.color = 'var(--mat-danger)';
+        document.body.appendChild(probe);
+        const danger = getComputedStyle(probe).color;
+        probe.remove();
+        const boxes = [...document.querySelectorAll('#otp-bad ~ .mat-otp__boxes .mat-otp__box')];
+        return { danger, borders: boxes.map(b => getComputedStyle(b).borderTopColor === danger), invalid: boxes.map(b => b.getAttribute('aria-invalid')).join(',') };
+      });
+      expect(state.borders.every(Boolean), true, 'the border of every box is the danger colour');
+      expect(state.invalid, 'true,true,true,true,true,true', 'aria-invalid');
+      expect(await page.evaluate(() => document.getElementById('otp-bad').closest('.mat-otp').nextElementSibling.textContent.trim()), 'That code is not valid or has expired. Check the app and try again.', 'the message of the field');
+    });
+    await ctx.close();
+  }
+  {
+    // the form validation and the application programming interface, on a page of their own (a complete code is sent by this field)
+    const { ctx, page } = await open(desktopOptions, '/Components#code-input');
+    const boxSel = id => `#${id} ~ .mat-otp__boxes .mat-otp__box`;
+    const vals = id => page.$$eval(boxSel(id), els => els.map(e => e.value).join('|'));
+    const active = () => page.evaluate(() => document.activeElement.id);
+    const field = id => page.$eval('#' + id, el => { const f = el.closest('.mat-field'); return { invalid: f.classList.contains('is-invalid'), message: f.querySelector('.mat-error').textContent.trim() }; });
+    const ariaInvalid = id => page.$$eval(boxSel(id), els => els.map(e => e.getAttribute('aria-invalid')).join(','));
+
+    await check('required: a form sent with an empty code says so at the field, and the focus goes to the first box', async () => {
+      await page.click('form:has(#otp-totp) button[type=submit]');
+      expect(await field('otp-totp'), { invalid: true, message: 'Please enter the six digits of the code.' }, 'the field');
+      expect(await active(), 'otp-totp-1', 'the focus');
+      await page.waitForFunction(() => document.getElementById('otp-totp-1').getAttribute('aria-invalid') === 'true');
+      expect(await ariaInvalid('otp-totp'), 'true,true,true,true,true,true', 'aria-invalid on the boxes');
+    });
+    await check('an incomplete code is not valid: the message of the pattern, the focus on the box where the code goes on, and the message goes when it is complete', async () => {
+      await page.keyboard.type('482');
+      expect(await field('otp-totp'), { invalid: true, message: 'Please enter the six digits of the code.' }, 'typing does not clear the message of an invalid field while the code is not valid');
+      await page.click('form:has(#otp-totp) button[type=submit]');
+      expect(await field('otp-totp'), { invalid: true, message: 'The code has six digits.' }, 'the message of the pattern');
+      expect(await active(), 'otp-totp-4', 'the focus goes on where the code goes on');
+      await page.click('#otp-pin-1');
+      await page.keyboard.type('12');
+      await page.click('form:has(#otp-pin) button[type=submit]');
+      expect(await field('otp-pin'), { invalid: true, message: 'The PIN has four digits.' }, 'the PIN');
+      await page.click('#otp-pin-3');
+      await page.keyboard.type('34');
+      expect(await field('otp-pin'), { invalid: false, message: '' }, 'the field once the PIN is complete');
+      await page.waitForFunction(() => document.getElementById('otp-pin-1').getAttribute('aria-invalid') === null);
+    });
+    await check('the application programming interface: value sets without sending, setInvalid marks with a message, clear empties and focuses the first box', async () => {
+      await page.evaluate(() => {
+        window.__otp = [];
+        document.addEventListener('mat:otp-complete', e => window.__otp.push(e.detail.value));
+        window.__value = MatUi.otp.value('otp-totp', '135790');
+      });
+      expect(await page.evaluate(() => window.__value), '135790', 'value() returns the code');
+      expect(await vals('otp-totp'), '1|3|5|7|9|0', 'the boxes follow');
+      await page.waitForTimeout(400);
+      expect(await page.evaluate(() => window.__otp), [], 'setting a code is not completing it: no event, nothing sent');
+      expectTrue(page.url().indexOf('code=') < 0, 'the form was sent: ' + page.url());
+      await page.evaluate(() => MatUi.otp.setInvalid('otp-totp', 'That code is not valid.'));
+      expect(await field('otp-totp'), { invalid: true, message: 'That code is not valid.' }, 'the field');
+      await page.waitForFunction(() => document.getElementById('otp-totp-6').getAttribute('aria-invalid') === 'true');
+      await page.evaluate(() => MatUi.otp.setInvalid('otp-totp', ''));
+      expect(await field('otp-totp'), { invalid: false, message: '' }, 'the mark taken away');
+      await page.evaluate(() => MatUi.otp.setInvalid('otp-totp', 'Rejected again.'));
+      await page.evaluate(() => MatUi.otp.clear('otp-totp'));
+      expect(await vals('otp-totp'), '|||||', 'clear() empties the boxes');
+      expect(await field('otp-totp'), { invalid: false, message: '' }, 'and takes the message away');
+      expect(await active(), 'otp-totp-1', 'and focuses the first box');
+      expect(await page.$eval('#otp-totp', e => e.value), '', 'the real input is empty');
+      await page.keyboard.type('12');
+      await page.evaluate(() => document.activeElement.blur());
+      await page.evaluate(() => MatUi.otp.focus('otp-totp'));
+      expect(await active(), 'otp-totp-3', 'focus() goes to the box where the code goes on');
+    });
+    await check('a complete code is sent by data-submit with the validation of the form, and an app can take over by cancelling the event', async () => {
+      await page.evaluate(() => MatUi.otp.clear('otp-totp'));
+      await page.evaluate(() => document.getElementById('otp-totp').closest('.mat-otp').addEventListener('mat:otp-complete', e => e.preventDefault(), { once: true }));
+      await page.keyboard.type('111222');
+      await page.waitForTimeout(500);
+      expectTrue(page.url().indexOf('code=') < 0, 'an app that cancelled the event does not want the form sent: ' + page.url());
+      await page.evaluate(() => MatUi.otp.clear('otp-totp'));
+      await Promise.all([page.waitForNavigation(), page.keyboard.type('482913')]);
+      expectTrue(page.url().includes('code=482913'), 'the form was not sent with the last digit: ' + page.url());
+    });
+    await check('data-submit="#id" clicks that button', async () => {
+      await page.evaluate(() => { localStorage.removeItem('otp-clicked'); document.getElementById('otp-signin-go').addEventListener('click', () => localStorage.setItem('otp-clicked', '1')); });
+      await page.click('#otp-signin-1');
+      await Promise.all([page.waitForNavigation(), page.keyboard.type('246810')]);
+      expectTrue(page.url().includes('signin=246810'), 'the form was not sent: ' + page.url());
+      expect(await page.evaluate(() => localStorage.getItem('otp-clicked')), '1', 'the button was clicked');
+    });
+    await ctx.close();
+  }
+  {
+    // markup that is added later, a form that is reset, another language and a code input outside a field
+    const { ctx, page } = await open(desktopOptions, '/Components#code-input');
+    await check('MatUi.refresh draws the boxes of markup added later: 12 boxes in three groups, in German, that a form reset puts back', async () => {
+      await page.evaluate(() => {
+        document.documentElement.lang = 'de';
+        const host = document.createElement('div');
+        host.id = 'otp-host';
+        host.innerHTML = '<form class="mat-form" id="otp-dyn-form" method="get" action="/Components#code-input" novalidate>' +
+          '<div class="mat-field"><label class="mat-label" for="otp-dyn">Schlüssel</label>' +
+          '<div class="mat-otp" data-otp data-length="12" data-chars="hex" data-group="4-4-4"><input class="mat-otp__input" id="otp-dyn" name="dyn" value="abc" required /></div>' +
+          '<span class="mat-error" aria-live="polite"></span></div>' +
+          '<button type="submit" class="mat-btn mat-btn--primary" id="otp-dyn-go">Senden</button></form>' +
+          '<div class="mat-otp" data-otp data-length="4" id="otp-bare"><input class="mat-otp__input" id="otp-bare-in" name="bare" /></div>';
+        document.getElementById('code-input').appendChild(host);
+        MatUi.refresh(host);
+      });
+      const s = await page.evaluate(() => {
+        const boxes = [...document.querySelectorAll('#otp-dyn ~ .mat-otp__boxes .mat-otp__box')];
+        return { count: boxes.length, first: boxes[0].getAttribute('aria-label'), last: boxes[11].getAttribute('aria-label'), values: boxes.map(b => b.value).join(''), seps: document.querySelectorAll('#otp-dyn ~ .mat-otp__boxes .mat-otp__sep--dash').length, ready: document.querySelector('#otp-dyn').closest('.mat-otp').classList.contains('is-ready') };
+      });
+      expect(s, { count: 12, first: 'Zeichen 1 von 12', last: 'Zeichen 12 von 12', values: 'abc', seps: 2, ready: true }, 'the boxes');
+      await page.click('#otp-dyn-4');
+      await page.keyboard.type('z');
+      expect(await page.$eval('#otp-dyn', el => el.closest('.mat-otp').querySelector('.mat-otp__status').textContent), 'Es sind nur die Ziffern 0 bis 9 und die Buchstaben A bis F erlaubt.', 'the refusal in German');
+      await page.click('#otp-dyn-go');
+      expect(await page.$eval('#otp-dyn', el => el.closest('.mat-field').querySelector('.mat-error').textContent), 'Bitte alle 12 Zeichen eingeben.', 'an incomplete code without a pattern, in German');
+      await page.keyboard.type('def0');
+      expect(await page.$eval('#otp-dyn', e => e.value), 'abcdef0', 'typed after the message');
+      await page.evaluate(() => document.getElementById('otp-dyn-form').reset());
+      await page.waitForTimeout(100);
+      expect(await page.$$eval('#otp-dyn ~ .mat-otp__boxes .mat-otp__box', els => els.map(b => b.value).join('')), 'abc', 'the boxes after a reset');
+      expect(await page.$eval('#otp-dyn', e => e.value), 'abc', 'the real input after a reset');
+    });
+    await check('a code input outside a field is marked on the wrapper, and the message is said under the boxes', async () => {
+      await page.evaluate(() => MatUi.otp.setInvalid('otp-bare-in', 'Not accepted.'));
+      const s = await page.evaluate(() => ({ cls: document.getElementById('otp-bare').classList.contains('is-invalid'), text: document.querySelector('#otp-bare .mat-otp__status').textContent, aria: document.getElementById('otp-bare-in').getAttribute('aria-invalid'), border: getComputedStyle(document.querySelector('#otp-bare .mat-otp__box')).borderTopColor }));
+      expect(s.cls && s.text === 'Not accepted.' && s.aria === 'true', true, 'the wrapper, the message and aria-invalid');
+      await page.evaluate(() => { document.getElementById('otp-host').remove(); document.documentElement.lang = 'en'; });
+    });
+    await ctx.close();
+  }
+  {
+    // without the script the real input is a text field
+    const ctx = await browser.newContext({ ...desktopOptions, javaScriptEnabled: false });
+    const page = await ctx.newPage();
+    await page.goto(BASE + '/Components#code-input', { waitUntil: 'networkidle' });
+    await check('without the script the real input is a visible text field with the look of a code', async () => {
+      const s = await page.evaluate(() => {
+        const i = document.getElementById('otp-totp');
+        const c = getComputedStyle(i);
+        return { boxes: document.querySelectorAll('#code-input .mat-otp__box').length, opacity: c.opacity, border: c.borderTopWidth, width: i.getBoundingClientRect().width > 100, mono: /mono|consolas|menlo|courier/i.test(c.fontFamily) };
+      });
+      expect(s, { boxes: 0, opacity: '1', border: '1px', width: true, mono: true }, 'the plain field');
+      await page.fill('#otp-totp', '123456');
+      expect(await page.inputValue('#otp-totp'), '123456', 'a code can be typed');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#code-input');
+    await check('on a phone eight boxes fit the screen, are 44 px high and keep 16 px type, and a code of twelve fits too', async () => {
+      await page.evaluate(() => {
+        const host = document.createElement('div');
+        host.id = 'otp-host';
+        host.innerHTML = '<div class="mat-field"><label class="mat-label" for="otp-twelve">Twelve</label><div class="mat-otp mat-otp--lg" data-otp data-length="12" data-chars="hex" data-group="4-4-4"><input class="mat-otp__input" id="otp-twelve" name="twelve" /></div></div>';
+        document.getElementById('code-input').appendChild(host);
+        MatUi.refresh(host);
+      });
+      const measure = id => page.evaluate(id => {
+        const wrap = document.getElementById(id).closest('.mat-otp');
+        const boxes = [...wrap.querySelectorAll('.mat-otp__box')];
+        const rects = boxes.map(b => b.getBoundingClientRect());
+        const field = wrap.closest('.mat-field').getBoundingClientRect();
+        return {
+          count: boxes.length,
+          inside: Math.max(...rects.map(r => r.right)) <= field.right + 0.5 && Math.min(...rects.map(r => r.left)) >= field.left - 0.5,
+          onScreen: Math.max(...rects.map(r => r.right)) <= innerWidth,
+          height: Math.round(Math.min(...rects.map(r => r.height))),
+          width: Math.round(Math.min(...rects.map(r => r.width))),
+          font: Math.min(...boxes.map(b => parseFloat(getComputedStyle(b).fontSize))),
+          scrolls: document.documentElement.scrollWidth > innerWidth,
+        };
+      }, id);
+      const eight = await measure('otp-recovery');
+      expect({ count: eight.count, inside: eight.inside, onScreen: eight.onScreen, scrolls: eight.scrolls }, { count: 8, inside: true, onScreen: true, scrolls: false }, 'eight boxes with a dash');
+      expectTrue(eight.height >= 44, 'the boxes are ' + eight.height + ' px high');
+      expectTrue(eight.font >= 16, 'the type is ' + eight.font + ' px');
+      expectTrue(eight.width >= 24, 'the boxes are ' + eight.width + ' px wide');
+      const small = await measure('otp-sm');
+      expectTrue(small.height >= 44, 'a small box is ' + small.height + ' px high on a touch screen');
+      const twelve = await measure('otp-twelve');
+      expect({ count: twelve.count, inside: twelve.inside, onScreen: twelve.onScreen, scrolls: twelve.scrolls }, { count: 12, inside: true, onScreen: true, scrolls: false }, 'twelve boxes in large');
+      expectTrue(twelve.font >= 16, 'the type of twelve is ' + twelve.font + ' px');
+    });
+    await check('on a phone a tap selects a box and the code is typed and pasted as on a computer', async () => {
+      await page.tap('#otp-recovery-1');
+      await page.keyboard.type('a1b2c3d4');
+      expect(await page.$eval('#otp-recovery', e => e.value), 'A1B2C3D4', 'the posted value');
+      await page.tap('#otp-md-2');
+      expect(await page.evaluate(() => document.activeElement.id), 'otp-md-2', 'the box that was tapped');
+      expect(await page.$eval('#otp-md-2', e => e.selectionEnd - e.selectionStart <= 1), true, 'selection');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- content components
   console.log('\nContent components');
   {
