@@ -75,6 +75,19 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
 - The right control for the value (`FORM-12`): the type of the value (`email`, `tel`, `number`, `date`) with `autocomplete` and `inputmode`; radios up to five choices, a select above; a switch applies at once, a check is saved.
   A form with errors shows a **summary** at the top with a link to every field (`data-validation-summary`, `FORM-03`). Layouts: columns, label beside the field on a wide screen, one line, sections (`FORM-14`).
 - Every table cell has `data-label`: on a phone the rows become cards (`TABLE-02`).
+- A value on a scale whose exact number does not matter is a **slider**, a from and to a **range slider** (`FORM-17`): native `input type="range"` (one, or two named `from` and `to`) in a wrapper
+  `mat-slider[data-slider]` (`mat-slider--range` for two), so a form posts them and they work without the script. The script draws the track, the thumbs (a target of 44 px) and the bubble with the
+  value; `data-format="{0} €"` is the template of every value shown, `data-min-gap` keeps two thumbs apart, `data-bubble="always"`, `data-ticks` and `data-output="id"` are optional:
+
+  ```html
+  <div class="mat-field">
+    <label class="mat-label" for="price-from">Price</label>
+    <div class="mat-slider mat-slider--range" data-slider data-min-gap="10" data-format="{0} €">
+      <input class="mat-slider__input" type="range" id="price-from" name="from" min="0" max="200" step="5" value="20" />
+      <input class="mat-slider__input" type="range" id="price-to" name="to" min="0" max="200" step="5" value="80" />
+    </div>
+  </div>
+  ```
 - A value that a native control cannot show well is chosen in a **picker** (`FORM-15`): an option with a picture, a description and tags, a date or a period, a time or a time range, a colour.
   The markup is a wrapper around the real input, which posts one value in a fixed format (`2026-10-10`, `2026-10-10..2026-10-14`, `09:30`, `09:00..17:30`, `#b4235f`, the key of an option);
   the script draws the button and the panel, which is full screen with an X on a phone. The MatCMS `richselect` and date pickers map onto `data-picker="select"` (with `data-multiple` for

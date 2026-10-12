@@ -82,6 +82,19 @@ It lives inside the wrapper, so a picker in a dialog is not cut off by it, and E
 browser message points at the right place, and whoever focuses it (a label, the validation) lands on the button. The texts are English and German (`data-pk-*` on `html` changes them; a test checks that
 both languages have every text).
 
+### Slider and range slider
+
+A slider (`FORM-17`) is a native `input type="range"` in a wrapper `mat-slider[data-slider]`; a range slider (`mat-slider--range`) holds two of them, `from` and `to`. The native inputs stay the truth: they post
+the values, are validated, have the keyboard and the role of the browser and are what a screen reader reads, so the script only dresses them. Without it the inputs are drawn as native controls in the
+look of the toolkit (the two of a range slider one under the other); with it (`is-ready`) they lie invisible over the slider (opacity, never `display: none`, so they keep the focus) and the script draws
+one track with the filled part, a thumb per input, a bubble with the value, the marks and the labels, and handles the pointer itself: a press on the rail moves the nearest thumb (both at one value: the
+side of the press, or the first movement when the thumbs themselves are pressed), the thumbs of a range slider cannot cross (`data-min-gap`), the one moved last is on top. The thumb is a target of 44 px
+(36 px for `--sm`) and the rail has `touch-action: pan-y`, so the page can still be scrolled. The keys are handled by the script as well (arrows, Page Up and Page Down by a tenth of the scale, Home and
+End, every key sending `input` and `change`), and a capture listener on `input` puts a value that a screen reader or a script made right (the gap, the grid of the steps) before anybody reads it. Every value
+shown (the bubble, the labels, the output) and `aria-valuetext` come from one template, `data-format="{0} GB"`; the two inputs of a range slider are named from the label, "Price from" and "Price to"
+(`SL_TEXT`, English and German). Two bubbles that would cover each other become one. A form reset is picked up after the event, `MatUi.refresh` and `initForms` pick up new sliders, and
+`MatUi.slider.update(wrapper)` reads a changed scale again.
+
 ### Layout and utilities
 
 `matui.layout.css` is the last part before the apps: containers, a grid of twelve columns (`mat-cols`, `mat-col-N`, with `sm`, `md` and `lg` variants from 600, 900 and 1200 px, mobile first) and
