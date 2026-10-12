@@ -274,3 +274,38 @@
 .mat-calendar__time { flex: none; min-width: 5.5rem; font-size: var(--mat-fs-sm); font-variant-numeric: tabular-nums; color: var(--mat-text-muted); }
 .mat-calendar__what { min-width: 0; overflow-wrap: anywhere; }
 .mat-calendar__none { margin: 0; font-size: var(--mat-fs-sm); color: var(--mat-text-muted); }
+
+/* ---- Appointment picker: a month, then the times of the chosen day (data-picker="slot") ----
+   Side by side on a wide screen (the times scroll inside their column, so that the panel keeps its height when another day is chosen), one below the other on a phone. */
+@media (min-width: 641px) {
+  .mat-picker__panel--slots { width: min(96vw, 42rem); }
+}
+.mat-picker__panel--slots .mat-picker__foot { flex-wrap: wrap; }
+.mat-slots { display: grid; gap: var(--mat-space-5); min-width: 0; }
+.mat-slots__cal, .mat-slots__day { min-width: 0; }
+@media (min-width: 641px) {
+  .mat-slots { grid-template-columns: 19rem minmax(0, 1fr); gap: var(--mat-space-6); }
+  .mat-slots__day { position: relative; }
+  .mat-slots__scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; padding: 2px; }
+}
+.mat-slots__status { display: flex; align-items: center; gap: var(--mat-space-2); flex-wrap: wrap; }
+.mat-slots__heading { margin: 0; font-weight: 650; }
+.mat-slots__hint { margin: 2px 0 0; font-size: var(--mat-fs-sm); color: var(--mat-text-muted); }
+.mat-slots__empty { display: flex; align-items: center; gap: var(--mat-space-2); margin: var(--mat-space-3) 0 0; color: var(--mat-text-muted); }
+.mat-slots__group-title { margin: var(--mat-space-4) 0 var(--mat-space-2); font-size: var(--mat-fs-sm); font-weight: 600; color: var(--mat-text-muted); }
+.mat-slots__heading + .mat-slots__list, .mat-slots__hint + .mat-slots__list { margin-top: var(--mat-space-3); }
+.mat-slots__list { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr)); gap: var(--mat-space-2); }
+.mat-slot {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: var(--mat-control-h); padding: 0 var(--mat-space-2);
+  border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius); background: var(--mat-surface); color: var(--mat-text);
+  font: inherit; font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.mat-slot:hover:not(:disabled) { background: var(--mat-accent-soft-strong); border-color: var(--mat-accent); }
+.mat-slot:focus-visible { outline: none; box-shadow: var(--mat-focus-ring); }
+.mat-slot[aria-pressed="true"], .mat-slot[aria-pressed="true"]:hover { background: var(--mat-accent); border-color: var(--mat-accent); color: var(--mat-on-accent); font-weight: 650; }
+/* a taken time is dashed, struck through and says "Taken": not a colour alone (COLOR-04) */
+.mat-slot:disabled { background: var(--mat-surface-2); border-style: dashed; border-color: var(--mat-border); color: var(--mat-text-faint); cursor: not-allowed; }
+.mat-slot:disabled .mat-slot__time { text-decoration: line-through; }
+.mat-slot__note { font-size: var(--mat-fs-xs); line-height: 1.1; color: var(--mat-text-muted); }
+.mat-slots__summary { flex: 1 1 100%; margin: 0; font-weight: 650; }
+.mat-slots__summary.is-empty { font-weight: 400; color: var(--mat-text-muted); }

@@ -90,13 +90,16 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - The dark set is written twice (`:root[data-theme="dark"]` and the system media query) and the two must stay identical. `data-app` and `data-theme` belong on `<html>`.
 - Order inside a button row, a list block and the toolbar is enforced by CSS (`order`), not by the author. A selector in a later part must be more specific than a base class it
   overrides (the bundle puts `controls` after `shell`).
-- Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour|tags"]` around the real input `mat-picker__input`, which posts one value in a fixed
-  format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`, the tags joined by a comma); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone; `tags` is
+- Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour|tags|slot"]` around the real input `mat-picker__input`, which posts one value in a fixed
+  format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`, `2026-10-14T09:30`, the tags joined by a comma); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone; `tags` is
   `inline`: a field of chips, no button, its suggestions a dropdown under it). Texts in English and German
   (`PK_TEXT`: both languages must have every key, a test checks). A hidden element that has a `display` in the CSS needs its own `[hidden]` rule (tests list them).
 - Calendar (`FORM-18`): `.mat-calendar[data-calendar]` around the real input `mat-calendar__input` (`data-mode="single|range|multiple"`, `data-min`/`data-max` as a date, `today` or `+3d`, `data-disabled`,
   `data-disabled-weekdays`, `data-events` JSON with `data-agenda`, `data-week-numbers`). It draws the **month grid that the date picker shares** (one `calMonth`, `calPaint`, `calKeys`, driven by a state
   object): never copy the grid, change it there. Its texts are in `CAL_TEXT` (both languages, a test checks), found through `pkText`. API: `MatUi.calendar.setEvents/setDisabled/setValue/go`.
+- Appointment picker (`FORM-18`): `data-picker="slot"` (`KINDS.slot`) posts `2026-10-14T09:30` (`..09:45` with `data-duration`). Its panel is the same grid plus the times of the chosen day. Availability is
+  `data-slots` JSON or, without it, asked per month with the event `mat:slots-needed` and answered with `MatUi.picker.setSlots(detail.picker, data, detail.month)`; the examples of the site are answered by
+  `doc.js`, the browser checks stop the event and answer it themselves. A taken time says "Taken" in words (`COLOR-04`); a time in the past is never offered.
 - Carousel (`LIST-13`): `.mat-carousel[data-carousel]` around `.mat-carousel__track` > `.mat-carousel__slide`. The strip scrolls and snaps in CSS (a scrollable strip without the script); the script names the slides,
   adds the bar (Previous, a dot per page, Next, Pause with `data-autoplay`), makes the slides out of view `inert` and says which page is shown. The buttons at the ends are `aria-disabled`, never `disabled` (the focus stays).
   Autoplay waits for the pointer and the focus, stops for good after any use of a control and never starts under `prefers-reduced-motion`. Texts in `CAR_TEXT` (English and German, a test checks).

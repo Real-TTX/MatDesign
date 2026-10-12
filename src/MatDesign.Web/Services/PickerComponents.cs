@@ -2,8 +2,8 @@ namespace MatDesign.Web.Services;
 
 /// <summary>
 /// The pickers (FORM-15): a select with pictures, descriptions and tags, a date and a period, a time and a time range, a colour. They are fields that
-/// are filled in a panel; on a phone the panel is full screen. The real input inside holds the value in a fixed format. The calendar that is always shown
-/// is FORM-18.
+/// are filled in a panel; on a phone the panel is full screen. The real input inside holds the value in a fixed format. The calendar that is always shown and
+/// the appointment picker (a day and a time to book) are FORM-18.
 /// </summary>
 internal static class PickerComponents
 {
@@ -319,6 +319,55 @@ internal static class PickerComponents
                 "`data-events` is JSON: an object with the days as keys (each a list of titles or `{title, time, end}`) or a list of items with a `date`. A dot per event (up to three) marks a day; `data-agenda` lists the events of the chosen day under the grid.",
                 "From a script: `MatUi.calendar.setEvents(el, events)`, `setDisabled(el, {dates, weekdays, min, max})`, `setValue(el, value)` (no events) and `go(el, date)`; `MatUi.refresh(scope)` wires new calendars.",
                 "The date picker uses the same grid: it shares `data-min` and `data-max` (with `today` and distances) and the jump to a month and a year.",
+            ]),
+
+        new("slot-picker", "Appointment picker", "Forms", "calendar",
+            "A day and a time to book, as in a doctor's practice: a month in which only the days with a free appointment can be chosen, then the times of the day, taken ones marked, and a shortcut to the next free appointment. One value is posted: 2026-10-14T09:30.",
+            ["FORM-18", "FORM-15", "DIALOG-03", "A11Y-02", "COLOR-04", "FORM-03"],
+            [
+                new("A doctor's practice", """
+                    <div class="mat-field">
+                      <label class="mat-label" for="pk-slot">Appointment</label>
+                      <div class="mat-picker" data-picker="slot" data-min="today" data-min-notice="2h" data-duration="15" data-group data-clearable data-placeholder="Choose an appointment">
+                        <input class="mat-picker__input" id="pk-slot" name="appointment" value="" />
+                      </div>
+                      <span class="mat-hint">Appointments of 15 minutes, none sooner than two hours from now, closed at weekends. Posted as <code>2026-10-14T09:30..09:45</code>.</span>
+                    </div>
+                    """, "The times of a month are asked for when the month is shown (the page answers `mat:slots-needed` with `MatUi.picker.setSlots`; here the script of this site plays the server). Days without a free appointment are struck through and cannot be chosen, the others carry a dot. Next free appointment chooses the first free time."),
+                new("Days without a free time are left out", """
+                    <div class="mat-field">
+                      <label class="mat-label" for="pk-pickup">Pick-up of the rental car</label>
+                      <div class="mat-picker" data-picker="slot" data-min="+3d" data-max="+60d" data-unavailable="hide" data-hour12="true" data-placeholder="Choose a time">
+                        <input class="mat-picker__input" id="pk-pickup" name="pickup" value="" />
+                      </div>
+                      <span class="mat-hint">At least three days ahead and at most 60. Taken times are not listed. With 12 hours it is still posted as <code>2026-10-17T14:45</code>.</span>
+                    </div>
+                    """, "With `data-unavailable=\"hide\"` a day that has no free time is not drawn at all, and a taken time is not listed; with `mark` (the default) they are dimmed, struck through and say \"Taken\"."),
+                new("In a form: required", $"""
+                    <form class="mat-form" method="get" action="/Components#slot-picker" novalidate>
+                      <div class="mat-field">
+                        <label class="mat-label" for="pk-slot-req">Appointment <span class="mat-req" aria-hidden="true">*</span></label>
+                        <div class="mat-picker" data-picker="slot" data-min="tomorrow" data-placeholder="Choose an appointment">
+                          <input class="mat-picker__input" id="pk-slot-req" name="visit" required data-msg-required="Please choose an appointment." />
+                        </div>
+                        <span class="mat-error" aria-live="polite"></span>
+                      </div>
+                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Book</span></button></div>
+                    </form>
+                    """, "From tomorrow on. Press Book with nothing chosen: the message appears under the field and the focus goes to its button."),
+            ],
+            [
+                "The wrapper is `mat-picker` with `data-picker=\"slot\"` around the real input. It posts `2026-10-14T09:30`; with `data-duration` (minutes) the end too, `2026-10-14T09:30..09:45` (an end before the start is the next day, as in a time range).",
+                "The button shows the choice in the language of the page (Wed 14 Oct 2026 · 09:30 – 09:45); the times use the clock of the page (`data-hour12=\"true|false\"`). A line above the buttons of the panel says what is chosen; Apply takes it.",
+                "Availability is data: `data-slots='{\"2026-10-14\": [\"09:00\", \"09:15\"]}'` lists the free times of a day. `{\"free\": [...], \"taken\": [...]}` for a day lists the taken ones too.",
+                "A taken time is disabled and says \"Taken\" (never only a colour), or is left out with `data-unavailable=\"hide\"`. A day without a free time is struck through and cannot be chosen (absent with `hide`); a day with one carries a dot.",
+                "Without `data-slots` (or with `data-lazy`) a month is asked for when it is shown and not known: the wrapper fires `mat:slots-needed` (it bubbles; `detail.month` is `2026-10`, plus `from`, `to` and `picker`).",
+                "The page answers with `MatUi.picker.setSlots(detail.picker, data, detail.month)` (the same JSON) or `MatUi.picker.slotsFailed(detail.picker, detail.month)`, which shows a message with Try again. Meanwhile the panel says it is loading.",
+                "`data-min` and `data-max` take a date, `today`, `tomorrow` or a distance (`+2d`); nothing before today is ever offered. `data-min-notice` (`2h`, `30m`, `1d`) hides what starts sooner than now plus the notice.",
+                "`data-group` groups the times into morning, afternoon and evening; `data-duration` shows the length of an appointment; `data-clearable` adds Clear.",
+                "Next free appointment looks from the first day that may be booked, asks for the following months when they are not known (for a year, or up to `data-max`) and chooses the first free time.",
+                "Keyboard: the arrow keys walk the days of the month, Enter chooses a day and moves the focus to its times, the arrow keys walk the times like a grid, Escape closes the panel.",
+                "On a wide screen the month and the times sit side by side; on a phone the panel is a full-screen sheet with an X (DIALOG-03), the month above the times.",
             ]),
     ];
 }

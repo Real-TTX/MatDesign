@@ -99,6 +99,23 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
   </div>
   ```
 
+- An **appointment** (a doctor's practice, a rental pick-up) is booked with the appointment picker (`data-picker="slot"`, `FORM-18`): a month in which the days with a free time carry a dot and the others cannot
+  be chosen, then the times of the chosen day, taken ones disabled with the word "Taken". It posts `2026-10-14T09:30` (with `data-duration="15"`: `2026-10-14T09:30..09:45`). The availability is data:
+  `data-slots='{"2026-10-14": ["09:00", "09:15"]}'`, or the page answers `mat:slots-needed` per month (the event carries the month) with `MatUi.picker.setSlots(detail.picker, data, detail.month)`, so that a
+  server decides. `data-min="today"`, `data-min-notice="2h"`, `data-unavailable="hide"` and `data-group` shape it; Next free appointment jumps to the first free time.
+
+  ```html
+  <div class="mat-picker" data-picker="slot" data-min="today" data-min-notice="2h" data-duration="15">
+    <input class="mat-picker__input" id="appointment" name="appointment" />
+  </div>
+  <script>
+    document.addEventListener('mat:slots-needed', async e => {
+      const data = await (await fetch('/api/slots?month=' + e.detail.month)).json();   // { "2026-10-14": ["09:00", ...] }
+      MatUi.picker.setSlots(e.detail.picker, data, e.detail.month);
+    });
+  </script>
+  ```
+
 ## 4a. Layout and utilities
 
 - **Containers and the grid:** a page inside the shell is `mat-page`; one without it (sign-in, a shared link) is `mat-container`. For a layout you have decided use the twelve columns

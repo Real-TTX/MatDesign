@@ -4,7 +4,7 @@ using MatDesign.Web.Services;
 
 namespace MatDesign.Tests;
 
-/// <summary>FORM-18: the calendar that is always shown: its documentation, its texts, its formats and its CSS contract.</summary>
+/// <summary>FORM-18: the calendar that is always shown and the appointment picker: their documentation, their texts, their formats and their CSS contract.</summary>
 public partial class CalendarTests
 {
     private static readonly string Js = TestPaths.ReadToolkit("js/matui.js");
@@ -31,6 +31,9 @@ public partial class CalendarTests
     [GeneratedRegex(@"data-mode=""([a-z]+)""")]
     private static partial Regex ModeAttribute();
 
+    [GeneratedRegex(@"data-picker=""slot""")]
+    private static partial Regex SlotPicker();
+
     private static IEnumerable<(string Attributes, string Id, string Value, string Html)> Calendars() =>
         ComponentCatalog.All.Single(c => c.Id == "calendar").Examples.SelectMany(e => CalendarMarkup().Matches(e.Html).Select(m =>
             (m.Groups[1].Value, m.Groups[2].Value, ValueAttribute().Match(m.Groups[3].Value).Groups[1].Value, e.Html)));
@@ -44,31 +47,34 @@ public partial class CalendarTests
         return Js[start..end];
     }
 
-    [Fact]
-    public void The_calendar_is_documented_among_the_forms_and_follows_its_rule()
+    [Theory]
+    [InlineData("calendar")]
+    [InlineData("slot-picker")]
+    public void The_calendar_and_the_appointment_picker_are_documented_among_the_forms_and_follow_their_rule(string id)
     {
-        var component = ComponentCatalog.All.Single(c => c.Id == "calendar");
+        var component = ComponentCatalog.All.Single(c => c.Id == id);
         Assert.Equal("Forms", component.Group);
         Assert.Contains("FORM-18", component.Rules);
         Assert.Contains("FORM-15", component.Rules);
-        Assert.True(component.Examples.Count >= 3);
-        Assert.True(component.Behaviour.Count >= 5);
+        Assert.True(component.Examples.Count >= 3, id);
+        Assert.True(component.Behaviour.Count >= 5, id);
     }
 
     [Fact]
-    public void The_rule_is_a_should_of_the_design_and_names_the_formats_and_the_minimum()
+    public void The_rule_is_a_should_of_the_design_and_names_the_formats_the_minimum_and_the_event()
     {
         var rule = RuleBook.Get("FORM-18");
         Assert.NotNull(rule);
         Assert.Equal("FORM", rule.Area);
         Assert.Equal(RuleLevel.Should, rule.Level);
         Assert.Equal(RuleBook.Design, rule.Source);
-        foreach (var part in new[] { "2026-10-10..2026-10-14", "2026-10-10,2026-10-12", "data-min=\"today\"", "FORM-15" })
+        foreach (var part in new[] { "2026-10-14T09:30", "2026-10-14T09:30..09:45", "data-min=\"today\"", "mat:slots-needed", "FORM-15", "never only coloured" })
         {
-            Assert.Contains(part, rule.Statement, StringComparison.Ordinal);
+            Assert.Contains(part, rule.Statement + " " + rule.Dont, StringComparison.Ordinal);
         }
 
         Assert.False(string.IsNullOrWhiteSpace(rule.Why));
+        Assert.Contains("2026-10-14T09:30", RuleBook.Get("FORM-15")!.Statement);
     }
 
     [Fact]
@@ -119,13 +125,37 @@ public partial class CalendarTests
     }
 
     [Fact]
+    public void The_appointment_examples_are_lazy_ask_for_the_future_and_show_the_options()
+    {
+        var slot = ComponentCatalog.All.Single(c => c.Id == "slot-picker");
+        var all = string.Join("\n", slot.Examples.Select(e => e.Html));
+        Assert.True(SlotPicker().Matches(all).Count >= 3);
+        foreach (var option in new[] { "data-min=\"today\"", "data-min=\"+3d\"", "data-min=\"tomorrow\"", "data-min-notice=\"2h\"", "data-duration=\"15\"", "data-group", "data-unavailable=\"hide\"", "data-hour12=\"true\"", "data-clearable", "required" })
+        {
+            Assert.Contains(option, all, StringComparison.Ordinal);
+        }
+
+        // no dates in the markup: the availability comes from the script of the site, near today, so that the examples do not go stale
+        Assert.DoesNotContain("data-slots", all);
+        var doc = File.ReadAllText(TestPaths.Web("wwwroot/js/doc.js"));
+        Assert.Contains("'mat:slots-needed'", doc);
+        Assert.Contains("MatUi.picker.setSlots(need.picker, demoSlots(need.month), need.month)", doc);
+
+        var behaviour = string.Join("\n", slot.Behaviour);
+        foreach (var part in new[] { "mat:slots-needed", "MatUi.picker.setSlots", "data-slots", "2026-10-14T09:30..09:45", "\"Taken\"", "data-min-notice" })
+        {
+            Assert.Contains(part, behaviour, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
     public void The_texts_of_the_calendar_exist_in_both_languages_and_every_text_the_script_asks_for_is_there()
     {
         var match = Texts().Match(Js);
         Assert.True(match.Success, "the text table of the calendar was not found");
         var en = TextKey().Matches(match.Groups[1].Value).Select(m => m.Groups[1].Value).Order().ToList();
         var de = TextKey().Matches(match.Groups[2].Value).Select(m => m.Groups[1].Value).Order().ToList();
-        Assert.True(en.Count >= 15, $"only {en.Count} texts");
+        Assert.True(en.Count >= 35, $"only {en.Count} texts");
         Assert.Equal(en, de);
         Assert.Equal(en.Count, en.Distinct().Count());
 
@@ -134,14 +164,20 @@ public partial class CalendarTests
         Assert.True(picker.Success);
         var known = TextKey().Matches(picker.Groups[1].Value).Select(m => m.Groups[1].Value).Concat(en).ToHashSet();
         var asked = TextCall().Matches(Js).Select(m => m.Groups[1].Value).Distinct().ToList();
-        Assert.True(asked.Count > 25);
+        Assert.True(asked.Count > 30);
         Assert.All(asked, key => Assert.Contains(key, known));
+        // the group titles of the times are asked for by a name that is in a list
+        Assert.All(new[] { "morning", "afternoon", "evening" }, key => Assert.Contains(key, known));
     }
 
     [Fact]
-    public void The_script_has_the_calendar_and_the_api()
+    public void The_script_has_the_calendar_the_slot_kind_the_event_and_the_api()
     {
+        Assert.Contains("KINDS.slot = {", Js);
+        Assert.Contains("mat:slots-needed", Js);
         Assert.Contains("calendar: CALENDAR_API", Js);
+        Assert.Contains("setSlots: setSlots", Js);
+        Assert.Contains("slotsFailed: slotsFailed", Js);
         var api = Section("var CALENDAR_API = {", "doc.addEventListener('click'");
         foreach (var member in new[] { "init:", "setEvents:", "setDisabled:", "setValue:", "go:" })
         {
@@ -151,8 +187,8 @@ public partial class CalendarTests
         Assert.Contains("initCalendars();", Js);
         Assert.Contains("initCalendars(scope);", Js);
         // the formats of FORM-15 are written down in the header of the script
-        var header = Regex.Replace(Js[..Js.IndexOf("(function () {", StringComparison.Ordinal)], @"\s+", " ");
-        Assert.Contains("2026-10-10..2026-10-14 or several dates 2026-10-10,2026-10-12", header);
+        Assert.Contains("2026-10-14T09:30", Js[..Js.IndexOf("(function () {", StringComparison.Ordinal)]);
+        Assert.Contains("2026-10-10..2026-10-14 or several dates 2026-10-10,2026-10-12", Regex.Replace(Js[..Js.IndexOf("(function () {", StringComparison.Ordinal)], @"\s+", " "));
     }
 
     [Fact]
@@ -172,11 +208,11 @@ public partial class CalendarTests
     [Fact]
     public void The_grid_of_the_date_picker_is_shared_not_copied()
     {
-        // one month grid, one set of keys, one paint for the picker and the calendar
+        // one month grid, one set of keys, one paint for the picker, the calendar and the appointment picker
         Assert.Single(Regex.Matches(Js, @"function calMonth\("));
         Assert.Single(Regex.Matches(Js, @"function calKeys\("));
         Assert.Single(Regex.Matches(Js, @"function calPaint\("));
-        foreach (var user in new[] { "var CALCTL = { pick: calcPick };", "pick: calPick," })
+        foreach (var user in new[] { "var CALCTL = { pick: calcPick };", "pick: calPick,", "pick: slotPickDay," })
         {
             Assert.Contains(user, Js, StringComparison.Ordinal);
         }
@@ -200,19 +236,53 @@ public partial class CalendarTests
         Assert.Contains("e.shiftKey ? 12 : 1", engine);
     }
 
+    [Fact]
+    public void The_slot_picker_never_offers_the_past_and_posts_the_end_only_with_a_duration()
+    {
+        var slot = Section("// ---- slot: a day and a time to book (FORM-18)", "// ---- tags: a field of chips");
+        Assert.Contains("if (!min || min < today) { min = today; }", slot);
+        Assert.Contains("p.notice * 60000", slot);
+        Assert.Contains("(p.duration ? '..' + timeStr(slotEnd(timeOf(s.slot), p.duration)) : '')", slot);
+        Assert.Contains("'T' + s.slot", slot);
+        Assert.Contains("data-lazy", slot);
+        Assert.Contains("data-unavailable", slot);
+        Assert.Contains("data-min-notice", slot);
+        Assert.Contains("data-group", slot);
+        Assert.Contains("data-duration", slot);
+        Assert.Contains("'slotTaken'", slot);
+        // the shortcut asks for the following months and gives up after a year (or at data-max)
+        Assert.Contains("limit: s.max || addMonths(s.min, 12)", slot);
+        // the page answers per month
+        Assert.Contains("detail: { month: key, from: key + '-01'", slot);
+    }
+
     [Theory]
     [InlineData(".mat-calendar__input { position: absolute; inset: 0;")]
     [InlineData(".mat-cal__day.is-unavailable { text-decoration: line-through; }")]
     [InlineData(".mat-cal__day.is-absent { visibility: hidden; }")]
+    [InlineData(".mat-slot:disabled .mat-slot__time { text-decoration: line-through; }")]
     [InlineData(".mat-cal__grid--weeks { grid-template-columns: 2.25rem repeat(7, minmax(0, 1fr)); }")]
     public void What_cannot_be_chosen_says_so_in_a_second_way_besides_its_colour(string rule)
         => Assert.Contains(rule, Css);
 
     [Fact]
-    public void The_touch_targets_are_44_px_on_a_phone()
+    public void The_times_sit_beside_the_month_on_a_wide_screen_and_below_it_on_a_phone_and_the_panel_keeps_the_phone_sheet()
+    {
+        Assert.Matches(@"@media \(min-width: 641px\) \{\s*\.mat-picker__panel--slots \{ width: min\(96vw, 42rem\); \}", Css);
+        Assert.Matches(@"@media \(min-width: 641px\) \{\s*\.mat-slots \{ grid-template-columns: 19rem minmax\(0, 1fr\);", Css);
+        // the times scroll inside their column so that the panel does not change its height with the day
+        Assert.Contains(".mat-slots__scroll { position: absolute; inset: 0; overflow-y: auto;", Css);
+        // the base rule of the phone sheet (inset 0, the whole screen) is not overridden by a width of the slot panel outside the wide-screen query
+        var outside = Regex.Replace(Css, @"@media \(min-width: 641px\) \{[^@]*?\n\}\n", string.Empty);
+        Assert.DoesNotContain(".mat-picker__panel--slots { width", outside);
+    }
+
+    [Fact]
+    public void The_touch_targets_are_44_px_on_a_phone_and_a_time_is_as_high_as_a_control()
     {
         var phone = Css[Css.IndexOf("@media (max-width: 640px)", StringComparison.Ordinal)..];
         Assert.Contains(".mat-cal__day { height: 44px; }", phone);
+        Assert.Matches(@"\.mat-slot \{[^}]*min-height: var\(--mat-control-h\);", Css);
         Assert.Matches(@"\.mat-cal__cell \{", Css);
         Assert.Contains("grid-auto-rows: minmax(48px, 1fr)", Css);
     }
@@ -221,6 +291,7 @@ public partial class CalendarTests
     public void What_is_chosen_is_a_tint_or_a_fill_behind_the_whole_item_and_never_a_bar()
     {
         // COLOR-08 holds for the new controls too
+        Assert.Matches(@"\.mat-slot\[aria-pressed=""true""\][^{]*\{ background: var\(--mat-accent\);", Css);
         Assert.Contains(".mat-cal__cell.is-current { background: var(--mat-accent-soft-strong);", Css);
         Assert.Empty(OneSidedAccentTests.Violations("matui.pickers.css", Css));
     }

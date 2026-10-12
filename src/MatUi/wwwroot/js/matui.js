@@ -20,13 +20,20 @@
      data-indeterminate                     a checkbox that starts in the indeterminate state
      data-password-toggle="id"              the eye button of a password field: shows and hides the password (aria-pressed)
      data-selectable                        a table with data-select-row checks, a data-select-all check in its header and a [data-bulk-bar] with [data-bulk-count]
-     data-picker="select|date|daterange|time|timerange|colour|tags"
+     data-picker="select|date|daterange|time|timerange|colour|tags|slot"
                                             a field that is filled in a panel (FORM-15); the real input inside is .mat-picker__input. Options of the wrapper:
                                             data-placeholder, data-clearable (a button that clears the value), data-min / data-max / data-week-start / data-flex (dates),
                                             data-step / data-hour12 (times), data-swatches (colours), data-search / data-multiple / data-sep (select; the options are
                                             .mat-picker__option with data-value). The texts change with data-pk-<name> on <html>, the format of dates with data-locale.
                                             tags is a field of chips and has no panel: data-sep, data-max (number of tags), data-max-length (of one tag),
                                             data-duplicates (allow a tag twice), data-strict (only the options, which are the suggestions, can be added)
+                                            slot books an appointment (FORM-18): a month with the days that have a free time, then the times of the chosen day. It posts
+                                            2026-10-14T09:30 (with data-duration: 2026-10-14T09:30..09:45). data-slots = the availability as JSON ({"2026-10-14": ["09:00",
+                                            "09:15"]} for free times, {"free": [...], "taken": [...]} to show the taken ones too); without it (or with data-lazy) a month that
+                                            is shown and not known fires mat:slots-needed (detail: month "2026-10", from, to, picker) and the page answers with
+                                            MatUi.picker.setSlots(picker, data, month). data-min / data-max (a date, today, tomorrow, +2d), data-min-notice ("2h", "30m", "1d":
+                                            what starts sooner is not offered), data-unavailable="mark|hide" (days and times that are not free: dimmed and struck, or absent),
+                                            data-group (morning, afternoon, evening), data-duration (minutes)
      data-calendar                          a calendar that is always shown (FORM-18); the real input inside is .mat-calendar__input and posts 2026-10-10, a period
                                             2026-10-10..2026-10-14 or several dates 2026-10-10,2026-10-12. data-mode="single|range|multiple", data-min / data-max (a date,
                                             today, tomorrow, +2d, -1w, +3m, +1y), data-disabled ("2026-10-14,2026-10-20..2026-10-24"), data-disabled-weekdays ("0,6", 0 is Sunday),
@@ -1065,7 +1072,7 @@
   function placeholderOf(p) {
     var own = p.wrap.getAttribute('data-placeholder');
     if (own) { return own; }
-    return pkText({ select: 'phSelect', date: 'phDate', daterange: 'phPeriod', time: 'phTime', timerange: 'phTimeRange', colour: 'phColour', tags: 'phTags' }[p.kind]);
+    return pkText({ select: 'phSelect', date: 'phDate', daterange: 'phPeriod', time: 'phTime', timerange: 'phTimeRange', colour: 'phColour', tags: 'phTags', slot: 'phSlot' }[p.kind]);
   }
 
   function pkPanel(p) {
@@ -2131,18 +2138,26 @@
   // The title of the month is a button: it leads to a choice of the month and then of the year. MatUi.calendar.setEvents / setDisabled / setValue / go change it later.
   var CAL_TEXT = {
     en: {
-      jumpMonth: 'choose month and year', chooseMonth: 'Choose a month', chooseYear: 'Choose a year',
+      phSlot: 'Choose an appointment', jumpMonth: 'choose month and year', chooseMonth: 'Choose a month', chooseYear: 'Choose a year',
       prevYear: 'Previous year', nextYear: 'Next year', prevYears: 'Earlier years', nextYears: 'Later years',
       week: 'Week', weekShort: 'Wk', weekNo: 'Week {0}',
       chooseDates: 'Choose one or more days', oneDate: '1 day chosen', datesCount: '{0} days chosen', maxDates: 'At most {0} days', unavailable: 'unavailable',
-      eventOne: '1 event', eventCount: '{0} events', noEvents: 'Nothing on this day', agendaChoose: 'Choose a day to see what is on it', allDay: 'All day'
+      eventOne: '1 event', eventCount: '{0} events', noEvents: 'Nothing on this day', agendaChoose: 'Choose a day to see what is on it', allDay: 'All day',
+      nextFree: 'Next free appointment', slotsChoose: 'Choose a day to see the free appointments', slotsLoading: 'Loading the free appointments …',
+      slotsFailed: 'The appointments could not be loaded.', retry: 'Try again', slotTaken: 'Taken', slotsNone: 'No free appointment on this day',
+      slotLen: 'Appointments of {0}', slotNoneFound: 'No free appointment found', slotSeeking: 'Looking for the next free appointment …', slotSummaryNone: 'Choose a day and a time',
+      morning: 'Morning', afternoon: 'Afternoon', evening: 'Evening', freeOne: '1 free appointment', freeCount: '{0} free appointments', noFree: 'no free appointment'
     },
     de: {
-      jumpMonth: 'Monat und Jahr wählen', chooseMonth: 'Monat wählen', chooseYear: 'Jahr wählen',
+      phSlot: 'Termin wählen', jumpMonth: 'Monat und Jahr wählen', chooseMonth: 'Monat wählen', chooseYear: 'Jahr wählen',
       prevYear: 'Vorheriges Jahr', nextYear: 'Nächstes Jahr', prevYears: 'Frühere Jahre', nextYears: 'Spätere Jahre',
       week: 'Woche', weekShort: 'KW', weekNo: 'Kalenderwoche {0}',
       chooseDates: 'Einen oder mehrere Tage wählen', oneDate: '1 Tag gewählt', datesCount: '{0} Tage gewählt', maxDates: 'Höchstens {0} Tage', unavailable: 'nicht verfügbar',
-      eventOne: '1 Termin', eventCount: '{0} Termine', noEvents: 'An diesem Tag steht nichts an', agendaChoose: 'Tag wählen, um zu sehen, was ansteht', allDay: 'Ganztägig'
+      eventOne: '1 Termin', eventCount: '{0} Termine', noEvents: 'An diesem Tag steht nichts an', agendaChoose: 'Tag wählen, um zu sehen, was ansteht', allDay: 'Ganztägig',
+      nextFree: 'Nächster freier Termin', slotsChoose: 'Tag wählen, um die freien Termine zu sehen', slotsLoading: 'Freie Termine werden geladen …',
+      slotsFailed: 'Die Termine konnten nicht geladen werden.', retry: 'Erneut versuchen', slotTaken: 'Belegt', slotsNone: 'An diesem Tag ist kein Termin frei',
+      slotLen: 'Termine à {0}', slotNoneFound: 'Kein freier Termin gefunden', slotSeeking: 'Der nächste freie Termin wird gesucht …', slotSummaryNone: 'Tag und Uhrzeit wählen',
+      morning: 'Vormittag', afternoon: 'Nachmittag', evening: 'Abend', freeOne: '1 freier Termin', freeCount: '{0} freie Termine', noFree: 'kein freier Termin'
     }
   };
 
@@ -2367,6 +2382,361 @@
   doc.addEventListener('reset', function (e) {
     setTimeout(function () { $$('.mat-calendar', e.target).forEach(function (el) { if (el._matCalendar) { calcSync(el._matCalendar); } }); }, 0);
   }, true);
+
+  // ---- slot: a day and a time to book (FORM-18)
+  // <div class="mat-picker" data-picker="slot" data-min="today" data-duration="15"><input class="mat-picker__input" id="..." name="..."></div> posts 2026-10-14T09:30
+  // (with data-duration the end too: 2026-10-14T09:30..09:45). The panel shows a month in which the days with a free time are marked, then the times of the chosen day.
+  // The availability is data: data-slots='{"2026-10-14": ["09:00", "09:15"], "2026-10-15": {"free": ["09:00"], "taken": ["09:15"]}}' (free times; with "taken" the
+  // taken ones are shown too), or, without data-slots (or with data-lazy), it is asked for per month: when a month is shown that is not known the wrapper fires
+  // mat:slots-needed (bubbles; detail: {month: "2026-10", from: "2026-10-01", to: "2026-10-31", picker: the wrapper}) and the page answers with
+  // MatUi.picker.setSlots(detail.picker, data, detail.month), or MatUi.picker.slotsFailed(detail.picker, detail.month). What starts before now plus data-min-notice
+  // ("2h", "30m", "1d") is never offered, and neither is a day before data-min or after data-max.
+  function slotValue(raw) {
+    var m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})(?:\.\.(\d{2}:\d{2}))?$/.exec((raw || '').trim());
+    var date = m && dateOf(m[1]), from = m && timeOf(m[2]);
+    return date && from ? { date: date, from: from, to: m[3] ? timeOf(m[3]) : null } : null;
+  }
+  function slotEnd(from, minutes) {
+    var total = from.h * 60 + from.m + minutes;
+    return { h: Math.floor(total / 60) % 24, m: total % 60 };
+  }
+  // "2h", "30m", "1d" -> minutes
+  function slotNotice(text) {
+    var m = /^(\d+)\s*(m|min|h|d)?$/i.exec((text || '').trim());
+    return m ? +m[1] * { m: 1, min: 1, h: 60, d: 1440 }[(m[2] || 'm').toLowerCase()] : 0;
+  }
+  function slotTimes(list) {
+    var seen = {};
+    return (Array.isArray(list) ? list : []).map(function (x) {
+      var t = timeOf(typeof x === 'string' ? x : x && x.time);
+      return t ? timeStr(t) : null;
+    }).filter(function (t) { return t && !seen[t] && (seen[t] = true); }).sort();
+  }
+  function slotDay(entry) {
+    var taken = entry && !Array.isArray(entry) && typeof entry === 'object' ? slotTimes(entry.taken) : [];
+    var free = slotTimes(Array.isArray(entry) ? entry : entry && entry.free).filter(function (t) { return taken.indexOf(t) < 0; });
+    return { free: free, taken: taken };
+  }
+  // the data of some days into the picker; the months of the days, and the month that was asked for, are known from now on
+  function slotMerge(p, data, month) {
+    var sl = p.slots;
+    if (typeof data === 'string') { try { data = JSON.parse(data); } catch (err) { data = null; } }
+    Object.keys(data && typeof data === 'object' ? data : {}).forEach(function (iso) {
+      if (!dateOf(iso)) { return; }
+      sl.days[iso] = slotDay(data[iso]);
+      sl.loaded[iso.slice(0, 7)] = true;
+    });
+    if (month) { sl.loaded[month] = true; }
+    Object.keys(sl.loaded).forEach(function (key) { delete sl.pending[key]; delete sl.failed[key]; });
+  }
+  // 'loaded' (also for every month when the data came with the page), 'pending', 'failed' or 'unknown'
+  function slotMonth(p, key) {
+    var sl = p.slots;
+    return !p.lazy || sl.loaded[key] ? 'loaded' : sl.pending[key] ? 'pending' : sl.failed[key] ? 'failed' : 'unknown';
+  }
+  // the free and the taken times of a day that are still to come (now plus the notice), for as long as the panel is open as they were when it opened
+  function slotLists(p, iso) {
+    var s = p.state, cache = s && s.cache;
+    if (cache && cache[iso]) { return cache[iso]; }
+    var day = p.slots.days[iso], d = dateOf(iso), out = { free: [], taken: [] };
+    if (day && d) {
+      var earliest = (s ? s.now : Date.now()) + p.notice * 60000;
+      var ahead = function (t) { var x = timeOf(t); return new Date(d.getFullYear(), d.getMonth(), d.getDate(), x.h, x.m).getTime() >= earliest; };
+      out.free = day.free.filter(ahead);
+      out.taken = day.taken.filter(ahead);
+    }
+    if (cache) { cache[iso] = out; }
+    return out;
+  }
+
+  function slotText(p, v, full) {
+    var day = full ? formats().full : new Intl.DateTimeFormat(pkLocale(), { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    return day.format(v.date) + ' · ' + timeText(p, v.from) + (v.to ? ' – ' + timeText(p, v.to) : '');
+  }
+  function slotDisplay(p, out) {
+    if (!p.input.value) { out.textContent = placeholderOf(p); return; }
+    var v = slotValue(p.input.value);
+    out.textContent = v ? slotText(p, v, false) : p.input.value;
+  }
+
+  function slotRequest(p, key) {
+    var sl = p.slots, y = +key.slice(0, 4), m = +key.slice(5, 7);
+    sl.pending[key] = true;
+    delete sl.failed[key];
+    p.wrap.dispatchEvent(new CustomEvent('mat:slots-needed', { bubbles: true, detail: { month: key, from: key + '-01', to: key + '-' + p2(new Date(y, m, 0).getDate()), picker: p.wrap } }));
+  }
+
+  // under the month: that the days are loading, that they could not be loaded (with a button to try again), that the next free appointment is looked for
+  function slotPaintStatus(p) {
+    var s = p.state, box = $('.mat-slots', p.body), el = $('.mat-slots__status', p.body);
+    if (!box || !el) { return; }
+    var st = slotMonth(p, isoOf(s.view).slice(0, 7)), html = '';
+    if (p.seek) { html = '<span class="mat-spinner mat-spinner--sm" aria-hidden="true"></span>' + esc(pkText('slotSeeking')); }
+    else if (st === 'pending') { html = '<span class="mat-spinner mat-spinner--sm" aria-hidden="true"></span>' + esc(pkText('slotsLoading')); }
+    else if (st === 'failed') { html = esc(pkText('slotsFailed')) + '<button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-slots-retry>' + esc(pkText('retry')) + '</button>'; }
+    else if (s.note) { html = esc(s.note); }
+    box.setAttribute('aria-busy', p.seek || st === 'pending' ? 'true' : 'false');
+    el.innerHTML = html;
+  }
+
+  function slotPart(t) { var h = timeOf(t).h; return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; }
+
+  // the times of the chosen day: a button for each, the free ones to choose and the taken ones (data-unavailable="mark") disabled and saying so
+  function slotRenderDay(p) {
+    var s = p.state, box = $('.mat-slots__scroll', p.body);
+    if (!box) { return; }
+    var had = doc.activeElement && doc.activeElement.closest ? doc.activeElement.closest('.mat-slot') : null, keep = had ? had.getAttribute('data-time') : null;
+    if (!s.start) { box.innerHTML = '<p class="mat-slots__empty">' + esc(pkText('slotsChoose')) + '</p>'; return; }
+    var iso = isoOf(s.start), lists = slotLists(p, iso), state = slotMonth(p, iso.slice(0, 7));
+    var heading = formats().full.format(s.start);
+    var h = '<p class="mat-slots__heading" id="' + p.panel.id + '-day">' + esc(heading) + '</p>';
+    if (p.duration) {
+      var hours = Math.floor(p.duration / 60), minutes = p.duration % 60;
+      h += '<p class="mat-slots__hint">' + esc(pkText('slotLen', hours && minutes ? pkText('durHM', hours, minutes) : hours ? pkText('durH', hours) : pkText('durM', minutes))) + '</p>';
+    }
+    var items = lists.free.map(function (t) { return { t: t, taken: false }; });
+    if (p.unavail !== 'hide') { items = items.concat(lists.taken.map(function (t) { return { t: t, taken: true }; })); }
+    items.sort(function (a, b) { return a.t < b.t ? -1 : a.t > b.t ? 1 : 0; });
+    if (state !== 'loaded') { h += '<p class="mat-slots__empty"><span class="mat-spinner mat-spinner--sm" aria-hidden="true"></span>' + esc(pkText('slotsLoading')) + '</p>'; }
+    else {
+      // a time that was chosen before and is not free any more is not a choice
+      if (s.slot && lists.free.indexOf(s.slot) < 0) { s.slot = null; }
+      if (!lists.free.length) { h += '<p class="mat-slots__empty">' + esc(pkText('slotsNone')) + '</p>'; }
+      var button = function (it) {
+        return '<button type="button" class="mat-slot" data-time="' + it.t + '" aria-pressed="' + (it.t === s.slot && !it.taken ? 'true' : 'false') + '" tabindex="-1"' + (it.taken ? ' disabled' : '') + '>' +
+          '<span class="mat-slot__time">' + esc(timeText(p, timeOf(it.t))) + '</span>' + (it.taken ? '<span class="mat-slot__note">' + esc(pkText('slotTaken')) + '</span>' : '') + '</button>';
+      };
+      if (p.group) {
+        ['morning', 'afternoon', 'evening'].forEach(function (part) {
+          var some = items.filter(function (it) { return slotPart(it.t) === part; });
+          if (!some.length) { return; }
+          h += '<div class="mat-slots__group" role="group" aria-labelledby="' + p.panel.id + '-' + part + '"><p class="mat-slots__group-title" id="' + p.panel.id + '-' + part + '">' + esc(pkText(part)) + '</p>' +
+            '<div class="mat-slots__list">' + some.map(button).join('') + '</div></div>';
+        });
+      } else if (items.length) { h += '<div class="mat-slots__list" role="group" aria-labelledby="' + p.panel.id + '-day">' + items.map(button).join('') + '</div>'; }
+    }
+    box.innerHTML = h;
+    var buttons = $$('.mat-slot:not(:disabled)', box), stop = buttons.filter(function (b) { return b.getAttribute('aria-pressed') === 'true'; })[0] || buttons[0];
+    if (stop) { stop.tabIndex = 0; }
+    var back = keep && $('.mat-slot[data-time="' + keep + '"]:not(:disabled)', box);
+    if (back) { back.focus({ preventScroll: true }); }
+  }
+
+  function slotPaintChoice(p) {
+    var s = p.state, chosen = null;
+    $$('.mat-slot', p.body).forEach(function (b) {
+      var on = !b.disabled && b.getAttribute('data-time') === s.slot;
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      if (on) { chosen = b; }
+    });
+    if (chosen) { $$('.mat-slot', p.body).forEach(function (b) { b.tabIndex = b === chosen ? 0 : -1; }); }
+    var el = $('.mat-slots__summary', p.foot), ok = !!s.start && !!s.slot;
+    el.classList.toggle('is-empty', !ok);
+    el.textContent = ok ? slotText(p, { date: s.start, from: timeOf(s.slot), to: p.duration ? slotEnd(timeOf(s.slot), p.duration) : null }, true) : pkText('slotSummaryNone');
+    refreshFoot(p);
+  }
+
+  // a day was chosen: its times replace the ones that were there (the time is kept only on the same day)
+  function slotPickDay(p, d, e) {
+    var s = p.state, same = !!s.start && isoOf(s.start) === isoOf(d);
+    s.start = d; s.focus = d; s.note = '';
+    if (!same) { s.slot = null; }
+    calPaint(p);
+    slotRenderDay(p);
+    slotPaintStatus(p);
+    slotPaintChoice(p);
+    var first = $('.mat-slot[tabindex="0"]', p.body);
+    // from the keyboard (a click that is made by Enter has no detail) the focus goes on to the times
+    if (e && e.detail === 0 && first) { first.focus({ preventScroll: true }); }
+    else if (p.full) {
+      // on a phone the times are below the month: they are brought into view when they start in the lower half of it
+      var box = $('.mat-slots__day', p.body), r = box.getBoundingClientRect(), b = p.body.getBoundingClientRect();
+      if (r.top > b.top + b.height * 0.55) { p.body.scrollTop += r.top - b.top - 16; }
+    }
+  }
+
+  function slotChoose(p, time) {
+    p.state.slot = time;
+    slotPaintChoice(p);
+  }
+
+  // the day and the time of the shortcut: shown, chosen and focused
+  function slotChoosePair(p, d, time) {
+    var s = p.state;
+    s.start = d; s.focus = d; s.view = firstOf(d); s.slot = time; s.level = 'days'; s.note = '';
+    calRender(p, null);
+    slotRenderDay(p);
+    slotPaintStatus(p);
+    slotPaintChoice(p);
+    var b = $('.mat-slot[aria-pressed="true"]', p.body);
+    if (b) {
+      b.focus({ preventScroll: true });
+      keepInView($('.mat-slots__scroll', p.body), b);
+      keepInView(p.body, b);
+    }
+  }
+
+  // The first day with a free time, from the first day that may be booked: in the months that are known, and for the months that are not (data-lazy) it asks for the
+  // next one and goes on when the answer is there.
+  function slotSeek(p) {
+    var s = p.state, sk = p.seek, d = sk.from;
+    for (var i = 0; d <= sk.limit && i < 800; i += 1, d = addDays(d, 1)) {
+      var iso = isoOf(d), key = iso.slice(0, 7), st = slotMonth(p, key);
+      if (st === 'unknown') { sk.from = d; slotRequest(p, key); slotPaintStatus(p); return; }
+      if (st === 'pending') { sk.from = d; slotPaintStatus(p); return; }
+      if (st === 'failed') {
+        p.seek = null;
+        s.view = firstOf(d);
+        calRender(p, null);
+        return;
+      }
+      var free = slotLists(p, iso).free;
+      if (free.length) { p.seek = null; slotChoosePair(p, d, free[0]); return; }
+    }
+    p.seek = null;
+    s.note = pkText('slotNoneFound');
+    slotPaintStatus(p);
+  }
+
+  // new availability while the panel is open: the days, the times and what waits for them
+  function slotRefresh(p) {
+    var s = p.state, active = doc.activeElement;
+    s.cache = {};
+    if (active && active.closest && active.closest('.mat-cal__months') && p.panel.contains(active)) { s.pendingFocus = true; }
+    calRender(p, null);
+    slotRenderDay(p);
+    slotPaintChoice(p);
+    if (p.seek) { slotSeek(p); }
+  }
+
+  function setSlots(ref, data, month) {
+    var wrap = typeof ref === 'string' ? $(ref) : ref;
+    var p = wrap && wrap.closest && wrap.closest('.mat-picker') ? wrap.closest('.mat-picker')._matPicker : null;
+    if (!p || p.kind !== 'slot') { return; }
+    slotMerge(p, data, month);
+    if (pickerOpen === p && p.state) { slotRefresh(p); }
+  }
+  function slotsFailed(ref, month) {
+    var wrap = typeof ref === 'string' ? $(ref) : ref;
+    var p = wrap && wrap.closest && wrap.closest('.mat-picker') ? wrap.closest('.mat-picker')._matPicker : null;
+    if (!p || p.kind !== 'slot' || !month) { return; }
+    delete p.slots.pending[month];
+    p.slots.failed[month] = true;
+    if (pickerOpen === p && p.state) { p.seek = null; slotPaintStatus(p); calRender(p, null); }
+  }
+
+  function slotViewed(p) {
+    var key = isoOf(p.state.view).slice(0, 7);
+    if (p.lazy && slotMonth(p, key) === 'unknown') { slotRequest(p, key); }
+    slotPaintStatus(p);
+  }
+
+  // the times are a grid of buttons: the arrow keys go to the next one in a row or in a column (the geometry says which)
+  function slotKeys(p, e) {
+    var b = e.target.closest('.mat-slot');
+    if (!b) { return false; }
+    var list = $$('.mat-slot:not(:disabled)', p.body), i = list.indexOf(b), to = null;
+    if (e.key === 'ArrowRight') { to = list[i + 1]; }
+    else if (e.key === 'ArrowLeft') { to = list[i - 1]; }
+    else if (e.key === 'Home') { to = list[0]; }
+    else if (e.key === 'End') { to = list[list.length - 1]; }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      var r = b.getBoundingClientRect(), best = Infinity, dir = e.key === 'ArrowDown' ? 1 : -1;
+      list.forEach(function (x) {
+        var q = x.getBoundingClientRect(), dy = dir * (q.top - r.top);
+        if (x === b || dy < r.height / 2) { return; }
+        var score = dy * 1000 + Math.abs(q.left - r.left);
+        if (score < best) { best = score; to = x; }
+      });
+    } else { return false; }
+    e.preventDefault();
+    if (to) {
+      list.forEach(function (x) { x.tabIndex = -1; });
+      to.tabIndex = 0;
+      to.focus({ preventScroll: true });
+    }
+    return true;
+  }
+
+  KINDS.slot = {
+    icon: 'calendar',
+    init: function (p) {
+      var attr = p.wrap.getAttribute('data-hour12');
+      p.hour12 = attr ? attr === 'true' : !!new Intl.DateTimeFormat(pkLocale(), { hour: 'numeric' }).resolvedOptions().hour12;
+      p.notice = 0; p.duration = 0; p.unavail = 'mark'; p.group = false; p.seek = null;
+      p.slots = { days: {}, loaded: {}, pending: {}, failed: {} };
+      var raw = p.wrap.getAttribute('data-slots');
+      p.lazy = raw === null || p.wrap.hasAttribute('data-lazy');
+      if (raw) { slotMerge(p, raw, null); }
+    },
+    display: slotDisplay,
+    open: function (p) {
+      var w = p.wrap, v = slotValue(p.input.value), today = dayStart(new Date());
+      p.notice = slotNotice(w.getAttribute('data-min-notice'));
+      p.duration = Math.max(0, parseInt(w.getAttribute('data-duration') || '0', 10) || 0);
+      p.unavail = w.getAttribute('data-unavailable') === 'hide' ? 'hide' : 'mark';
+      p.group = w.hasAttribute('data-group');
+      p.seek = null;
+      // a time that has gone is never offered, so the first day is today at the earliest
+      var min = dateExpr(w.getAttribute('data-min')), max = dateExpr(w.getAttribute('data-max'));
+      if (!min || min < today) { min = today; }
+      var focus = limitDate(v ? v.date : today, min, max);
+      var s = p.state = {
+        mode: 'single', level: 'days', jump: true, months: 1, hover: null, message: '', note: '', start: v ? v.date : null, end: null, dates: [],
+        slot: v ? timeStr(v.from) : null, focus: focus, view: firstOf(focus), min: min, max: max, now: Date.now(), cache: {},
+        weekStart: parseInt(w.getAttribute('data-week-start') || root.getAttribute('data-week-start') || '1', 10) % 7
+      };
+      s.off = function (d) { return slotLists(p, isoOf(d)).free.length === 0; };
+      // a day that is not free is struck through, or absent; a day that is only outside the limits, or not known yet, is just dimmed
+      s.look = function (d) {
+        if (slotMonth(p, isoOf(d).slice(0, 7)) !== 'loaded') { return ''; }
+        return p.unavail === 'hide' ? 'absent' : (s.min && d < s.min) || (s.max && d > s.max) ? '' : 'unavailable';
+      };
+      s.marks = function (iso) { return slotLists(p, iso).free.length ? 1 : 0; };
+      s.describe = function (iso) {
+        var n = slotLists(p, iso).free.length;
+        return n ? (n === 1 ? pkText('freeOne') : pkText('freeCount', n)) : slotMonth(p, iso.slice(0, 7)) === 'loaded' ? pkText('noFree') : '';
+      };
+      p.panel.classList.add('mat-picker__panel--slots');
+      p.body.innerHTML = '<div class="mat-slots" aria-busy="false"><div class="mat-slots__cal"><div class="mat-cal"><div class="mat-cal__months"></div>' +
+        '<div class="mat-cal__tools"><button type="button" class="mat-btn mat-btn--secondary mat-btn--sm" data-slots-next>' + icon('arrow-right') + '<span>' + esc(pkText('nextFree')) + '</span></button></div>' +
+        '<p class="mat-picker__status mat-slots__status" role="status"></p></div></div>' +
+        '<div class="mat-slots__day"><div class="mat-slots__scroll"></div></div></div>';
+      setFoot(p, 'apply');
+      p.foot.insertAdjacentHTML('afterbegin', '<p class="mat-slots__summary" role="status"></p>');
+      calRender(p, null);
+      slotRenderDay(p);
+      slotPaintChoice(p);
+      return $(CAL_FOCUS, p.body) || $('[data-slots-next]', p.body);
+    },
+    // the panel is there: the chosen time is brought into view
+    shown: function (p) {
+      var b = $('.mat-slot[aria-pressed="true"]', p.body);
+      if (b) { keepInView($('.mat-slots__scroll', p.body), b); keepInView(p.body, b); }
+    },
+    viewed: slotViewed,
+    pick: slotPickDay,
+    click: function (p, t, e) {
+      var slot = t.closest('.mat-slot');
+      if (slot) { if (!slot.disabled) { slotChoose(p, slot.getAttribute('data-time')); } return; }
+      if (t.closest('[data-slots-next]')) {
+        var s = p.state;
+        p.seek = { from: s.min, limit: s.max || addMonths(s.min, 12) };
+        s.note = '';
+        slotSeek(p);
+        return;
+      }
+      var retry = t.closest('[data-slots-retry]');
+      if (retry) { slotRequest(p, isoOf(p.state.view).slice(0, 7)); slotPaintStatus(p); calRender(p, null); return; }
+      calClick(p, t, e);
+    },
+    keys: function (p, e) { if (!slotKeys(p, e)) { calKeys(p, e); } },
+    ready: function (p) { return !!p.state && !!p.state.start && !!p.state.slot; },
+    value: function (p) {
+      var s = p.state;
+      return isoOf(s.start) + 'T' + s.slot + (p.duration ? '..' + timeStr(slotEnd(timeOf(s.slot), p.duration)) : '');
+    }
+  };
 
   // ---- tags: a field of chips that the user types into
   // The real input holds the tags joined by data-sep (default ", "). The script draws a field (.mat-tagfield) with a chip per tag and a text field to type in.
@@ -3018,7 +3388,7 @@
     accent: { set: setAccent, custom: customAccent },
     scrollspy: { update: updateSpy },
     nav: { set: setNavSet, branch: function (key, open) { var b = $('[data-nav-branch="' + key + '"]'); if (b) { setBranch(b, open !== false, true); } } },
-    picker: { init: initPickers, close: closePicker },
+    picker: { init: initPickers, close: closePicker, setSlots: setSlots, slotsFailed: slotsFailed },
     calendar: CALENDAR_API,
     carousel: { init: initCarousels, go: function (el, page) { var c = el && el._matCarousel; if (c) { carGo(c, page, false); } } },
     refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initCalendars(scope); initCarousels(scope); }

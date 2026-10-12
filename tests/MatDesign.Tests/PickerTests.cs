@@ -8,7 +8,7 @@ public partial class PickerTests
 {
     private static readonly string Js = TestPaths.ReadToolkit("js/matui.js");
 
-    private static readonly string[] Kinds = ["select", "date", "daterange", "time", "timerange", "colour", "tags"];
+    private static readonly string[] Kinds = ["select", "date", "daterange", "time", "timerange", "colour", "tags", "slot"];
 
     [GeneratedRegex(@"<div class=""mat-picker""([^>]*)>\s*<input class=""mat-picker__input"" id=""([^""]+)""([^>]*)>", RegexOptions.Singleline)]
     private static partial Regex PickerMarkup();
@@ -35,6 +35,7 @@ public partial class PickerTests
     [InlineData("date-picker")]
     [InlineData("time-picker")]
     [InlineData("colour-picker")]
+    [InlineData("slot-picker")]
     public void The_pickers_are_documented_among_the_forms(string id)
     {
         var component = ComponentCatalog.All.Single(c => c.Id == id);
@@ -62,7 +63,7 @@ public partial class PickerTests
     [Fact]
     public void The_examples_post_the_fixed_formats_whatever_the_language()
     {
-        // FORM-15: 2026-10-10, 2026-10-10..2026-10-14(~2), 09:30, 09:00..17:30, #b4235f
+        // FORM-15: 2026-10-10, 2026-10-10..2026-10-14(~2), 09:30, 09:00..17:30, #b4235f, 2026-10-14T09:30 (..09:45 with a duration)
         var formats = new Dictionary<string, string>
         {
             ["date"] = @"^(\d{4}-\d\d-\d\d)?$",
@@ -72,6 +73,7 @@ public partial class PickerTests
             ["colour"] = @"^(#[0-9a-f]{6})?$",
             ["select"] = @"^[a-z0-9, ]*$",
             ["tags"] = @"^[A-Za-z0-9 \-]+(, [A-Za-z0-9 \-]+)*$|^$",
+            ["slot"] = @"^(\d{4}-\d\d-\d\dT\d\d:\d\d(\.\.\d\d:\d\d)?)?$",
         };
         Assert.All(Pickers(), p => Assert.Matches(formats[p.Kind], p.Value));
     }
@@ -91,8 +93,9 @@ public partial class PickerTests
     [Fact]
     public void The_pickers_are_documented_in_the_header_of_the_script()
     {
-        Assert.Contains("data-picker=\"select|date|daterange|time|timerange|colour|tags\"", Js);
+        Assert.Contains("data-picker=\"select|date|daterange|time|timerange|colour|tags|slot\"", Js);
         Assert.Contains("2026-10-10..2026-10-14", Js);
+        Assert.Contains("2026-10-14T09:30", Js);
     }
 
     [Theory]

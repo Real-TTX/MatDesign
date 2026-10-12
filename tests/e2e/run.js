@@ -1563,6 +1563,417 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- appointment picker (FORM-18)
+  console.log('\nAppointment picker');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#slot-picker');
+    // the availability of the checks: from tomorrow on, a free time in the morning and the afternoon, two taken ones, a day now and then fully booked or closed
+    const slotData = (from, to) => {
+      const data = {};
+      for (let n = from; n <= to; n += 1) {
+        const d = calPlus(n);
+        if (n % 5 === 0) { continue; }   // closed
+        data[calIso(d)] = n % 7 === 0
+          ? { free: [], taken: ['09:00', '09:15'] }
+          : { free: ['09:00', '09:15', '09:30', '10:00', '14:00', '14:15', '17:30'], taken: ['09:45', '14:30'] };
+      }
+      return data;
+    };
+    const slotPut = (attrs, data, id = 'e2e-s1', extra = '') => calPut(page, `<div class="mat-field"><label class="mat-label" for="${id}">Appointment</label><div class="mat-picker" data-picker="slot" ${data === null ? '' : `data-slots='${JSON.stringify(data)}'`} ${attrs}><input class="mat-picker__input" id="${id}" name="${id}" ${extra} /></div></div>`);
+    const panel = (id = 'e2e-s1') => `#${id}-trigger ~ .mat-picker__panel`;
+    const shown = async (id = 'e2e-s1') => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
+    const valueOf = (id = 'e2e-s1') => page.$eval(`#${id}`, el => el.value);
+    const monthDays = async (id = 'e2e-s1') => calDays(page, panel(id));
+    const fullDay = d => new Intl.DateTimeFormat('en-GB', { dateStyle: 'full' }).format(d);
+    // shows the month of a day in the open panel (forwards or backwards, whatever is needed)
+    const gotoDay = async (id, d) => {
+      for (let i = 0; i < 14 && (await page.locator(`${panel(id)} [data-date="${calIso(d)}"]`).count()) === 0; i += 1) {
+        const shownMonth = (await page.$eval(`${panel(id)} .mat-cal__day`, el => el.getAttribute('data-date'))).slice(0, 7);
+        await page.click(`${panel(id)} [data-cal-nav="${calIso(d).slice(0, 7) > shownMonth ? 1 : -1}"]`);
+      }
+    };
+    const dayOf = async (id, n) => { const d = calPlus(n); await gotoDay(id, d); return d; };
+
+    await check('the appointment picker shows a month: days with a free time are enabled and have a dot, the others are disabled and struck through, the past is not offered', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today" data-duration="15"', data);
+      expect(await shown(), 'Choose an appointment', 'the placeholder');
+      await page.click('#e2e-s1-trigger');
+      expectTrue(await page.locator(panel()).isVisible(), 'the panel is not shown');
+      const wrong = [];
+      const firstMonth = await monthDays();
+      expectTrue(/free appointments?/.test(firstMonth.find(d => d.marks === 1).label), 'the name of a free day says it: ' + firstMonth.find(d => d.marks === 1).label);
+      expectTrue(/no free appointment/.test(firstMonth.find(d => d.off && /is-unavailable/.test(d.cls)).label), 'the name of a day without one says it');
+      for (let step = 0; step < 3; step += 1) {
+        (await monthDays()).forEach(d => {
+          const free = !!data[d.date] && data[d.date].free.length > 0;
+          const past = calDate(d.date) < calPlus(0);
+          if (d.off !== !free) { wrong.push(`${d.date} off=${d.off}`); }
+          if ((d.marks === 1) !== free) { wrong.push(`${d.date} dot=${d.marks}`); }
+          if (!past && !free && !/is-unavailable/.test(d.cls)) { wrong.push(`${d.date} not struck`); }
+          if (past && /is-unavailable/.test(d.cls)) { wrong.push(`${d.date} (past) struck`); }
+        });
+        await page.click(`${panel()} [data-cal-nav="1"]`);
+      }
+      expect(wrong, [], 'days in the wrong state');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('a day shows its times: the free ones are buttons, the taken ones are disabled and say "Taken", in groups, with the length of an appointment', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today" data-duration="15" data-group', data);
+      await page.click('#e2e-s1-trigger');
+      const d = await dayOf('e2e-s1', 1);
+      const iso = calIso(d);
+      await page.click(`${panel()} [data-date="${iso}"]`);
+      const heading = (await page.textContent(`${panel()} .mat-slots__heading`)).trim();
+      expect(heading, fullDay(d), 'the heading of the times');
+      expect((await page.textContent(`${panel()} .mat-slots__hint`)).trim(), 'Appointments of 15 min', 'the length');
+      expect(await page.$$eval(`${panel()} .mat-slots__group-title`, els => els.map(e => e.textContent.trim())), ['Morning', 'Afternoon', 'Evening'], 'the groups');
+      const slots = await page.$$eval(`${panel()} .mat-slot`, els => els.map(b => ({ t: b.getAttribute('data-time'), off: b.disabled, note: (b.querySelector('.mat-slot__note') || {}).textContent || '', text: b.textContent.replace(/\s+/g, ' ').trim() })));
+      const expected = data[iso];
+      expect(slots.filter(s => !s.off).map(s => s.t), expected.free, 'the free times');
+      expect(slots.filter(s => s.off).map(s => s.t), expected.taken, 'the taken times');
+      expectTrue(slots.filter(s => s.off).every(s => s.note === 'Taken' && s.text.includes('Taken')), 'a taken time says Taken in words');
+      expect(slots.map(s => s.t), [...expected.free, ...expected.taken].sort(), 'in the order of the time');
+      const decoration = await page.$eval(`${panel()} .mat-slot:disabled .mat-slot__time`, el => getComputedStyle(el).textDecorationLine);
+      expect(decoration, 'line-through', 'a taken time is struck through besides');
+      const afternoon = await page.$$eval(`${panel()} .mat-slots__group`, gs => gs.map(g => g.querySelector('.mat-slots__group-title').textContent.trim() + ':' + [...g.querySelectorAll('.mat-slot')].map(b => b.getAttribute('data-time')).join(',')));
+      expect(afternoon, ['Morning:09:00,09:15,09:30,09:45,10:00', 'Afternoon:14:00,14:15,14:30', 'Evening:17:30'], 'which time is in which group');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('a taken time cannot be chosen, Apply waits for a free one, and the choice is posted as one value with its end', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today" data-duration="15"', data);
+      await calLog(page, 'e2e-s1');
+      await page.click('#e2e-s1-trigger');
+      const d = await dayOf('e2e-s1', 1);
+      await page.click(`${panel()} [data-date="${calIso(d)}"]`);
+      expect(await page.locator(`${panel()} [data-picker-action="apply"]`).isDisabled(), true, 'Apply before a choice');
+      expect((await page.textContent(`${panel()} .mat-slots__summary`)).trim(), 'Choose a day and a time', 'the line before a choice');
+      await page.locator(`${panel()} .mat-slot[data-time="09:45"]`).click({ force: true, timeout: 1000 }).catch(() => { /* a disabled button cannot be pressed: that is the point */ });
+      expect(await page.locator(`${panel()} .mat-slot[aria-pressed="true"]`).count(), 0, 'a taken time is not chosen');
+      expect(await page.locator(`${panel()} [data-picker-action="apply"]`).isDisabled(), true, 'Apply after a click on a taken time');
+      await page.click(`${panel()} .mat-slot[data-time="09:30"]`);
+      expect(await page.getAttribute(`${panel()} .mat-slot[data-time="09:30"]`, 'aria-pressed'), 'true', 'the chosen time');
+      expect((await page.textContent(`${panel()} .mat-slots__summary`)).trim(), `${fullDay(d)} · 09:30 – 09:45`, 'the line above the buttons');
+      expect(await valueOf(), '', 'nothing is posted before Apply');
+      await page.click(`${panel()} [data-picker-action="apply"]`);
+      expect(await valueOf(), `${calIso(d)}T09:30..09:45`, 'the posted value');
+      expect(await calEvents(page), [`input:${calIso(d)}T09:30..09:45`, `change:${calIso(d)}T09:30..09:45`], 'input and change');
+      expectTrue(!(await page.locator(panel()).isVisible()), 'the panel closed');
+      expectTrue((await shown()).endsWith('09:30 – 09:45') && /\d{4}/.test(await shown()), 'the field shows the choice: ' + await shown());
+      expect(await page.evaluate(() => document.activeElement.id), 'e2e-s1-trigger', 'the focus is back on the field');
+      // reopened: the choice is there
+      await page.click('#e2e-s1-trigger');
+      expect(await page.getAttribute(`${panel()} .mat-slot[data-time="09:30"]`, 'aria-pressed'), 'true', 'the chosen time when it is opened again');
+      expect(await page.getAttribute(`${panel()} [data-date="${calIso(d)}"]`, 'aria-selected'), 'true', 'the chosen day');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('without data-duration only the start is posted, and Cancel and Escape keep the old value', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today" data-clearable', data, 'e2e-s2', `value="${calIso(calPlus(2))}T10:00"`);
+      expectTrue((await shown('e2e-s2')).endsWith('10:00'), 'the value that was there is shown: ' + await shown('e2e-s2'));
+      await page.click('#e2e-s2-trigger');
+      expect(await page.locator(`${panel('e2e-s2')} .mat-slots__hint`).count(), 0, 'no length without data-duration');
+      await page.click(`${panel('e2e-s2')} .mat-slot[data-time="14:15"]`);
+      await page.click(`${panel('e2e-s2')} [data-picker-action="cancel"]`);
+      expect(await valueOf('e2e-s2'), `${calIso(calPlus(2))}T10:00`, 'Cancel');
+      await page.click('#e2e-s2-trigger');
+      await page.click(`${panel('e2e-s2')} .mat-slot[data-time="14:15"]`);
+      await page.keyboard.press('Escape');
+      expect(await valueOf('e2e-s2'), `${calIso(calPlus(2))}T10:00`, 'Escape');
+      await page.click('#e2e-s2-trigger');
+      await page.click(`${panel('e2e-s2')} .mat-slot[data-time="14:15"]`);
+      await page.click(`${panel('e2e-s2')} [data-picker-action="apply"]`);
+      expect(await valueOf('e2e-s2'), `${calIso(calPlus(2))}T14:15`, 'the start only');
+      await page.click('#e2e-s2-trigger ~ .mat-picker__clear');
+      expect(await valueOf('e2e-s2'), '', 'Clear');
+      expect(await shown('e2e-s2'), 'Choose an appointment', 'the placeholder after Clear');
+    });
+
+    await check('a click outside closes the panel without a choice', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today"', data);
+      await page.click('#e2e-s1-trigger');
+      expectTrue(await page.locator(panel()).isVisible(), 'not open');
+      await page.mouse.click(5, 450);
+      expectTrue(!(await page.locator(panel()).isVisible()), 'a click outside did not close the panel');
+      expect(await valueOf(), '', 'no value');
+    });
+
+    await check('data-min="+3d" and data-max take days away, and data-unavailable="hide" makes days and taken times absent', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="+3d" data-max="+40d" data-unavailable="hide"', data);
+      await page.click('#e2e-s1-trigger');
+      const lastOpen = calPlus(40), firstOpen = calPlus(3);
+      const wrong = [];
+      for (let step = 0; step < 3; step += 1) {
+        for (const d of await monthDays()) {
+          const x = calDate(d.date), free = !!data[d.date] && data[d.date].free.length > 0, within = x >= firstOpen && x <= lastOpen;
+          if (d.off !== !(free && within)) { wrong.push(`${d.date} off=${d.off}`); }
+          if (d.off && !/is-absent/.test(d.cls)) { wrong.push(`${d.date} is drawn`); }
+          if (!d.off && /is-absent/.test(d.cls)) { wrong.push(`${d.date} is absent`); }
+        }
+        if (await page.locator(`${panel()} [data-cal-nav="1"]`).isDisabled()) { break; }
+        await page.click(`${panel()} [data-cal-nav="1"]`);
+      }
+      expect(wrong, [], 'days in the wrong state');
+      const gone = await page.$eval(`${panel()} .mat-cal__day.is-absent`, el => ({ visibility: getComputedStyle(el).visibility, hidden: el.getAttribute('aria-hidden') }));
+      expect(gone, { visibility: 'hidden', hidden: 'true' }, 'an absent day');
+      const d = await dayOf('e2e-s1', 6);
+      await page.click(`${panel()} [data-date="${calIso(d)}"]`).catch(async () => { await page.click(`${panel()} .mat-cal__day:not(:disabled)`); });
+      expect(await page.locator(`${panel()} .mat-slot:disabled`).count(), 0, 'taken times are not listed');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('a time that starts before now plus data-min-notice is never offered, and Next free appointment finds the first one that is', async () => {
+      // a time every half hour for today and the next two days
+      const data = {};
+      for (let n = 0; n <= 2; n += 1) {
+        data[calIso(calPlus(n))] = { free: Array.from({ length: 48 }, (_, i) => `${calPad(Math.floor(i / 2))}:${i % 2 ? '30' : '00'}`) };
+      }
+      await slotPut('data-min="today" data-min-notice="2h"', data);
+      const first = (now) => {
+        const earliest = now + 2 * 3600000;
+        for (let n = 0; n <= 2; n += 1) {
+          for (let i = 0; i < 48; i += 1) {
+            const d = calPlus(n); d.setHours(Math.floor(i / 2), i % 2 ? 30 : 0);
+            if (d.getTime() >= earliest) { return `${calIso(d)}T${calPad(d.getHours())}:${calPad(d.getMinutes())}`; }
+          }
+        }
+        return null;
+      };
+      const before = first(Date.now());
+      await page.click('#e2e-s1-trigger');
+      await page.click(`${panel()} [data-slots-next]`);
+      const after = first(Date.now());
+      const chosen = await page.evaluate(sel => { const day = document.querySelector(sel + ' .mat-cal__day[aria-selected="true"]'); const slot = document.querySelector(sel + ' .mat-slot[aria-pressed="true"]'); return day && slot ? day.getAttribute('data-date') + 'T' + slot.getAttribute('data-time') : null; }, panel());
+      expectTrue(chosen === before || chosen === after, `the first free time is ${before}, the picker chose ${chosen}`);
+      expect(await page.evaluate(() => document.activeElement.classList.contains('mat-slot')), true, 'the focus is on the chosen time');
+      // the times of the day that was chosen: none before the notice (for today: before now plus two hours)
+      const day = chosen.slice(0, 10);
+      const listed = await page.$$eval(`${panel()} .mat-slot`, els => els.map(b => b.getAttribute('data-time')));
+      const earliestMs = Date.now() + 2 * 3600000;
+      expectTrue(listed.every(t => { const d = calDate(day); d.setHours(+t.slice(0, 2), +t.slice(3)); return d.getTime() >= earliestMs - 5000; }), 'a time before the notice is listed: ' + listed.join(','));
+      if (day === calIso(calPlus(0))) { expectTrue(listed.length < 48, 'today shows fewer times than a whole day'); }
+      await page.click(`${panel()} [data-picker-action="apply"]`);
+      expect(await valueOf(), chosen, 'Apply books it');
+    });
+
+    await check('Next free appointment goes to a later month and says so when there is nothing', async () => {
+      const far = calPlus(75);
+      await slotPut('data-min="today"', { [calIso(far)]: ['11:15', '11:30'] });
+      await page.click('#e2e-s1-trigger');
+      await page.click(`${panel()} [data-slots-next]`);
+      expect(await page.$$eval(`${panel()} .mat-cal__day[aria-selected="true"]`, els => els.map(e => e.getAttribute('data-date'))), [calIso(far)], 'the day in a later month');
+      expect(await page.$$eval(`${panel()} .mat-slot[aria-pressed="true"]`, els => els.map(e => e.getAttribute('data-time'))), ['11:15'], 'the first time of it');
+      expect((await page.textContent(`${panel()} .mat-picker__title, ${panel()} .mat-cal__title`)).trim(), new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(far), 'the month is shown');
+      await page.keyboard.press('Escape');
+      await slotPut('data-min="today"', {});
+      await page.click('#e2e-s1-trigger');
+      await page.click(`${panel()} [data-slots-next]`);
+      expect((await page.textContent(`${panel()} .mat-slots__status`)).trim(), 'No free appointment found', 'the message');
+      expect(await page.locator(`${panel()} [data-picker-action="apply"]`).isDisabled(), true, 'nothing to apply');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('the keyboard: arrows walk the days over the ones that are not free, Enter moves to the times, arrows walk them like a grid, Space chooses, Escape closes', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today" data-duration="15"', data);
+      await page.focus('#e2e-s1-trigger');
+      await page.keyboard.press('Enter');
+      expectTrue(await page.locator(panel()).isVisible(), 'Enter did not open the panel');
+      expectTrue(await page.evaluate(() => !!document.activeElement.getAttribute('data-date')), 'the focus is on a day');
+      const d = await dayOf('e2e-s1', 1);
+      await page.evaluate(i => document.querySelector(`#e2e-s1-trigger ~ .mat-picker__panel [data-date="${i}"]`).focus(), calIso(d));
+      // the next day that is free, found the slow way
+      const freeAfter = n => { for (let k = n + 1; k < 60; k += 1) { const e = data[calIso(calPlus(k))]; if (e && e.free.length) { return calPlus(k); } } return null; };
+      const want = freeAfter(1);
+      await page.keyboard.press('ArrowRight');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-date')), calIso(want), 'ArrowRight lands on the next day with a free time');
+      await page.keyboard.press('Enter');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-time')), '09:00', 'Enter on a day moves the focus to its first free time');
+      expect((await page.$$eval(`${panel()} .mat-slot`, els => els.length)) > 5, true, 'the times are listed');
+      await page.keyboard.press('ArrowRight');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-time')), '09:15', 'ArrowRight: the next free time');
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('ArrowRight');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-time')), '10:00', 'the taken time 09:45 is skipped');
+      await page.keyboard.press('ArrowDown');
+      const at = await page.evaluate(() => document.activeElement.getAttribute('data-time'));
+      expectTrue(at > '10:00', 'ArrowDown goes to a later row: ' + at);
+      await page.keyboard.press('ArrowUp');
+      const back = await page.evaluate(() => document.activeElement.getAttribute('data-time'));
+      expectTrue(back < at && back >= '10:00', `ArrowUp goes to the row above (${at} to ${back})`);
+      await page.evaluate(() => document.querySelector('#e2e-s1-trigger ~ .mat-picker__panel .mat-slot[data-time="10:00"]').focus());
+      await page.keyboard.press('Home');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-time')), '09:00', 'Home');
+      await page.keyboard.press('End');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-time')), '17:30', 'End');
+      await page.keyboard.press('Space');
+      expect(await page.getAttribute(`${panel()} .mat-slot[data-time="17:30"]`, 'aria-pressed'), 'true', 'Space chooses a time');
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator(panel()).isVisible()), 'Escape did not close the panel');
+      expect(await valueOf(), '', 'Escape does not choose');
+      expect(await page.evaluate(() => document.activeElement.id), 'e2e-s1-trigger', 'the focus is back on the field');
+    });
+
+    await check('the availability can be asked for per month: mat:slots-needed carries the month and the picker, the panel says it is loading, setSlots answers and the days appear', async () => {
+      await slotPut('data-min="today" data-duration="30"', null);
+      await page.evaluate(() => {
+        window.__asked = [];
+        document.querySelector('#e2e-s1').closest('.mat-picker').addEventListener('mat:slots-needed', e => { e.stopPropagation(); window.__asked.push({ month: e.detail.month, from: e.detail.from, to: e.detail.to, own: e.detail.picker === document.querySelector('#e2e-s1').closest('.mat-picker') }); });
+      });
+      await page.click('#e2e-s1-trigger');
+      const month = calIso(calPlus(0)).slice(0, 7);
+      const lastDay = calPad(new Date(calPlus(0).getFullYear(), calPlus(0).getMonth() + 1, 0).getDate());
+      expect(await page.evaluate(() => window.__asked), [{ month, from: month + '-01', to: `${month}-${lastDay}`, own: true }], 'the question');
+      expect((await page.textContent(`${panel()} .mat-slots__status`)).trim(), 'Loading the free appointments …', 'the loading state');
+      expect(await page.getAttribute(`${panel()} .mat-slots`, 'aria-busy'), 'true', 'aria-busy');
+      expect((await monthDays()).every(d => d.off), true, 'no day can be chosen while it loads');
+      expect((await monthDays()).every(d => !/is-unavailable/.test(d.cls)), true, 'and none is struck through before it is known');
+      expect(await page.locator(`${panel()} [data-slots-next]`).count(), 1, 'the shortcut is there');
+      // the answer: three days of this month (or, at the end of the month, the days that are left)
+      const days = [];
+      for (let n = 1; n <= 6 && days.length < 3; n += 1) { if (calIso(calPlus(n)).slice(0, 7) === month) { days.push(calIso(calPlus(n))); } }
+      await page.evaluate(([m, d]) => window.MatUi.picker.setSlots(document.querySelector('#e2e-s1').closest('.mat-picker'), Object.fromEntries(d.map(x => [x, ['09:00', '09:30']])), m), [month, days]);
+      expect(await page.evaluate(() => window.__asked.length), 1, 'the month is asked for once');
+      expect((await page.textContent(`${panel()} .mat-slots__status`)).trim(), '', 'the loading state is gone');
+      expect(await page.getAttribute(`${panel()} .mat-slots`, 'aria-busy'), 'false', 'aria-busy after the answer');
+      expect((await monthDays()).filter(d => !d.off).map(d => d.date), days, 'the days with a free time');
+      // the next month is asked for when it is shown, and an empty answer for it ends the loading as well
+      await page.click(`${panel()} [data-cal-nav="1"]`);
+      const next = calIso(new Date(calPlus(0).getFullYear(), calPlus(0).getMonth() + 1, 1)).slice(0, 7);
+      expect((await page.evaluate(() => window.__asked)).map(a => a.month), [month, next], 'the second question');
+      await page.evaluate(m => window.MatUi.picker.setSlots(document.querySelector('#e2e-s1').closest('.mat-picker'), {}, m), next);
+      expect((await page.textContent(`${panel()} .mat-slots__status`)).trim(), '', 'an empty answer ends the loading');
+      expect((await monthDays()).every(d => d.off), true, 'a month without a free time has no day to choose');
+      await page.click(`${panel()} [data-cal-nav="-1"]`);
+      expect(await page.evaluate(() => window.__asked.length), 2, 'a month that is known is not asked for again');
+      expect((await monthDays()).filter(d => !d.off).map(d => d.date), days, 'the days of the first month are still there');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('when the answer is a failure the panel says so and Try again asks for the month once more', async () => {
+      await slotPut('data-min="today"', null, 'e2e-s3');
+      await page.evaluate(() => {
+        window.__asked = [];
+        document.querySelector('#e2e-s3').closest('.mat-picker').addEventListener('mat:slots-needed', e => { e.stopPropagation(); window.__asked.push(e.detail.month); });
+      });
+      await page.click('#e2e-s3-trigger');
+      const month = calIso(calPlus(0)).slice(0, 7);
+      await page.evaluate(m => window.MatUi.picker.slotsFailed(document.querySelector('#e2e-s3').closest('.mat-picker'), m), month);
+      expectTrue((await page.textContent(`${panel('e2e-s3')} .mat-slots__status`)).includes('The appointments could not be loaded.'), 'the message');
+      await page.click(`${panel('e2e-s3')} [data-slots-retry]`);
+      expect(await page.evaluate(() => window.__asked), [month, month], 'the month is asked for again');
+      expectTrue((await page.textContent(`${panel('e2e-s3')} .mat-slots__status`)).includes('Loading'), 'loading again');
+      await page.evaluate(m => window.MatUi.picker.setSlots(document.querySelector('#e2e-s3').closest('.mat-picker'), { [m + '-28']: ['08:00'] }, m), month);
+      expect((await page.textContent(`${panel('e2e-s3')} .mat-slots__status`)).trim(), '', 'the message is gone after an answer');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('Next free appointment asks for the following months one after the other when the data is lazy', async () => {
+      await slotPut('data-min="today"', null, 'e2e-s4');
+      const target = calPlus(70);
+      await page.evaluate(([iso]) => {
+        window.__asked = [];
+        const wrap = document.querySelector('#e2e-s4').closest('.mat-picker');
+        wrap.addEventListener('mat:slots-needed', e => {
+          e.stopPropagation();
+          window.__asked.push(e.detail.month);
+          setTimeout(() => window.MatUi.picker.setSlots(wrap, e.detail.month === iso.slice(0, 7) ? { [iso]: ['08:45', '09:00'] } : {}, e.detail.month), 20);
+        });
+      }, [calIso(target)]);
+      await page.click('#e2e-s4-trigger');
+      await page.click(`${panel('e2e-s4')} [data-slots-next]`);
+      await page.waitForFunction(sel => !!document.querySelector(sel + ' .mat-slot[aria-pressed="true"]'), panel('e2e-s4'), { timeout: 5000 });
+      expect(await page.$$eval(`${panel('e2e-s4')} .mat-cal__day[aria-selected="true"]`, els => els.map(e => e.getAttribute('data-date'))), [calIso(target)], 'the day');
+      const asked = await page.evaluate(() => window.__asked);
+      expectTrue(asked[0] === calIso(calPlus(0)).slice(0, 7) && asked.at(-1) === calIso(target).slice(0, 7) && new Set(asked).size === asked.length, 'the months are asked for in order, each once: ' + asked.join(' '));
+      await page.click(`${panel('e2e-s4')} [data-picker-action="apply"]`);
+      expect(await valueOf('e2e-s4'), `${calIso(target)}T08:45`, 'Apply');
+    });
+
+    await check('the examples of the page ask the script of the site, which answers: days appear, Next free appointment chooses a time on a weekday and the value has the end', async () => {
+      await page.evaluate(() => document.getElementById('pk-slot-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('#pk-slot-trigger');
+      await page.waitForFunction(() => document.querySelector('#pk-slot-trigger ~ .mat-picker__panel .mat-slots').getAttribute('aria-busy') === 'false' && !!document.querySelector('#pk-slot-trigger ~ .mat-picker__panel .mat-cal__day:not(:disabled)'), null, { timeout: 5000 });
+      await page.click('#pk-slot-trigger ~ .mat-picker__panel [data-slots-next]');
+      const p = '#pk-slot-trigger ~ .mat-picker__panel';
+      const day = await page.getAttribute(`${p} .mat-cal__day[aria-selected="true"]`, 'data-date');
+      expectTrue(![0, 6].includes(calDate(day).getDay()), 'the practice is closed at weekends: ' + day);
+      await page.click(`${p} [data-picker-action="apply"]`);
+      expectTrue(/^\d{4}-\d\d-\d\dT\d\d:\d\d\.\.\d\d:\d\d$/.test(await valueOf('pk-slot')), 'the value: ' + await valueOf('pk-slot'));
+      await page.click('#pk-slot-trigger ~ .mat-picker__clear');
+      expect(await valueOf('pk-slot'), '', 'Clear');
+    });
+
+    await check('a required appointment writes its message at the field and the focus goes to its button', async () => {
+      await page.evaluate(() => document.getElementById('pk-slot-req-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('form[action="/Components#slot-picker"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#pk-slot-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked invalid');
+      expect((await page.locator('#pk-slot-req').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose an appointment.', 'the message');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-slot-req-trigger', 'the focus');
+    });
+
+    await check('a free appointment can be chosen with a data-slots that has the times as objects too and a duration over an hour', async () => {
+      await slotPut('data-min="today" data-duration="90"', { [calIso(calPlus(2))]: { free: [{ time: '09:00' }, '23:00'], taken: [{ time: '09:30' }] } }, 'e2e-s5');
+      await page.click('#e2e-s5-trigger');
+      const d = await dayOf('e2e-s5', 2);
+      await page.click(`${panel('e2e-s5')} [data-date="${calIso(d)}"]`);
+      expect((await page.textContent(`${panel('e2e-s5')} .mat-slots__hint`)).trim(), 'Appointments of 1 h 30 min', 'the length of 90 minutes');
+      await page.click(`${panel('e2e-s5')} .mat-slot[data-time="23:00"]`);
+      await page.click(`${panel('e2e-s5')} [data-picker-action="apply"]`);
+      expect(await valueOf('e2e-s5'), `${calIso(d)}T23:00..00:30`, 'an end after midnight is the next day, as in a time range');
+    });
+
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#slot-picker');
+    const days = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + n); return d; };
+    const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    await check('on a phone the appointment picker is a full-screen sheet with an X, the month above the times, 44 px targets, and the page behind does not scroll', async () => {
+      const data = {};
+      for (let n = 1; n <= 40; n += 1) { data[iso(days(n))] = { free: ['09:00', '09:15', '09:30', '10:00', '14:00', '14:15', '17:30'], taken: ['09:45'] }; }
+      await page.evaluate(d => {
+        const box = document.createElement('div');
+        box.id = 'e2e-box';
+        document.querySelector('.mat-main').appendChild(box);
+        box.innerHTML = `<div class="mat-field"><label class="mat-label" for="e2e-ps">Appointment</label><div class="mat-picker" data-picker="slot" data-min="today" data-duration="15" data-group data-slots='${JSON.stringify(d)}'><input class="mat-picker__input" id="e2e-ps" name="ps" /></div></div>`;
+        window.MatUi.refresh(box);
+        box.scrollIntoView({ block: 'center' });
+      }, data);
+      await page.tap('#e2e-ps-trigger');
+      const p = '#e2e-ps-trigger ~ .mat-picker__panel';
+      const state = await page.$eval(p, el => { const r = el.getBoundingClientRect(); return { width: Math.round(r.width) === innerWidth, height: Math.round(r.height) === innerHeight, x: getComputedStyle(el.querySelector('.mat-picker__head')).display !== 'none' }; });
+      expect(state, { width: true, height: true, x: true }, 'the sheet');
+      expect(await page.evaluate(() => document.documentElement.classList.contains('mat-lock')), true, 'the page behind does not scroll');
+      const layout = await page.evaluate(sel => {
+        const cal = document.querySelector(sel + ' .mat-slots__cal').getBoundingClientRect(), day = document.querySelector(sel + ' .mat-slots__day').getBoundingClientRect();
+        const first = [...document.querySelectorAll(sel + ' .mat-cal__day:not(:disabled)')][0].getBoundingClientRect();
+        return { above: day.top >= cal.bottom - 1, sameWidth: Math.abs(day.width - cal.width) < 2, dayHeight: Math.round(first.height), overflow: document.documentElement.scrollWidth > innerWidth };
+      }, p);
+      expect(layout, { above: true, sameWidth: true, dayHeight: 44, overflow: false }, 'the layout of the sheet');
+      await page.tap(`${p} .mat-cal__day:not(:disabled) >> nth=1`);
+      await page.waitForTimeout(100);
+      const sizes = await page.$$eval(`${p} .mat-slot`, els => els.map(b => Math.round(b.getBoundingClientRect().height)));
+      expectTrue(sizes.length > 6 && sizes.every(h => h >= 44), 'the times are at least 44 px high: ' + sizes.join(','));
+      const view = await page.evaluate(sel => { const body = document.querySelector(sel + ' .mat-picker__body'), apply = document.querySelector(sel + ' [data-picker-action="apply"]').getBoundingClientRect(), heading = document.querySelector(sel + ' .mat-slots__heading').getBoundingClientRect(); return { applyVisible: apply.bottom <= innerHeight && apply.top >= 0, headingVisible: heading.top >= 0 && heading.bottom <= innerHeight, scrolled: body.scrollTop > 0 }; }, p);
+      expect(view, { applyVisible: true, headingVisible: true, scrolled: true }, 'after a day the times are brought into view and the buttons stay in reach');
+      await page.tap(`${p} .mat-slot:not(:disabled) >> nth=2`);
+      expectTrue(!(await page.locator(`${p} [data-picker-action="apply"]`).isDisabled()), 'Apply after a choice');
+      await page.tap(`${p} [data-picker-close]`);
+      expectTrue(!(await page.locator(p).isVisible()), 'the X did not close the sheet');
+      expect(await page.$eval('#e2e-ps', el => el.value), '', 'the X does not choose');
+      expect(await page.evaluate(() => document.documentElement.classList.contains('mat-lock')), false, 'the page is free again');
+    });
+    await ctx.close();
+  }
   {
     // the language of the page: the texts and the names of the months come in German when the page says lang="de"
     const ctx = await browser.newContext({ ...desktopOptions, locale: 'de-DE' });
@@ -1573,8 +1984,8 @@ function expectTrue(value, what) {
       await route.fulfill({ response, body: (await response.text()).replace('<html lang="en"', '<html lang="de"') });
     });
     await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
-    await check('in German the calendar speaks German: days, months, buttons, the line under a period', async () => {
-      await calPut(page, calField('e2e-de1', 'data-min="today" data-clearable data-week-numbers data-mode="multiple"'));
+    await check('in German the calendar and the appointment picker speak German: days, months, buttons, placeholder, Taken', async () => {
+      await calPut(page, calField('e2e-de1', 'data-min="today" data-clearable data-week-numbers') + `<div class="mat-field"><label class="mat-label" for="e2e-de2">Termin</label><div class="mat-picker" data-picker="slot" data-min="today" data-group data-slots='${JSON.stringify({ [calIso(calPlus(1))]: { free: ['09:00', '14:00'], taken: ['09:15'] } })}'><input class="mat-picker__input" id="e2e-de2" name="de2" /></div></div>`);
       const root = '#e2e-box .mat-calendar';
       const dow = d => new Intl.DateTimeFormat('de-DE', { weekday: 'short' }).format(new Date(2024, 0, d));   // 1 January 2024 is a Monday
       expect((await page.$$eval(`${root} .mat-cal__dow`, els => els.map(e => e.textContent.trim()))).slice(0, 3), ['KW', dow(1), dow(2)], 'the week days');
@@ -1585,14 +1996,18 @@ function expectTrue(value, what) {
       await page.click(`${root} [data-cal-level="months"]`);
       expect(await page.getAttribute(`${root} [data-cal-nav="1"]`, 'aria-label'), 'Nächstes Jahr', 'the arrow of the years');
       expect((await page.textContent(`${root} [data-cal-month="2"]`)).trim().toLowerCase().startsWith('mär'), true, 'a month');
-      await page.click(`${root} [data-cal-level="years"]`);
-      expect(await page.getAttribute(`${root} [data-cal-nav="1"]`, 'aria-label'), 'Spätere Jahre', 'the arrow of a block of years');
-      await page.click(`${root} [data-cal-year="${calPlus(0).getFullYear()}"]`);
-      await page.click(`${root} [data-cal-month="${calPlus(0).getMonth()}"]`);
-      expect((await page.textContent(`${root} .mat-picker__status`)).trim(), 'Einen oder mehrere Tage wählen', 'the line under the month');
-      await page.click(`${root} [data-date="${calIso(calPlus(0))}"]`);
-      expect((await page.textContent(`${root} .mat-picker__status`)).trim(), '1 Tag gewählt', 'one day');
-      expect(await page.$eval('#e2e-de1', el => el.value), calIso(calPlus(0)), 'the posted value is the same in every language');
+      expect((await page.textContent('#e2e-de2-trigger .mat-picker__value')).trim(), 'Termin wählen', 'the placeholder');
+      await page.click('#e2e-de2-trigger');
+      const p = '#e2e-de2-trigger ~ .mat-picker__panel';
+      expect((await page.textContent(`${p} [data-slots-next]`)).trim(), 'Nächster freier Termin', 'the shortcut');
+      expect((await page.textContent(`${p} .mat-slots__empty`)).trim(), 'Tag wählen, um die freien Termine zu sehen', 'the hint before a day');
+      await page.click(`${p} [data-date="${calIso(calPlus(1))}"]`);
+      expect((await page.textContent(`${p} .mat-slot:disabled .mat-slot__note`)).trim(), 'Belegt', 'a taken time');
+      expect(await page.$$eval(`${p} .mat-slots__group-title`, els => els.map(e => e.textContent.trim())), ['Vormittag', 'Nachmittag'], 'the groups');
+      await page.click(`${p} .mat-slot[data-time="14:00"]`);
+      expect((await page.textContent(`${p} .mat-slots__summary`)).trim(), `${new Intl.DateTimeFormat('de-DE', { dateStyle: 'full' }).format(calPlus(1))} · 14:00`, 'the line above the buttons');
+      await page.click(`${p} [data-picker-action="apply"]`);
+      expect(await page.$eval('#e2e-de2', el => el.value), `${calIso(calPlus(1))}T14:00`, 'the posted value is the same in every language');
     });
     await ctx.close();
   }
