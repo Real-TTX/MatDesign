@@ -8,7 +8,7 @@ public partial class PickerTests
 {
     private static readonly string Js = TestPaths.ReadToolkit("js/matui.js");
 
-    private static readonly string[] Kinds = ["select", "date", "daterange", "time", "timerange", "colour"];
+    private static readonly string[] Kinds = ["select", "date", "daterange", "time", "timerange", "colour", "tags"];
 
     [GeneratedRegex(@"<div class=""mat-picker""([^>]*)>\s*<input class=""mat-picker__input"" id=""([^""]+)""([^>]*)>", RegexOptions.Singleline)]
     private static partial Regex PickerMarkup();
@@ -31,6 +31,7 @@ public partial class PickerTests
 
     [Theory]
     [InlineData("rich-select")]
+    [InlineData("tag-input")]
     [InlineData("date-picker")]
     [InlineData("time-picker")]
     [InlineData("colour-picker")]
@@ -70,6 +71,7 @@ public partial class PickerTests
             ["timerange"] = @"^(\d\d:\d\d\.\.\d\d:\d\d)?$",
             ["colour"] = @"^(#[0-9a-f]{6})?$",
             ["select"] = @"^[a-z0-9, ]*$",
+            ["tags"] = @"^[A-Za-z0-9 \-]+(, [A-Za-z0-9 \-]+)*$|^$",
         };
         Assert.All(Pickers(), p => Assert.Matches(formats[p.Kind], p.Value));
     }
@@ -89,7 +91,7 @@ public partial class PickerTests
     [Fact]
     public void The_pickers_are_documented_in_the_header_of_the_script()
     {
-        Assert.Contains("data-picker=\"select|date|daterange|time|timerange|colour\"", Js);
+        Assert.Contains("data-picker=\"select|date|daterange|time|timerange|colour|tags\"", Js);
         Assert.Contains("2026-10-10..2026-10-14", Js);
     }
 
@@ -115,6 +117,22 @@ public partial class PickerTests
         Assert.Contains("inset: 0; width: 100%; height: 100%;", phone);
         Assert.Contains(".mat-picker__head { display: flex; }", phone);
         Assert.Contains("position: fixed; z-index: var(--mat-z-menu);", css);
+    }
+
+    [Fact]
+    public void The_tag_input_is_a_field_of_its_own_and_its_suggestions_are_never_a_full_screen_sheet()
+    {
+        // FORM-15: no button and no panel that is opened, and the keyboard stays in the field on a phone
+        Assert.Contains("inline: true", Js);
+        foreach (var option in new[] { "data-max", "data-max-length", "data-duplicates", "data-strict" })
+        {
+            Assert.Contains(option, Js);
+        }
+
+        var css = TestPaths.ReadToolkit("css/matui.pickers.css");
+        var phone = css[css.LastIndexOf("@media (max-width: 640px)", StringComparison.Ordinal)..];
+        Assert.Contains(".mat-picker__panel.mat-picker__panel--suggest {", phone);
+        Assert.Contains("inset: auto;", phone);
     }
 
     [Fact]

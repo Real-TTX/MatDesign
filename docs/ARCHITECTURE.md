@@ -71,7 +71,9 @@ summary of the errors of a form; validation itself stays the browser's (`require
 
 ### Pickers
 
-A picker is a field whose value is chosen in a panel: a select with pictures, descriptions and tags, a date or a period, a time or a time range, a colour (`FORM-15`). They are a part of their own
+A picker is a field whose value is chosen in a panel: a select with pictures, descriptions and tags, a date or a period, a time or a time range, a colour (`FORM-15`). The tag input is the one
+picker that is a field of its own and has no panel to open (`KINDS.tags` is `inline`: no button, it draws chips and a text field from the value; its suggestions are the options of a select, as a
+dropdown under the field on every screen size, never a full-screen sheet, because the keyboard stays in the field). They are a part of their own
 (`matui.pickers.css`) and one section of `matui.js`; the select and the calendar were taken over from MatCMS, the time and the colour were made in the same style. The markup is a wrapper
 `mat-picker[data-picker]` around the real input (`mat-picker__input`), which is what is validated, posted and reset. It holds the value in a **fixed format** (`2026-10-10`,
 `2026-10-10..2026-10-14~2`, `09:30`, `09:00..17:30`, `#b4235f`, the keys of the options), whatever the language of the page; the script adds the button that shows it in the language of the

@@ -197,3 +197,32 @@
 /* The chosen chip (flexible dates): the same tint as a chosen button of a group. */
 .mat-picker__chips .mat-btn.is-active { background: var(--mat-accent-soft-strong); border-color: var(--mat-accent); color: var(--mat-accent-text); }
 .mat-time__entry[aria-invalid="true"], .mat-colour__hex[aria-invalid="true"] { border-color: var(--mat-danger); }
+
+/* ---- Tags: a field of chips that the user types into (data-picker="tags") ----
+   The field is drawn like every field (mat-input) but grows with its chips; the text field inside has no border of its own. The suggestions are the list of a
+   select, as a dropdown under the field on every screen size (it is not a full-screen sheet: the keyboard stays in the field). */
+.mat-tagfield { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-1) var(--mat-space-2); height: auto; padding: var(--mat-space-1) var(--mat-space-2); cursor: text; }
+.mat-tagfield:focus-within { border-color: var(--mat-accent); box-shadow: var(--mat-focus-ring); }
+.mat-tagfield.is-disabled { background: var(--mat-surface-3); color: var(--mat-text-muted); cursor: not-allowed; }
+.mat-tagfield.is-readonly { background: var(--mat-surface-2); cursor: default; }
+.mat-tagfield .mat-chip { max-width: 100%; min-width: 0; }
+.mat-tagfield.is-disabled .mat-chip { background: var(--mat-surface-3); color: var(--mat-text-muted); }
+.mat-tagfield .mat-chip__x:focus-visible { outline: none; box-shadow: var(--mat-focus-ring); }
+.mat-chip__text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mat-tagfield__input { flex: 1 1 8ch; min-width: 8ch; min-height: var(--mat-control-h-sm); padding: 0 var(--mat-space-1); border: 0; outline: none; background: transparent; color: inherit; font: inherit; }
+/* the field around it shows the focus (:focus-within), so the text field draws no ring of its own */
+.mat-tagfield__input:focus-visible { box-shadow: none; border-radius: 0; }
+.mat-tagfield__input::placeholder { color: var(--mat-text-faint); }
+.mat-tagfield__input:disabled { cursor: not-allowed; }
+.mat-picker--sm .mat-tagfield { min-height: var(--mat-control-h-sm); font-size: var(--mat-fs-sm); }
+.mat-picker--lg .mat-tagfield { min-height: var(--mat-control-h-lg); font-size: var(--mat-fs-lg); }
+.mat-picker__panel--suggest { min-width: 0; }
+.mat-picker__option.is-active { background: var(--mat-surface-3); }
+@media (max-width: 640px) {
+  .mat-picker__panel.mat-picker__panel--suggest {
+    inset: auto; width: auto; height: auto; max-height: min(50dvh, 320px); padding: 0;
+    border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius-lg); box-shadow: var(--mat-shadow-3);
+    animation: mat-menu-in var(--mat-dur) var(--mat-ease);
+  }
+  .mat-picker__panel--suggest .mat-picker__options { max-height: min(50dvh, 320px); padding: var(--mat-space-2); }
+}
