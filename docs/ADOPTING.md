@@ -101,6 +101,9 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
     </div>
   </div>
   ```
+- Things that are looked at, opened or ticked off one by one (contacts, messages, settings, files, tasks) are a **list of rows** (`LIST-15`): `ul.mat-itemlist` of `li.mat-item`, a row is one target
+  (`mat-item__main`: a link, a button or a label) with a lead, a body and an end; a switch or a button beside it goes in `mat-item__aside`, never inside the link. Add `data-itemlist` for sliding actions
+  (`mat-item--sliding`, listen to `mat:item-action`), reordering (`data-reorder` and a `mat-item__handle`, listen to `mat:reorder`) and a filter field (`data-item-filter`). A table that is searched and sorted stays a table (`LIST-02`).
 
 - A **code** that is read from somewhere else (an authenticator or SMS code, a PIN, a recovery code) is a **code input** (`FORM-19`): one box per character, drawn by the script around a real input that posts the code joined.
   `data-chars` is `digits` (the default), `letters`, `alphanumeric`, `hex` or a class such as `[A-Z2-7]`; `data-mask` shows dots; `data-group="4-4"` draws groups; a form is sent with the last character only if you write `data-submit`.
@@ -195,6 +198,8 @@ When the Studio is on, MatDesign publishes **releases**: the toolkit files of on
 with the one it carries, and when the release is newer copies `/releases/<version>/matui.css`, `matui.js`, `matui.boot.js` and `matui-icons.svg` into its static files (or the archive `matui-<version>.zip`),
 checking each file against the SHA-256 of the manifest. Every release also carries `styleguide.html`, the rules and every component with its examples as one static page (`/releases/<version>/styleguide.html`), and `design.json` with the same as data. The app still carries its own copy (`CODE-03`): the release is where the copy comes from, not something it loads at run time. The Studio's **Versions** page is where it is written down which release each app has,
 and which apps are behind.
+
+**The toolkit has a version of its own** (semantic versioning): it is in the first line of `matui.css` and in `MatUi.version`, and `/Changelog` (also `/ui/CHANGELOG.md` and `/api/changelog?since=0.1.0`) says what changed in each version, what breaks and what an app has to do. `node tools/matui-check.js <folder of the app>` finds the app's copy, says which version it is, whether the files are all one version and whether one was changed by hand, and what an update takes with it. How a version is made and how an app updates, step by step: [VERSIONING.md](VERSIONING.md).
 
 ## 7. Check it
 

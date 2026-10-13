@@ -34,6 +34,7 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
 - **Icon library (optional, ICON-05):** `node tools/iconlib.js` builds `src/MatUi/wwwroot/iconlib/` (sprite `mat-il-*`, catalogue, licence, README) from `tools/iconlib/`: `lucide.json` (vendored Lucide, written by
   `import-lucide.js <checkout>` when Lucide is updated), `custom.json` (icons drawn for MatDesign: one line each, with tags and categories; look at them on a contact sheet before keeping one) and `categories.json`
   (General, Home automation and its areas as curated lists). An icon can be in any number of categories. Nothing in `matui.css`/`matui.js` may refer to the library (a test checks); CI fails when the committed files are stale.
+- **Versions of the toolkit:** `node tools/bump.js <patch|minor|major>` turns Unreleased of `CHANGELOG.md` into the next version and writes the number where it is kept (docs/VERSIONING.md); `node tools/matui-check.js <folder of an app>` shows how an app's copy stands against the changelog (and whether a file was changed by hand).
 - **Audit:** `node tools/audit.js [folder with the repositories]` rewrites `src/MatDesign.Web/Data/audit.json`, a snapshot of how close the other apps are to the rules.
 
 ## Map
@@ -43,6 +44,8 @@ src/MatUi                  Razor class library = the toolkit. wwwroot/css (10 pa
 src/MatDesign.Core         no web types
   Colors.cs                  OKLab, mixing like CSS color-mix, WCAG contrast, distance
   AppRegistry.cs             the apps and their accent, AccentPresets
+  AppVersion.cs              the build of the site (Current) and the version of the toolkit (MatUi, from MatUiVersion in Directory.Build.props)
+  Changelog.cs               the changelog of the toolkit (CHANGELOG.md, embedded in this project): parse, the versions since a version, the problems of the file
   AccentReport.cs            what the toolkit derives from an accent + the contrast checks
   PaletteAdvisor.cs          accents that are too close, proposals
   CssTokens.cs               parser for matui.tokens.css (tokens, description from the comment, group from the heading)
@@ -52,6 +55,7 @@ src/MatDesign.Core         no web types
   Studio/AppValidator.cs     what an app has to be (id, name, glyph, port, contrast), Normalize, IsSafe
   Studio/RuleValidator.cs    what a rule has to be (an id of its area, title, statement, level, source), Normalize, IsSafe, NextId
   Studio/Diff.cs             what changed between two revisions: the fields (Flatten, Changes) and the lines (Lines)
+  Studio/HtmlFormatter.cs    indents and wraps the markup of an example for showing it as code (white space only; a test holds that for every example)
   Studio/MarkupChecks.cs     the contract of the markup of an example (classes, icons, no inline/outside/script, labels, ids ...): the unit tests and the Studio use this one code
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /releases/* (the releases of the Studio), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
@@ -62,7 +66,7 @@ src/MatDesign.Web          the site
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
   Pages/Studio/              Setup (the assistant of the first administrator), Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, IconLibrary (the optional icon library: sprite, catalogue, single icons, archive, served under /ui/iconlib/), Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
-                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, LayoutComponents, ScheduleComponents; CatalogSection = what a page shows),
+                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, ListComponents, LayoutComponents, ScheduleComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
@@ -72,7 +76,7 @@ src/MatDesign.Web          the site
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
 tests/e2e                  run.js: the behaviour in a real browser against a running site
-tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js
+tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js, bump.js (makes a version of the toolkit), matui-check.js (checks an app's copy of it)
 ```
 
 ## Conventions
@@ -128,6 +132,11 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   a length or a column that is data is a `--mat-sch-*` property set by the script (`data-sch-*` in the markup it draws), never an inline style. A tone is a tint with a line all around plus an icon and a text (`COLOR-04`, `COLOR-08`).
   Events: `mat:schedule-select`, `mat:schedule-range` (lazy loading with `data-lazy`), `mat:schedule-day`; API `MatUi.schedule.setEvents|go|setLoading|get`. The calendar weeks are ISO 8601 (`isoWeek`; a test ports the formula and
   checks it against .NET for 40 years). The examples pin the clock (`data-now`) and write their dates, so that nothing depends on the day: do the same in a test. Texts in `SCH_TEXT` (English and German, a test checks).
+- Lists of rows (`LIST-15`, like ion-list): `ul.mat-itemlist` of `li.mat-item`; a row is `mat-item__main` (a link, a button, a label or a div: the whole row is the target) with `__lead`, `__body` (`__title`, `__text` lines) and
+  `__end`; what else is pressed (switch, button, handle) is `mat-item__aside` beside it, never inside a link. The look is the list's (`--lines-inset|none`, `--inset` card, `--sticky` dividers with `--scroll`, `--choices`, `--tasks`,
+  `--lead-lg`, `--compact`); do not call anything `mat-list*` (that is the list block of a page). `data-itemlist` adds, by what the markup has: sliding actions (`mat-item--sliding` > `__row` > `__main` + `__options--start|end` of
+  `__option` buttons; swipe, a More button the script adds, arrow keys; options are `inert` while hidden; `mat:item-action`), reordering (`data-reorder`, `__handle`; pointer and Space/arrows/Escape; `mat:reorder`; the DOM changes on drop),
+  `data-item-filter` (a field hides rows, `.mat-itemlist__empty` shows) and the `data-selectable` of tables around a list. Texts in `IL_TEXT` (English and German, quoted keys: the picker test takes the first unquoted `en:` table).
 - Layout and utilities: mobile first with `sm` 600, `md` 900, `lg` 1200 px; no `!important`; values from the tokens; the grid spans by `grid-column-end`. An example in the catalogue uses
   toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.
@@ -158,4 +167,5 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - Commit and push **under the user's name**, never add a Claude/Anthropic co-author trailer or "generated with" line (global rule of the user, it overrides any default).
 - Branches: `main` = release, `dev` = development. Versions: release `<major>.<minor>.<build>-<date>`, development `nightly-<build>-<date>`, local `local-<date>`
   (`Directory.Build.props`, `.github/workflows/build.yml`).
+- **The toolkit has a version of its own** (`MatUiVersion` in `Directory.Build.props`, semantic versioning, docs/VERSIONING.md: the number an app compares with its copy). Every change under `src/MatUi` that an app can see gets a line under `## [Unreleased]` of `CHANGELOG.md` **in the same commit** (CI fails a pull request that changes `src/MatUi` without it); a change that makes an app change something is a **Breaking** entry with a **Migration**. A version is made with `node tools/bump.js`, never by editing the number: `MatUiVersion`, the newest entry of the changelog and the literals in `matui.js` and `matui.boot.js` are held to each other by tests.
 - Push without asking (the user's standing instruction, 2026-10-11); a push to `main` or `dev` starts the GitHub action, which builds and publishes the image. The audit snapshot and the screenshots in `docs/images` show real content of this site only, never user data.

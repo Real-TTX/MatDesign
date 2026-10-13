@@ -66,7 +66,7 @@ public static class Styleguide
         .sg__code { display: flex; flex-direction: column; min-width: 0; background: var(--mat-surface-3); border: 1px solid var(--mat-border); border-radius: var(--mat-radius); overflow: hidden; }
         .sg__code-bar { display: flex; align-items: center; justify-content: space-between; gap: var(--mat-space-3); padding: var(--mat-space-1) var(--mat-space-2) var(--mat-space-1) var(--mat-space-4); border-bottom: 1px solid var(--mat-border); }
         .sg__lang { font-size: var(--mat-fs-xs); font-weight: 650; color: var(--mat-text-muted); }
-        .sg__code .mat-code { flex: 1 1 auto; max-height: 26rem; margin: 0; background: transparent; border: 0; border-radius: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .sg__code .mat-code { flex: 1 1 auto; max-height: 26rem; margin: 0; background: transparent; border: 0; border-radius: 0; overflow: auto; white-space: pre; }
         .sg__api { margin: 0; font-size: var(--mat-fs-xs); color: var(--mat-text-muted); }
         .sg__api code { display: inline-block; margin: 2px 2px 2px 0; padding: 1px 6px; border-radius: var(--mat-radius-xs); background: var(--mat-surface-3); }
         @media (min-width: 1100px) {

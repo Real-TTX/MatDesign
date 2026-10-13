@@ -79,7 +79,8 @@ public sealed partial class ComponentPageTests(WebApplicationFactory<Program> fa
         foreach (var (id, example) in examples)
         {
             Assert.True(blocks.ContainsKey(id), $"{id}: no code block");
-            Assert.Equal(example.Js ?? example.Html, Text(blocks[id]));
+            // the markup of an example is shown formatted (indented, wrapped); a script as it is written
+            Assert.Equal(example.Js ?? MatDesign.Core.Studio.HtmlFormatter.Pretty(example.Html), Text(blocks[id]));
             Assert.Contains($"data-copy=\"#{id}\"", html);
         }
 

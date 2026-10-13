@@ -1,0 +1,108 @@
+@page "/Changelog"
+@model MatDesign.Web.Pages.ChangelogModel
+@using MatDesign.Core
+@{
+    ViewData["Title"] = "Changelog";
+    ViewData["PageSub"] = "What changed in each version of MatUi, and what an app has to do when it updates.";
+    ViewData["Crumbs"] = Crumbs.Of(("Use it", "/Download"), ("Changelog", null));
+
+    // one card for a version or for what is not released yet: its note, its sections, and the Breaking and Migration parts in an alert of their own
+    void Entry(ChangelogEntry entry)
+    {
+        var id = entry.IsUnreleased ? "unreleased" : ChangelogModel.IdOf(entry);
+        <section class="mat-card" aria-labelledby="@id">
+            <div class="mat-card__head">
+                <h3 class="mat-card__title" id="@id">@(entry.IsUnreleased ? "Not released yet" : "Version " + entry.Version)</h3>
+                @if (entry.IsUnreleased) { <span class="mat-pill mat-pill--plain">Unreleased</span> }
+                else if (entry.Date is not null) { <span class="mat-pill mat-pill--plain">@entry.Date</span> }
+                @if (entry.Breaking) { <span class="mat-pill mat-pill--error">Breaking</span> }
+            </div>
+            <div class="mat-card__body mat-stack">
+                @if (entry.IsUnreleased) { <p class="mat-muted">These changes are in the nightly and local builds of the site and in the next version.</p> }
+                else if (entry.Note.Length > 0) { <p class="mat-muted">@Ui.Rich(entry.Note)</p> }
+                @if (entry.Breaking)
+                {
+                    <div class="mat-alert mat-alert--warning">
+                        @Ui.Icon("alert")
+                        <div class="mat-alert__body">
+                            <strong>An app has to change something</strong>
+                            <ul class="doc-changes">@foreach (var item in entry.Section("Breaking")) { <li>@Ui.Rich(item)</li> }</ul>
+                            @if (entry.Migration.Count > 0)
+                            {
+                                <strong>What to do</strong>
+                                <ol class="doc-changes">@foreach (var item in entry.Migration) { <li>@Ui.Rich(item)</li> }</ol>
+                            }
+                        </div>
+                    </div>
+                }
+                @foreach (var part in entry.Sections.Where(s => !s.Name.Equals("Breaking", StringComparison.OrdinalIgnoreCase) && !s.Name.Equals("Migration", StringComparison.OrdinalIgnoreCase)))
+                {
+                    <div>
+                        <h4 class="doc-changes__name">@part.Name</h4>
+                        <ul class="doc-changes">@foreach (var item in part.Items) { <li>@Ui.Rich(item)</li> }</ul>
+                    </div>
+                }
+                @if (!entry.Breaking && entry.Migration.Count > 0)
+                {
+                    <div>
+                        <h4 class="doc-changes__name">Migration</h4>
+                        <ol class="doc-changes">@foreach (var item in entry.Migration) { <li>@Ui.Rich(item)</li> }</ol>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+}
+
+<section class="mat-section" aria-labelledby="since-title">
+    <div class="mat-section__head">
+        <h2 id="since-title">What does an update take with it?</h2>
+        <p class="mat-section__lead">
+            The version of an app's copy is in the first line of its <code>matui.css</code> and in <code>MatUi.version</code>. MatUi is at <strong>@Model.Version</strong>.
+            A patch fixes something, a minor adds something, a major (and, until 1.0, a minor that says <em>Breaking</em>) needs work in the app.
+        </p>
+    </div>
+    <form class="mat-form" method="get" action="/Changelog" novalidate>
+        <div class="mat-field @(Model.Problem is null ? "" : "is-invalid")">
+            <label class="mat-label" for="since">The version of your copy</label>
+            <input class="mat-input mat-mono" id="since" name="since" value="@Model.Since" placeholder="0.1.0" inputmode="decimal" autocomplete="off" />
+            <span class="mat-hint">Leave it empty to see every version.</span>
+            <span class="mat-error" aria-live="polite">@Model.Problem</span>
+        </div>
+        <div class="mat-btn-row">
+            <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("check")<span>Show what changed</span></button>
+            @if (Model.Since is not null) { <a class="mat-btn mat-btn--secondary" href="/Changelog">@Ui.Icon("x")<span>Show every version</span></a> }
+        </div>
+    </form>
+
+    @if (Model.Asked)
+    {
+        if (Model.Shown.Count == 0)
+        {
+            <div class="mat-alert mat-alert--success">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>Your copy is up to date.</strong> Version @Model.Since is the newest version of MatUi.</div></div>
+        }
+        else if (Model.Breaking)
+        {
+            <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body"><strong>@Model.Shown.Count newer @(Model.Shown.Count == 1 ? "version" : "versions") than @Model.Since, and an update needs changes in the app.</strong> Read the part "An app has to change something" of every version below, from the oldest to the newest.</div></div>
+        }
+        else
+        {
+            <div class="mat-alert mat-alert--info">@Ui.Icon("info")<div class="mat-alert__body"><strong>@Model.Shown.Count newer @(Model.Shown.Count == 1 ? "version" : "versions") than @Model.Since.</strong> Nothing in them breaks an app: copy the files again.</div></div>
+        }
+    }
+</section>
+
+@if (Model.Unreleased is { } unreleased && unreleased.ItemCount > 0)
+{
+    <section class="mat-section" aria-labelledby="next-title">
+        <div class="mat-section__head"><h2 id="next-title">Next</h2></div>
+        @{ Entry(unreleased); }
+    </section>
+}
+
+<section class="mat-section" aria-labelledby="versions-title">
+    <div class="mat-section__head"><h2 id="versions-title">@(Model.Asked ? "Since " + Model.Since : "Versions")</h2></div>
+    <div class="mat-stack">
+        @foreach (var release in Model.Shown) { Entry(release); }
+    </div>
+</section>

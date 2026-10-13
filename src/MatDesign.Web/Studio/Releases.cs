@@ -44,7 +44,8 @@ public sealed record ReleaseManifest(
     int Rules,
     int Components,
     IReadOnlyList<string> Changelog,
-    IReadOnlyList<ReleaseFile> Files);
+    IReadOnlyList<ReleaseFile> Files,
+    string? Toolkit = null);
 
 /// <summary>
 /// The pipeline that turns the data of the Studio into a release of the design system: <c>Check</c> (every check of <see cref="DesignChecks"/> must pass) → <c>Version</c> (the number must be
@@ -116,6 +117,11 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
             return $"Version {version} is released already. A release never changes.";
         }
 
+        if (Parse(version!) < Parse(AppVersion.MatUi))
+        {
+            return $"The toolkit is at {AppVersion.MatUi}: a release carries its files and is not lower than that.";
+        }
+
         if (releases.Count > 0 && Parse(version!) <= Parse(releases[0].Version))
         {
             return $"The last release is {releases[0].Version}: the next version is higher.";
@@ -124,16 +130,17 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
         return null;
     }
 
-    /// <summary>The version the next release would most likely get: the last one with the patch number raised, or 0.1.0 for the first.</summary>
+    /// <summary>The version the next release would most likely get: the last one with the patch number raised (or the version of the toolkit, when that is higher), or the version of the toolkit for the first.</summary>
     public string SuggestNext()
     {
         if (Latest is not { } latest)
         {
-            return "0.1.0";
+            return AppVersion.MatUi;
         }
 
         var v = Parse(latest.Version);
-        return $"{v.Major}.{v.Minor}.{v.Build + 1}";
+        var next = $"{v.Major}.{v.Minor}.{v.Build + 1}";
+        return Parse(next) < Parse(AppVersion.MatUi) ? AppVersion.MatUi : next;
     }
 
     /// <summary>The runs, the newest first.</summary>
@@ -198,6 +205,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
             ".html" => "text/html; charset=utf-8",
             ".zip" => "application/zip",
             ".txt" => "text/plain; charset=utf-8",
+            ".md" => "text/markdown; charset=utf-8",
             _ => null,
         };
         return type is null ? null : (path, type);
@@ -299,8 +307,9 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
 
                 static byte[] Text(string text) => new UTF8Encoding(false).GetBytes(text);
                 Write("matui.css", Text(toolkit.ReleaseBundle(version)));
-                Write("matui.js", Text(toolkit.Script));
-                Write("matui.boot.js", Text(toolkit.BootScript));
+                Write("matui.js", Text(toolkit.ReleaseScript(version)));
+                Write("matui.boot.js", Text(toolkit.ReleaseBootScript(version)));
+                Write("CHANGELOG.md", Text(Changelog.LoadText()));
                 Write("matui-icons.svg", Text(toolkit.Sprite));
                 foreach (var part in ToolkitFiles.CssParts)
                 {
@@ -329,7 +338,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
                     return false;
                 }
 
-                manifest = new ReleaseManifest(version, DateTimeOffset.UtcNow, by, note, toolkit.Hash, runId, report!.Errors, report.Advice, design.Apps.Count, design.Rules.Count, design.Components.Count, changes, files);
+                manifest = new ReleaseManifest(version, DateTimeOffset.UtcNow, by, note, toolkit.Hash, runId, report!.Errors, report.Advice, design.Apps.Count, design.Rules.Count, design.Components.Count, changes, files, AppVersion.MatUi);
                 File.WriteAllText(Path.Combine(buildDirectory!, "manifest.json"), JsonSerializer.Serialize(manifest, Json), new UTF8Encoding(false));
                 Directory.Move(buildDirectory!, directory);
                 buildDirectory = null;

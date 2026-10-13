@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using MatDesign.Core.Studio;
 
 namespace MatDesign.Web.Studio;
 
@@ -17,8 +18,11 @@ public static class CodeHighlighter
         "if", "import", "in", "instanceof", "let", "new", "null", "of", "return", "switch", "this", "throw", "true", "try", "typeof", "undefined", "var", "void", "while", "yield",
     };
 
-    /// <summary>The code of an example: markup, or script when <paramref name="script"/> is set.</summary>
-    public static string Of(string code, bool script) => script ? Script(code) : Html(code);
+    /// <summary>
+    /// The code of an example: markup, or script when <paramref name="script"/> is set. Markup is indented and wrapped first (<see cref="HtmlFormatter"/>), so that the
+    /// code reads the same whatever the example's source looked like; script is shown as it is written.
+    /// </summary>
+    public static string Of(string code, bool script) => script ? Script(code) : Html(HtmlFormatter.Pretty(code));
 
     /// <summary>Markup: tags, attribute names and values, comments.</summary>
     public static string Html(string code)

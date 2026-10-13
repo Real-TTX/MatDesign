@@ -131,7 +131,10 @@ public sealed partial class Changelog
         return problems;
     }
 
-    /// <summary>The changelog that this build carries.</summary>
+    /// <summary>The changelog that this build carries, read once.</summary>
+    public static Changelog Current { get; } = Load();
+
+    /// <summary>Reads the changelog that this build carries.</summary>
     public static Changelog Load()
     {
         using var stream = typeof(Changelog).Assembly.GetManifestResourceStream("CHANGELOG.md")

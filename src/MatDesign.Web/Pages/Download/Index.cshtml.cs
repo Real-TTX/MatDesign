@@ -16,7 +16,11 @@ public class IndexModel : PageModel
         _iconLibrary = iconLibrary;
     }
 
-    public string Version => AppVersion.Current;
+    /// <summary>The version of the toolkit (semantic versioning): what an app compares with its copy.</summary>
+    public string Version => AppVersion.MatUi;
+
+    /// <summary>The build of the site that made the files.</summary>
+    public string Build => AppVersion.Current;
 
     public string Hash => _toolkit.Hash;
 
@@ -45,7 +49,10 @@ public class IndexModel : PageModel
         ("/api/tokens", "Every design token with its light and dark value."),
         ("/api/icons", "The names of the icons in the sprite."),
         ("/api/iconlib", "The icon library: its categories, and every icon with its categories and tags."),
-        ("/api/version", "The version and the hash of the toolkit."),
+        ("/api/version", "The version of the toolkit (matui), the build of the site and the hash of the files."),
+        ("/ui/manifest.json", "The version, the build and every file of the toolkit with its SHA-256: what a program compares with an app's copy."),
+        ("/ui/CHANGELOG.md", "What changed in each version, as the file."),
+        ("/api/changelog", "What changed, as data: all versions, or those after ?since=0.1.0, with their sections and migration steps."),
     ];
 
     /// <summary>The address as another app would write it down: with this site's host.</summary>

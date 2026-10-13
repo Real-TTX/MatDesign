@@ -210,4 +210,21 @@
     var need = e.detail;
     setTimeout(function () { window.MatUi.picker.setSlots(need.picker, demoSlots(need.month), need.month); }, 400);
   });
+
+  // The lists of rows report what they do in a toast, so that the examples show their events: a sliding action and a new order.
+  function titleOf(item) {
+    var t = item && item.querySelector('.mat-item__title');
+    if (!t) { return ''; }
+    var copy = t.cloneNode(true);
+    copy.querySelectorAll('.mat-sr-only').forEach(function (n) { n.remove(); });
+    return copy.textContent.replace(/\s+/g, ' ').trim();
+  }
+  document.addEventListener('mat:item-action', function (e) {
+    var d = e.detail || {};
+    if (window.MatUi) { window.MatUi.toast('Action ' + d.action + ' on ' + titleOf(d.item)); }
+  });
+  document.addEventListener('mat:reorder', function (e) {
+    var d = e.detail || {};
+    if (window.MatUi) { window.MatUi.toast('New order: ' + (d.order || []).join(', ')); }
+  });
 })();

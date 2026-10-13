@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text.Json;
 using System.Text;
 using System.Text.RegularExpressions;
 using MatDesign.Core;
@@ -11,6 +12,16 @@ namespace MatDesign.Web.Services;
 
 /// <summary>A file of the toolkit as the download page lists it.</summary>
 public sealed record ToolkitFile(string Name, string Url, string Description, int Bytes);
+
+/// <summary>A file in the manifest of the toolkit: where it is served and the SHA-256 of its content, so that an app can tell whether its copy is this one.</summary>
+public sealed record ToolkitManifestFile(string Name, string Url, long Bytes, string Sha256);
+
+/// <summary>
+/// What a version of the toolkit is, as a program can read it (<c>/ui/manifest.json</c>, and <c>matui.manifest.json</c> in the archive an app copies): the version
+/// (semantic versioning, the one number to compare), the build of the site that made the files, the hash that is in the first line of <c>matui.css</c>, where the
+/// changelog is and every file with its hash. <c>tools/matui-check.js</c> reads it.
+/// </summary>
+public sealed record ToolkitManifest(string Name, string Version, string Build, string Hash, string Changelog, IReadOnlyList<ToolkitManifestFile> Files);
 
 /// <summary>
 /// The files of MatUi (CSS parts, script, sprite), read once from the toolkit project's static assets. The site serves them as
@@ -28,6 +39,10 @@ public sealed partial class ToolkitFiles
 
     private const string AppsPart = "matui.apps.css";
 
+    private static readonly JsonSerializerOptions ManifestJson = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+
+    private readonly string _scriptTemplate;
+    private readonly string _bootTemplate;
     private readonly IFileProvider _files;
     private readonly DesignData _design;
     private readonly Dictionary<string, string> _css = new(StringComparer.OrdinalIgnoreCase);
@@ -43,8 +58,10 @@ public sealed partial class ToolkitFiles
             _css[part] = Read($"css/{part}");
         }
 
-        Script = Read("js/matui.js");
-        BootScript = Read("js/matui.boot.js");
+        _scriptTemplate = Read("js/matui.js");
+        _bootTemplate = Read("js/matui.boot.js");
+        Script = _scriptTemplate;
+        BootScript = _bootTemplate;
         Sprite = Read("img/matui-icons.svg");
         IconNames = SymbolRegex().Matches(Sprite).Select(m => m.Groups[1].Value).Order().ToList();
         Tokens = CssTokens.Tokens(_css["matui.tokens.css"]);
@@ -82,8 +99,9 @@ public sealed partial class ToolkitFiles
         var appsCss = _css[AppsPart] + AppsOverlay(_design.StudioApps);
         string Part(string name) => name == AppsPart ? appsCss : _css[name];
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Concat(CssParts.Select(Part)) + Script + BootScript + Sprite)))[..10].ToLowerInvariant();
-        var bundle = $"/* MatUi {AppVersion.Current} ({hash}) - bundled from {string.Join(", ", CssParts)} */\n" + string.Join("\n", CssParts.Select(Part));
-        return new State(version, appsCss, hash, bundle, new Lazy<byte[]>(() => BuildZip(bundle, appsCss, hash, AppVersion.Current)));
+        // the first line names the version of the toolkit first (what an app compares), then the build of the site that made the file
+        var bundle = $"/* MatUi {AppVersion.MatUi} ({hash}) - build {AppVersion.Current} - bundled from {string.Join(", ", CssParts)} */\n" + string.Join("\n", CssParts.Select(Part));
+        return new State(version, appsCss, hash, bundle, new Lazy<byte[]>(() => BuildZip(bundle, Script, BootScript, appsCss, hash, AppVersion.MatUi)));
     }
 
     /// <summary>The colours of the apps that were added or changed in the Studio, written like the built-in ones and placed after them, so they win.</summary>
@@ -112,21 +130,51 @@ public sealed partial class ToolkitFiles
     /// <summary>Every file of the toolkit and a short README, to be copied into an app's static files (an app never loads them from this site).</summary>
     public byte[] Zip => Current.Zip.Value;
 
-    public string ZipName => $"matui-{AppVersion.Current}.zip";
+    public string ZipName => $"matui-{AppVersion.MatUi}.zip";
 
-    /// <summary>The bundle as a release names it: the same CSS, with the version of the release in the first line instead of the one of this build.</summary>
+    /// <summary>The bundle as a release names it: the same CSS, with the version of the release in the first line instead of the version of the toolkit.</summary>
     public string ReleaseBundle(string version)
     {
         var state = Current;
-        return state.CssBundle.Replace($"MatUi {AppVersion.Current} ({state.Hash})", $"MatUi {version} ({state.Hash})", StringComparison.Ordinal);
+        return state.CssBundle.Replace($"MatUi {AppVersion.MatUi} ({state.Hash})", $"MatUi {version} ({state.Hash})", StringComparison.Ordinal);
     }
+
+    /// <summary>The script as a release names it: <c>MatUi.version</c> is the version of the release (the files carry the version of the toolkit, a test holds them to it).</summary>
+    public string ReleaseScript(string version)
+        => _scriptTemplate.Replace($"version: '{AppVersion.MatUi}'", $"version: '{version}'", StringComparison.Ordinal)
+            .Replace($"Version {AppVersion.MatUi} of the toolkit MatUi", $"Version {version} of the toolkit MatUi", StringComparison.Ordinal);
+
+    public string ReleaseBootScript(string version) => _bootTemplate.Replace($"MatUi boot {AppVersion.MatUi}:", $"MatUi boot {version}:", StringComparison.Ordinal);
 
     /// <summary>The archive as a release names it: the files as the site serves them now, and a README that names the version of the release.</summary>
     public byte[] ReleaseZip(string version)
     {
         var state = Current;
-        return BuildZip(ReleaseBundle(version), state.AppsCss, state.Hash, version);
+        return BuildZip(ReleaseBundle(version), ReleaseScript(version), ReleaseBootScript(version), state.AppsCss, state.Hash, version);
     }
+
+    /// <summary>The manifest of the toolkit as the site serves it now (<c>/ui/manifest.json</c>).</summary>
+    public ToolkitManifest Manifest()
+    {
+        var state = Current;
+        return ManifestOf(AppVersion.MatUi, state.Hash, [
+            ("matui.css", "/ui/matui.css", state.CssBundle),
+            ("matui.js", "/ui/matui.js", Script),
+            ("matui.boot.js", "/ui/matui.boot.js", BootScript),
+            ("matui-icons.svg", "/ui/matui-icons.svg", Sprite),
+            .. CssParts.Select(p => ($"css/{p}", $"/ui/css/{p}", p == AppsPart ? state.AppsCss : _css[p])),
+        ], "/ui/CHANGELOG.md");
+    }
+
+    private static ToolkitManifest ManifestOf(string version, string hash, IEnumerable<(string Name, string Url, string Content)> files, string changelog)
+        => new("MatUi", version, AppVersion.Current, hash, changelog,
+            files.Select(f =>
+            {
+                var bytes = Encoding.UTF8.GetBytes(f.Content);
+                return new ToolkitManifestFile(f.Name, f.Url, bytes.Length, Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant());
+            }).ToList());
+
+    public string ManifestText() => JsonSerializer.Serialize(Manifest(), ManifestJson);
 
     public string Hash => Current.Hash;
 
@@ -163,35 +211,32 @@ public sealed partial class ToolkitFiles
         ];
     }
 
-    private byte[] BuildZip(string bundle, string appsCss, string hash, string label)
+    private byte[] BuildZip(string bundle, string script, string boot, string appsCss, string hash, string version)
     {
+        // the files, then the manifest that lists them with their hashes, then the README: an app that copies the archive keeps what it needs to check its copy later
+        var files = new List<(string Name, string Content)> { ("matui.css", bundle), ("matui.js", script), ("matui.boot.js", boot), ("matui-icons.svg", Sprite) };
+        files.AddRange(CssParts.Select(part => ($"css/{part}", part == AppsPart ? appsCss : _css[part])));
+        files.Add(("CHANGELOG.md", Changelog.LoadText()));
+        files.Add(("matui.manifest.json", JsonSerializer.Serialize(ManifestOf(version, hash, files.Select(f => (f.Name, f.Name, f.Content)), "CHANGELOG.md"), ManifestJson)));
+        files.Add(("README.txt", Readme(hash, version)));
+
         using var stream = new MemoryStream();
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
         {
-            void Add(string name, string content)
+            foreach (var (name, content) in files)
             {
                 var entry = zip.CreateEntry($"matui/{name}", CompressionLevel.Optimal);
                 using var writer = new StreamWriter(entry.Open(), new UTF8Encoding(false));
                 writer.Write(content);
             }
-
-            Add("matui.css", bundle);
-            Add("matui.js", Script);
-            Add("matui.boot.js", BootScript);
-            Add("matui-icons.svg", Sprite);
-            foreach (var part in CssParts)
-            {
-                Add($"css/{part}", part == AppsPart ? appsCss : _css[part]);
-            }
-
-            Add("README.txt", Readme(hash, label));
         }
 
         return stream.ToArray();
     }
 
-    private string Readme(string hash, string label) => string.Join('\n',
-        $"MatUi {label} ({hash})",
+    private static string Readme(string hash, string version) => string.Join('\n',
+        $"MatUi {version} ({hash})",
+        $"Made by MatDesign {AppVersion.Current}.",
         "The UI toolkit of the Mat apps. Rules, documentation and live examples: the MatDesign site.",
         string.Empty,
         "Copy these files into the app's static files. An app never loads them from another site (rule CODE-03); update by copying again.",
@@ -207,8 +252,13 @@ public sealed partial class ToolkitFiles
         string.Empty,
         "An app sets one colour:  [data-app=\"yourapp\"] { --mat-app-accent: #2f6feb; }",
         "css/ holds the parts of matui.css (tokens, base, shell, controls, forms, lists, dialogs, layout, apps) for apps that load them one by one.",
+        string.Empty,
+        "Versions (docs/VERSIONING.md on the MatDesign site):",
+        "  The version is in the first line of matui.css and in window.MatUi.version; matui.manifest.json lists every file with its SHA-256.",
+        "  CHANGELOG.md says what changed in each version. A version with a Breaking section needs a change in the app: its Migration section says what.",
+        "  Update by copying ALL the files again, never a few of them: the files of one version belong together.",
+        "  To see how an app's copy stands against the toolkit:  node tools/matui-check.js <folder of the app>",
         string.Empty);
-
     private string Read(string relative)
     {
         var file = _files.GetFileInfo($"_content/MatUi/{relative}");
@@ -225,6 +275,9 @@ public sealed partial class ToolkitFiles
         using var reader = new StreamReader(file.CreateReadStream(), Encoding.UTF8);
         return reader.ReadToEnd();
     }
+
+    /// <summary>The first ten hex characters of the SHA-256 of a text: the tag of a file that has no hash of its own.</summary>
+    public static string ShortHash(string text) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..10].ToLowerInvariant();
 
     /// <summary>A text response with an ETag, so browsers and other apps revalidate cheaply.</summary>
     public static IResult Result(HttpContext http, string content, string contentType, string hash)
