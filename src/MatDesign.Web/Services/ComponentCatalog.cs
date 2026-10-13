@@ -1050,7 +1050,7 @@ public static class ComponentCatalog
     [
         "buttons", "button-group", "dropdown", "button-row",
         "fields", "input-types", "selects", "checks", "choices", "range", "slider", "number-stepper", "input-groups", "special-inputs", "rich-select", "checkbox-select", "tag-input", "date-picker", "time-picker", "colour-picker", "code-input", "floating-labels", "form-layout", "form-grid", "validation",
-        "toolbar", "table", "pager", "gallery",
+        "toolbar", "table", "table-groups", "pager", "gallery",
         "typography", "cards", "list-group", "accordion", "carousel", "avatars", "stat", "pills", "kv", "meter", "empty", "code",
         "tabs", "menu", "breadcrumb", "topbar", "steps", "navmenu", "switcher", "toc", "footer",
         "alerts", "toasts", "dialogs", "popover", "tooltip", "spinner", "skeleton",
@@ -1068,6 +1068,7 @@ public static class ComponentCatalog
         .. ContentComponents.All,
         .. LayoutComponents.All,
         .. ScheduleComponents.All,
+        .. GroupComponents.All,
     ]);
 
     /// <summary>A component with the examples that other files add to it.</summary>

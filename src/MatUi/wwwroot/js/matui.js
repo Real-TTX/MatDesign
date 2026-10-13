@@ -67,6 +67,11 @@
      data-show-if="#id | name" data-show-value="a,b | * | true"   show a dependent field only when it is needed
      data-copy="text | #id"                 copy to the clipboard
      data-tabs                              a tab group (role=tablist buttons + role=tabpanel panels)
+     data-groups="key"                      a table whose groups (<tbody class="mat-group" data-group="name">) open and close (LIST-16): the toggle in the heading row
+                                            (data-group-toggle, aria-expanded) opens or closes its group, and the choice is remembered per table key and group; a group with
+                                            data-group-fixed stays as the server drew it (the one with a search hit). data-groups-set="open|closed|toggle" on a button does it
+                                            for every group of the table that data-groups-target="#id" names (else the nearest .mat-list, else the page). Event: mat:group-toggle
+                                            (detail.group, detail.open). API: MatUi.groups.set(group, open) / setAll(scope, open)
      data-dismiss                           close the alert around it
      data-view-switch="list|gallery"        switch between the two views of a list (remembered per data-view-key)
      data-shortcut="/"                      key that clicks the element, or focuses it when it is a text field (not while typing)
@@ -933,6 +938,65 @@
       updateSelection(box);
     } else if (t.matches('input[data-select-row]')) {
       updateSelection(box);
+    }
+  });
+
+  // ------------------------------------------------------------------------------------------------ groups in a table (LIST-16, matui.lists.css)
+  // <table data-groups="key"> holds <tbody class="mat-group" data-group="name"> whose first row (.mat-group__head) has the toggle button (data-group-toggle,
+  // aria-expanded). A closed group has is-collapsed (the CSS hides its other rows). What the user opened or closed is remembered per table and group; a group with
+  // data-group-fixed stays as drawn: the server keeps open the groups that have a search hit or the current item.
+  var GROUP_KEY = 'mat-groups';
+
+  function groupStore() {
+    try { return JSON.parse(localStorage.getItem(GROUP_KEY) || '{}') || {}; } catch (e) { return {}; }
+  }
+
+  function groupId(group) {
+    var table = group.closest('[data-groups]');
+    return (root.getAttribute('data-app') || '') + ':' + (table ? table.getAttribute('data-groups') : '') + ':' + group.getAttribute('data-group');
+  }
+
+  function groupsOf(scope) { return $$('.mat-group[data-group]', scope); }
+
+  function setGroup(group, open, remember) {
+    var btn = $('[data-group-toggle]', group);
+    var changed = group.classList.contains('is-collapsed') === open;
+    group.classList.toggle('is-collapsed', !open);
+    if (btn) { btn.setAttribute('aria-expanded', open ? 'true' : 'false'); }
+    if (remember) {
+      var store = groupStore();
+      store[groupId(group)] = open;
+      try { localStorage.setItem(GROUP_KEY, JSON.stringify(store)); } catch (e) { /* ignore */ }
+    }
+    if (changed) { group.dispatchEvent(new CustomEvent('mat:group-toggle', { bubbles: true, detail: { group: group.getAttribute('data-group'), open: open } })); }
+  }
+
+  function setAllGroups(scope, open) {
+    groupsOf(scope).forEach(function (group) { setGroup(group, open, true); });
+  }
+
+  function restoreGroups(scope) {
+    var store = groupStore();
+    groupsOf(scope).forEach(function (group) {
+      var saved = store[groupId(group)];
+      if (typeof saved === 'boolean' && !group.hasAttribute('data-group-fixed')) { setGroup(group, saved, false); }
+    });
+  }
+
+  doc.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t.closest) { return; }
+    var toggle = t.closest('[data-group-toggle]');
+    var group = toggle && toggle.closest('.mat-group');
+    if (group) { setGroup(group, group.classList.contains('is-collapsed'), true); return; }
+    var all = t.closest('[data-groups-set]');
+    if (all) {
+      var target = all.getAttribute('data-groups-target');
+      var scope = (target && $(target)) || all.closest('.mat-list') || doc;
+      var mode = all.getAttribute('data-groups-set');
+      var groups = groupsOf(scope);
+      // "toggle" opens everything when everything is closed, and closes everything otherwise
+      setAllGroups(scope, mode === 'open' ? true : mode === 'closed' ? false : groups.length > 0 && groups.every(function (g) { return g.classList.contains('is-collapsed'); }));
     }
   });
 
@@ -5085,6 +5149,7 @@
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
     restoreBranches();
+    restoreGroups();
     window.requestAnimationFrame(function () { window.requestAnimationFrame(function () { root.classList.remove('mat-nav-init'); }); });
     fillMeters();
     applyTheme(currentTheme(), false);
@@ -5122,6 +5187,7 @@
     calendar: CALENDAR_API,
     carousel: { init: initCarousels, go: function (el, page) { var c = el && el._matCarousel; if (c) { carGo(c, page, false); } } },
     schedule: schedule,
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); }
+    groups: { set: function (group, open) { setGroup(group, open !== false, true); }, setAll: function (scope, open) { setAllGroups(scope, open !== false); }, restore: restoreGroups },
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); restoreGroups(scope); }
   };
 })();

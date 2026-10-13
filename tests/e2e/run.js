@@ -4775,6 +4775,85 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- groups in a table (LIST-16)
+  console.log('\nGroups in a table');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#table-groups');
+    const table = '#grp-hosts';
+    const group = n => `${table} tbody.mat-group >> nth=${n}`;
+    const within = (n, sel) => `${group(n)} >> ${sel}`;
+    await page.evaluate(() => document.getElementById('table-groups').scrollIntoView());
+
+    await check('a group is open or closed as the markup says, and its toggle says so', async () => {
+      expect(await page.$eval(group(0), g => g.classList.contains('is-collapsed')), false, 'the first group');
+      expect(await page.$eval(group(1), g => g.classList.contains('is-collapsed')), true, 'the second group');
+      expect(await page.getAttribute(within(1, '[data-group-toggle]'), 'aria-expanded'), 'false', 'aria-expanded of the closed group');
+      expect(await page.isVisible(within(0, '.mat-group__item >> nth=0')), true, 'a row of the open group');
+      expect(await page.isVisible(within(1, '.mat-group__item >> nth=0')), false, 'a row of the closed group');
+    });
+    await check('the heading opens and closes its group with the mouse, Enter and Space, and aria-expanded follows', async () => {
+      await page.click(within(1, '[data-group-toggle]'));
+      expect(await page.isVisible(within(1, '.mat-group__item >> nth=0')), true, 'opened by a click');
+      expect(await page.getAttribute(within(1, '[data-group-toggle]'), 'aria-expanded'), 'true', 'aria-expanded after opening');
+      await page.focus(within(0, '[data-group-toggle]'));
+      await page.keyboard.press('Enter');
+      expect(await page.isVisible(within(0, '.mat-group__item >> nth=0')), false, 'closed by Enter');
+      await page.keyboard.press('Space');
+      expect(await page.isVisible(within(0, '.mat-group__item >> nth=0')), true, 'opened by Space');
+    });
+    await check('the button in the first column header opens every group when all are closed, and closes every group otherwise', async () => {
+      await page.click(`${table} [data-groups-set]`);
+      expect(await page.$$eval(`${table} tbody.mat-group.is-collapsed`, g => g.length), 2, 'all closed');
+      await page.click(`${table} [data-groups-set]`);
+      expect(await page.$$eval(`${table} tbody.mat-group.is-collapsed`, g => g.length), 0, 'all open');
+    });
+    await check('what the user chose is remembered, except in a group with data-group-fixed', async () => {
+      await page.click(within(0, '[data-group-toggle]'));
+      await page.click('#grp-files tbody.mat-group >> nth=0 >> [data-group-toggle]');
+      await page.reload();
+      await page.evaluate(() => document.getElementById('table-groups').scrollIntoView());
+      expect(await page.$eval(group(0), g => g.classList.contains('is-collapsed')), true, 'the closed group stays closed after a reload');
+      expect(await page.$eval('#grp-files tbody.mat-group >> nth=0', g => g.classList.contains('is-collapsed')), false, 'the fixed group is as drawn');
+    });
+    await check('the add row is the last row of its group and the line of the group ends on it', async () => {
+      await page.click(within(0, '[data-group-toggle]'));
+      const rows = await page.$$eval(`${table} tbody.mat-group:first-of-type tr`, trs => trs.map(t => t.className));
+      expect(rows[rows.length - 1], 'mat-group__add', 'the last row');
+      expect(rows[0], 'mat-group__head', 'the first row');
+      const line = await page.$eval(`${table} tbody.mat-group:first-of-type .mat-group__add td`, td => {
+        const before = getComputedStyle(td, '::before');
+        return { position: before.position, bottom: before.bottom, height: td.getBoundingClientRect().height };
+      });
+      expect(line.position, 'absolute', 'the line is drawn');
+      expect(Math.abs(parseFloat(line.bottom) - line.height / 2) < 2, true, 'the line ends at the middle of the last row: ' + line.bottom + ' of ' + line.height);
+    });
+    await ctx.close();
+
+    const phone = await open(phoneOptions, '/Components#table-groups');
+    await phone.page.evaluate(() => document.getElementById('table-groups').scrollIntoView());
+    await check('on a phone the rows of a group are cards, without the line, with their labels, and the add row is a card with its button', async () => {
+      const s = await phone.page.$eval('#grp-hosts tbody.mat-group >> nth=0', g => {
+        const item = g.querySelector('.mat-group__item td');
+        const add = g.querySelector('.mat-group__add td');
+        return {
+          itemDisplay: getComputedStyle(item.closest('tr')).display,
+          label: getComputedStyle(item, '::before').content,
+          linePosition: getComputedStyle(item, '::before').position,
+          after: getComputedStyle(item, '::after').content,
+          addAlign: getComputedStyle(add).justifyContent,
+          sideways: document.documentElement.scrollWidth > innerWidth,
+        };
+      });
+      expect(s.itemDisplay, 'block', 'a row is a card');
+      expect(s.label, '"Host"', 'the first cell has its label');
+      expect(s.linePosition, 'static', 'no line');
+      expect(s.after, 'none', 'no branch');
+      expect(s.addAlign, 'flex-start', 'the add button at the start');
+      expect(s.sideways, false, 'sideways scroll');
+    });
+    await phone.ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {

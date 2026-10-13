@@ -91,6 +91,49 @@
   .mat-table td.mat-table__select::before { content: none; }
 }
 
+/* ---- Groups in a table (LIST-16): rows under a heading that opens and closes. The items hang on a line below the heading, and the action that adds one
+   is the last row of the group. A group is a <tbody class="mat-group">; its first row is the heading (.mat-group__head), the rows after it are items
+   (.mat-group__item), the last may be the add row (.mat-group__add). The script (data-groups on the table) opens and closes a group and remembers the choice;
+   without it every group stays open. ---- */
+.mat-group { --mat-group-x: 1.375rem; --mat-group-line: var(--mat-border-strong); }
+.mat-group__head > .mat-group__cell { padding: 0; background: var(--mat-surface-2); }
+.mat-group__bar { display: flex; align-items: center; gap: var(--mat-space-2); min-height: var(--mat-control-h); padding-right: var(--mat-space-3); }
+.mat-group__toggle {
+  flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: var(--mat-space-3);
+  min-height: var(--mat-control-h); padding: var(--mat-space-1) var(--mat-space-4);
+  border: 0; border-radius: 0; background: transparent; color: var(--mat-text);
+  font: inherit; font-weight: 600; text-align: left; cursor: pointer;
+  transition: background var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-group__toggle:hover { background: var(--mat-accent-soft); }
+.mat-group__toggle:focus-visible { box-shadow: inset 0 0 0 2px var(--mat-accent); border-radius: 0; }
+.mat-group__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mat-group__chev { flex: none; color: var(--mat-text-muted); transition: transform var(--mat-dur) var(--mat-ease); }
+.mat-group.is-collapsed .mat-group__chev { transform: rotate(-90deg); }
+.mat-group__actions { display: flex; align-items: center; gap: var(--mat-space-1); flex: none; }
+.mat-group.is-collapsed > tr:not(.mat-group__head) { display: none; }
+/* The line: one short stroke from the heading down the rows, a branch to each item, and the last row ends it. */
+.mat-group__item > td:first-child, .mat-group__add > td:first-child { position: relative; padding-left: calc(var(--mat-group-x) + var(--mat-space-6)); }
+.mat-group__item > td:first-child::before, .mat-group__add > td:first-child::before,
+.mat-group__item > td:first-child::after, .mat-group__add > td:first-child::after { content: ""; position: absolute; left: var(--mat-group-x); pointer-events: none; }
+.mat-group__item > td:first-child::before, .mat-group__add > td:first-child::before { top: -1px; bottom: 0; border-left: 1px solid var(--mat-group-line); }
+.mat-group > tr:last-child > td:first-child::before { bottom: 50%; }
+.mat-group__item > td:first-child::after, .mat-group__add > td:first-child::after { top: 50%; width: var(--mat-space-4); border-top: 1px solid var(--mat-group-line); }
+.mat-group__add > .mat-group__cell { color: var(--mat-text-muted); }
+.mat-group__add > .mat-group__cell > .mat-btn { margin-left: calc(var(--mat-space-3) * -1); }
+@media (max-width: 720px) {
+  /* A row is a card here: no line, the heading is a bar over its cards, and the add row is a card with its button. */
+  .mat-table .mat-group__head { padding: 0; }
+  .mat-table tbody.mat-group:not(:first-of-type) > tr.mat-group__head { border-top: 1px solid var(--mat-border); }
+  .mat-group__head > .mat-group__cell { display: block; }
+  .mat-group__item > td:first-child, .mat-group__add > td:first-child { padding-left: 0; }
+  /* the ::before that drew the line is the label of the cell again, the ::after is not needed */
+  .mat-group__item > td:first-child::before, .mat-group__add > td:first-child::before { position: static; border: 0; content: attr(data-label); }
+  .mat-group__item > td:first-child::after, .mat-group__add > td:first-child::after { content: none; }
+  .mat-group__add > .mat-group__cell { justify-content: flex-start; text-align: left; }
+  .mat-group__add > .mat-group__cell > .mat-btn { margin-left: 0; }
+}
+
 /* ---- Pagination: directly under the table, nothing between ---- */
 .mat-pager { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--mat-space-3); }
 .mat-pager__info { color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }

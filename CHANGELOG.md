@@ -19,6 +19,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 - Menu switcher (`SHELL-15`): it can sit under the logo, at the foot of the menu directly above the user, or at both places (`mat-nav__switch--foot`, `data-menu-place="top"`), and menus can be grouped below a parent in its popup (`data-nav-group`, `data-nav-parent`, `mat-menu__parent`, `mat-menu__sub`).
 - Tag input: `data-picker="tags"`, a field of chips with suggestions (`FORM-15`).
 - Carousel: `mat-carousel` with `data-carousel`, `data-loop` and `data-autoplay` (`LIST-13`).
+- Groups in a table: `tbody.mat-group` with a heading row that opens and closes the group (`data-groups`, `data-group`, `data-group-toggle`, `data-group-fixed`, `data-groups-set`), the rows hanging on a line and the add row (`mat-group__add`) as the last row of the group; the choice is remembered (`LIST-16`).
 - Number stepper: `mat-stepper` with `data-stepper` (`FORM-16`).
 - Slider and range slider with two thumbs: `mat-slider` with `data-slider` (`FORM-17`).
 - Code input: `mat-otp` with `data-otp`, for one-time codes and PINs (`FORM-19`).
