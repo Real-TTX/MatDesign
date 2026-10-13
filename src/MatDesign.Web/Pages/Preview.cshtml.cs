@@ -80,6 +80,11 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             parts.Add($"accent={HttpUtility.UrlEncode(accent)}");
         }
 
+        if (ColorSchemes.Normalize(Request.Query["scheme"].ToString()) is { } scheme)
+        {
+            parts.Add($"scheme={scheme}");
+        }
+
         return string.Join("&", parts);
     }
 
@@ -98,6 +103,7 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             App = App,
             Tagline = App.Tagline,
             Theme = theme,
+            Scheme = ColorSchemes.Normalize(Request.Query["scheme"].ToString()),
             CustomAccent = customAccent,
             PreviewQuery = Base(),
             ActiveHref = active,
@@ -204,6 +210,7 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             ["app"] = App.Id,
             ["theme"] = Request.Query["theme"].ToString(),
             ["accent"] = Request.Query["accent"].ToString(),
+            ["scheme"] = ColorSchemes.Normalize(Request.Query["scheme"].ToString()) ?? string.Empty,
             ["view"] = View,
         };
 

@@ -48,6 +48,7 @@ public sealed partial class ToolkitFiles
         Sprite = Read("img/matui-icons.svg");
         IconNames = SymbolRegex().Matches(Sprite).Select(m => m.Groups[1].Value).Order().ToList();
         Tokens = CssTokens.Tokens(_css["matui.tokens.css"]);
+        Schemes = CssTokens.Schemes(_css["matui.tokens.css"]);
         Facts = new MarkupFacts(MarkupChecks.ClassesIn(CssParts.Select(part => _css[part])), IconNames.ToHashSet());
         _state = Build(design.Version);
     }
@@ -142,6 +143,15 @@ public sealed partial class ToolkitFiles
     public IReadOnlyList<string> IconNames { get; }
 
     public IReadOnlyList<DesignToken> Tokens { get; }
+
+    /// <summary>What each colour scheme sets in <c>matui.tokens.css</c> (the base tokens are <see cref="Tokens"/>).</summary>
+    public IReadOnlyList<SchemeBlocks> Schemes { get; }
+
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<(string, bool), SchemeSurfaces> _surfaces = new();
+
+    /// <summary>The colours of a scheme (null or "standard" for the standard look) in light or dark mode, read from the tokens; the contrast checks and the pages use these.</summary>
+    public SchemeSurfaces Surfaces(string? scheme, bool dark)
+        => _surfaces.GetOrAdd((ColorSchemes.Normalize(scheme) ?? ColorSchemes.Standard, dark), key => SchemeSurfaces.Read(TokensCss, key.Item1, dark));
 
     /// <summary>What the toolkit ships (its classes and its icons): the markup of an example may use nothing else.</summary>
     public MarkupFacts Facts { get; }

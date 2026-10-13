@@ -81,4 +81,35 @@ public class ColorsTests
         Assert.Equal(0.0, Colors.ToOklab(Rgb.Black).L, 3);
         Assert.True(Colors.ToOklab(Rgb.Parse("#4fd1c5")).L > Colors.ToOklab(Rgb.Parse("#1a56db")).L);
     }
+
+    [Theory]
+    [InlineData("#abc", 170, 187, 204, 1.0)]
+    [InlineData("#1F1E1B", 31, 30, 27, 1.0)]
+    [InlineData("rgba(31, 30, 27, .13)", 31, 30, 27, 0.13)]
+    [InlineData("rgba(255,255,255,0.5)", 255, 255, 255, 0.5)]
+    [InlineData("rgba(0 0 0 / 40%)", 0, 0, 0, 0.4)]
+    [InlineData("rgb(1, 2, 3)", 1, 2, 3, 1.0)]
+    public void A_colour_with_an_opacity_is_read_the_way_the_tokens_write_it(string text, double r, double g, double b, double alpha)
+    {
+        var colour = Rgba.Parse(text);
+        Assert.Equal(new Rgb(r, g, b), colour.Color);
+        Assert.Equal(alpha, colour.Alpha, 6);
+    }
+
+    [Theory]
+    [InlineData("rgba(1, 2)")]
+    [InlineData("rgba(1, 2, 3, .5, 7)")]
+    [InlineData("red")]
+    public void A_colour_with_an_opacity_that_cannot_be_read_is_refused(string text)
+        => Assert.Throws<FormatException>(() => Rgba.Parse(text));
+
+    [Fact]
+    public void A_colour_with_an_opacity_is_painted_over_what_is_behind_it_in_srgb()
+    {
+        // 13 % of the ink over white: what a hairline looks like on a card (31 * .13 + 255 * .87 = 225.9 for the red channel).
+        var hairline = Rgba.Parse("rgba(31, 30, 27, .13)").Over(Rgb.White);
+        Assert.InRange(hairline.R, 225.5, 226.5);
+        Assert.Equal(Rgb.White.ToHex(), new Rgba(Rgb.Black, 0).Over(Rgb.White).ToHex());
+        Assert.Equal(Rgb.Black.ToHex(), new Rgba(Rgb.Black, 1).Over(Rgb.White).ToHex());
+    }
 }

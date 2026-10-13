@@ -43,6 +43,9 @@ public sealed class ShellModel
     /// <summary>Forces light or dark (a preview); null follows the user's choice and the system.</summary>
     public string? Theme { get; init; }
 
+    /// <summary>A colour scheme (a preview or the builder, a known id of <see cref="ColorSchemes"/>); null is the standard look, or the user's own choice.</summary>
+    public string? Scheme { get; init; }
+
     /// <summary>A custom accent (a preview or the builder); null uses the app's own colour.</summary>
     public string? CustomAccent { get; init; }
 
@@ -63,6 +66,11 @@ public sealed class ShellModel
             if (Theme is "light" or "dark")
             {
                 sb.Append(" data-theme=\"").Append(Theme).Append('"');
+            }
+
+            if (ColorSchemes.Normalize(Scheme) is { } scheme)
+            {
+                sb.Append(" data-scheme=\"").Append(scheme).Append('"');
             }
 
             if (CustomAccent is not null)

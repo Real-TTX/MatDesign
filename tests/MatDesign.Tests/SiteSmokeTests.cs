@@ -59,6 +59,9 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         yield return "/Patterns";
         yield return "/Builder";
         yield return "/Builder?app=matmail&accent=%23ff6600";
+        yield return "/Builder?app=matmail&scheme=paper";
+        yield return "/Builder?app=matarchive&accent=%23ff6600&scheme=oled";
+        yield return "/Foundations/Tokens?group=Schemes";
         yield return "/Download";
     }
 
@@ -112,6 +115,59 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("data-theme=\"dark\"", preview);
         Assert.Contains("data-preview", preview);
         Assert.DoesNotContain("data-accent=", preview);
+        Assert.DoesNotContain("data-scheme=\"", html);
+        Assert.DoesNotContain("data-scheme=\"", preview);
+    }
+
+    [Theory]
+    [InlineData("paper", "data-scheme=\"paper\"")]
+    [InlineData("contrast", "data-scheme=\"contrast\"")]
+    [InlineData("oled", "data-scheme=\"oled\"")]
+    [InlineData("standard", null)]
+    [InlineData("PAPER", null)]
+    [InlineData("%22%3E%3Cscript%3E", null)]
+    [InlineData("", null)]
+    public async Task The_sample_app_and_the_builder_take_a_colour_scheme_of_the_registry_and_ignore_everything_else(string scheme, string? attribute)
+    {
+        // COLOR-09: data-scheme on <html>, a known id only, like theme and accent; a frame of the builder carries it on.
+        var (_, preview) = await Get($"/Preview?app=matmail&view=list&theme=dark&scheme={scheme}");
+        var (_, builder) = await Get($"/Builder?app=matmail&scheme={scheme}");
+        if (attribute is null)
+        {
+            Assert.DoesNotContain("data-scheme=\"", preview);
+            Assert.DoesNotContain("scheme=", Regex.Match(builder, @"<iframe[^>]*src=""[^""]*""").Value);
+            Assert.DoesNotContain("<script>", preview);
+            return;
+        }
+
+        Assert.Contains(attribute, preview);
+        Assert.Contains("scheme=" + scheme, Regex.Match(builder, @"<iframe[^>]*src=""[^""]*""").Value);
+        Assert.Contains("Contrast on the scheme", builder);
+        Assert.Matches(@"<option value=""" + scheme + @""" selected", builder);
+    }
+
+    [Fact]
+    public async Task The_colour_page_shows_every_scheme_with_its_tokens_and_its_contrast_and_the_page_of_the_tokens_has_a_group_for_them()
+    {
+        var (_, colour) = await Get("/Foundations");
+        foreach (var scheme in ColorSchemes.All.Select(s => s.Id).Prepend("standard"))
+        {
+            Assert.Contains($"id=\"scheme-{scheme}\"", colour);
+            Assert.Contains($"data-scheme-set=\"{scheme}\"", colour);
+        }
+
+        Assert.Contains("--mat-accent-text-keep", colour);
+        Assert.Contains("the weakest of the", colour);
+        Assert.DoesNotContain(">Fails<", colour);
+
+        var (_, tokens) = await Get("/Foundations/Tokens?group=Schemes");
+        Assert.Contains("Paper: ", tokens);
+        Assert.Contains("High contrast: ", tokens);
+        Assert.DoesNotContain("No token matches", tokens);
+
+        // 25 to a page: the last scheme is on the second one
+        var (_, more) = await Get("/Foundations/Tokens?group=Schemes&page=2");
+        Assert.Contains("Black (OLED): ", more);
     }
 
     [Fact]
@@ -447,6 +503,10 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(AppRegistry.All.Count, (await Json("/api/apps")).GetArrayLength());
         Assert.Equal(RuleBook.All.Count, (await Json("/api/rules")).GetArrayLength());
         Assert.Equal(AccentPresets.All.Count, (await Json("/api/accents")).GetArrayLength());
+        var schemes = await Json("/api/schemes");
+        Assert.Equal(ColorSchemes.All.Select(s => s.Id), schemes.EnumerateArray().Select(s => s.GetProperty("id").GetString()));
+        Assert.Equal("#f3eee3", schemes[0].GetProperty("light").GetProperty("--mat-bg").GetString());
+        Assert.Equal(JsonValueKind.Null, schemes[2].GetProperty("light").ValueKind);
         Assert.True((await Json("/api/tokens")).GetArrayLength() > 80);
         Assert.True((await Json("/api/icons")).GetArrayLength() > 100);
         Assert.Equal(AppVersion.Current, (await Json("/api/version")).GetProperty("toolkit").GetString());

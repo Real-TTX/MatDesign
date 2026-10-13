@@ -1,0 +1,23 @@
+@model (AccentReport Report, IReadOnlyList<SchemeSurfaces> Modes, string Title)
+@*
+    The contrast of one accent on the surfaces of a colour scheme, in every mode the scheme has: the pairings that depend on the accent (a link on the page, on a surface, in the menu,
+    on a tint, the text on the accent, the current menu item). Used by the builder when a scheme is chosen. The pairings that do not depend on the accent are on the Colour page.
+*@
+@{
+    var checks = Model.Modes.SelectMany(m => Model.Report.Checks(m)).ToList();
+    var passes = checks.Where(c => !c.Advisory).All(c => c.Passes);
+}
+<section class="mat-card mat-card--flush" aria-labelledby="scheme-contrast-title">
+    <div class="mat-card__head">@Ui.Icon("accessibility")<h2 class="mat-card__title" id="scheme-contrast-title">@Model.Title</h2><span class="mat-pill @(passes ? "mat-pill--ok" : "mat-pill--error")">@(passes ? "AA passed" : "AA failed")</span></div>
+    <div class="mat-card__body">
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">@Model.Title</caption>
+                <thead><tr><th scope="col">Pairing</th><th scope="col">Colours</th><th scope="col" class="mat-num">Ratio</th><th scope="col" class="mat-num">Needed</th><th scope="col">Result</th></tr></thead>
+                <tbody>
+                    <partial name="_ContrastRows" model="checks" />
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>

@@ -1,7 +1,7 @@
 /* ==========================================================================
    MatUi · behaviour
    Dependency-free. Everything is wired by delegated listeners and data-attributes, so server-rendered and dynamically added
-   markup behave the same. The public API is window.MatUi (dialog, confirm, alert, prompt, toast, theme, accent).
+   markup behave the same. The public API is window.MatUi (dialog, confirm, alert, prompt, toast, theme, scheme, accent).
 
    Texts: what the script writes itself is English or German (chosen by <html lang>); an app changes any text with an attribute on <html>
      data-pk-<name>                         one text of the pickers and of the theme button (the names are the keys of PK_TEXT, in lower case)
@@ -13,6 +13,8 @@
    Data-attributes
      data-theme-toggle                      the 3-state button (system -> light -> dark); data-theme-save-url posts the choice
      data-theme-set="system|light|dark"     a button of a segmented control in the settings that chooses the theme (aria-pressed follows)
+     data-scheme-set="paper|contrast|oled|standard"   a button of a segmented control that chooses the colour scheme, data-scheme on <html> (COLOR-09; aria-pressed follows);
+                                            data-scheme-save-url (on the button or its group) posts scheme=<name or standard> like the theme. MatUi.scheme.get() / .set(name)
      data-nav-toggle / data-nav-close       open / close the menu drawer (phones)
      data-nav-branch="key"                  the parent of a submenu in the menu (aria-expanded; the choice is remembered per app)
      data-nav-set="id" / data-nav-panel="id"  the menu switcher: an entry of its menu shows the panel of items with the same id;
@@ -136,6 +138,44 @@
     if (name) { root.setAttribute('data-accent', name); } else { root.removeAttribute('data-accent'); }
     try { if (name) { localStorage.setItem('mat-accent', name); } else { localStorage.removeItem('mat-accent'); } } catch (e) { /* ignore */ }
     root.dispatchEvent(new CustomEvent('mat:accent', { detail: { accent: name || null } }));
+  }
+
+  // ---------------------------------------------------------------------------------------------- colour scheme (COLOR-09)
+  // <html data-scheme="paper|contrast|oled"> changes the surfaces; absent, "standard" or any other value is the standard look. The choice is kept in the browser like the
+  // accent (not by a preview frame) and by the account where the button names data-scheme-save-url; matui.boot.js applies the saved one before the first paint.
+  var SCHEMES = ['paper', 'contrast', 'oled'];
+
+  function currentScheme() {
+    var s = root.getAttribute('data-scheme');
+    return SCHEMES.indexOf(s) >= 0 ? s : 'standard';
+  }
+
+  function syncScheme() {
+    var scheme = currentScheme();
+    $$('[data-scheme-set]').forEach(function (btn) { btn.setAttribute('aria-pressed', btn.getAttribute('data-scheme-set') === scheme ? 'true' : 'false'); });
+  }
+
+  function applyScheme(name, persist) {
+    if (SCHEMES.indexOf(name) >= 0) { root.setAttribute('data-scheme', name); } else { root.removeAttribute('data-scheme'); name = 'standard'; }
+    if (persist !== false && !root.hasAttribute('data-preview')) {
+      try { if (name === 'standard') { localStorage.removeItem('mat-scheme'); } else { localStorage.setItem('mat-scheme', name); } } catch (e) { /* ignore */ }
+    }
+    syncScheme();
+    root.dispatchEvent(new CustomEvent('mat:scheme', { detail: { scheme: name } }));
+  }
+
+  // A segmented control chooses (data-scheme-set="paper"); the address to save it to (data-scheme-save-url) is on the button or on the group around it. Saved like the theme.
+  function chooseScheme(btn, name) {
+    if (name !== 'standard' && SCHEMES.indexOf(name) < 0) { return; }
+    applyScheme(name);
+    var holder = btn && btn.closest('[data-scheme-save-url]');
+    var url = holder && holder.getAttribute('data-scheme-save-url');
+    if (url) {
+      var body = new URLSearchParams({ scheme: name });
+      var token = $('input[name="__RequestVerificationToken"]');
+      if (token) { body.set('__RequestVerificationToken', token.value); }
+      fetch(url, { method: 'POST', body: body, credentials: 'same-origin' }).catch(function () { /* the choice stays in this browser */ });
+    }
   }
 
   // ---------------------------------------------------------------------------------------------- menu drawer (phones)
@@ -707,6 +747,8 @@
     if (themeBtn) { cycleTheme(themeBtn); return; }
     var themeSet = t.closest('[data-theme-set]');
     if (themeSet) { chooseTheme(themeSet, themeSet.getAttribute('data-theme-set')); return; }
+    var schemeSet = t.closest('[data-scheme-set]');
+    if (schemeSet) { chooseScheme(schemeSet, schemeSet.getAttribute('data-scheme-set')); return; }
 
     var branchBtn = t.closest('[data-nav-branch]');
     if (branchBtn) { setBranch(branchBtn, branchBtn.getAttribute('aria-expanded') !== 'true', true); return; }
@@ -1911,6 +1953,7 @@
     window.requestAnimationFrame(function () { window.requestAnimationFrame(function () { root.classList.remove('mat-nav-init'); }); });
     fillMeters();
     applyTheme(currentTheme(), false);
+    syncScheme();
     refreshDependents();
     var custom = root.getAttribute('data-custom-accent');
     if (custom) { customAccent(custom); }
@@ -1936,6 +1979,7 @@
     prompt: promptDialog,
     toast: toast,
     theme: { get: currentTheme, set: function (t) { applyTheme(t); } },
+    scheme: { get: currentScheme, set: function (name) { applyScheme(name); } },
     accent: { set: setAccent, custom: customAccent },
     scrollspy: { update: updateSpy },
     nav: { set: setNavSet, branch: function (key, open) { var b = $('[data-nav-branch="' + key + '"]'); if (b) { setBranch(b, open !== false, true); } } },

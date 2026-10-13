@@ -342,6 +342,166 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- colour schemes (COLOR-09)
+  console.log('\nColour schemes');
+  {
+    // What a scheme may change; and what it never does.
+    const SURFACES = ['--mat-bg', '--mat-bg-2', '--mat-surface', '--mat-surface-2', '--mat-surface-3', '--mat-glass', '--mat-nav-bg', '--mat-overlay', '--mat-border', '--mat-border-strong',
+      '--mat-text', '--mat-text-muted', '--mat-text-faint', '--mat-danger-text', '--mat-success-text', '--mat-warning-text', '--mat-info-text', '--mat-shadow-1', '--mat-shadow-2', '--mat-shadow-3',
+      '--mat-scroll-thumb', '--mat-accent-text-keep'];
+    const ACCENTS = ['--mat-accent', '--mat-accent-hover', '--mat-accent-active', '--mat-accent-soft', '--mat-accent-soft-strong', '--mat-on-accent', '--mat-selection'];
+    const BACKGROUND = {
+      standard: { light: 'rgb(245, 244, 241)', dark: 'rgb(21, 21, 20)' },
+      paper: { light: 'rgb(243, 238, 227)', dark: 'rgb(27, 24, 20)' },
+      contrast: { light: 'rgb(255, 255, 255)', dark: 'rgb(0, 0, 0)' },
+      oled: { light: 'rgb(245, 244, 241)', dark: 'rgb(0, 0, 0)' },
+    };
+    const sample = (scheme, theme) => `/Preview?app=matpaper&view=list${theme ? '&theme=' + theme : ''}${scheme ? '&scheme=' + scheme : ''}`;
+    const look = page => page.evaluate(([surfaces, accents]) => {
+      const root = getComputedStyle(document.documentElement);
+      const resolve = name => { const probe = document.createElement('i'); probe.style.color = `var(${name})`; document.body.appendChild(probe); const c = getComputedStyle(probe).color; probe.remove(); return c; };
+      return { bg: getComputedStyle(document.body).backgroundColor, tokens: surfaces.map(n => root.getPropertyValue(n).trim()), accents: [...accents.map(resolve), root.getPropertyValue('--mat-focus-ring').trim()] };
+    }, [SURFACES, ACCENTS]);
+    // the colour that is painted for a CSS colour (a computed colour can be written as oklab() or color()), as three numbers
+    const painted = (page, colour) => page.evaluate(c => { const cv = document.createElement('canvas'); cv.width = 1; cv.height = 1; const g = cv.getContext('2d', { willReadFrequently: true }); g.fillStyle = c; g.fillRect(0, 0, 1, 1); return Array.from(g.getImageData(0, 0, 1, 1).data).slice(0, 3); }, colour);
+
+    await check('every scheme changes the page background, in light and in dark (the standard look is the first row of each)', async () => {
+      for (const scheme of ['standard', 'paper', 'contrast', 'oled']) {
+        for (const theme of ['light', 'dark']) {
+          const { ctx, page } = await open(desktopOptions, sample(scheme === 'standard' ? null : scheme, theme));
+          expect((await look(page)).bg, BACKGROUND[scheme][theme], `${scheme} in ${theme}`);
+          await ctx.close();
+        }
+      }
+    });
+    await check('oled in light mode is the standard look: every token that a scheme can set has the standard value', async () => {
+      const standard = await open(desktopOptions, sample(null, 'light'));
+      const oled = await open(desktopOptions, sample('oled', 'light'));
+      expect((await look(oled.page)).tokens, (await look(standard.page)).tokens, 'the tokens of oled in light');
+      await standard.ctx.close();
+      await oled.ctx.close();
+    });
+    await check('a scheme never changes an accent token: the accent, its hover, its tints, the text on it and the focus ring are the same in every scheme and mode', async () => {
+      for (const theme of ['light', 'dark']) {
+        const base = await open(desktopOptions, sample(null, theme));
+        const expected = (await look(base.page)).accents;
+        await base.ctx.close();
+        for (const scheme of ['paper', 'contrast', 'oled']) {
+          const { ctx, page } = await open(desktopOptions, sample(scheme, theme));
+          expect((await look(page)).accents, expected, `${scheme} in ${theme}`);
+          await ctx.close();
+        }
+      }
+    });
+    await check('"system" follows the operating system: a scheme is its dark values while the system is dark (and oled is the standard look while it is light)', async () => {
+      const dark = await open({ ...desktopOptions, colorScheme: 'dark' }, sample('paper', null));
+      expect((await look(dark.page)).bg, BACKGROUND.paper.dark, 'paper, system dark');
+      await dark.ctx.close();
+      const oledDark = await open({ ...desktopOptions, colorScheme: 'dark' }, sample('oled', null));
+      expect((await look(oledDark.page)).bg, BACKGROUND.oled.dark, 'oled, system dark');
+      await oledDark.ctx.close();
+      const light = await open({ ...desktopOptions, colorScheme: 'light' }, sample('oled', null));
+      expect((await look(light.page)).bg, BACKGROUND.standard.light, 'oled, system light');
+      await light.ctx.close();
+      const paperLight = await open({ ...desktopOptions, colorScheme: 'light' }, sample('paper', null));
+      expect((await look(paperLight.page)).bg, BACKGROUND.paper.light, 'paper, system light');
+      await paperLight.ctx.close();
+    });
+    await check('the contrast scheme draws lines instead of shadows: a card has no shadow and a dark border, a menu has a line', async () => {
+      const { ctx, page } = await open(desktopOptions, sample('contrast', 'light'));
+      const card = await page.evaluate(() => { const s = getComputedStyle(document.querySelector('.mat-toolbar')); return { shadow: s.boxShadow, border: s.borderTopColor }; });
+      expect(card, { shadow: 'none', border: 'rgb(92, 92, 92)' }, 'a card');
+      const control = await page.evaluate(() => { const probe = document.createElement('input'); probe.className = 'mat-input'; document.body.appendChild(probe); const s = getComputedStyle(probe); const v = { border: s.borderTopColor }; probe.remove(); return v; });
+      expect(control, { border: 'rgb(31, 31, 31)' }, 'the border of a control');
+      expect(await page.evaluate(() => getComputedStyle(document.getElementById('user-menu')).boxShadow), 'rgb(31, 31, 31) 0px 0px 0px 1px', 'a menu has a line, not a shadow');
+      await ctx.close();
+    });
+    await check('the numbers on the Builder page are what the browser draws: the link on a surface in paper is the colour of a link on paper', async () => {
+      const numbers = await open(desktopOptions, '/Builder?app=matpaper&scheme=paper');
+      const rows = await numbers.page.evaluate(() => [...document.querySelectorAll('section[aria-labelledby="scheme-contrast-title"] tbody tr')].map(r => ({ name: r.querySelector('td')?.textContent.trim(), hex: r.querySelector('code')?.textContent.trim() })).filter(r => r.name));
+      await numbers.ctx.close();
+      for (const [theme, label] of [['light', 'Link on a surface (light)'], ['dark', 'Link on a surface (dark)']]) {
+        const wanted = rows.find(r => r.name.startsWith(label));
+        expectTrue(wanted && /^#[0-9a-f]{6}$/.test(wanted.hex), `no row "${label}" in the report: ${JSON.stringify(rows.map(r => r.name))}`);
+        const { ctx, page } = await open(desktopOptions, sample('paper', theme));
+        const drawn = await page.evaluate(() => { const a = document.createElement('a'); a.href = '#'; a.textContent = 'x'; document.querySelector('.mat-page').appendChild(a); const c = getComputedStyle(a).color; a.remove(); return c; });
+        const [r, g, b] = await painted(page, drawn);
+        const [wr, wg, wb] = [1, 3, 5].map(i => parseInt(wanted.hex.slice(i, i + 2), 16));
+        expectTrue(Math.abs(r - wr) <= 2 && Math.abs(g - wg) <= 2 && Math.abs(b - wb) <= 2, `${label}: the report says ${wanted.hex}, the browser draws ${drawn}`);
+        await ctx.close();
+      }
+    });
+    {
+      const { ctx, page } = await open(desktopOptions, '/Foundations');
+      await ctx.addInitScript(() => {
+        // when the attribute is set: before the page has been parsed and before matui.js exists, so the boot script did it and nothing flashes
+        // (an init script runs before the page has an <html>: the observer watches the document and the attribute of whatever element appears)
+        new MutationObserver(() => {
+          if (document.documentElement && document.documentElement.hasAttribute('data-scheme') && !window.__scheme) { window.__scheme = { ready: document.readyState, script: !!window.MatUi }; }
+        }).observe(document, { attributes: true, subtree: true, attributeFilter: ['data-scheme'] });
+      });
+      await check('the choice of the colour page (data-scheme-set) is applied to the whole site at once, the pressed button follows and the choice is saved in the browser', async () => {
+        expect(await page.getAttribute('[data-scheme-set="standard"]', 'aria-pressed'), 'true', 'standard is pressed at the start');
+        await page.evaluate(() => { window.__events = []; document.documentElement.addEventListener('mat:scheme', e => window.__events.push(e.detail.scheme)); });
+        await page.click('#schemes [data-scheme-set="paper"]');
+        expect(await page.evaluate(() => document.documentElement.getAttribute('data-scheme')), 'paper', 'data-scheme');
+        expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), BACKGROUND.paper.light, 'the page background');
+        expect(await page.getAttribute('#schemes [data-scheme-set="paper"]', 'aria-pressed'), 'true', 'paper is pressed');
+        expect(await page.getAttribute('#schemes [data-scheme-set="standard"]', 'aria-pressed'), 'false', 'standard is not pressed');
+        expect(await page.evaluate(() => localStorage.getItem('mat-scheme')), 'paper', 'saved');
+        expect(await page.evaluate(() => window.__events), ['paper'], 'the event mat:scheme');
+      });
+      await check('after a reload the boot script has applied the saved scheme before the page is parsed, and the page starts in it', async () => {
+        const fresh = await ctx.newPage();
+        await fresh.goto(BASE + '/Foundations', { waitUntil: 'networkidle' });
+        expect(await fresh.evaluate(() => window.__scheme), { ready: 'loading', script: false }, 'when data-scheme was first there');
+        expect(await fresh.evaluate(() => getComputedStyle(document.body).backgroundColor), BACKGROUND.paper.light, 'the page background after a reload');
+        expect(await fresh.getAttribute('[data-scheme-set="paper"]', 'aria-pressed'), 'true', 'the pressed button after a reload');
+        await fresh.close();
+      });
+      await check('MatUi.scheme.get and set work, "standard" and null take the attribute away and forget the choice, anything else is the standard look', async () => {
+        expect(await page.evaluate(() => MatUi.scheme.get()), 'paper', 'get');
+        await page.evaluate(() => MatUi.scheme.set('oled'));
+        expect(await page.evaluate(() => [MatUi.scheme.get(), document.documentElement.getAttribute('data-scheme'), localStorage.getItem('mat-scheme')]), ['oled', 'oled', 'oled'], 'oled');
+        await page.evaluate(() => MatUi.scheme.set('standard'));
+        expect(await page.evaluate(() => [MatUi.scheme.get(), document.documentElement.getAttribute('data-scheme'), localStorage.getItem('mat-scheme')]), ['standard', null, null], 'standard');
+        await page.click('#schemes [data-scheme-set="contrast"]');
+        await page.evaluate(() => MatUi.scheme.set(null));
+        expect(await page.evaluate(() => [MatUi.scheme.get(), document.documentElement.getAttribute('data-scheme'), localStorage.getItem('mat-scheme')]), ['standard', null, null], 'null');
+        await page.evaluate(() => document.documentElement.setAttribute('data-scheme', 'nonsense'));
+        expect(await page.evaluate(() => MatUi.scheme.get()), 'standard', 'an unknown value is the standard look');
+        expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), BACKGROUND.standard.light, 'and looks like it');
+        await page.evaluate(() => document.documentElement.removeAttribute('data-scheme'));
+      });
+      await check('data-scheme-save-url posts scheme=<name> with the anti-forgery token of the page, from the button or from the group around it', async () => {
+        await page.evaluate(() => {
+          document.body.insertAdjacentHTML('beforeend',
+            '<form id="tok"><input type="hidden" name="__RequestVerificationToken" value="tok-123" /></form>' +
+            '<div id="seg" data-scheme-save-url="/save-scheme-test"><button type="button" id="seg-contrast" data-scheme-set="contrast">High contrast</button><button type="button" id="seg-standard" data-scheme-set="standard">Standard</button></div>');
+        });
+        const posted = [];
+        await page.route('**/save-scheme-test', route => { posted.push({ method: route.request().method(), body: route.request().postData() }); route.fulfill({ status: 200, body: 'ok' }); });
+        await page.dispatchEvent('#seg-contrast', 'click');
+        await page.dispatchEvent('#seg-standard', 'click');
+        await page.waitForTimeout(300);
+        expect(posted, [{ method: 'POST', body: 'scheme=contrast&__RequestVerificationToken=tok-123' }, { method: 'POST', body: 'scheme=standard&__RequestVerificationToken=tok-123' }], 'what was posted');
+      });
+      await ctx.close();
+    }
+    {
+      const { ctx, page } = await open(desktopOptions, '/Preview?app=matpaper&view=settings');
+      await check('a preview frame shows the chosen scheme but does not keep it for the whole site; the settings of the sample app have the control', async () => {
+        await page.click('#tab-look');
+        expect(await page.locator('[data-scheme-set]').count(), 4, 'the buttons of the control');
+        await page.click('[data-scheme-set="contrast"]');
+        expect(await page.evaluate(() => document.documentElement.getAttribute('data-scheme')), 'contrast', 'data-scheme');
+        expect(await page.getAttribute('[data-scheme-set="contrast"]', 'aria-pressed'), 'true', 'pressed');
+        expect(await page.evaluate(() => localStorage.getItem('mat-scheme')), null, 'localStorage');
+      });
+      await ctx.close();
+    }
+  }
+
   // ---------------------------------------------------------------------------------------------------- the builder
   console.log('\nBuilder');
   {

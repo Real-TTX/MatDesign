@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **109 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **110 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -38,7 +38,9 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   no framework, no build step, no CDN
 - **One accent colour per app.** Hover, tints, links, the focus ring and the dark mode are derived from it
   and checked for **WCAG AA, for every app, in light and dark**
-- **90 design tokens**, read from the CSS itself, so the documentation cannot go out of date
+- **91 design tokens**, read from the CSS itself, so the documentation cannot go out of date
+- Optional **colour schemes** – *paper*, *high contrast* and *black (OLED)* – as one attribute on `<html>` (`data-scheme`):
+  surfaces, lines and text change, the accent never does, and every combination of scheme, mode and accent is checked for AA
 - A **flat look on purpose**: borders instead of shadows, no gradients, and what is selected is a tint behind
   the whole item, never a bar at one side
 - An optional **icon library** in files of its own: **1,925 icons in 54 categories** – an icon can be in several –

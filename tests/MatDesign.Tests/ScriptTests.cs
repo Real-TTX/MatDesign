@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using MatDesign.Core;
 
 namespace MatDesign.Tests;
 
@@ -62,6 +63,7 @@ public partial class ScriptTests
     [InlineData("prompt")]
     [InlineData("toast")]
     [InlineData("theme")]
+    [InlineData("scheme")]
     [InlineData("accent")]
     [InlineData("refresh")]
     public void The_public_api_has_its_documented_members(string member)
@@ -107,6 +109,25 @@ public partial class ScriptTests
         => Assert.Contains("!root.hasAttribute('data-preview')", Js);
 
     [Fact]
+    public void The_colour_scheme_is_chosen_saved_and_announced_like_the_theme_and_names_the_schemes_of_the_css()
+    {
+        // COLOR-09: data-scheme-set (aria-pressed follows), data-scheme-save-url (anti-forgery token like the theme), localStorage "mat-scheme" (not in a preview), the event mat:scheme.
+        Assert.Contains("var SCHEMES = ['paper', 'contrast', 'oled'];", Js);
+        Assert.Equal(ColorSchemes.All.Select(s => s.Id), Regex.Match(Js, @"var SCHEMES = \[([^\]]*)\]").Groups[1].Value.Split(',').Select(s => s.Trim().Trim('\'')));
+        Assert.Contains("data-scheme-set", Code);
+        Assert.Contains("data-scheme-save-url", Code);
+        Assert.Contains("mat-scheme", Code);
+        Assert.Contains("mat:scheme", Code);
+        Assert.Contains("new URLSearchParams({ scheme: name })", Code);
+        Assert.Contains("root.removeAttribute('data-scheme')", Code);
+
+        var save = Js[Js.IndexOf("function chooseScheme", StringComparison.Ordinal)..];
+        Assert.Contains("__RequestVerificationToken", save[..save.IndexOf("// ----", StringComparison.Ordinal)]);
+        var apply = Js[Js.IndexOf("function applyScheme", StringComparison.Ordinal)..];
+        Assert.Contains("!root.hasAttribute('data-preview')", apply[..apply.IndexOf("function chooseScheme", StringComparison.Ordinal)]);
+    }
+
+    [Fact]
     public void Scrollbars_show_only_while_scrolling()
     {
         // SPACE-05
@@ -121,6 +142,8 @@ public partial class ScriptTests
         Assert.True(boot.Length < 1500, $"the boot script is {boot.Length} bytes");
         Assert.Contains("mat-theme", boot);
         Assert.Contains("hasAttribute('data-theme')", boot);
+        Assert.Contains("mat-scheme", boot);
+        Assert.Contains("hasAttribute('data-scheme')", boot);
         Assert.DoesNotContain("fetch(", boot);
     }
 

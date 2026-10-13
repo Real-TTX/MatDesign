@@ -11,10 +11,20 @@ namespace MatDesign.Web.Pages.Builder;
 /// Tries an accent: derives the colours the toolkit would use, checks the contrast in both modes, names the nearest app and gives the
 /// snippet for the app's CSS. The preview frames are the real sample app with this accent.
 /// </summary>
-public partial class IndexModel(DesignData design) : PageModel
+public partial class IndexModel(DesignData design, MatDesign.Web.Services.ToolkitFiles toolkit) : PageModel
 {
     [GeneratedRegex("^#[0-9a-fA-F]{6}$")]
     private static partial Regex HexRegex();
+
+    /// <summary>The colour scheme to try (a known id), or null for the standard look.</summary>
+    public string? Scheme { get; private set; }
+
+    /// <summary>The modes in which the scheme has colours of its own, with their surfaces: what the accent is checked against. Empty for the standard look.</summary>
+    public IReadOnlyList<SchemeSurfaces> SchemeModes { get; private set; } = [];
+
+    public ColorScheme? SchemeInfo => ColorSchemes.Get(Scheme);
+
+    private string SchemeQuery => Scheme is null ? string.Empty : "&scheme=" + Scheme;
 
     public MatApp BaseApp { get; private set; } = null!;
 
@@ -34,12 +44,14 @@ public partial class IndexModel(DesignData design) : PageModel
     public bool TooClose => NearestDistance < PaletteAdvisor.TooClose;
 
     public string FrameUrl(string view, string theme)
-        => $"/Preview?app={BaseApp.Id}{(Custom ? "&accent=" + Uri.EscapeDataString(Accent) : string.Empty)}&view={view}&theme={theme}";
+        => $"/Preview?app={BaseApp.Id}{(Custom ? "&accent=" + Uri.EscapeDataString(Accent) : string.Empty)}{SchemeQuery}&view={view}&theme={theme}";
 
-    public string PresetUrl(string value) => $"/Builder?app={BaseApp.Id}&accent={Uri.EscapeDataString(value)}";
+    public string PresetUrl(string value) => $"/Builder?app={BaseApp.Id}&accent={Uri.EscapeDataString(value)}{SchemeQuery}";
 
-    public void OnGet(string? app, string? accent)
+    public void OnGet(string? app, string? accent, string? scheme)
     {
+        Scheme = ColorSchemes.Normalize(scheme);
+        SchemeModes = Scheme is null ? [] : ColorSchemes.Get(Scheme)!.DarkOnly ? [toolkit.Surfaces(Scheme, dark: true)] : [toolkit.Surfaces(Scheme, dark: false), toolkit.Surfaces(Scheme, dark: true)];
         BaseApp = design.App(app) ?? design.App("mattiverse")!;
         var hex = accent is not null && HexRegex().IsMatch(accent) ? accent.ToLowerInvariant() : BaseApp.Accent.ToLowerInvariant();
         Accent = hex;
@@ -67,7 +79,13 @@ public partial class IndexModel(DesignData design) : PageModel
     private string BuildSnippet(MatApp app)
     {
         var sb = new StringBuilder();
-        sb.Append("<html lang=\"en\" data-app=\"").Append(app.Id).Append("\">\n\n");
+        sb.Append("<html lang=\"en\" data-app=\"").Append(app.Id).Append('"');
+        if (Scheme is not null)
+        {
+            sb.Append(" data-scheme=\"").Append(Scheme).Append('"');
+        }
+
+        sb.Append(">\n\n");
         sb.Append("/* the colour of the app (matui.apps.css already has it for the family) */\n");
         sb.Append("[data-app=\"").Append(app.Id).Append("\"] { --mat-app-accent: ").Append(Accent);
         if (app.OnAccent is { } on)

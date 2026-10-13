@@ -26,6 +26,17 @@ registry reaches AA in light and dark**. If the CSS changes, the report must cha
 `--mat-app-accent-text`). Hover, the tints, the focus ring and the dark variant follow. In dark mode the accent is lightened (74 % accent, 26 % white) and the
 text on it is dark. This keeps 22 colours consistent without 22 stylesheets.
 
+**Schemes change surfaces, never the accent** (`COLOR-09`). `data-scheme="paper|contrast|oled"` on `<html>` is an opt-in set of surfaces, lines, text colours, shadows, dim layer and scrollbar for the same controls: *paper*
+(warm and slightly yellowed), *contrast* (pure white or black, lines instead of shadows, control borders at 3:1) and *oled* (black; dark mode only, in light mode it is the standard look). The values are the **end of
+`matui.tokens.css`**, not a part of their own: they are token values like the dark set, so the parser, the descriptions and the test that keeps the dark values written twice are the ones the tokens already have (a scheme's
+selectors start with `:root[data-scheme=…]`, so `CssTokens` never takes them for a base token or for the dark set; `CssTokens.Schemes` reads them). A scheme sets the same tokens in light and in dark, so its light values never
+show through in dark, and it sets no accent token, so every combination of scheme, mode, accent and app works without a rule of its own. One thing does follow the surfaces: the colour of a link. It is derived from the accent
+for a white or near-black page; on warm paper it comes out a little too light, so `--mat-accent-text` takes `--mat-accent-text-keep` (100 % in the standard look, 75 % on paper in light) of itself and the rest from
+`--mat-text`. That one share is what a scheme sets, for every accent and every app at once, and the standard look is byte-for-byte what it was (a test pins it, and the standard values were compared in a browser).
+`SchemeSurfaces` reads a scheme in one mode from the CSS and `AccentReport.Checks(surfaces)` and `SchemeSurfaces.Checks()` hold every pairing to AA for every app and every accent preset in every mode a scheme has, so the numbers on
+the Colour page are the CSS's. Where the standard look is a little under for one accent (a link of Matarchive on the page background, the link of Matdo on a chip in dark) the pairing is shown as advice for the standard look and
+required for every scheme: the standard look does not change.
+
 ## 3. The registry is data, the rulebook is code
 
 `AppRegistry` lists the apps with the accent the toolkit uses, the accent found in the app (so the site can say what changed and why), the logo colour, the class prefix and
@@ -170,8 +181,8 @@ writes: into `/data` (a volume), and only where a data directory is set (the ima
 (`admin.json`, created once and never overwritten); whoever opens the assistant first becomes the administrator, which is the price of a compose file without a password. Its session is a cookie that is
 HttpOnly, SameSite Lax and ends after eight hours or when the password changes, a sign-in that fails costs half a second and five of them lock the client out for a minute, and signing out is a POST with an
 anti-forgery token. The image runs as the unprivileged user of the base image and needs nothing else; the file system can be made read-only (a tmpfs for `/tmp`, the volume for `/data`) and the capabilities
-dropped (`read_only`, `cap_drop: [ALL]`, `no-new-privileges`) by whoever wants that, but the compose file leaves it out to stay simple. `Preview` and `Builder` take an app id, a theme and an accent from the query string and accept only known ids, `light`/`dark`
-and a `#rrggbb` value; everything else is ignored. A preview frame never saves its theme choice for the whole site (`data-preview`).
+dropped (`read_only`, `cap_drop: [ALL]`, `no-new-privileges`) by whoever wants that, but the compose file leaves it out to stay simple. `Preview` and `Builder` take an app id, a theme, a colour scheme and an accent from the query string and accept only known ids, `light`/`dark`,
+a scheme of the registry and a `#rrggbb` value; everything else is ignored. A preview frame never saves its theme or scheme choice for the whole site (`data-preview`).
 
 ## 11. Versions and delivery
 

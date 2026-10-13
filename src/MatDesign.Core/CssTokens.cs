@@ -17,6 +17,12 @@ public sealed record DesignToken(string Name, string Light, string? Dark, string
 }
 
 /// <summary>
+/// What a colour scheme sets in <c>matui.tokens.css</c> (the blocks that start with <c>:root[data-scheme="..."]</c>): the tokens of its light values, of its dark values for an
+/// explicit <c>data-theme="dark"</c> and the same for the system under <c>prefers-color-scheme: dark</c>. A part that the scheme does not have is null (oled has no light values).
+/// </summary>
+public sealed record SchemeBlocks(string Id, IReadOnlyDictionary<string, string>? Light, IReadOnlyDictionary<string, string>? Dark, IReadOnlyDictionary<string, string>? SystemDark);
+
+/// <summary>
 /// Reads <c>matui.tokens.css</c>. The CSS is the source of truth; the site, the documentation and the tests read it instead of keeping a
 /// second list. A token's description is the comment behind its declaration, its group the last <c>/* ---- Name ---- */</c> comment before it.
 /// </summary>
@@ -166,5 +172,63 @@ public static partial class CssTokens
         }
 
         return tokens;
+    }
+
+    [GeneratedRegex(@"^:root\[data-scheme=""([a-z]+)""\](\[data-theme=""dark""\]|:not\(\[data-theme=""light""\]\):not\(\[data-theme=""dark""\]\))?$")]
+    private static partial Regex SchemeSelectorRegex();
+
+    /// <summary>
+    /// The colour schemes of <c>matui.tokens.css</c> and what each sets. A block of a scheme is told from the base tokens and from the dark set by its selector (it starts with
+    /// <c>:root[data-scheme=</c>), so <see cref="Tokens"/> never mistakes a scheme for a base token.
+    /// </summary>
+    public static IReadOnlyList<SchemeBlocks> Schemes(string tokensCss)
+    {
+        var light = new Dictionary<string, Dictionary<string, string>>();
+        var dark = new Dictionary<string, Dictionary<string, string>>();
+        var system = new Dictionary<string, Dictionary<string, string>>();
+        var order = new List<string>();
+        foreach (var block in ParseBlocks(tokensCss))
+        {
+            var match = SchemeSelectorRegex().Match(block.Selector);
+            if (!match.Success)
+            {
+                continue;
+            }
+
+            var id = match.Groups[1].Value;
+            var kind = match.Groups[2].Value;
+            var inSystemDark = block.Media is not null && block.Media.Contains("prefers-color-scheme: dark", StringComparison.Ordinal);
+            var target = kind.Length == 0 && block.Media is null ? light
+                : kind.StartsWith("[data-theme", StringComparison.Ordinal) && block.Media is null ? dark
+                : kind.StartsWith(":not", StringComparison.Ordinal) && inSystemDark ? system
+                : null;
+            if (target is null)
+            {
+                continue;
+            }
+
+            if (!order.Contains(id))
+            {
+                order.Add(id);
+            }
+
+            if (!target.TryGetValue(id, out var values))
+            {
+                target[id] = values = [];
+            }
+
+            foreach (var d in block.Declarations)
+            {
+                values[d.Name] = d.Value;
+            }
+        }
+
+        return order
+            .Select(id => new SchemeBlocks(
+                id,
+                light.TryGetValue(id, out var l) ? l : null,
+                dark.TryGetValue(id, out var d) ? d : null,
+                system.TryGetValue(id, out var s) ? s : null))
+            .ToList();
     }
 }

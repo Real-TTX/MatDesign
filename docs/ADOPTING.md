@@ -42,6 +42,34 @@ The app sets one colour and nothing else:
 - Check it in the **Builder** (derived colours, contrast in light and dark, the nearest app) and on **Identity → Palette** (is it too close to another app, `IDENT-04`).
 - If the app already has a colour users know, keep it where AA allows and say so in the registry (`FoundAccent`); the site then shows what changed and why.
 
+## 2a. Colour schemes (optional, `COLOR-09`)
+
+An app can let its users choose the surfaces besides the standard look: **`paper`** (warm, slightly yellowed), **`contrast`** (pure white or pure black, strong lines instead of shadows, the borders of controls at 3:1 or
+more) and **`oled`** (a black page and menu, near-black surfaces; dark mode only, in light mode it is the standard look). It is one more attribute on `<html>`, next to `data-theme`, `data-app` and `data-accent`:
+
+```html
+<html lang="en" data-app="yourapp" data-theme="dark" data-scheme="oled">
+```
+
+- **Opt-in.** Without `data-scheme`, with `standard` or with any other value the app looks as it always did. A scheme changes surfaces (backgrounds, lines, text, the status texts, shadows, the dim layer, the scrollbar) and
+  never the accent, so it works with every accent, every preset and both modes. Every combination of scheme, mode and accent is checked for AA: **Foundations → Colour** shows the numbers, the **Builder** takes a scheme next to your accent.
+- **From the account.** Write `data-scheme` on every page from the user's setting on the server, `standard` too: an attribute that is there is the account's, and what the browser saved does not override it. Without an account
+  the browser keeps the choice (`localStorage` `mat-scheme`) and `matui.boot.js` applies it before the first paint, so the page does not flash.
+- **The control.** A segmented control in the settings. Each button is `data-scheme-set="standard|paper|contrast|oled"` (`aria-pressed` follows the choice); where the choice is kept per user, `data-scheme-save-url` on a button or on the
+  group around them posts `scheme=<name>` (`standard` for none) with the anti-forgery token of the page, exactly like `data-theme-save-url`. `MatUi.scheme.get()` and `.set(name)` do the same from code, and `mat:scheme` is fired on
+  `<html>` when it changes.
+
+```html
+<div class="mat-seg" role="group" aria-label="Colour scheme" data-scheme-save-url="/Account/Scheme">
+  <button type="button" class="mat-seg__btn" data-scheme-set="standard" aria-pressed="true">Standard</button>
+  <button type="button" class="mat-seg__btn" data-scheme-set="paper" aria-pressed="false">Paper</button>
+  <button type="button" class="mat-seg__btn" data-scheme-set="contrast" aria-pressed="false">High contrast</button>
+  <button type="button" class="mat-seg__btn" data-scheme-set="oled" aria-pressed="false">Black (OLED)</button>
+</div>
+```
+
+- A scheme is a set of surfaces only. An app that has a second dark mode or its own greys deletes them (`COLOR-02`) and offers a scheme instead.
+
 ## 3. The shell (`SHELL-*`)
 
 Replace the app's own frame with the shell:

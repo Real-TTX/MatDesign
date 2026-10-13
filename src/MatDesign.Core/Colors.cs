@@ -30,6 +30,45 @@ public readonly record struct Rgb(double R, double G, double B)
     private static int Clamp(double v) => (int)Math.Round(Math.Min(255, Math.Max(0, v)));
 }
 
+/// <summary>
+/// A colour with an opacity, written the way the tokens write them: <c>#rrggbb</c> or <c>rgba(31, 30, 27, .13)</c>. A browser paints it over what is behind it,
+/// in sRGB, which <see cref="Over"/> does; a hairline or a tint is only a colour once it is over a surface.
+/// </summary>
+public readonly record struct Rgba(Rgb Color, double Alpha)
+{
+    public static Rgba Parse(string value)
+    {
+        var v = value.Trim();
+        if (!v.StartsWith("rgb", StringComparison.OrdinalIgnoreCase))
+        {
+            return new Rgba(Rgb.Parse(v), 1);
+        }
+
+        var open = v.IndexOf('(');
+        var close = v.LastIndexOf(')');
+        if (open < 0 || close < open)
+        {
+            throw new FormatException($"'{value}' is not a colour like rgba(1, 2, 3, .5).");
+        }
+
+        var parts = v[(open + 1)..close].Split([',', ' ', '/'], StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length is < 3 or > 4)
+        {
+            throw new FormatException($"'{value}' is not a colour like rgba(1, 2, 3, .5).");
+        }
+
+        double Number(string s) => double.Parse(s.TrimEnd('%'), System.Globalization.CultureInfo.InvariantCulture);
+        var alpha = parts.Length == 4 ? (parts[3].EndsWith('%') ? Number(parts[3]) / 100 : Number(parts[3])) : 1;
+        return new Rgba(new Rgb(Number(parts[0]), Number(parts[1]), Number(parts[2])), alpha);
+    }
+
+    /// <summary>The colour that is seen when this one is painted over an opaque <paramref name="background"/>.</summary>
+    public Rgb Over(Rgb background) => new(
+        Color.R * Alpha + background.R * (1 - Alpha),
+        Color.G * Alpha + background.G * (1 - Alpha),
+        Color.B * Alpha + background.B * (1 - Alpha));
+}
+
 /// <summary>A colour in OKLab, the space <c>color-mix(in oklab, ...)</c> mixes in.</summary>
 public readonly record struct Oklab(double L, double A, double B);
 

@@ -73,13 +73,105 @@
     </div></div>
 </section>
 
+<section class="mat-section" aria-labelledby="schemes-title" id="schemes">
+    <div class="mat-section__head">
+        <h2 id="schemes-title">Colour schemes</h2>
+        <p class="mat-section__lead">
+            Besides the standard look an app can offer schemes (<a href="/Rules/Detail?id=COLOR-09">COLOR-09</a>): <code>data-scheme="paper|contrast|oled"</code> on <code>&lt;html&gt;</code>, next to <code>data-theme</code>,
+            <code>data-app</code> and <code>data-accent</code>. A scheme changes surfaces only: the backgrounds, the lines, the text, the status texts, the shadows, the dim layer and the scrollbar. It never sets an accent token,
+            so every combination of scheme, mode, accent and app works. Where the surfaces of a scheme need darker links it lowers <code>--mat-accent-text-keep</code>, the share of the accent that the colour of a link keeps.
+            The numbers below are computed from <code>matui.tokens.css</code> for every app and every accent preset.
+        </p>
+    </div>
+    <div class="mat-card"><div class="mat-card__body mat-stack">
+        <div class="mat-field">
+            <span class="mat-label" id="scheme-try-label">Try a scheme on this site</span>
+            <div class="mat-seg" role="group" aria-labelledby="scheme-try-label">
+                <button type="button" class="mat-seg__btn" data-scheme-set="standard" aria-pressed="true"><span>Standard</span></button>
+                @foreach (var s in ColorSchemes.All)
+                {
+                    <button type="button" class="mat-seg__btn" data-scheme-set="@s.Id" aria-pressed="false"><span>@s.Name</span></button>
+                }
+            </div>
+            <span class="mat-hint">Kept in this browser, for every page of the site. Black is for dark mode: in light mode it looks like Standard.</span>
+        </div>
+    </div></div>
+
+    @foreach (var scheme in new[] { new ColorScheme(ColorSchemes.Standard, "Standard", "The look above: warm neutral greys in light, neutral dark greys in dark. What an app has when it sets no scheme, and the base that every scheme changes.") }.Concat(ColorSchemes.All))
+    {
+        var set = SchemeDocs.TokensOf(Toolkit, scheme.Id);
+        var rows = SchemeDocs.Rows(Toolkit, scheme.Id, Design.Apps);
+        var query = scheme.Id == ColorSchemes.Standard ? string.Empty : "&scheme=" + scheme.Id;
+        <section class="mat-card" aria-labelledby="scheme-@scheme.Id">
+            <div class="mat-card__head">
+                <h3 class="mat-card__title" id="scheme-@scheme.Id">@scheme.Name</h3>
+                @if (scheme.Id != ColorSchemes.Standard) { <code>data-scheme="@scheme.Id"</code> }
+                @if (scheme.DarkOnly) { <span class="mat-pill mat-pill--plain">Dark mode only</span> }
+            </div>
+            <div class="mat-card__body mat-stack">
+                <p>@scheme.Description</p>
+                @if (set.Count > 0)
+                {
+                    <div class="doc-swatches">
+                        @foreach (var t in set)
+                        {
+                            <div class="doc-swatch">
+                                @if (TokensModel.Drawable(t.Light) && t.Dark is not null && TokensModel.Drawable(t.Dark))
+                                {
+                                    <div class="doc-pair">@Ui.Swatch(t.Light, "chip")@Ui.Swatch(t.Dark, "chip")</div>
+                                }
+                                <div class="doc-swatch__body">
+                                    <span class="doc-swatch__name">@t.Name</span>
+                                    <span class="doc-swatch__value">@t.Light</span>
+                                    <span class="doc-swatch__value">@(t.Dark ?? t.Light)</span>
+                                    <span class="doc-swatch__note">@t.Description</span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <p class="mat-hint">Left half light, right half dark@(scheme.DarkOnly ? ". Black has no light values: the left half is the standard look" : string.Empty). Only what the scheme sets is listed; everything else is the standard value.</p>
+                }
+
+                <div class="mat-table-wrap">
+                    <table class="mat-table">
+                        <caption class="mat-sr-only">Contrast of the scheme @scheme.Name</caption>
+                        <thead><tr><th scope="col">Pairing</th><th scope="col" class="mat-num">Light</th><th scope="col" class="mat-num">Dark</th><th scope="col" class="mat-num">Needed</th><th scope="col">Result</th></tr></thead>
+                        <tbody>
+                            @foreach (var row in rows)
+                            {
+                                <tr>
+                                    <td data-label="Pairing">@row.Pairing@if (row.Advisory) { <small class="mat-muted"> (advice only)</small> }</td>
+                                    <td data-label="Light" class="mat-num mat-mono">@Ratio(row.Light, scheme.DarkOnly)@if (row.LightAccent is not null) { <small class="mat-muted"> @row.LightAccent</small> }</td>
+                                    <td data-label="Dark" class="mat-num mat-mono">@Ratio(row.Dark, false)@if (row.DarkAccent is not null) { <small class="mat-muted"> @row.DarkAccent</small> }</td>
+                                    <td data-label="Needed" class="mat-num mat-mono">@row.Required.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture):1</td>
+                                    <td data-label="Result"><span class="mat-pill @(row.Passes ? "mat-pill--ok" : row.Advisory ? "mat-pill--warn" : "mat-pill--error")">@(row.Passes ? "Passes" : row.Advisory ? "Below advice" : "Fails")</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mat-hint">Pairings that depend on the accent show the weakest of the @Design.Apps.Count apps and the @AccentPresets.All.Count presets, with its name. <a href="/Builder?app=matpaper@(query)">Try your own accent on this scheme</a>.</p>
+                <div class="mat-row">
+                    <a class="mat-btn mat-btn--secondary mat-btn--sm" href="/Preview?app=matpaper&amp;view=list&amp;theme=light@(query)">@Ui.Icon("sun")<span>Sample app, light</span></a>
+                    <a class="mat-btn mat-btn--secondary mat-btn--sm" href="/Preview?app=matpaper&amp;view=list&amp;theme=dark@(query)">@Ui.Icon("moon")<span>Sample app, dark</span></a>
+                </div>
+            </div>
+        </section>
+    }
+</section>
+
 <section class="mat-section" aria-labelledby="rules-title">
     <div class="mat-section__head"><h2 id="rules-title">Rules for colour</h2></div>
     <div class="mat-grid">
-        @foreach (var id in new[] { "COLOR-01", "COLOR-02", "COLOR-03", "COLOR-04", "COLOR-05", "IDENT-02" })
+        @foreach (var id in new[] { "COLOR-01", "COLOR-02", "COLOR-03", "COLOR-04", "COLOR-05", "COLOR-09", "IDENT-02" })
         {
             var rule = Design.Rule(id)!;
             <a class="mat-card" href="/Rules/Detail?id=@rule.Id"><div class="mat-card__body mat-stack mat-stack--sm"><div class="mat-row"><span class="doc-rule-id">@rule.Id</span></div><strong>@rule.Title</strong></div></a>
         }
     </div>
 </section>
+
+@functions {
+    private static string Ratio(double? ratio, bool standardLook)
+        => ratio is null ? (standardLook ? "standard look" : "–") : ratio.Value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ":1";
+}

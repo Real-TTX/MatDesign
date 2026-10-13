@@ -43,9 +43,10 @@ src/MatUi                  Razor class library = the toolkit. wwwroot/css (10 pa
 src/MatDesign.Core         no web types
   Colors.cs                  OKLab, mixing like CSS color-mix, WCAG contrast, distance
   AppRegistry.cs             the apps and their accent, AccentPresets
-  AccentReport.cs            what the toolkit derives from an accent + the contrast checks
+  AccentReport.cs            what the toolkit derives from an accent + the contrast checks (also on the surfaces of a colour scheme)
+  ColorSchemes.cs            the colour schemes (paper, contrast, oled), SchemeSurfaces (a scheme in one mode, read from the CSS) and the checks per scheme, mode and accent
   PaletteAdvisor.cs          accents that are too close, proposals
-  CssTokens.cs               parser for matui.tokens.css (tokens, description from the comment, group from the heading)
+  CssTokens.cs               parser for matui.tokens.css (tokens, description from the comment, group from the heading; Schemes = what each colour scheme sets)
   RuleBook.cs                the rules (id, area, level, source, text)
   Studio/StudioStore.cs      what the Studio saves: an append-only log per item (studio/<kind>/<id>/<revision>.json), history, restore, activity
   Studio/AdminAccount.cs     the administrator: a name and a salted PBKDF2 hash in admin.json (created once, never overwritten), what the setup assistant accepts, Verify
@@ -64,10 +65,10 @@ src/MatDesign.Web          the site
   Services/                  ToolkitFiles, IconLibrary (the optional icon library: sprite, catalogue, single icons, archive, served under /ui/iconlib/), Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
                              ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
-                             PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
+                             PatternCatalog, ShellSkeleton, SchemeDocs (the numbers and tokens of the colour schemes for the pages), AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
   Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (switcher, items, badges, submenus), _MenuSwitchPopup, _Head, _Toolbar, _Pager,
-                             _DocSection + _Toc + _Component + _ContextPage (the components, layout and utilities pages), _AccentSwatches, _ContrastCard, _FoundationsTabs
+                             _DocSection + _Toc + _Component + _ContextPage (the components, layout and utilities pages), _AccentSwatches, _ContrastCard (+ _ContrastRows, _SchemeChecks), _FoundationsTabs
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
 tests/e2e                  run.js: the behaviour in a real browser against a running site
@@ -87,6 +88,10 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - Names: classes `mat-*` (block, element, modifier: `mat-card__head`, `mat-btn--primary`), state classes `is-*`, properties `--mat-*`, behaviour by `data-*` attributes.
   Site-only classes are `doc-*` and live in `site.css`.
 - The dark set is written twice (`:root[data-theme="dark"]` and the system media query) and the two must stay identical. `data-app` and `data-theme` belong on `<html>`.
+- Colour schemes (`COLOR-09`): `data-scheme="paper|contrast|oled"` on `<html>`, opt-in, at the END of `matui.tokens.css` (not a part of its own). A scheme sets surfaces, lines, text, status texts, shadows, the dim layer and
+  the scrollbar, **never an accent token**; its selectors start with `:root[data-scheme=...]` (so `CssTokens.Tokens` never reads them as base tokens or as the dark set; `CssTokens.Schemes` does), its dark values are written
+  twice and identical, it sets in dark every token it sets in light, and `oled` has no light values (light = standard). Links follow the surfaces through `--mat-accent-text-keep`. `SchemeTests` holds every scheme, mode, app and
+  accent preset to AA; the standard look is unchanged and the pairings it was never held to are shown as advice. `MatUi.scheme`, `data-scheme-set`, `data-scheme-save-url`, `mat-scheme` in localStorage, `matui.boot.js`.
 - Order inside a button row, a list block and the toolbar is enforced by CSS (`order`), not by the author. A selector in a later part must be more specific than a base class it
   overrides (the bundle puts `controls` after `shell`).
 - Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour"]` around the real input `mat-picker__input`, which posts one value in a fixed
