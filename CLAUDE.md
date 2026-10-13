@@ -102,7 +102,7 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   `.mat-tile` or `[data-select-item]` inside the box. A selected row is `--mat-accent-soft-strong`, a selected `[data-select-item]` is `--mat-accent-soft` with the accent as its line (like a ticked `.mat-choice`): a tint, no bar (`COLOR-08`).
 - The menu: a main action (`SHELL-19`) is the first item and filled with the accent (`mat-nav__item--primary`, `NavItem.Primary`; the current page keeps the fill, a step darker). The switcher (`SHELL-15`) is under the logo,
   or, with `mat-nav__switch--end` (`ShellModel.SwitcherAtEnd`), after the panels and above the foot with its popup upwards (`data-menu-place="top"`). In the header bar a main action is a `mat-btn--primary mat-btn--icon` in
-  `mat-topbar__actions` (`SHELL-17`, at most two). The sample app shows them with `/Preview?...&action=1&switcher=end`.
+  `mat-topbar__actions` (`SHELL-17`, one icon in the accent colour, last; a second one beside it is `mat-btn--secondary mat-btn--icon`). The sample app shows the menu pieces with `/Preview?...&action=1&switcher=end`.
 - Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour"]` around the real input `mat-picker__input`, which posts one value in a fixed
   format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone). Texts in English and German
   (`PK_TEXT`: both languages must have every key, a test checks; it also holds the label of the theme button and the AM and PM, so the script writes no text an app cannot change: `data-pk-*`,

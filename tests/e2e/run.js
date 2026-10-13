@@ -796,21 +796,32 @@ function seenAt(page, selector) {
   }
   {
     const { ctx, page } = await open(desktopOptions, '/Components#topbar');
-    await check('a highlighted action of the header bar is filled with the accent, readable, with room around it and in line with the content edge', async () => {
+    await check('the main action of the header bar is the one icon in the accent colour, a second one is secondary, with room between them and in line with the content edge', async () => {
       const state = await page.evaluate(() => {
         const bar = Array.from(document.querySelectorAll('.mat-topbar')).find(b => b.querySelector('.mat-topbar__actions .mat-btn--primary'));
-        const buttons = Array.from(bar.querySelectorAll('.mat-topbar__actions .mat-btn--primary'));
-        const s = getComputedStyle(buttons[0]);
+        const buttons = Array.from(bar.querySelectorAll('.mat-topbar__actions .mat-btn'));
+        const [second, main] = buttons;
+        const sm = getComputedStyle(main), ss = getComputedStyle(second);
         const rects = buttons.map(b => b.getBoundingClientRect());
         const edge = bar.getBoundingClientRect().right - parseFloat(getComputedStyle(bar).paddingRight);
-        return { count: buttons.length, bg: s.backgroundColor, colour: s.color, gap: Math.round(rects[1].left - rects[0].right), lastToEdge: Math.round(edge - rects[rects.length - 1].right), side: Math.round(rects[0].width) };
+        return {
+          count: buttons.length, classes: buttons.map(b => b.className.replace('mat-btn mat-btn--icon', '').replace('mat-btn--icon', '').replace('mat-btn', '').trim()),
+          mainBg: sm.backgroundColor, mainColour: sm.color, secondBg: ss.backgroundColor, secondColour: ss.color, secondBorder: ss.borderTopWidth,
+          gap: Math.round(rects[1].left - rects[0].right), mainToEdge: Math.round(edge - rects[1].right),
+        };
       });
-      const probes = await accentOf(page);
-      expect(state.count, 2, 'highlighted actions');
-      expect(state.bg, probes.accent, 'background');
-      expectTrue(contrastOf(state.bg, state.colour) >= 4.5, 'the icon is not readable on the accent');
-      expectTrue(state.gap >= 8, 'the highlighted buttons touch: gap ' + state.gap + ' px');
-      expectTrue(Math.abs(state.lastToEdge) <= 1, 'the last filled button is not in line with the edge of the content: ' + state.lastToEdge + ' px');
+      const probe = (prop, value) => page.evaluate(([p, v]) => { const t = document.createElement('i'); t.style.setProperty(p, v); document.body.appendChild(t); const c = getComputedStyle(t).getPropertyValue(p); t.remove(); return c; }, [prop, value]);
+      const accent = await accentOf(page);
+      const surface = await probe('background-color', 'var(--mat-surface)');
+      expect(state.classes, ['mat-btn--secondary', 'mat-btn--primary'], 'the buttons of the bar, the main action last');
+      expect(state.mainBg, accent.accent, 'background of the main action');
+      expect(state.secondBg, surface, 'background of the second action (a surface, not the accent)');
+      expectTrue(state.secondBg !== state.mainBg, 'the second action has the colour of the main one');
+      expectTrue(parseFloat(state.secondBorder) >= 1, 'the second action has no line');
+      expectTrue(contrastOf(state.mainBg, state.mainColour) >= 4.5, 'the icon of the main action is not readable on the accent');
+      expectTrue(contrastOf(state.secondBg, state.secondColour) >= 4.5, 'the icon of the second action is not readable on its surface');
+      expectTrue(state.gap >= 8, 'the buttons touch: gap ' + state.gap + ' px');
+      expectTrue(Math.abs(state.mainToEdge) <= 1, 'the main action is not in line with the edge of the content: ' + state.mainToEdge + ' px');
     });
     await ctx.close();
   }

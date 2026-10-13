@@ -677,20 +677,20 @@ public static class ComponentCatalog
                       </div>
                     </header>
                     """, "A count or a dot goes in a badge on the icon; the name of the button says what the badge says, because the badge itself is hidden from screen readers. Tones: accent (default), warn, error.", Frame: "bar"),
-                new("Highlighted actions", $"""
+                new("A main action and a secondary one", $"""
                     <header class="mat-topbar">
                       <nav class="mat-crumbs" aria-label="Breadcrumb">
                         <ol><li><a href="#">MatPaper</a></li><li aria-current="page">Documents</li></ol>
                       </nav>
                       <div class="mat-topbar__actions">
-                        <button type="button" class="mat-btn mat-btn--primary mat-btn--icon" aria-label="Upload a file" data-tip="Upload a file">{I("upload")}</button>
+                        <button type="button" class="mat-btn mat-btn--secondary mat-btn--icon" aria-label="Search" data-tip="Search">{I("search")}</button>
                         <button type="button" class="mat-btn mat-btn--primary mat-btn--icon" aria-label="Add a document" data-tip="Add a document">{I("plus")}</button>
                       </div>
                     </header>
-                    """, "The one or two main actions of the app (scan a document, add something) are filled with the accent, so that they are found at once; the other icons stay ghost. They keep a name and a tooltip like every icon here.", Frame: "bar"),
+                    """, "The main action of the app (scan a document, add something) is the one icon in the accent colour, last, at the right end. A second action that should be seen but is not the main one is a secondary icon button; the other icons stay ghost. All keep a name and a tooltip.", Frame: "bar"),
             ],
             ["At most four icons; more go behind one icon that opens a context menu (the `menu` component).",
-             "A main action is highlighted with `mat-btn--primary` instead of `mat-btn--ghost`: at most two; with more filled icons nothing stands out any more.",
+             "The main action is highlighted with `mat-btn--primary` instead of `mat-btn--ghost`, at most one: with several icons in the accent colour nothing stands out any more. A second one beside it is `mat-btn--secondary`.",
              "Only things of the whole app belong here. Page actions stay with their content (FORM-01, LIST-07); the theme button and the user stay at the foot of the menu (SHELL-03).",
              "On a phone the icons stay and the breadcrumb shows only its last two items (MOBILE-02)."]),
 

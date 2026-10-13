@@ -46,9 +46,9 @@ public class MenuActionTests
     }
 
     [Fact]
-    public void A_main_action_of_the_header_bar_is_filled_and_lines_up_with_the_content()
+    public void A_main_action_of_the_header_bar_is_filled_and_a_second_one_is_secondary_both_with_room_and_in_line_with_the_content()
     {
-        var actions = Block(".mat-topbar__actions:has(> .mat-btn--primary)");
+        var actions = Block(".mat-topbar__actions:has(> .mat-btn--primary, > .mat-btn--secondary)");
         Assert.Contains("gap: var(--mat-space-2)", actions);
         Assert.Contains("margin-right: 0", actions);
     }
@@ -66,13 +66,15 @@ public class MenuActionTests
         Assert.False(string.IsNullOrWhiteSpace(main.Dont));
 
         Assert.Contains("mat-nav__switch--end", RuleBook.All.Single(r => r.Id == "SHELL-15").Statement);
-        Assert.Contains("mat-btn--primary", RuleBook.All.Single(r => r.Id == "SHELL-17").Statement);
+        var bar = RuleBook.All.Single(r => r.Id == "SHELL-17").Statement;
+        Assert.Contains("mat-btn--primary", bar);
+        Assert.Contains("mat-btn--secondary", bar);
     }
 
     [Fact]
     public void They_are_documented_in_the_adoption_guide_and_in_examples_of_the_components()
     {
-        foreach (var documented in new[] { "mat-nav__item--primary", "mat-nav__switch--end", "mat-btn--primary mat-btn--icon", "SHELL-19" })
+        foreach (var documented in new[] { "mat-nav__item--primary", "mat-nav__switch--end", "mat-btn--primary mat-btn--icon", "mat-btn--secondary mat-btn--icon", "SHELL-19" })
         {
             Assert.Contains(documented, Adopting);
         }
@@ -89,8 +91,10 @@ public class MenuActionTests
         Assert.True(end.Html.IndexOf("mat-nav__switch--end", StringComparison.Ordinal) > end.Html.LastIndexOf("data-nav-panel=", StringComparison.Ordinal), "the switcher has to come after the panels");
 
         var topbar = ComponentCatalog.All.Single(c => c.Id == "topbar");
-        var highlighted = topbar.Examples.Single(e => e.Title == "Highlighted actions");
-        Assert.Equal(2, Regex.Count(highlighted.Html, "mat-btn--primary mat-btn--icon"));
+        var highlighted = topbar.Examples.Single(e => e.Title == "A main action and a secondary one");
+        Assert.Equal(1, Regex.Count(highlighted.Html, "mat-btn--primary mat-btn--icon"));
+        Assert.Equal(1, Regex.Count(highlighted.Html, "mat-btn--secondary mat-btn--icon"));
         Assert.DoesNotContain("mat-btn--ghost", highlighted.Html);
+        Assert.True(highlighted.Html.IndexOf("mat-btn--secondary", StringComparison.Ordinal) < highlighted.Html.IndexOf("mat-btn--primary", StringComparison.Ordinal), "the main action is the last one, at the right end");
     }
 }
