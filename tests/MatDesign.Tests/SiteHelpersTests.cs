@@ -272,6 +272,16 @@ public class SiteHelpersTests
     }
 
     [Fact]
+    public void A_menu_has_a_start_page_when_it_names_an_address_and_only_the_studio_of_the_site_does()
+    {
+        Assert.False(Menu("a").HasStartPage);
+        Assert.True(new NavSet("b", "B", "list", Menu("b").Groups, Href: "/b").HasStartPage);
+        Assert.All(Navigation.Sets, s => Assert.False(s.HasStartPage, s.Id));
+        Assert.Equal("/Studio", Navigation.StudioSet.Href);
+        Assert.Contains(Navigation.StudioSet.Pages, p => p.Href == Navigation.StudioSet.Href);   // the start page is a page of the menu
+    }
+
+    [Fact]
     public void The_menus_of_the_site_are_not_grouped()
         => Assert.All(Navigation.Sets, s => Assert.Null(s.Parent));
 

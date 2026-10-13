@@ -945,10 +945,33 @@ public static class ComponentCatalog
                       <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="false" data-nav-set="admin" data-nav-title="Administration">{I("shield")}<span>Administration</span>{I("check", "mat-menu__check")}</button>
                     </div>
                     """, "For an app whose menu starts with a main action (SHELL-19): the switcher sits at the end of the menu, directly above the foot, and its popup opens upwards (data-menu-place=\"top\"). It comes after the panels in the markup.", Frame: "menu"),
+                new("With start pages", $"""
+                    <div id="switch-pages-demo">
+                      <div class="mat-nav__switch">
+                        <button type="button" class="mat-switcher" data-menu-toggle="switch-pages-menu" data-menu-place="bottom" aria-haspopup="menu" aria-expanded="false">
+                          <span class="mat-switcher__icon">{I("briefcase")}</span>
+                          <span class="mat-switcher__text"><small data-nav-label="Menu">Menu</small><span class="mat-switcher__name">Work</span></span>
+                          {I("chevron-down", "mat-switcher__chev")}
+                          <span class="mat-switcher__dot" hidden></span>
+                        </button>
+                      </div>
+                      <nav class="mat-nav__scroll" aria-label="Work" data-nav-panel="work">
+                        <ul class="mat-nav__list">
+                          <li><a class="mat-nav__item is-active" href="#" aria-current="page">{I("dashboard")}<span>Dashboard</span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("list")}<span>Items</span></a></li>
+                        </ul>
+                      </nav>
+                    </div>
+                    <div class="mat-menu" id="switch-pages-menu" role="menu" aria-label="Menus" data-nav-scope="switch-pages-demo" hidden>
+                      <a class="mat-menu__item" href="#" role="menuitemradio" aria-checked="true" data-nav-set="work" data-nav-title="Work">{I("briefcase")}<span>Work</span>{I("check", "mat-menu__check")}</a>
+                      <a class="mat-menu__item" href="#" role="menuitemradio" aria-checked="false" data-nav-set="admin" data-nav-title="Administration">{I("shield")}<span>Administration</span>{I("check", "mat-menu__check")}</a>
+                    </div>
+                    """, "For an app whose menus are areas with a page each: the entries are links (the start page of a menu, `href`), so choosing one loads that page and the page that loads shows its own menu. Here the links go nowhere; in the app the page of the Administration draws only the menu of the Administration, with its entry checked.", Frame: "menu"),
             ],
             [
                 "The switcher appears only when an app has at least two menus; a menu the user may not use is not offered.",
-                "When a page loads, the menu that has the current page is shown. Choosing a menu only swaps the items: nothing is loaded.",
+                "When a page loads, the menu that has the current page is shown. Choosing a menu swaps the items: nothing is loaded.",
+                "A menu can have a start page: its entry is a link (`<a href>`, `NavSet.Href`), so choosing it loads that page, which shows its own menu. The other pages carry no hidden panel of it.",
                 "The popup is a context menu drawn at the end of the page and names the element that holds the switcher and the panels (`data-nav-scope`).",
                 "Under the logo, above the items, at the foot of the menu directly above the user, or both: the logo and the foot (user, theme button, version) stay where they are, and the switchers show the same menu.",
                 "Or at the end of the menu, above the foot (`mat-nav__switch--end`, after the panels in the markup, the popup opens upwards): for a menu that starts with a main action.",

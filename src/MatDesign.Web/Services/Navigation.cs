@@ -76,10 +76,14 @@ public sealed record NavSetParent(string Title, string Icon)
 
 /// <summary>
 /// One menu of an app (SHELL-15). An app with distinct areas, such as an administration, has several; the switcher shows one at a time.
-/// With a <see cref="Parent"/> the menu is listed below that parent in the switcher instead of at its top level.
+/// With a <see cref="Parent"/> the menu is listed below that parent in the switcher instead of at its top level. With a <see cref="Href"/> choosing the menu loads that page (its start page)
+/// instead of swapping the items: the entry of the switcher is a link, and the page that loads shows its own menu.
 /// </summary>
-public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<NavGroup> Groups, NavSetParent? Parent = null)
+public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<NavGroup> Groups, NavSetParent? Parent = null, string? Href = null)
 {
+    /// <summary>True when choosing the menu loads a page of its own, so that a page that belongs to another menu needs no panel for it.</summary>
+    public bool HasStartPage => Href is not null;
+
     /// <summary>Every item, parents included.</summary>
     public IEnumerable<NavItem> AllItems => Groups.SelectMany(g => g.Items).SelectMany(i => i.IsParent ? i.Children!.Prepend(i) : [i]);
 
@@ -158,7 +162,7 @@ public static class Navigation
 
     /// <summary>
     /// The menu of the Studio without counts (docs/STUDIO.md). It is a third menu behind the switcher, shown only to the signed-in administrator, so it is not one of
-    /// <see cref="Sets"/>; the pages use <see cref="StudioMenu"/>.
+    /// <see cref="Sets"/>; the pages use <see cref="StudioMenu"/>. Choosing it in the switcher opens the overview of the Studio (a start page).
     /// </summary>
     public static NavSet StudioSet { get; } = StudioMenu(NavFacts.BuiltIn);
 
@@ -184,7 +188,7 @@ public static class Navigation
             new("Releases", "/Studio/Releases", "rocket"),
             new("Versions", "/Studio/Versions", "tag"),
         ]),
-    ]);
+    ], Href: "/Studio");
 
     /// <summary>The menus a visitor sees: the two of the site, and the Studio for the signed-in administrator.</summary>
     public static IReadOnlyList<NavSet> For(NavFacts facts, bool studio) => studio ? [.. Create(facts), StudioMenu(facts)] : Create(facts);

@@ -2,7 +2,8 @@
 @model (ShellModel Shell, string? Active)
 @*
     The menu of the shell: the switcher under the logo, or at the end of the menu with ShellModel.SwitcherAtEnd (only with more than one menu, SHELL-15; at the foot,
-    _Layout draws it) and a panel of items per menu; only the menu that has the current page is shown. Items: an icon and a label, the current one marked (SHELL-02);
+    _Layout draws it) and a panel of items per menu; only the menu that has the current page is shown. A menu with a start page (NavSet.Href) has a panel only
+    while it is the current one: choosing it loads its page, so the other pages carry no hidden copy of it. Items: an icon and a label, the current one marked (SHELL-02);
     a badge at the right end (SHELL-14); a parent opens its children (SHELL-13); the main action is filled with the accent (NavItem.Primary, SHELL-19).
     The popup of the switcher is drawn at the end of the page (_MenuSwitchPopup): the menu has a backdrop filter, which would make it the frame of a fixed popup.
 *@
@@ -24,7 +25,7 @@
     <partial name="_MenuSwitcher" model="(shell, active, SwitcherPlace.Top)" />
 }
 
-@foreach (var menu in shell.Menus)
+@foreach (var menu in shell.Menus.Where(m => m == current || !m.HasStartPage))
 {
     <nav class="mat-nav__scroll" aria-label="@(shell.HasSwitcher ? menu.Title : "Main")" data-nav-panel="@menu.Id" hidden="@(menu != current)">
         <ul class="mat-nav__list">

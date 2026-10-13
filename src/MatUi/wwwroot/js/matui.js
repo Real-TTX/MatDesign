@@ -19,7 +19,8 @@
                                             data-scheme-save-url (on the button or its group) posts scheme=<name or standard> like the theme. MatUi.scheme.get() / .set(name)
      data-nav-toggle / data-nav-close       open / close the menu drawer (phones)
      data-nav-branch="key"                  the parent of a submenu in the menu (aria-expanded; the choice is remembered per app)
-     data-nav-set="id" / data-nav-panel="id"  the menu switcher: an entry of its menu shows the panel of items with the same id;
+     data-nav-set="id" / data-nav-panel="id"  the menu switcher: an entry of its menu shows the panel of items with the same id; an entry that is a link
+                                            (<a href>, the start page of the menu) loads its page instead, and that page shows its own menu;
                                             the menu names the element with the switcher and the panels: data-nav-scope="id". There can be a switcher
                                             under the logo and one at the foot of the menu (both in the scope, both kept in step), or one at the end of the menu
      data-nav-group                         the parent of some menus in the popup of the switcher (aria-expanded, aria-controls = the element with its menus;
@@ -1609,8 +1610,9 @@
     if (openMenu && !t.closest('.mat-menu')) { closeMenu(); }
     else if (openMenu && t.closest('.mat-menu__item')) { setTimeout(closeMenu, 0); }
 
+    // an entry with an address (<a href>) is a start page: the browser loads it (a new tab, a modifier click) and the page shows its own menu; only a button swaps the items
     var setBtn = t.closest('[data-nav-set]');
-    if (setBtn) { setNavSet(setBtn.getAttribute('data-nav-set'), setBtn.closest('.mat-menu')); return; }
+    if (setBtn) { if (!setBtn.hasAttribute('href')) { setNavSet(setBtn.getAttribute('data-nav-set'), setBtn.closest('.mat-menu')); } return; }
 
     // a link to a section of the page inside a dialog (the index on a phone) closes the dialog and lets the browser jump
     var jump = t.closest('dialog a[href^="#"]');
@@ -1686,6 +1688,10 @@
       if (shell && shell.classList.contains('is-nav-open')) { setNav(false); }
       return;
     }
+
+    // an entry of a menu that is a link (the start page of a menu in the switcher) is chosen with the Space key as well, like a button
+    var focused = doc.activeElement;
+    if (openMenu && e.key === ' ' && focused && focused.tagName === 'A' && focused.classList.contains('mat-menu__item') && openMenu.menu.contains(focused)) { e.preventDefault(); focused.click(); return; }
 
     if (openMenu && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       // the menus of a closed parent are not walked

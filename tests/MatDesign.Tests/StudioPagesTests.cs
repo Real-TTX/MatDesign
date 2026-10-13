@@ -180,6 +180,24 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
     }
 
     [Fact]
+    public async Task The_studio_is_a_start_page_in_the_switcher_and_its_menu_is_only_in_its_own_pages()
+    {
+        await _studio.SignIn();
+
+        // on a page of the site the entry of the Studio is a link to its overview, the other two are buttons, and the Studio has no hidden panel
+        var site = await _studio.Get("/Rules");
+        Assert.Matches(@"<a class=""mat-menu__item"" href=""/Studio"" role=""menuitemradio"" aria-checked=""false"" data-nav-set=""studio""", site);
+        Assert.Matches(@"<button type=""button"" class=""mat-menu__item"" role=""menuitemradio"" aria-checked=""false"" data-nav-set=""toolkit""", site);
+        Assert.DoesNotContain("data-nav-panel=\"studio\"", site);
+        Assert.Contains("data-nav-panel=\"toolkit\"", site);
+
+        // on a page of the Studio the entry is checked and its menu is drawn, shown
+        var studio = await _studio.Get("/Studio/Apps");
+        Assert.Matches(@"<a class=""mat-menu__item"" href=""/Studio"" role=""menuitemradio"" aria-checked=""true"" data-nav-set=""studio""", studio);
+        Assert.Matches(@"data-nav-panel=""studio""(?![^>]*hidden)", studio);
+    }
+
+    [Fact]
     public async Task The_menu_of_the_studio_has_every_page_and_marks_the_one_that_is_open()
     {
         await Fill();

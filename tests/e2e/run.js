@@ -691,6 +691,32 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
+    // SHELL-15: an entry that is a link is the start page of its menu: the browser loads it, the script does not swap the items
+    const { ctx, page } = await open(desktopOptions, '/Components#switcher');
+    const entry = '#switch-pages-menu [data-nav-set="admin"]';
+    await check('an entry of the switcher that is a link loads its page and does not swap the items', async () => {
+      await page.click('#switch-pages-demo .mat-switcher');
+      expect(await page.evaluate(sel => document.querySelector(sel).tagName, entry), 'A', 'the entry is a link');
+      expect(await page.getAttribute(entry, 'role'), 'menuitemradio', 'role');
+      await page.click(entry);
+      await page.waitForTimeout(250);
+      expectTrue(await page.locator('#switch-pages-menu').isHidden(), 'the popup stays open after the choice');
+      expect((await page.textContent('#switch-pages-demo .mat-switcher__name')).trim(), 'Work', 'the items were swapped: the page that loads draws its menu');
+      expect(await page.getAttribute('#switch-pages-menu [data-nav-set="work"]', 'aria-checked'), 'true', 'the checked entry stays until the page is loaded');
+      expectTrue(page.url().endsWith('#'), 'the link was not followed: ' + page.url());
+    });
+    await check('a link in the popup of the switcher is chosen with the arrow keys and the Space key like a button', async () => {
+      await page.click('#switch-pages-demo .mat-switcher');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-nav-set')), 'work', 'the first entry has the focus when the popup opens');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-nav-set')), 'admin', 'the entry that has the focus');
+      await page.keyboard.press(' ');
+      await page.waitForTimeout(250);
+      expectTrue(await page.locator('#switch-pages-menu').isHidden(), 'the popup stays open after the Space key');
+    });
+    await ctx.close();
+  }
+  {
     const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list');
     await check('on a phone a parent opens its children without closing the drawer; a link closes it', async () => {
       await page.click('[data-nav-toggle]');
@@ -5721,6 +5747,24 @@ function seenAt(page, selector) {
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
         const names = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').evaluateAll(els => els.map(e => { const c = e.cloneNode(true); c.querySelectorAll('.mat-nav__badge').forEach(b => b.remove()); return c.textContent.trim(); }));
         expect(names, ['Overview', 'Apps', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'Versions'], 'items of the Studio menu');
+      });
+      await check('choosing the Studio in the switcher loads its overview (a start page); the other menus swap the items', async () => {
+        await page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
+        expect(await page.locator('.mat-nav [data-nav-panel="studio"]').count(), 0, 'the page of the site has no panel of the Studio');
+        await page.click('.mat-nav__foot .mat-switcher');
+        expect(await page.evaluate(() => document.querySelector('#nav-switch-menu [data-nav-set="studio"]').tagName), 'A', 'the Studio is a link');
+        expect(await page.evaluate(() => document.querySelector('#nav-switch-menu [data-nav-set="toolkit"]').tagName), 'BUTTON', 'the Toolkit is a button');
+        await Promise.all([page.waitForURL('**/Studio'), page.click('#nav-switch-menu [data-nav-set="studio"]')]);
+        expect((await page.textContent('.mat-switcher__name')).trim(), 'Studio', 'the menu of the page that loaded');
+        expectTrue(await page.locator('.mat-nav [data-nav-panel="studio"]').isVisible(), 'the Studio menu is shown');
+        expect(await page.getAttribute('#nav-switch-menu [data-nav-set="studio"]', 'aria-checked'), 'true', 'checked');
+        // from there a menu without a start page is still swapped without a request
+        await page.click('.mat-nav__foot .mat-switcher');
+        await page.click('#nav-switch-menu [data-nav-set="toolkit"]');
+        await page.waitForTimeout(250);
+        expect(new URL(page.url()).pathname, '/Studio', 'the address after swapping');
+        expectTrue(await page.locator('.mat-nav [data-nav-panel="toolkit"]').isVisible(), 'the toolkit menu is shown');
+        await page.goto(BASE + '/Studio/Activity', { waitUntil: 'networkidle' });   // where the next checks expect to be
       });
       await check('the activity list has its toolbar above it and the sort dialog opens', async () => {
         const bar = await page.locator('.mat-toolbar').boundingBox();

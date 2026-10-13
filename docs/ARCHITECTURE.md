@@ -61,7 +61,8 @@ The items of the menu are not markup an app writes but a model the partial `_Men
 (title, address, icon, an optional `NavBadge`, optional children). A parent has children and no address: it is a button that opens them, one level deep (`NavSet.IsValid` and a test
 check this). A `NavBadge` is a count (above 99 it reads `99+`) or a dot, in a tone that follows the status colours; a closed parent shows the sum of its children's badges in the most
 urgent tone. An app with more than one `NavSet` gets the switcher; the set that has the current page is the one drawn visible, the others are in the page with `hidden`, so
-choosing another one in the switcher swaps them without a request. The popup of the switcher is drawn at the end of the page like the user menu, because the menu has a backdrop filter and
+choosing another one in the switcher swaps them without a request. A `NavSet` with an `Href` is the other kind: an area with a page of its own, whose entry in the popup is a link, so choosing it
+loads that start page; the page that loads draws its own menu, and the pages of the other menus carry no hidden panel of it (`_Menu` leaves it out). The popup of the switcher is drawn at the end of the page like the user menu, because the menu has a backdrop filter and
 that would make it the frame of a fixed popup; it names the element that holds the panels (`data-nav-scope`) so that an example in the documentation can show a menu without touching the menu
 of the page. The choice of open and closed branches is remembered in the browser per app and never overrides the branch of the current page.
 
