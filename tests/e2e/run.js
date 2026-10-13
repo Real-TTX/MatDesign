@@ -40,6 +40,8 @@ function expectTrue(value, what) {
     page.on('pageerror', e => consoleErrors.push(url + ': ' + e.message));
     page.on('console', m => { if (m.type() === 'error') { consoleErrors.push(url + ': ' + m.text()); } });
     await page.goto(BASE + url, { waitUntil: 'networkidle' });
+    // the components page is two megabytes: the network can be quiet for half a second while the document is still being read, and its script has not run yet
+    await page.waitForFunction(() => document.readyState === 'complete');
     return { ctx, page };
   }
 
@@ -653,6 +655,381 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- lists of rows (LIST-15)
+  console.log('\nLists of rows');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#itemlist');
+    // the toasts of the documentation (it reports the events of the lists) would cover what the checks press
+    await page.addStyleTag({ content: '.mat-toasts { display: none; }' });
+    // what the lists report is collected in the page, so that each check can look at it
+    await page.evaluate(() => {
+      window.__il = [];
+      const note = (type, d) => window.__il.push({ type, action: d.action, key: d.item && d.item.getAttribute('data-item-key'), from: d.from, to: d.to, order: d.order, text: d.text, shown: d.shown, total: d.total });
+      for (const type of ['mat:item-action', 'mat:reorder', 'mat:item-filter']) { document.addEventListener(type, e => note(type, e.detail)); }
+    });
+    const events = type => page.evaluate(t => window.__il.filter(e => e.type === t), type);
+    const show = sel => page.locator(sel).first().scrollIntoViewIfNeeded();
+    const slide = '#il-slide';
+    const row = n => `${slide} > .mat-item:nth-child(${n})`;
+    const rowState = sel => page.$eval(sel, li => {
+      const end = li.querySelector('.mat-item__options--end'), start = li.querySelector('.mat-item__options--start');
+      const side = end || start;
+      return {
+        end: li.classList.contains('is-open-end'), start: li.classList.contains('is-open-start'), open: li.classList.contains('is-open'),
+        x: li.style.getPropertyValue('--mat-item-x'), width: side ? side.offsetWidth : 0,
+        visibility: side ? getComputedStyle(side).visibility : '', inert: side ? side.hasAttribute('inert') : null,
+        expanded: li.querySelector('.mat-item__more').getAttribute('aria-expanded'),
+        moved: Math.round(li.querySelector('.mat-item__row').getBoundingClientRect().left - li.getBoundingClientRect().left),
+      };
+    });
+    const active = () => page.evaluate(() => {
+      const a = document.activeElement, li = a.closest && a.closest('.mat-item');
+      return { cls: typeof a.className === 'string' ? a.className : '', key: li ? li.getAttribute('data-item-key') : null, action: a.getAttribute && a.getAttribute('data-item-action') };
+    });
+    // a drag of the row with the mouse, from its right part to the left (or the right)
+    const drag = async (sel, dx) => {
+      await show(sel);
+      const box = await page.locator(sel + ' .mat-item__main').boundingBox();
+      const y = box.y + box.height / 2, x0 = box.x + box.width - 80;
+      await page.mouse.move(x0, y);
+      await page.mouse.down();
+      for (let i = 1; i <= 10; i += 1) { await page.mouse.move(x0 + dx * i / 10, y); await page.waitForTimeout(25); }
+      return { up: async () => { await page.mouse.up(); await page.waitForTimeout(350); }, box };
+    };
+
+    // ---- the list and its rows
+    await check('a row is at least 48 px high, the lines are drawn by the rows (none under the last one) and from the text when the list says so', async () => {
+      await show('[aria-labelledby="ex-itemlist-2"]');
+      const s = await page.evaluate(() => {
+        const lists = [...document.querySelectorAll('[aria-labelledby="ex-itemlist-2"] .mat-itemlist')];
+        const line = li => getComputedStyle(li, '::after').content;
+        const first = lists[0].querySelector('.mat-item'), last = lists[0].querySelector('.mat-item:last-child');
+        const inset = lists[1], none = lists[2];
+        const left = li => { const a = getComputedStyle(li, '::after'); return parseFloat(a.left); };
+        return {
+          height: Math.round(first.getBoundingClientRect().height), line: line(first) !== 'none', lastLine: line(last),
+          insetLeft: Math.round(left(inset.querySelector('.mat-item'))), fullLeft: Math.round(left(first)), noneColour: getComputedStyle(none.querySelector('.mat-item'), '::after').backgroundColor,
+        };
+      });
+      expectTrue(s.height >= 48, 'a row is ' + s.height + ' px high');
+      expect(s.line, true, 'the line under the first row');
+      expect(s.lastLine, 'none', 'the line under the last row');
+      expect([s.fullLeft, s.insetLeft], [0, 68], 'where the lines begin (full, from the text)');
+      expect(s.noneColour, 'rgba(0, 0, 0, 0)', 'the lines of a list without lines');
+    });
+    await check('the grouped card is a rounded list with a border, and a selected row is a tint behind the whole row with no bar at a side', async () => {
+      await show('[aria-labelledby="ex-itemlist-5"]');
+      const s = await page.evaluate(() => {
+        const card = document.querySelector('[aria-labelledby="ex-itemlist-3"] .mat-itemlist--inset');
+        const sel = document.querySelector('[aria-labelledby="ex-itemlist-5"] .mat-item.is-selected');
+        const c = getComputedStyle(card), r = getComputedStyle(sel);
+        return {
+          radius: c.borderTopLeftRadius, border: c.borderTopWidth, tint: r.backgroundColor, left: r.borderLeftWidth, right: r.borderRightWidth, shadow: r.boxShadow,
+          weight: Number(getComputedStyle(sel.querySelector('.mat-item__title')).fontWeight), normal: Number(getComputedStyle(document.querySelector('[aria-labelledby="ex-itemlist-5"] .mat-item:first-child .mat-item__title')).fontWeight),
+        };
+      });
+      expect([s.radius, s.border], ['8px', '1px'], 'the card');
+      expectTrue(s.tint !== 'rgba(0, 0, 0, 0)' && s.tint !== 'transparent', 'the selected row has no tint');
+      expect([s.left, s.right, s.shadow], ['0px', '0px', 'none'], 'a bar at a side');
+      expectTrue(s.weight > s.normal, 'the selected title is not stronger');
+    });
+    await check('a row that is a link has its focus ring inside the row', async () => {
+      await show('[aria-labelledby="ex-itemlist-1"]');
+      await page.focus('[aria-labelledby="ex-itemlist-1"] .mat-item:first-child .mat-item__main');
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      const ring = await page.$eval('[aria-labelledby="ex-itemlist-1"] .mat-item:first-child .mat-item__main', el => getComputedStyle(el).boxShadow);
+      expectTrue(ring.includes('inset'), 'the focus ring is not inside the row: ' + ring);
+    });
+
+    // ---- sliding actions
+    await check('a list that the script has taken over names the More button of each row, and the options are hidden, inert and not in the tab order', async () => {
+      await show(slide);
+      const s = await page.$eval(slide, l => ({
+        ready: l.classList.contains('is-ready'),
+        labels: [...l.querySelectorAll('.mat-item__more')].map(b => b.getAttribute('aria-label')),
+        inert: [...l.querySelectorAll('.mat-item__options')].map(o => o.hasAttribute('inert')),
+        visibility: [...l.querySelectorAll('.mat-item__options')].map(o => getComputedStyle(o).visibility),
+        live: l.nextElementSibling && l.nextElementSibling.getAttribute('role'),
+        expanded: l.querySelector('.mat-item__more').getAttribute('aria-expanded'),
+      }));
+      expect(s.ready, true, 'the list is ready');
+      expect(s.labels, ['More actions for Jamie Doe', 'More actions for Sam Lee', 'More actions for Kim Park'], 'names of the More buttons');
+      expect(s.inert, [true, true, true], 'inert options');
+      expect(s.visibility, ['hidden', 'hidden', 'hidden'], 'visibility of the options');
+      expect([s.live, s.expanded], ['status', 'false'], 'live region and state');
+      await page.focus(row(1) + ' .mat-item__main');
+      await page.keyboard.press('Tab');
+      expectTrue((await active()).cls.includes('mat-item__more'), 'Tab does not go to the More button');
+      await page.keyboard.press('Tab');
+      const next = await active();
+      expect([next.key, next.cls.includes('mat-item__main')], ['lunch', true], 'Tab skips the options and goes to the next row');
+    });
+    await check('a drag of the row with the mouse slides it open to the width of its options; the click that ends it follows no link; a press on the row closes it', async () => {
+      const url = page.url();
+      const d = await drag(row(2), -240);
+      const mid = await page.$eval(row(2), li => ({ swiping: li.classList.contains('is-swiping'), x: li.style.getPropertyValue('--mat-item-x') }));
+      expect(mid.swiping, true, 'swiping while the button is down');
+      expectTrue(parseFloat(mid.x) < -100, 'the row did not follow the pointer: ' + mid.x);
+      await d.up();
+      const s = await rowState(row(2));
+      expect([s.end, s.open, s.expanded, s.inert, s.visibility], [true, true, 'true', false, 'visible'], 'the open row');
+      expect([s.x, s.moved], [`-${s.width}px`, -s.width], 'the row stands at the width of its options');
+      expect(page.url(), url, 'the swipe followed the link');
+      await page.mouse.click(d.box.x + 120, d.box.y + d.box.height / 2);
+      await page.waitForTimeout(350);
+      expect((await rowState(row(2))).open, false, 'the row is still open after a press on it');
+      expect(page.url(), url, 'the press that closes followed the link');
+    });
+    await check('a short drag, or a drag the other way, leaves the row closed; a vertical move is not a swipe', async () => {
+      let d = await drag(row(3), -40);
+      await d.up();
+      expect((await rowState(row(3))).open, false, 'a short drag');
+      d = await drag(row(3), 120);
+      await d.up();
+      expect((await rowState(row(3))).open, false, 'a drag to the right (there are no options at the start)');
+      await show(row(3));
+      const box = await page.locator(row(3) + ' .mat-item__main').boundingBox();
+      await page.mouse.move(box.x + box.width - 80, box.y + 10);
+      await page.mouse.down();
+      for (let i = 1; i <= 6; i += 1) { await page.mouse.move(box.x + box.width - 80 - i * 3, box.y + 10 + i * 8); }
+      await page.mouse.up();
+      expect((await rowState(row(3))).open, false, 'a vertical move');
+    });
+    await check('the More button opens the end side and focuses the first option; Escape closes the row and gives the focus back', async () => {
+      await show(row(1));
+      await page.click(row(1) + ' .mat-item__more');
+      const s = await rowState(row(1));
+      expect([s.end, s.expanded, s.inert, s.visibility], [true, 'true', false, 'visible'], 'the row after More');
+      expect((await active()).action, 'archive', 'the first option has the focus');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      expect((await rowState(row(1))).open, false, 'Escape');
+      expectTrue((await active()).cls.includes('mat-item__more'), 'the focus did not go back to the More button');
+      expect((await rowState(row(1))).inert, true, 'the options are inert again');
+    });
+    await check('the arrow keys on a row open its side; tabbing out of an open row, or pressing elsewhere, closes it', async () => {
+      await page.focus(row(1) + ' .mat-item__main');
+      await page.keyboard.press('ArrowLeft');
+      expect([(await rowState(row(1))).end, (await active()).action], [true, 'archive'], 'ArrowLeft');
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+      expect((await active()).key, 'lunch', 'the focus left the open row');
+      expect((await rowState(row(1))).open, false, 'the row closes when the focus leaves it');
+      await page.click(row(2) + ' .mat-item__more');
+      expect((await rowState(row(2))).open, true, 'the second row is open');
+      await page.click('#h-itemlist-actions', { position: { x: 5, y: 5 } });
+      await page.waitForTimeout(300);
+      expect((await rowState(row(2))).open, false, 'a press elsewhere');
+    });
+    await check('an action sends mat:item-action and closes the row; an action that asks first sends it when the question is answered', async () => {
+      await page.click(row(2) + ' .mat-item__more');
+      await page.click(row(2) + ' .mat-item__option[data-item-action="archive"]');
+      await page.waitForTimeout(300);
+      expect(await events('mat:item-action'), [{ type: 'mat:item-action', action: 'archive', key: 'lunch' }], 'the event of Archive');
+      expect((await rowState(row(2))).open, false, 'the row after the action');
+      await page.click(row(3) + ' .mat-item__more');
+      await page.click(row(3) + ' .mat-item__option[data-item-action="delete"]');
+      try {
+        await page.waitForSelector('dialog[open]');
+        expect(await page.locator('dialog[open]').count(), 1, 'the question');
+        expect((await events('mat:item-action')).length, 1, 'the event before the answer');
+        await page.click('dialog[open] .mat-dialog__foot .mat-btn--primary');
+        await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+      } finally {
+        // a question that is left open would block every check that follows
+        await page.evaluate(() => document.querySelectorAll('dialog[open]').forEach(d => d.close()));
+      }
+      await page.waitForTimeout(350);
+      expect((await events('mat:item-action')).map(e => e.action + ':' + e.key), ['archive:lunch', 'delete:notes'], 'the events');
+      expect((await rowState(row(3))).open, false, 'the row after the answer');
+    });
+    await check('with actions on both sides the More button opens the end and closes it again; the Right arrow opens the start, the Left arrow closes it, and the focus goes back to the row', async () => {
+      const both = n => `#il-both > .mat-item:nth-child(${n})`;
+      await show(both(1));
+      await page.click(both(1) + ' .mat-item__more');
+      expect([(await rowState(both(1))).end, (await active()).action], [true, 'later'], 'first press');
+      await page.click(both(1) + ' .mat-item__more');
+      expect((await rowState(both(1))).open, false, 'second press');
+      await page.focus(both(2) + ' .mat-item__main');
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(350);
+      const start = await rowState(both(2));
+      expect([start.start, start.end, (await active()).action], [true, false, 'done'], 'ArrowRight');
+      expectTrue(start.moved > 0, 'the row did not slide to the right');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      expect([(await rowState(both(2))).open, (await active()).cls.includes('mat-item__main')], [false, true], 'Escape closes the start side and the focus goes to the row');
+      // among the options the arrows walk; from the last option of the start side the Tab key leads to the row, where the Left arrow closes the side
+      await page.click(both(1) + ' .mat-item__more');
+      await page.keyboard.press('ArrowRight');
+      expect((await active()).action, 'remove', 'ArrowRight among the options');
+      await page.keyboard.press('ArrowLeft');
+      expect((await active()).action, 'later', 'ArrowLeft among the options');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      await page.focus(both(2) + ' .mat-item__main');
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('Tab');
+      expect((await active()).cls.includes('mat-item__main'), true, 'Tab from the option of the start side leads to the row');
+      await page.keyboard.press('ArrowLeft');
+      await page.waitForTimeout(300);
+      expect((await rowState(both(2))).open, false, 'the Left arrow closes the start side');
+    });
+    await check('the texts of the lists come in German when the page is German', async () => {
+      const s = await page.evaluate(() => {
+        document.documentElement.lang = 'de';
+        const ul = document.createElement('ul');
+        ul.className = 'mat-itemlist'; ul.id = 'il-de'; ul.setAttribute('data-itemlist', ''); ul.setAttribute('data-reorder', '');
+        ul.innerHTML = '<li class="mat-item mat-item--sliding"><div class="mat-item__row"><div class="mat-item__main"><span class="mat-item__title">Anna</span></div><div class="mat-item__options mat-item__options--end"><button type="button" class="mat-item__option">Löschen</button></div><div class="mat-item__aside"><button type="button" class="mat-item__handle">x</button></div></div></li><li class="mat-item"><div class="mat-item__main"><span class="mat-item__title">Ben</span></div><div class="mat-item__aside"><button type="button" class="mat-item__handle">y</button></div></li>';
+        document.body.appendChild(ul);
+        window.MatUi.refresh(document.body);
+        const r = { more: ul.querySelector('.mat-item__more').getAttribute('aria-label'), handle: ul.querySelector('.mat-item__handle').getAttribute('aria-label') };
+        ul.nextElementSibling.remove();
+        ul.remove();
+        document.documentElement.lang = 'en';
+        return r;
+      });
+      expect(s, { more: 'Weitere Aktionen für Anna', handle: 'Anna verschieben' }, 'German names');
+    });
+
+    // ---- reordering
+    const reorder = '#il-reorder';
+    const handle = n => `${reorder} > .mat-item:nth-child(${n}) .mat-item__handle`;
+    const titles = () => page.$$eval(reorder + ' .mat-item__title', t => t.map(x => x.textContent.trim()));
+    const say = () => page.$eval(reorder + ' + [role=status]', s => s.textContent);
+    await check('a handle drags a row: the others make room, the list is in the new order when it is dropped, and mat:reorder tells it', async () => {
+      await show(reorder);
+      const hb = await page.locator(handle(1)).boundingBox();
+      const rb = await page.locator(`${reorder} > .mat-item:nth-child(2)`).boundingBox();
+      const x = hb.x + hb.width / 2, y = hb.y + hb.height / 2;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      for (let i = 1; i <= 12; i += 1) { await page.mouse.move(x, y + rb.height * 2.2 * i / 12); }
+      const mid = await page.evaluate(sel => ({
+        dragging: document.querySelector(sel + ' > .mat-item:nth-child(1)').classList.contains('is-dragging'), reordering: document.querySelector(sel).classList.contains('is-reordering'),
+        shifts: [...document.querySelectorAll(sel + ' > .mat-item')].map(li => li.style.getPropertyValue('--mat-item-dy')),
+        shadow: getComputedStyle(document.querySelector(sel + ' > .mat-item:nth-child(1)')).boxShadow !== 'none',
+      }), reorder);
+      expect([mid.dragging, mid.reordering, mid.shadow], [true, true, true], 'while dragging');
+      expect(mid.shifts.slice(1, 3).every(s => parseFloat(s) < 0) && mid.shifts.slice(3).every(s => parseFloat(s) === 0), true, 'the rows between make room: ' + mid.shifts.join(' | '));
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+      expect(await titles(), ['Commute', 'Focus', 'Morning', 'Evening', 'Night'], 'the new order');
+      expect((await events('mat:reorder')).map(e => [e.key, e.from, e.to, e.order.join(',')]), [['morning', 0, 2, 'commute,focus,morning,evening,night']], 'the event');
+      const clean = await page.evaluate(sel => [document.querySelector(sel).classList.contains('is-reordering'), [...document.querySelectorAll(sel + ' .mat-item')].some(li => li.classList.contains('is-dragging') || li.style.getPropertyValue('--mat-item-dy') !== '')], reorder);
+      expect(clean, [false, false], 'nothing of the drag is left');
+    });
+    await check('with the keyboard Space picks a row up, the arrow keys move it, Space drops it and mat:reorder tells it; a live region says each step', async () => {
+      await page.focus(handle(1));
+      await page.keyboard.press('Space');
+      expect(await page.getAttribute(handle(1), 'aria-pressed'), 'true', 'pressed');
+      expect(await say(), 'Commute picked up, position 1 of 5. Arrow keys move it, Space drops it, Escape cancels.', 'what is said when a row is picked up');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      expect(await titles(), ['Focus', 'Morning', 'Commute', 'Evening', 'Night'], 'the order while it is held');
+      expect(await say(), 'Commute, position 3 of 5', 'what is said when it moves');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Reorder Commute', 'the focus stays on the handle of the row');
+      await page.keyboard.press('Space');
+      expect(await say(), 'Commute dropped, position 3 of 5', 'what is said when it is dropped');
+      expect((await events('mat:reorder')).map(e => e.key + ':' + e.from + '>' + e.to), ['morning:0>2', 'commute:0>2'], 'the events');
+      expect(await page.getAttribute(handle(3), 'aria-pressed'), 'false', 'released');
+    });
+    await check('Escape puts a held row back and sends nothing; Home and End go to the ends', async () => {
+      const before = (await events('mat:reorder')).length;
+      await page.focus(handle(5));
+      await page.keyboard.press('Space');
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('ArrowUp');
+      expect((await titles()).indexOf('Night'), 2, 'Night moved up two places');
+      await page.keyboard.press('Escape');
+      expect(await titles(), ['Focus', 'Morning', 'Commute', 'Evening', 'Night'], 'the order after Escape');
+      expect(await say(), 'Reordering cancelled, Night is back at position 5', 'what is said');
+      expect((await events('mat:reorder')).length, before, 'an event was sent');
+      await page.focus(handle(2));
+      await page.keyboard.press('Space');
+      await page.keyboard.press('End');
+      expect((await titles()).at(-1), 'Morning', 'End');
+      await page.keyboard.press('Home');
+      expect((await titles())[0], 'Morning', 'Home');
+      await page.keyboard.press('Enter');
+      expect((await events('mat:reorder')).length, before + 1, 'one event for the move from the pick-up to the drop');
+    });
+
+    // ---- selecting and filtering
+    await check('select-all selects the rows that are shown, the state in between is shown, and the bar says how many', async () => {
+      await show('#il-select');
+      await page.check('#il-select-all');
+      const all = await page.evaluate(() => ({
+        rows: [...document.querySelectorAll('#il-select .mat-item')].map(li => li.classList.contains('is-selected')),
+        count: document.querySelector('#il-select').closest('[data-selectable]').querySelector('[data-bulk-count]').textContent, bar: !document.querySelector('#il-select').closest('[data-selectable]').querySelector('[data-bulk-bar]').hidden,
+      }));
+      expect(all, { rows: [true, true, true], count: '3', bar: true }, 'after select-all');
+      await page.uncheck('#il-sel-2');
+      const some = await page.evaluate(() => ({ state: document.getElementById('il-select-all').indeterminate, row: document.getElementById('il-sel-2').closest('.mat-item').classList.contains('is-selected'), count: document.querySelector('#il-select').closest('[data-selectable]').querySelector('[data-bulk-count]').textContent }));
+      expect(some, { state: true, row: false, count: '2' }, 'after one is unchecked');
+    });
+    await check('a filter field hides the rows that do not contain its text and the letters with no row left, says how many are shown, and shows the empty row', async () => {
+      await show('#il-contacts-q');
+      await page.fill('#il-contacts-q', 'CARTER');
+      const one = await page.evaluate(() => ({
+        rows: [...document.querySelectorAll('#il-contacts .mat-item:not([hidden]) .mat-item__title')].map(t => t.textContent),
+        groups: [...document.querySelectorAll('#il-contacts .mat-itemlist__group:not([hidden]) .mat-itemlist__divider')].map(t => t.textContent),
+        empty: document.querySelector('#il-contacts .mat-itemlist__empty').hidden, live: document.querySelector('#il-contacts + [role=status]').textContent,
+      }));
+      expect(one, { rows: ['Ben Carter'], groups: ['B'], empty: true, live: '1 of 10 shown' }, 'for carter');
+      expect((await events('mat:item-filter')).at(-1), { type: 'mat:item-filter', text: 'CARTER', shown: 1, total: 10 }, 'the event');
+      await page.fill('#il-contacts-q', 'zzz');
+      const none = await page.evaluate(() => ({ empty: document.querySelector('#il-contacts .mat-itemlist__empty').hidden, text: document.querySelector('#il-contacts .mat-itemlist__empty').textContent, live: document.querySelector('#il-contacts + [role=status]').textContent }));
+      expect(none, { empty: false, text: 'Nothing matches', live: 'Nothing matches' }, 'for zzz');
+      await page.fill('#il-contacts-q', '');
+      expect(await page.evaluate(() => [document.querySelectorAll('#il-contacts .mat-item:not([hidden])').length, document.querySelector('#il-contacts .mat-itemlist__empty').hidden]), [10, true], 'after the field is cleared');
+    });
+    await check('the letter of a group stays at the top of the scrolling list until the next one pushes it away', async () => {
+      await show('#il-contacts');
+      const top = async () => page.evaluate(() => {
+        const list = document.getElementById('il-contacts'), lt = list.getBoundingClientRect().top;
+        return [...list.querySelectorAll('.mat-itemlist__divider')].map(d => [d.textContent, Math.round(d.getBoundingClientRect().top - lt)]).filter(p => p[1] <= 2).map(p => p[0]).pop();
+      });
+      await page.$eval('#il-contacts', l => { l.scrollTop = 0; });
+      expect(await top(), 'A', 'at the start');
+      await page.$eval('#il-contacts', l => { l.scrollTop = 200; });
+      expect(await top(), 'B', 'after scrolling past the first group');
+      const pinned = await page.$eval('#il-contacts', l => { const d = [...l.querySelectorAll('.mat-itemlist__divider')].find(x => x.textContent === 'B'); return Math.round(d.getBoundingClientRect().top - l.getBoundingClientRect().top); });
+      expectTrue(pinned >= 0 && pinned <= 2, 'the letter is not at the top of the list: ' + pinned);
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#itemlist-actions');
+    await check('on a phone the rows, the handle and the options are touch targets, nothing scrolls sideways, and a swipe with a finger slides a row open', async () => {
+      const slide = '#il-slide', first = slide + ' > .mat-item:nth-child(1)';
+      await page.locator(slide).scrollIntoViewIfNeeded();
+      const s = await page.evaluate(() => ({
+        row: Math.round(document.querySelector('#il-slide .mat-item__main').getBoundingClientRect().height),
+        more: Math.round(document.querySelector('#il-slide .mat-item__more').getBoundingClientRect().width),
+        handle: (r => [Math.round(r.width), Math.round(r.height)])(document.querySelector('#il-reorder .mat-item__handle').getBoundingClientRect()),
+        option: Math.round(document.querySelector('#il-slide .mat-item__option').getBoundingClientRect().height),
+        sideways: document.documentElement.scrollWidth > innerWidth,
+      }));
+      expectTrue(s.row >= 52 && s.more >= 44 && s.handle[0] >= 44 && s.handle[1] >= 44 && s.option >= 52, 'sizes: ' + JSON.stringify(s));
+      expect(s.sideways, false, 'the page scrolls sideways');
+      const box = await page.locator(first + ' .mat-item__main').boundingBox();
+      const client = await ctx.newCDPSession(page);
+      const touch = (type, x, y) => client.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+      const y = box.y + box.height / 2, x0 = box.x + box.width - 90;
+      await touch('touchStart', x0, y);
+      for (let i = 1; i <= 8; i += 1) { await touch('touchMove', x0 - i * 22, y); }
+      await touch('touchEnd', 0, 0);
+      await page.waitForTimeout(400);
+      const o = await page.$eval(first, li => ({ open: li.classList.contains('is-open-end'), moved: Math.round(li.querySelector('.mat-item__row').getBoundingClientRect().left - li.getBoundingClientRect().left), width: li.querySelector('.mat-item__options--end').offsetWidth }));
+      expect([o.open, o.moved], [true, -o.width], 'the row after a swipe');
+      expectTrue(o.width <= 390 * 0.75, 'the options take more than three quarters of the phone: ' + o.width);
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the form controls
   console.log('\nForm controls');
   {
@@ -771,17 +1148,18 @@ function expectTrue(value, what) {
     });
     await page.evaluate(() => document.getElementById('table').scrollIntoView());
     await check('the check in the header selects every row, shows the bulk bar with the count and marks the rows', async () => {
-      expectTrue(!(await page.locator('[data-bulk-bar]').isVisible()), 'the bulk bar is shown before a row is selected');
+      const box = '[data-selectable]:has(#tsel-all)';   // the lists of rows have a bar of their own on the same page
+      expectTrue(!(await page.locator(box + ' [data-bulk-bar]').isVisible()), 'the bulk bar is shown before a row is selected');
       await page.check('#tsel-all');
-      expect((await page.textContent('[data-bulk-count]')).trim(), '3', 'selected');
-      expectTrue(await page.locator('[data-bulk-bar]').isVisible(), 'the bulk bar');
+      expect((await page.textContent(box + ' [data-bulk-count]')).trim(), '3', 'selected');
+      expectTrue(await page.locator(box + ' [data-bulk-bar]').isVisible(), 'the bulk bar');
       expect(await page.locator('tr.is-selected').count(), 3, 'rows marked');
       await page.uncheck('#tsel-2');
-      expect((await page.textContent('[data-bulk-count]')).trim(), '2', 'selected after one is taken away');
+      expect((await page.textContent(box + ' [data-bulk-count]')).trim(), '2', 'selected after one is taken away');
       expect(await page.$eval('#tsel-all', el => el.indeterminate), true, 'the header check shows the state in between');
       await page.uncheck('#tsel-1');
       await page.uncheck('#tsel-3');
-      expectTrue(!(await page.locator('[data-bulk-bar]').isVisible()), 'the bulk bar is still shown with nothing selected');
+      expectTrue(!(await page.locator(box + ' [data-bulk-bar]').isVisible()), 'the bulk bar is still shown with nothing selected');
     });
     await check('the width of a progress bar comes from data-value, and a stack shows its parts side by side', async () => {
       const share = await page.$eval('.mat-meter--lg[aria-label="Large"] .mat-meter__fill', el => Math.round(100 * el.getBoundingClientRect().width / el.parentElement.getBoundingClientRect().width));
