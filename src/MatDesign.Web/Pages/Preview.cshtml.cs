@@ -9,7 +9,7 @@ namespace MatDesign.Web.Pages;
 /// <summary>
 /// A sample app of the family, drawn with the real shell and the real controls: it is what the preview frames of the site show.
 /// <c>?app=matmail&amp;theme=dark&amp;accent=%23ff6600&amp;view=list</c>. The search, filter and sort dialogs of the list work.
-/// <c>&amp;action=1</c> adds a main action to the menu (SHELL-19) and <c>&amp;switcher=end</c> puts the switcher at the end of the menu (SHELL-15).
+/// <c>&amp;action=1</c> adds a main action to the menu (SHELL-19) and <c>&amp;switcher=end</c> puts the switcher at the end of the menu (SHELL-15), <c>&amp;tenants=1</c> adds the tenants as choices to its popup.
 /// </summary>
 public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
 {
@@ -71,6 +71,9 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
     /// <summary><c>?menus=tree</c>: the administration is two menus below one parent in the switcher.</summary>
     private bool Tree => Request.Query["menus"].ToString() == "tree";
 
+    /// <summary><c>?tenants=1</c>: the switcher offers the tenants as choices between the menus and the administration (SHELL-15).</summary>
+    private bool Tenants => Request.Query["tenants"].ToString() == "1";
+
     /// <summary>The page of an area (a menu item that is not one of the basic views), or null.</summary>
     public (string Title, string Icon, IReadOnlyList<(string Text, string? Url)> Crumbs)? AreaPage
         => Area is not null && Areas.TryGetValue(Area, out var a)
@@ -103,6 +106,11 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
         if (Tree)
         {
             parts.Add("menus=tree");
+        }
+
+        if (Tenants)
+        {
+            parts.Add("tenants=1");
         }
 
         return string.Join("&", parts);
@@ -151,12 +159,12 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
         IReadOnlyList<NavSet> admin = Tree
             ?
             [
-                new("people", "People", "users", [new(null, [users, roles])], administration),
-                new("system", "System", "settings", [new(null, [settings, audit])], administration),
+                new("people", "People", "users", [new(null, [users, roles])], administration, Last: true),
+                new("system", "System", "settings", [new(null, [settings, audit])], administration, Last: true),
             ]
             :
             [
-                new("admin", "Administration", "shield", [new(null, [users, roles]), new("System", [settings, audit])]),
+                new("admin", "Administration", "shield", [new(null, [users, roles]), new("System", [settings, audit])], Last: true),
             ];
 
         Shell = new ShellModel
@@ -169,6 +177,9 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             PreviewQuery = Base(),
             ActiveHref = active,
             SwitcherPlace = Place,
+            Choices = Tenants
+                ? [new SwitcherChoices("Tenants", "store", [new("Muster GmbH", "/Preview", true), new("Beispiel AG", "/Preview"), new("Dritte KG", "/Preview")])]
+                : [],
             Menus =
             [
                 new("work", "Work", "briefcase",
@@ -248,6 +259,7 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             ["scheme"] = ColorSchemes.Normalize(Request.Query["scheme"].ToString()) ?? string.Empty,
             ["switcher"] = Place == SwitcherPlace.Top ? null : Place.ToString().ToLowerInvariant(),
             ["menus"] = Tree ? "tree" : null,
+            ["tenants"] = Tenants ? "1" : null,
             ["view"] = View,
         };
 

@@ -282,6 +282,27 @@ public class SiteHelpersTests
     }
 
     [Fact]
+    public void Menus_that_are_last_stand_after_the_choices_and_a_choice_has_fields_even_without_any()
+    {
+        var shell = new ShellModel
+        {
+            App = MatDesign.Core.AppRegistry.Get("matdesign")!,
+            Menus = [Menu("work"), new NavSet("admin", "Administration", "shield", Menu("admin").Groups, Last: true), Menu("docs")],
+            UserName = "A",
+            UserRole = "B",
+            Version = "v",
+            Choices = [new SwitcherChoices("Tenants and more", "store", [new("Muster GmbH", "/switch", true), new("Beispiel AG", "/switch", false, new Dictionary<string, string> { ["tenantId"] = "2" })])],
+        };
+
+        Assert.Equal(["work", "docs"], shell.SwitcherEntries.Where(e => !e.Last).Select(e => e.Menus[0].Id));
+        Assert.Equal(["admin"], shell.SwitcherEntries.Where(e => e.Last).Select(e => e.Menus[0].Id));
+        Assert.Equal("tenants-and-more", shell.Choices[0].Key);
+        Assert.Empty(shell.Choices[0].Items[0].Fields);
+        Assert.Equal("2", shell.Choices[0].Items[1].Fields["tenantId"]);
+        Assert.Empty(ShellModel.Site().Choices);   // the site itself has none
+    }
+
+    [Fact]
     public void The_menus_of_the_site_are_not_grouped()
         => Assert.All(Navigation.Sets, s => Assert.Null(s.Parent));
 

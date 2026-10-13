@@ -351,6 +351,33 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
+    public async Task The_switcher_lists_the_menus_then_the_tenants_as_a_closed_parent_of_forms_then_the_administration()
+    {
+        // SHELL-15: ?tenants=1 adds choices that change the context of the whole app: a closed parent, a form button for each, between the menus and the administration
+        var (_, html) = await Get("/Preview?app=matmail&view=list&switcher=bottom&tenants=1");
+        var popup = html[html.IndexOf("id=\"nav-switch-menu\"", StringComparison.Ordinal)..];
+        var work = popup.IndexOf("data-nav-set=\"work\"", StringComparison.Ordinal);
+        var tenants = popup.IndexOf("aria-controls=\"nav-switch-choices-tenants\"", StringComparison.Ordinal);
+        var admin = popup.IndexOf("data-nav-set=\"admin\"", StringComparison.Ordinal);
+        Assert.True(work >= 0 && work < tenants && tenants < admin, $"order: work {work}, tenants {tenants}, administration {admin}");
+        Assert.Matches(@"<button type=""button"" class=""mat-menu__item mat-menu__parent"" role=""menuitem"" aria-expanded=""false"" aria-controls=""nav-switch-choices-tenants"" data-nav-group>", popup);
+        Assert.Matches(@"<div class=""mat-menu__sub"" id=""nav-switch-choices-tenants"" role=""group"" aria-label=""Tenants"" hidden", popup);
+
+        // a choice posts (a form with a token), and the one in effect is checked
+        var forms = Regex.Matches(popup, @"<form class=""mat-menu__form"" method=""post"" action=""/Preview"">(.*?)</form>", RegexOptions.Singleline);
+        Assert.Equal(3, forms.Count);
+        Assert.All(forms, f => Assert.Contains("__RequestVerificationToken", f.Groups[1].Value));
+        Assert.Contains("aria-checked=\"true\"", forms[0].Groups[1].Value);
+        Assert.Contains("Muster GmbH", forms[0].Groups[1].Value);
+        Assert.All(forms.Skip(1), f => Assert.Contains("aria-checked=\"false\"", f.Groups[1].Value));
+
+        // without the option there are no choices, and the administration is where it was
+        var (_, plain) = await Get("/Preview?app=matmail&view=list");
+        Assert.DoesNotContain("nav-switch-choices", plain);
+        Assert.DoesNotContain("mat-menu__form", plain);
+    }
+
+    [Fact]
     public async Task The_sample_app_has_an_administration_behind_the_switcher_with_badges_and_a_submenu()
     {
         var (_, work) = await Get("/Preview?app=matmail&view=list");

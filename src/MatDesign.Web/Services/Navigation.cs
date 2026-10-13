@@ -77,9 +77,10 @@ public sealed record NavSetParent(string Title, string Icon)
 /// <summary>
 /// One menu of an app (SHELL-15). An app with distinct areas, such as an administration, has several; the switcher shows one at a time.
 /// With a <see cref="Parent"/> the menu is listed below that parent in the switcher instead of at its top level. With a <see cref="Href"/> choosing the menu loads that page (its start page)
-/// instead of swapping the items: the entry of the switcher is a link, and the page that loads shows its own menu.
+/// instead of swapping the items: the entry of the switcher is a link, and the page that loads shows its own menu. A menu that is <see cref="Last"/> stands at the end of the
+/// popup, below the choices (<see cref="SwitcherChoices"/>): the administration.
 /// </summary>
-public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<NavGroup> Groups, NavSetParent? Parent = null, string? Href = null)
+public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<NavGroup> Groups, NavSetParent? Parent = null, string? Href = null, bool Last = false)
 {
     /// <summary>True when choosing the menu loads a page of its own, so that a page that belongs to another menu needs no panel for it.</summary>
     public bool HasStartPage => Href is not null;

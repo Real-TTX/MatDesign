@@ -29,6 +29,30 @@ public sealed record SwitcherEntry(NavSetParent? Parent, IReadOnlyList<NavSet> M
 {
     /// <summary>True when a menu below the parent asks for attention (a dot on the parent while it is closed).</summary>
     public bool NeedsAttention => Menus.Any(m => m.NeedsAttention);
+
+    /// <summary>True when the entry stands at the end of the popup, below the choices: every menu of it is <see cref="NavSet.Last"/>.</summary>
+    public bool Last => Menus.All(m => m.Last);
+}
+
+/// <summary>
+/// One choice of <see cref="SwitcherChoices"/>: a button of a small form that posts to <see cref="Action"/> with the <see cref="Fields"/> (for a tenant: its id and where to
+/// go afterwards) and an anti-forgery token. It changes the context of the whole app, so it is never a link. <see cref="Selected"/> is the one that is in effect.
+/// </summary>
+public sealed record SwitcherChoice(string Label, string Action, bool Selected = false, IReadOnlyDictionary<string, string>? Hidden = null)
+{
+    /// <summary>The hidden fields of the form, never null.</summary>
+    public IReadOnlyDictionary<string, string> Fields => Hidden ?? new Dictionary<string, string>();
+}
+
+/// <summary>
+/// A group of choices in the popup of the switcher (SHELL-15): not a menu but what the whole app shows, such as the tenant or the organisation. It is a parent entry
+/// like those of SHELL-13 with a button for each choice below it, closed until it is opened, and it stands after the menus and before the menus that are
+/// <see cref="NavSet.Last"/>.
+/// </summary>
+public sealed record SwitcherChoices(string Title, string Icon, IReadOnlyList<SwitcherChoice> Items)
+{
+    /// <summary>Names the element that holds the choices in the popup.</summary>
+    public string Key => Navigation.Slug(Title);
 }
 
 /// <summary>
@@ -45,6 +69,9 @@ public sealed class ShellModel
     public string? ActiveHref { get; init; }
 
     public bool HasSwitcher => Menus.Count > 1;
+
+    /// <summary>Choices that change what the whole app shows (the tenant), in the popup of the switcher between the menus and the menus that are <see cref="NavSet.Last"/> (SHELL-15).</summary>
+    public IReadOnlyList<SwitcherChoices> Choices { get; init; } = [];
 
     /// <summary>Where the switcher is drawn: under the logo (the default), at the foot above the user, both, or at the end of the menu.</summary>
     public SwitcherPlace SwitcherPlace { get; init; } = SwitcherPlace.Top;
