@@ -72,6 +72,7 @@
 .mat-table--zebra tbody tr:nth-child(even):hover { background: var(--mat-surface-3); }
 .mat-table__name { display: flex; align-items: center; gap: var(--mat-space-3); min-width: 0; font-weight: 600; }
 .mat-table__name small { display: block; color: var(--mat-text-muted); font-weight: 400; }
+.mat-table__name .mat-muted { font-weight: 400; } /* a part of the name that the group already says: .example.org after app */
 .mat-table__actions { display: flex; justify-content: flex-end; gap: var(--mat-space-1); }
 .mat-table td.mat-table__cell-actions { width: 1%; white-space: nowrap; }
 
@@ -127,8 +128,9 @@
   .mat-table tbody.mat-group:not(:first-of-type) > tr.mat-group__head { border-top: 1px solid var(--mat-border); }
   .mat-group__head > .mat-group__cell { display: block; }
   .mat-group__item > td:first-child, .mat-group__add > td:first-child { padding-left: 0; }
-  /* the ::before that drew the line is the label of the cell again, the ::after is not needed */
-  .mat-group__item > td:first-child::before, .mat-group__add > td:first-child::before { position: static; border: 0; content: attr(data-label); }
+  /* the ::before that drew the line is the label of the cell again (when it has one), the ::after is not needed */
+  .mat-group__item > td:first-child::before, .mat-group__add > td:first-child::before { position: static; border: 0; content: none; }
+  .mat-group__item > td:first-child[data-label]:not([data-label=""])::before { content: attr(data-label); }
   .mat-group__item > td:first-child::after, .mat-group__add > td:first-child::after { content: none; }
   .mat-group__add > .mat-group__cell { justify-content: flex-start; text-align: left; }
   .mat-group__add > .mat-group__cell > .mat-btn { margin-left: 0; }

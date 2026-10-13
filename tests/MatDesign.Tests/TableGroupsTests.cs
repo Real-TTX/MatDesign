@@ -88,6 +88,8 @@ public partial class TableGroupsTests
         Assert.Contains(".mat-group.is-collapsed > tr:not(.mat-group__head) { display: none; }", Css);
         Assert.Contains(".mat-group.is-collapsed .mat-group__chev { transform: rotate(-90deg); }", Css);
         Assert.Contains(".mat-group > tr:last-child > td:first-child::before { bottom: 50%; }", Css);
+        // the muted rest of a name (.example.org after app) is not bold like the name
+        Assert.Contains(".mat-table__name .mat-muted { font-weight: 400; }", Css);
         // COLOR-08 does not forbid a line of a tree, but the heading is tinted, never marked by a bar at its side
         Assert.DoesNotContain("border-left: 3px", Css[Css.IndexOf(".mat-group", StringComparison.Ordinal)..Css.IndexOf("/* ---- Pagination", StringComparison.Ordinal)]);
     }
@@ -98,7 +100,8 @@ public partial class TableGroupsTests
         var phone = Css[Css.IndexOf("@media (max-width: 720px) {\n  /* A row is a card here: no line", StringComparison.Ordinal)..];
         phone = phone[..phone.IndexOf("/* ---- Pagination", StringComparison.Ordinal)];
         // the pseudo element of the line is the label of the cell again (TABLE-02)
-        Assert.Contains("{ position: static; border: 0; content: attr(data-label); }", phone);
+        Assert.Contains("{ position: static; border: 0; content: none; }", phone);
+        Assert.Contains("td:first-child[data-label]:not([data-label=\"\"])::before { content: attr(data-label); }", phone);
         Assert.Contains("td:first-child::after { content: none; }", phone);
         Assert.Contains(".mat-table .mat-group__head { padding: 0; }", phone);
         Assert.Contains(".mat-group__add > .mat-group__cell { justify-content: flex-start;", phone);
