@@ -98,6 +98,8 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone). Texts in English and German
   (`PK_TEXT`: both languages must have every key, a test checks; it also holds the label of the theme button and the AM and PM, so the script writes no text an app cannot change: `data-pk-*`,
   `data-theme-label`, `data-dlg-*`, `data-msg-*`, `data-copied` on `<html>`, see ADOPTING.md 3a). A hidden element that has a `display` in the CSS needs its own `[hidden]` rule (tests list them).
+  A select can create what is missing and suggest (`FORM-16`): `data-create-url` (POST `name=`, answer `{ value, name, description? }`) and `data-suggest-url` (GET, `[ { value } | { name } ]`) on the wrapper, `MatUi.picker.set`,
+  `.addOption`, `.suggest`; the create row and the suggested rows are never options (`isReal`), what comes back is made with `textContent`, the demo endpoints are `/api/demo/create` and `/api/demo/suggest` (stateless).
 - Layout and utilities: mobile first with `sm` 600, `md` 900, `lg` 1200 px; no `!important`; values from the tokens; the grid spans by `grid-column-end`. An example in the catalogue uses
   toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.

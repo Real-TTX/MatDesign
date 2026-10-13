@@ -31,6 +31,10 @@
                                             data-placeholder, data-clearable (a button that clears the value), data-min / data-max / data-week-start / data-flex (dates),
                                             data-step / data-hour12 (times), data-swatches (colours), data-search / data-multiple / data-sep (select; the options are
                                             .mat-picker__option with data-value). The texts change with data-pk-<name> on <html>, the format of dates with data-locale.
+                                            A select can create and suggest (FORM-16): data-create-url="/x" (POST name=<text>, the answer { value, name, description? }: a first row "Create <text>"
+                                            for a text that is not an option; data-create-label is its text) and data-suggest-url="/y" (GET, the answer [ { value } | { name } ] or { items }:
+                                            "Suggestions" above "All" while nothing is chosen). MatUi.picker.set(wrapper, value), .addOption(wrapper, { value, name, description, tags })
+                                            and .suggest(wrapper, items) do the same from code.
      data-menu-toggle="id"                  open the context menu #id next to the button; data-menu-place="top|bottom"
      data-dialog-open="id" / data-dialog-close   open / close a <dialog class="mat-dialog">
      data-confirm="Question?"               ask in a dialog before a submit button, a form or a link goes ahead
@@ -887,6 +891,8 @@
       phSelect: 'Choose', phDate: 'Choose a date', phPeriod: 'Choose a period', phTime: 'Choose a time', phTimeRange: 'Choose a time range', phColour: 'Choose a colour',
       search: 'Search', noResults: 'Nothing found', selectedCount: '{0} selected',
       themeLabel: 'Theme: {0}. Click for {1}.', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark', am: 'AM', pm: 'PM', phTimeEntry: 'hh:mm', phTimeEntryAmPm: 'hh:mm am',
+      create: 'Create "{0}"', creating: 'Creating "{0}" …', created: 'Created "{0}"', createFailed: 'It could not be created. Please try again.', createHint: 'Type a name to create it.',
+      suggestions: 'Suggestions', all: 'All', suggestionCount: '{0} suggestions', suggestionOne: '1 suggestion',
       startDate: 'Choose the start date', endDate: 'Choose the end date', daysCount: '{0} days', oneDay: '1 day',
       exactDates: 'Exact dates', flexible: 'Flexible dates', flexDays: '± {0} days', flexDay: '± 1 day',
       from: 'From', to: 'To', hour: 'Hour', minute: 'Minute', ampm: 'AM or PM', typeTime: 'Type a time', nextDay: 'next day', durHM: '{0} h {1} min', durH: '{0} h', durM: '{0} min',
@@ -899,6 +905,8 @@
       phSelect: 'Auswählen', phDate: 'Datum wählen', phPeriod: 'Zeitraum wählen', phTime: 'Uhrzeit wählen', phTimeRange: 'Zeitbereich wählen', phColour: 'Farbe wählen',
       search: 'Suchen', noResults: 'Nichts gefunden', selectedCount: '{0} gewählt',
       themeLabel: 'Design: {0}. Klicken für {1}.', themeSystem: 'System', themeLight: 'Hell', themeDark: 'Dunkel', am: 'AM', pm: 'PM', phTimeEntry: 'hh:mm', phTimeEntryAmPm: 'hh:mm am',
+      create: 'Anlegen: "{0}"', creating: '"{0}" wird angelegt …', created: '"{0}" angelegt', createFailed: 'Das ließ sich nicht anlegen. Bitte erneut versuchen.', createHint: 'Name eintippen, um etwas Neues anzulegen.',
+      suggestions: 'Vorschläge', all: 'Alle', suggestionCount: '{0} Vorschläge', suggestionOne: '1 Vorschlag',
       startDate: 'Startdatum wählen', endDate: 'Enddatum wählen', daysCount: '{0} Tage', oneDay: '1 Tag',
       exactDates: 'Genaue Daten', flexible: 'Flexible Daten', flexDays: '± {0} Tage', flexDay: '± 1 Tag',
       from: 'Von', to: 'Bis', hour: 'Stunde', minute: 'Minute', ampm: 'Vor- oder nachmittags', typeTime: 'Uhrzeit eintippen', nextDay: 'am nächsten Tag', durHM: '{0} Std. {1} Min.', durH: '{0} Std.', durM: '{0} Min.',
@@ -1212,16 +1220,267 @@
     o.focus({ preventScroll: true });
     keepInView(p.list, o);
   }
-  function visibleOptions(p) { return $$('.mat-picker__option:not([hidden]):not(:disabled)', p.list); }
+  // (a row in a group that is hidden, the suggestions while something is searched or chosen, is not in the way of the arrow keys)
+  function visibleOptions(p) { return $$('.mat-picker__option:not([hidden]):not(:disabled)', p.list).filter(function (o) { return !o.closest('.mat-picker__group[hidden]'); }); }
   function filterOptions(p, query) {
     var q = query.trim().toLowerCase(), shown = 0;
-    $$('.mat-picker__option', p.list).forEach(function (o) {
+    realOptions(p).forEach(function (o) {
       var hit = !q || (o.textContent + ' ' + (o.getAttribute('data-keywords') || '')).toLowerCase().indexOf(q) >= 0;
       o.hidden = !hit;
       if (hit) { shown += 1; }
     });
-    p.empty.hidden = shown > 0;
+    var offer = updateCreate(p, query);
+    updateSuggestions(p);
+    // "Nothing found" unless the list offers to create it; a list that is empty to begin with says how to fill it
+    p.empty.hidden = shown > 0 || offer;
+    if (p.create) { p.empty.textContent = q ? pkTextOf(p, 'noResults') : pkTextOf(p, 'createHint'); }
     p.relayout();
+  }
+
+  // ---- select: create what is missing, and suggestions (FORM-16)
+  // data-create-url on the wrapper: the panel has the search field and, while the text in it is not the name of an option, a first row "Create <text>". Choosing it POSTs
+  // name=<text> (and the anti-forgery token of the page) to the address and takes { "value": "...", "name": "...", "description"?: "..." } as the new option, which is chosen.
+  // data-suggest-url (or MatUi.picker.suggest): [ { "value": "7" }, { "name": "New Corp" } ] (or { "items": [...] }): an existing option, or, with data-create-url, a name that
+  // creates one. While nothing is chosen and nothing is searched the panel shows them under "Suggestions" and the whole list under "All", and the closed button counts them.
+  function isReal(o) { return !o.classList.contains('mat-picker__create') && !o.classList.contains('mat-picker__option--suggest'); }
+  function realOptions(p) { return $$('.mat-picker__option', p.list).filter(isReal); }
+  function optionByValue(p, v) { return realOptions(p).filter(function (o) { return (o.getAttribute('data-value') || '') === v; })[0] || null; }
+  function optionByName(p, name) { var n = name.trim().toLowerCase(); return realOptions(p).filter(function (o) { return optionName(o).toLowerCase() === n; })[0] || null; }
+  function fillText(s, a, b) { return s.replace('{0}', function () { return a === undefined ? '' : a; }).replace('{1}', function () { return b === undefined ? '' : b; }); }
+  // a text of one picker: its own data-pk-<name> (the create row also data-create-label), then <html data-pk-<name>>, then the tables
+  function pkTextOf(p, key, a, b) {
+    var own = p.wrap.getAttribute('data-pk-' + key.toLowerCase()) || (key === 'create' ? p.wrap.getAttribute('data-create-label') : null);
+    return own ? fillText(own, a, b) : pkText(key, a, b);
+  }
+  function announce(p, text) {
+    if (!p.live) { return; }
+    clearTimeout(p.liveTimer);
+    p.live.textContent = text;
+    p.liveTimer = setTimeout(function () { p.live.textContent = ''; }, 4000);
+  }
+
+  // the row "Create <text>": shown for a text that is not the name of an option (compared without regard to case)
+  function updateCreate(p, query) {
+    if (!p.createRow || p.creating) { return !!p.createRow && !p.createRow.hidden; }
+    var q = query.trim();
+    var show = !!q && !optionByName(p, q);
+    p.createName = show ? q : '';
+    p.createRow.hidden = !show;
+    if (show) { $('.mat-picker__name', p.createRow).textContent = pkTextOf(p, 'create', q); }
+    return show;
+  }
+  function createError(p, message) {
+    p.createMsg.textContent = message || '';
+    p.createMsg.hidden = !message;
+  }
+  function setBusy(p, row, on) {
+    p.creating = on;
+    row.classList.toggle('is-busy', on);
+    if (on) { row.setAttribute('aria-busy', 'true'); row.setAttribute('aria-disabled', 'true'); } else { row.removeAttribute('aria-busy'); row.removeAttribute('aria-disabled'); }
+    if (row === p.createRow) { $('.mat-picker__name', row).textContent = on ? pkTextOf(p, 'creating', p.createName) : pkTextOf(p, 'create', p.createName); }
+  }
+
+  // An option as the markup of the toolkit has it, made with textContent (what a person typed is never markup).
+  function pickerAddOption(x, spec) {
+    var p = pickerOf(x);
+    if (!p || p.kind !== 'select' || !spec) { return null; }
+    var value = spec.value === undefined || spec.value === null ? '' : String(spec.value);
+    var known = optionByValue(p, value);
+    if (known) { return known; }
+    var o = doc.createElement('button');
+    o.type = 'button';
+    o.className = 'mat-picker__option';
+    o.setAttribute('data-value', value);
+    o.setAttribute('role', 'option');
+    o.setAttribute('aria-selected', 'false');
+    o.tabIndex = -1;
+    var text = doc.createElement('span');
+    text.className = 'mat-picker__text';
+    var name = doc.createElement('span');
+    name.className = 'mat-picker__name';
+    name.textContent = spec.name === undefined || spec.name === null ? value : String(spec.name);
+    text.appendChild(name);
+    if (spec.description) {
+      var desc = doc.createElement('span');
+      desc.className = 'mat-picker__desc';
+      desc.textContent = String(spec.description);
+      text.appendChild(desc);
+    }
+    if (spec.tags && spec.tags.length) {
+      var tags = doc.createElement('span');
+      tags.className = 'mat-picker__tags';
+      Array.prototype.forEach.call(spec.tags, function (t) { var tag = doc.createElement('span'); tag.className = 'mat-tag'; tag.textContent = String(t); tags.appendChild(tag); });
+      text.appendChild(tags);
+    }
+    o.appendChild(text);
+    o.insertAdjacentHTML('beforeend', '<span class="mat-picker__check" aria-hidden="true">' + icon('check') + '</span>');
+    p.list.appendChild(o);
+    // a suggested name that is an option now is that option
+    var turned = false;
+    (p.suggestions || []).forEach(function (s) {
+      if (s.name !== undefined && s.name.toLowerCase() === name.textContent.trim().toLowerCase()) { delete s.name; s.value = value; turned = true; }
+    });
+    if (turned) { renderSuggestions(p); } else { syncPicker(p.wrap); }
+    if (pickerOpen === p && p.search) { filterOptions(p, p.search.value); }
+    return o;
+  }
+
+  // A new option is chosen: a single select takes it and closes, one with several choices adds it, keeps the panel open and starts the search again.
+  function pkCreated(p, data, typed) {
+    var value = String(data.value);
+    var name = typeof data.name === 'string' && data.name ? data.name : typed;
+    pickerAddOption(p.wrap, { value: value, name: name, description: data.description });
+    createError(p, '');
+    announce(p, pkTextOf(p, 'created', name));
+    if (p.search) { p.search.value = ''; }
+    if (!p.multiple) {
+      setPickerValue(p, value);
+      if (pickerOpen === p) { closePicker(true); }
+      return;
+    }
+    var vals = selValues(p);
+    if (vals.indexOf(value) < 0) {
+      vals.push(value);
+      var order = realOptions(p).map(function (x) { return x.getAttribute('data-value') || ''; });
+      vals.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
+      setPickerValue(p, vals.join(p.sep));
+    }
+    if (pickerOpen === p) {
+      filterOptions(p, '');
+      var again = p.full ? optionByValue(p, value) : p.search;
+      if (again) { if (again === p.search) { again.focus({ preventScroll: true }); } else { focusOption(p, again); } }
+    }
+  }
+
+  function pkCreate(p, name, row) {
+    name = (name || '').trim();
+    if (!name || p.creating || !p.createUrl) { return; }
+    row = row || p.createRow;
+    p.createName = name;
+    createError(p, '');
+    setBusy(p, row, true);
+    var body = new URLSearchParams({ name: name });
+    var token = $('input[name="__RequestVerificationToken"]');
+    if (token) { body.set('__RequestVerificationToken', token.value); }
+    function failed(message) {
+      setBusy(p, row, false);
+      var text = message || pkTextOf(p, 'createFailed');
+      if (pickerOpen === p) { createError(p, text); } else { announce(p, text); }
+    }
+    fetch(p.createUrl, { method: 'POST', body: body, credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (res) {
+        return res.json().catch(function () { return null; }).then(function (data) {
+          if (!res.ok) { throw { refused: true, message: data && typeof data.error === 'string' && data.error ? data.error : null }; }
+          if (!data || data.value === undefined || data.value === null || String(data.value) === '') { throw { refused: true, message: null }; }
+          return data;
+        });
+      })
+      .then(function (data) { setBusy(p, row, false); pkCreated(p, data, name); })
+      .catch(function (err) { failed(err && err.refused ? err.message : null); });
+  }
+
+  // ---- suggestions: heading, rows, the count on the closed button
+  function suggestionShown(p) {
+    return !!p.suggestions && p.suggestions.length > 0 && selValues(p).length === 0 && !(p.search && p.search.value.trim());
+  }
+  function updateSuggestions(p) {
+    if (!p.suggestGroup) { return; }
+    var on = suggestionShown(p);
+    p.suggestGroup.hidden = !on;
+    p.allHead.hidden = !on;
+  }
+  function suggestionRow(p, s) {
+    var row;
+    if (s.value !== undefined) {
+      row = optionByValue(p, s.value).cloneNode(true);
+      row.removeAttribute('id');
+      row.removeAttribute('hidden');
+      row.setAttribute('aria-selected', 'false');
+    } else {
+      row = doc.createElement('button');
+      row.type = 'button';
+      row.setAttribute('role', 'option');
+      row.setAttribute('aria-selected', 'false');
+      row.setAttribute('data-suggest-name', s.name);
+      row.setAttribute('aria-label', pkTextOf(p, 'create', s.name));
+      row.innerHTML = '<span class="mat-picker__plus" aria-hidden="true">' + icon('plus') + '</span><span class="mat-picker__text"><span class="mat-picker__name"></span></span>';
+      $('.mat-picker__name', row).textContent = s.name;
+      row.classList.add('mat-picker__option--new');
+    }
+    row.classList.add('mat-picker__option', 'mat-picker__option--suggest');
+    row.tabIndex = -1;
+    return row;
+  }
+  function renderSuggestions(p) {
+    if (p.suggestGroup) { p.suggestGroup.remove(); p.allHead.remove(); p.suggestGroup = null; p.allHead = null; }
+    if (p.suggestions && p.suggestions.length) {
+      var id = nextId('mat-pk-sg');
+      var group = doc.createElement('div');
+      group.className = 'mat-picker__group';
+      group.setAttribute('role', 'group');
+      group.setAttribute('aria-labelledby', id);
+      var head = doc.createElement('div');
+      head.className = 'mat-picker__group-head';
+      head.id = id;
+      head.textContent = pkTextOf(p, 'suggestions');
+      group.appendChild(head);
+      p.suggestions.forEach(function (s) { group.appendChild(suggestionRow(p, s)); });
+      var all = doc.createElement('div');
+      all.className = 'mat-picker__group-head mat-picker__group-head--all';
+      all.setAttribute('aria-hidden', 'true');
+      all.textContent = pkTextOf(p, 'all');
+      var after = p.createRow ? p.createRow.nextSibling : p.list.firstChild;
+      p.list.insertBefore(group, after);
+      p.list.insertBefore(all, after);
+      p.suggestGroup = group;
+      p.allHead = all;
+    }
+    updateSuggestions(p);
+    syncPicker(p.wrap);
+    if (pickerOpen === p) { p.relayout(); }
+  }
+
+  // [ { value } | { name } ] or { items: [...] } for a select: an option that is there, or a name that is not an option yet (only where data-create-url can make it). Returns the count.
+  function pickerSuggest(x, items) {
+    var p = pickerOf(x);
+    if (!p || p.kind !== 'select') { return 0; }
+    var list = Array.isArray(items) ? items : items && Array.isArray(items.items) ? items.items : [];
+    var seen = {}, found = [];
+    list.forEach(function (item) {
+      if (!item || typeof item !== 'object') { return; }
+      var hasValue = item.value !== undefined && item.value !== null && String(item.value) !== '';
+      var name = typeof item.name === 'string' ? item.name.trim() : '';
+      var option = hasValue ? optionByValue(p, String(item.value)) : name ? optionByName(p, name) : null;
+      var entry = option ? { value: option.getAttribute('data-value') || '' } : !hasValue && name && p.create ? { name: name } : null;
+      var key = entry && (entry.value !== undefined ? 'v:' + entry.value : 'n:' + entry.name.toLowerCase());
+      if (entry && !seen[key]) { seen[key] = true; found.push(entry); }
+    });
+    p.suggestions = found;
+    p.suggestLoaded = true;
+    renderSuggestions(p);
+    return found.length;
+  }
+  function fetchSuggestions(p) {
+    p.suggestLoading = true;
+    fetch(p.suggestUrl, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (res) { if (!res.ok) { throw new Error('suggestions: ' + res.status); } return res.json(); })
+      .then(function (data) { p.suggestLoading = false; pickerSuggest(p.wrap, data); })
+      .catch(function () { p.suggestLoading = false; /* no suggestions: the list is all there is, and it is asked again when the panel opens next */ });
+  }
+
+  // choose an option, or any value, from code (the whole value of a select with several choices: a string joined by data-sep, or an array)
+  function pickerSet(x, value) {
+    var p = pickerOf(x);
+    if (!p) { return false; }
+    setPickerValue(p, value === null || value === undefined ? '' : Array.isArray(value) ? value.join(p.sep || ', ') : String(value));
+    return true;
+  }
+  function pickerOf(x) {
+    var el = typeof x === 'string' ? $(x) : x;
+    var wrap = el && el.closest ? el.closest('.mat-picker') : null;
+    if (!wrap) { return null; }
+    if (!wrap._matPicker) { buildPicker(wrap); }
+    return wrap._matPicker || null;
   }
 
   KINDS.select = {
@@ -1229,6 +1488,9 @@
     init: function (p) {
       p.multiple = p.wrap.hasAttribute('data-multiple');
       p.sep = p.wrap.hasAttribute('data-sep') ? p.wrap.getAttribute('data-sep') : ', ';
+      p.createUrl = p.wrap.getAttribute('data-create-url') || '';
+      p.create = !!p.createUrl;
+      p.suggestUrl = p.wrap.getAttribute('data-suggest-url') || '';
       p.list = $('.mat-picker__options', p.wrap) || doc.createElement('div');
       var panel = pkPanel(p);
       panel.classList.add('mat-picker__panel--list');
@@ -1243,7 +1505,8 @@
         if (o.disabled) { o.setAttribute('aria-disabled', 'true'); }
         if (!$('.mat-picker__check', o)) { o.insertAdjacentHTML('beforeend', '<span class="mat-picker__check" aria-hidden="true">' + icon('check') + '</span>'); }
       });
-      if (p.wrap.hasAttribute('data-search')) {
+      // creating needs the text that is typed, so a select that can create always has the search field
+      if (p.wrap.hasAttribute('data-search') || p.create) {
         var search = doc.createElement('div');
         search.className = 'mat-picker__search';
         search.innerHTML = icon('search') + '<input type="search" class="mat-input" autocomplete="off" aria-label="' + esc(pkText('search')) + '" placeholder="' + esc(pkText('search')) + '">';
@@ -1258,16 +1521,48 @@
       p.empty.hidden = true;
       p.empty.textContent = pkText('noResults');
       p.body.appendChild(p.empty);
+      if (p.create) {
+        // the row that creates, the message that says why it did not work (read aloud when it changes) and the place where the result is announced
+        p.createMsg = doc.createElement('p');
+        p.createMsg.className = 'mat-picker__status mat-picker__create-msg';
+        p.createMsg.setAttribute('aria-live', 'polite');
+        p.createMsg.hidden = true;
+        p.body.insertBefore(p.createMsg, p.list);
+        p.createRow = doc.createElement('button');
+        p.createRow.type = 'button';
+        p.createRow.className = 'mat-picker__option mat-picker__create';
+        p.createRow.setAttribute('role', 'option');
+        p.createRow.setAttribute('aria-selected', 'false');
+        p.createRow.tabIndex = -1;
+        p.createRow.hidden = true;
+        p.createRow.innerHTML = '<span class="mat-picker__plus" aria-hidden="true">' + icon('plus') + '</span><span class="mat-picker__text"><span class="mat-picker__name"></span></span>';
+        p.list.insertBefore(p.createRow, p.list.firstChild);
+        p.live = doc.createElement('span');
+        p.live.className = 'mat-sr-only';
+        p.live.setAttribute('role', 'status');
+        p.live.setAttribute('aria-live', 'polite');
+        p.wrap.appendChild(p.live);
+        p.empty.textContent = pkTextOf(p, 'createHint');
+        p.empty.hidden = realOptions(p).length > 0;
+      }
       setFoot(p, p.multiple ? 'done' : null);
     },
     display: function (p, out) {
       var vals = selValues(p);
       var chosen = [];
-      $$('.mat-picker__option', p.list).forEach(function (o) {
+      out.classList.remove('is-suggest');
+      realOptions(p).forEach(function (o) {
         var on = vals.indexOf(o.getAttribute('data-value') || '') >= 0;
         o.setAttribute('aria-selected', on ? 'true' : 'false');
         if (on) { chosen.push(o); }
       });
+      updateSuggestions(p);
+      if (chosen.length === 0 && !vals.length && p.suggestions && p.suggestions.length) {
+        // nothing is chosen but something is suggested: the closed button says so, in the colour of a link, instead of the placeholder
+        out.textContent = p.suggestions.length === 1 ? pkTextOf(p, 'suggestionOne') : pkTextOf(p, 'suggestionCount', p.suggestions.length);
+        out.classList.add('is-suggest');
+        return;
+      }
       if (chosen.length === 0) { out.textContent = vals.length ? vals.join(p.sep) : placeholderOf(p); return; }
       if (p.multiple) {
         var names = chosen.map(optionName);
@@ -1281,7 +1576,10 @@
       out.appendChild(name);
     },
     open: function (p) {
+      if (p.createMsg) { createError(p, ''); }
       if (p.search) { p.search.value = ''; filterOptions(p, ''); }
+      // suggestions are fetched when the panel is opened for the first time with nothing chosen (and asked for again if that failed)
+      if (p.suggestUrl && !p.suggestLoaded && !p.suggestLoading && !selValues(p).length) { fetchSuggestions(p); }
       var chosen = $('.mat-picker__option[aria-selected="true"]:not([hidden])', p.list);
       var first = chosen || visibleOptions(p)[0];
       if (first) { $$('.mat-picker__option', p.list).forEach(function (x) { x.tabIndex = -1; }); first.tabIndex = 0; }
@@ -1291,16 +1589,19 @@
     click: function (p, t) {
       var o = t.closest('.mat-picker__option');
       if (!o || o.disabled) { return; }
+      if (o === p.createRow) { pkCreate(p, p.createName); return; }
+      if (o.hasAttribute('data-suggest-name')) { pkCreate(p, o.getAttribute('data-suggest-name'), o); return; }
       var v = o.getAttribute('data-value') || '';
       if (!p.multiple) { setPickerValue(p, v); closePicker(true); return; }
       var vals = selValues(p), i = vals.indexOf(v);
       if (i >= 0) { vals.splice(i, 1); } else { vals.push(v); }
-      var order = $$('.mat-picker__option', p.list).map(function (x) { return x.getAttribute('data-value') || ''; });
+      var order = realOptions(p).map(function (x) { return x.getAttribute('data-value') || ''; });
       vals.sort(function (a, b) { return order.indexOf(a) - order.indexOf(b); });
       setPickerValue(p, vals.join(p.sep));
-      focusOption(p, o);
+      // a suggested row goes away once something is chosen: the focus stays on the option itself
+      focusOption(p, isReal(o) ? o : optionByValue(p, v) || o);
     },
-    input: function (p, t) { if (t === p.search) { filterOptions(p, t.value); } },
+    input: function (p, t) { if (t === p.search) { if (p.createMsg) { createError(p, ''); } filterOptions(p, t.value); } },
     keys: function (p, e) {
       var t = e.target, opts = visibleOptions(p), o = t.closest('.mat-picker__option'), i = opts.indexOf(o), to = null;
       if (e.key === 'ArrowDown') { to = opts[Math.min(opts.length - 1, i + 1)]; }
@@ -1310,7 +1611,15 @@
       }
       else if (e.key === 'Home' && o) { to = opts[0]; }
       else if (e.key === 'End' && o) { to = opts[opts.length - 1]; }
-      else if (e.key === 'Enter' && t === p.search) { e.preventDefault(); if (opts[0]) { p.spec.click(p, opts[0]); } return; }
+      else if (e.key === 'Enter' && t === p.search) {
+        // with a text in the field Enter takes the first match, and where nothing matches it creates; in an empty field it takes the first row, as it always did,
+        // but never a suggested name: that would create something nobody asked for
+        e.preventDefault();
+        var typed = p.search.value.trim();
+        var pick = typed ? (p.create && optionByName(p, typed)) || opts.filter(isReal)[0] : opts.filter(function (x) { return !x.hasAttribute('data-suggest-name'); })[0];
+        if (pick) { p.spec.click(p, pick); } else if (p.createRow && !p.createRow.hidden) { pkCreate(p, p.createName); }
+        return;
+      }
       else if (o && !p.search && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
         // type the first letters of a title to jump to it
         p.typed = (p.typed || '') + e.key.toLowerCase();
@@ -1983,7 +2292,7 @@
     accent: { set: setAccent, custom: customAccent },
     scrollspy: { update: updateSpy },
     nav: { set: setNavSet, branch: function (key, open) { var b = $('[data-nav-branch="' + key + '"]'); if (b) { setBranch(b, open !== false, true); } } },
-    picker: { init: initPickers, close: closePicker },
+    picker: { init: initPickers, close: closePicker, set: pickerSet, addOption: pickerAddOption, suggest: pickerSuggest },
     refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); }
   };
 })();

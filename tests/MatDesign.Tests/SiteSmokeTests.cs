@@ -496,6 +496,64 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
+    public async Task The_demo_endpoints_of_the_pickers_keep_nothing_and_answer_what_the_examples_expect()
+    {
+        // FORM-16: POST name=<text> answers { value, name, description }; a refusal is a status that is not 2xx with { error }; GET suggest answers { items }. No token, no Studio, no state.
+        async Task<(HttpStatusCode Status, JsonElement Body)> Create(string name)
+        {
+            var response = await _client.PostAsync("/api/demo/create", new FormUrlEncodedContent(new Dictionary<string, string> { ["name"] = name, ["__RequestVerificationToken"] = "not checked" }));
+            return (response.StatusCode, JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement);
+        }
+
+        var (ok, created) = await Create("  New Corp ");
+        Assert.Equal(HttpStatusCode.OK, ok);
+        Assert.Equal("New Corp", created.GetProperty("name").GetString());
+        Assert.Matches("^n-[0-9a-f]{8}$", created.GetProperty("value").GetString()!);
+        Assert.False(string.IsNullOrEmpty(created.GetProperty("description").GetString()));
+        Assert.Equal(created.GetProperty("value").GetString(), (await Create("new corp")).Body.GetProperty("value").GetString());
+
+        var (empty, emptyBody) = await Create("   ");
+        Assert.Equal(HttpStatusCode.BadRequest, empty);
+        Assert.False(string.IsNullOrEmpty(emptyBody.GetProperty("error").GetString()));
+        var (refused, refusedBody) = await Create("ERROR");
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, refused);
+        Assert.Contains("on purpose", refusedBody.GetProperty("error").GetString(), StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Create(new string('x', 41))).Status);
+        Assert.Equal(HttpStatusCode.OK, (await Create(new string('x', 40))).Status);
+
+        // nothing but a form is a request: no body is an empty name
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsync("/api/demo/create", new StringContent("{}", System.Text.Encoding.UTF8, "application/json"))).StatusCode);
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, (await _client.GetAsync("/api/demo/create")).StatusCode);
+
+        var tags = JsonDocument.Parse(await _client.GetStringAsync("/api/demo/suggest?set=tags")).RootElement.GetProperty("items");
+        Assert.Equal(3, tags.GetArrayLength());
+        Assert.Equal(2, tags.EnumerateArray().Count(i => i.TryGetProperty("value", out _)));
+        Assert.Equal("Invoices 2026", tags.EnumerateArray().Single(i => i.TryGetProperty("name", out _)).GetProperty("name").GetString());
+        Assert.Equal(2, JsonDocument.Parse(await _client.GetStringAsync("/api/demo/suggest?set=folders")).RootElement.GetProperty("items").GetArrayLength());
+        Assert.Equal(0, JsonDocument.Parse(await _client.GetStringAsync("/api/demo/suggest?set=nothing")).RootElement.GetProperty("items").GetArrayLength());
+        Assert.Equal(0, JsonDocument.Parse(await _client.GetStringAsync("/api/demo/suggest")).RootElement.GetProperty("items").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Every_address_that_an_example_of_a_picker_calls_leads_to_an_endpoint_that_answers()
+    {
+        var calls = ComponentCatalog.All.SelectMany(c => c.Examples)
+            .SelectMany(e => Regex.Matches(e.Html, @"data-(create|suggest)-url=""([^""]+)""").Select(m => (Kind: m.Groups[1].Value, Url: WebUtility.HtmlDecode(m.Groups[2].Value))))
+            .Distinct()
+            .ToList();
+        Assert.Contains(calls, c => c.Kind == "create");
+        Assert.Contains(calls, c => c.Kind == "suggest");
+        foreach (var (kind, url) in calls)
+        {
+            var response = kind == "create"
+                ? await _client.PostAsync(url, new FormUrlEncodedContent(new Dictionary<string, string> { ["name"] = "Test" }))
+                : await _client.GetAsync(url);
+            Assert.True(response.IsSuccessStatusCode, $"{kind} {url}: {(int)response.StatusCode}");
+            Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        }
+    }
+
+    [Fact]
     public async Task The_design_system_is_available_as_data()
     {
         async Task<JsonElement> Json(string url) => JsonDocument.Parse(await _client.GetStringAsync(url)).RootElement;

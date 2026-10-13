@@ -1109,6 +1109,287 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the select: create what is missing, suggestions (FORM-16)
+  console.log('\nSelect: create and suggestions');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#rich-select');
+    const panelOf = id => `#${id}-trigger ~ .mat-picker__panel`;
+    const search = id => `${panelOf(id)} input[type=search]`;
+    const createRow = id => `${panelOf(id)} .mat-picker__create`;
+    const valueOf = id => page.$eval(`#${id}`, el => el.value);
+    const shown = async id => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
+    const names = async id => (await page.locator(`${panelOf(id)} .mat-picker__option:not([hidden]) .mat-picker__name`).allTextContents()).map(t => t.trim());
+    const live = id => page.$eval(`#${id}-trigger ~ [role=status].mat-sr-only`, el => el.textContent);
+    const open1 = async id => { await page.evaluate(i => document.getElementById(i + '-trigger').scrollIntoView({ block: 'center' }), id); if (!(await page.locator(panelOf(id)).isVisible())) { await page.click(`#${id}-trigger`); } };
+    await page.evaluate(() => { window.__changes = []; document.addEventListener('change', e => { if (e.target.id) { window.__changes.push(e.target.id + '=' + e.target.value); } }); });
+
+    await check('a select with data-create-url always has the search field, and offers Create only for a text that is not the name of an option', async () => {
+      await open1('pk-create');
+      expect(await page.evaluate(() => document.activeElement.type), 'search', 'the search field has the focus on a wide screen');
+      expectTrue(await page.locator(createRow('pk-create')).isHidden(), 'the create row is shown with nothing typed');
+      await page.fill(search('pk-create'), 'Web');
+      expectTrue(await page.locator(createRow('pk-create')).isVisible(), 'no create row for "Web", which is only the start of a name');
+      await page.fill(search('pk-create'), 'WEBSITE');
+      expectTrue(await page.locator(createRow('pk-create')).isHidden(), 'a create row for the name of an option, written in other letters');
+      await page.fill(search('pk-create'), '');
+      expectTrue(await page.locator(createRow('pk-create')).isHidden(), 'the create row is shown with nothing typed');
+      expect(await page.locator(`${panelOf('pk-create')} .mat-picker__option[data-value]:not([hidden])`).count(), 3, 'the options with nothing typed');
+    });
+    await check('a click on Create posts name=<text> with the answer taken as a new option that is chosen: the field shows it, the panel closes, the change event fires and it is announced', async () => {
+      await page.fill(search('pk-create'), '  Intranet ');
+      expect((await page.textContent(createRow('pk-create'))).trim(), 'Create "Intranet"', 'the row');
+      expect(await page.getAttribute(createRow('pk-create'), 'role'), 'option', 'the row is an option of the list');
+      const [request] = await Promise.all([page.waitForRequest('**/api/demo/create'), page.click(createRow('pk-create'))]);
+      expect([request.method(), request.postData(), request.headers()['content-type'], request.headers().accept], ['POST', 'name=Intranet', 'application/x-www-form-urlencoded;charset=UTF-8', 'application/json'], 'the request');
+      await page.waitForFunction(() => document.getElementById('pk-create').value !== '');
+      const value = await valueOf('pk-create');
+      expectTrue(/^n-[0-9a-f]{8}$/.test(value), 'the key from the server: ' + value);
+      expect(await shown('pk-create'), 'Intranet', 'the field');
+      expectTrue(!(await page.locator(panelOf('pk-create')).isVisible()), 'the panel is still shown');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-create-trigger', 'the focus');
+      expect(await live('pk-create'), 'Created "Intranet"', 'the announcement');
+      expect(await page.evaluate(() => window.__changes.filter(c => c.startsWith('pk-create='))), ['pk-create=' + value], 'the change event of the real input');
+      const option = page.locator(`${panelOf('pk-create')} .mat-picker__option[data-value="${value}"]`);
+      expect([await option.count(), (await option.locator('.mat-picker__name').textContent()).trim(), (await option.locator('.mat-picker__desc').textContent()).trim(), await option.getAttribute('role')], [1, 'Intranet', 'Created just now', 'option'], 'the new option');
+    });
+    await check('a name that exists (any case) has no Create row; Enter takes the first match, or the exact one when another name contains it, and never creates a second one', async () => {
+      await open1('pk-create');
+      await page.fill(search('pk-create'), 'intranet');
+      expectTrue(await page.locator(createRow('pk-create')).isHidden(), 'a create row for the option that was just made');
+      await page.fill(search('pk-create'), 'back');
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-create'), 'backoffice', 'Enter chose the first match');
+      await page.evaluate(() => MatUi.picker.addOption('#pk-create', { value: 'web', name: 'Web' }));
+      await open1('pk-create');
+      await page.fill(search('pk-create'), 'web');
+      expect(await names('pk-create'), ['Website', 'Web'], 'both names contain the text');
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-create'), 'web', 'Enter chose the exact name, not the first that contains it');
+      expect(await page.evaluate(() => window.__changes.filter(c => c.startsWith('pk-create=')).length), 3, 'three changes so far, no new option');
+    });
+    await check('a refusal keeps the panel open, shows the message of the answer at the row, and typing takes it away; nothing is chosen', async () => {
+      await open1('pk-create');
+      await page.fill(search('pk-create'), 'error');
+      const before = await valueOf('pk-create');
+      await page.click(createRow('pk-create'));
+      await page.waitForSelector(`${panelOf('pk-create')} .mat-picker__create-msg:not([hidden])`);
+      expect((await page.textContent(`${panelOf('pk-create')} .mat-picker__create-msg`)).trim(), 'This demo refuses the name "error" on purpose, to show what a failure looks like.', 'the message of the server');
+      expect(await page.getAttribute(`${panelOf('pk-create')} .mat-picker__create-msg`, 'aria-live'), 'polite', 'the message is read aloud');
+      expectTrue(await page.locator(panelOf('pk-create')).isVisible(), 'the panel closed');
+      expect(await valueOf('pk-create'), before, 'the value after a refusal');
+      expect(await page.getAttribute(createRow('pk-create'), 'aria-busy'), null, 'the row is not busy any more');
+      expectTrue(await page.locator(createRow('pk-create')).isVisible(), 'the row went away: the user cannot try again');
+      await page.fill(search('pk-create'), 'erro');
+      expectTrue(await page.locator(`${panelOf('pk-create')} .mat-picker__create-msg`).isHidden(), 'the message stays after typing');
+    });
+    await check('no answer at all gives the default text, in the language of the page', async () => {
+      await page.route('**/api/demo/create', route => route.abort());
+      try {
+        await open1('pk-create');
+        await page.fill(search('pk-create'), 'Intranet 2');
+        await page.click(createRow('pk-create'));
+        await page.waitForSelector(`${panelOf('pk-create')} .mat-picker__create-msg:not([hidden])`);
+        expect((await page.textContent(`${panelOf('pk-create')} .mat-picker__create-msg`)).trim(), 'It could not be created. Please try again.', 'the default text');
+      } finally {
+        await page.unroute('**/api/demo/create');
+      }
+      await page.keyboard.press('Escape');
+    });
+    await check('the row is busy while the request runs and cannot be pressed twice; the anti-forgery token of the page goes along', async () => {
+      await page.evaluate(() => document.body.insertAdjacentHTML('beforeend', '<input type="hidden" name="__RequestVerificationToken" value="tok-9" />'));
+      const posts = [];
+      await page.route('**/api/demo/create', async route => { posts.push(route.request().postData()); await new Promise(r => setTimeout(r, 700)); await route.continue(); });
+      try {
+        await open1('pk-create');
+        await page.fill(search('pk-create'), 'Slow one');
+        await page.click(createRow('pk-create'));
+        expect(await page.getAttribute(createRow('pk-create'), 'aria-busy'), 'true', 'aria-busy while it runs');
+        expectTrue(/Creating/.test(await page.textContent(createRow('pk-create'))), 'the busy text: ' + await page.textContent(createRow('pk-create')));
+        await page.evaluate(sel => { const r = document.querySelector(sel); r.click(); r.click(); }, createRow('pk-create'));
+        await page.waitForFunction(() => document.getElementById('pk-create').value.startsWith('n-'));
+        await page.waitForTimeout(200);
+        expect(posts, ['name=Slow+one&__RequestVerificationToken=tok-9'], 'one request, with the token');
+      } finally {
+        await page.unroute('**/api/demo/create');
+        await page.evaluate(() => document.querySelectorAll('input[name=__RequestVerificationToken]').forEach(i => i.remove()));
+      }
+    });
+    await check('with the keyboard: Arrow down reaches the Create row like an option and Enter creates; Enter in the search creates where nothing matches', async () => {
+      await open1('pk-create');
+      await page.fill(search('pk-create'), 'Zebra');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.classList.contains('mat-picker__create')), true, 'the focus is on the Create row');
+      const first = await valueOf('pk-create');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(v => document.getElementById('pk-create').value !== v, first);
+      expect(await shown('pk-create'), 'Zebra', 'created with the keyboard');
+      await open1('pk-create');
+      await page.fill(search('pk-create'), 'Quokka');
+      const second = await valueOf('pk-create');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(v => document.getElementById('pk-create').value !== v, second);
+      expect(await shown('pk-create'), 'Quokka', 'Enter in the search creates');
+    });
+
+    await check('suggestions: the closed field says nothing yet; opening fetches them; they stand under "Suggestions", the whole list under "All"; the closed field then counts them', async () => {
+      expect(await shown('pk-suggest'), 'Choose tags', 'before the panel was opened');
+      await open1('pk-suggest');
+      await page.waitForSelector(`${panelOf('pk-suggest')} .mat-picker__group:not([hidden])`);
+      const group = `${panelOf('pk-suggest')} .mat-picker__group`;
+      expect((await page.locator(`${group} .mat-picker__group-head`).textContent()).trim(), 'Suggestions', 'the heading');
+      expect(await page.getAttribute(group, 'role'), 'group', 'the group');
+      expect((await page.locator(`${group} .mat-picker__name`).allTextContents()).map(t => t.trim()), ['Finance', 'Contracts', 'Invoices 2026'], 'the suggested entries');
+      expect((await page.textContent(`${panelOf('pk-suggest')} .mat-picker__group-head--all`)).trim(), 'All', 'the heading of the list');
+      expect(await page.locator(`${panelOf('pk-suggest')} .mat-picker__option[data-value]:not(.mat-picker__option--suggest)`).count(), 5, 'the list is all there');
+      await page.keyboard.press('Escape');
+      expect(await shown('pk-suggest'), '3 suggestions', 'the closed field');
+      expect(await page.$eval('#pk-suggest-trigger .mat-picker__value', el => [el.classList.contains('is-placeholder'), el.classList.contains('is-suggest')]), [true, true], 'marked as a suggestion');
+      const colour = await page.$eval('#pk-suggest-trigger .mat-picker__value', el => getComputedStyle(el).color);
+      const link = await page.evaluate(() => { const a = document.createElement('a'); a.href = '#'; document.body.appendChild(a); const c = getComputedStyle(a).color; a.remove(); return c; });
+      expect(colour, link, 'the colour of a link');
+    });
+    await check('suggestions are not shown while something is searched, and not once something is chosen; the suggested option is that option', async () => {
+      await open1('pk-suggest');
+      await page.fill(search('pk-suggest'), 'fam');
+      expectTrue(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group`).isHidden(), 'suggestions while searching');
+      expectTrue(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group-head--all`).isHidden(), 'the heading All while searching');
+      await page.fill(search('pk-suggest'), '');
+      expectTrue(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group`).isVisible(), 'suggestions after the search was emptied');
+      await page.click(`${panelOf('pk-suggest')} .mat-picker__group [data-value="contracts"]`);
+      expect(await valueOf('pk-suggest'), 'contracts', 'the suggestion is the option');
+      expectTrue(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group`).isHidden(), 'suggestions after a choice');
+      expectTrue(await page.locator(panelOf('pk-suggest')).isVisible(), 'the panel of several choices stays open');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-value')), 'contracts', 'the focus is on the option itself');
+      expect(await shown('pk-suggest'), 'Contracts', 'the closed field');
+    });
+    await check('a suggested name that is not an option creates it: added, chosen, the panel stays open for several choices and the search starts again', async () => {
+      await page.click(`${panelOf('pk-suggest')} [data-picker-action]`);
+      await page.evaluate(() => MatUi.picker.set('#pk-suggest', ''));
+      await open1('pk-suggest');
+      const [request] = await Promise.all([page.waitForRequest('**/api/demo/create'), page.click(`${panelOf('pk-suggest')} .mat-picker__group [data-suggest-name]`)]);
+      expect(request.postData(), 'name=Invoices+2026', 'the request');
+      await page.waitForFunction(() => /n-/.test(document.getElementById('pk-suggest').value));
+      expectTrue(/^n-[0-9a-f]{8}$/.test(await valueOf('pk-suggest')), 'one new key: ' + await valueOf('pk-suggest'));
+      expectTrue(await page.locator(panelOf('pk-suggest')).isVisible(), 'the panel closed');
+      expect(await page.inputValue(search('pk-suggest')), '', 'the search');
+      expect(await shown('pk-suggest'), 'Invoices 2026', 'the field');
+      await page.click(`${panelOf('pk-suggest')} .mat-picker__option[data-value="finance"]:not(.mat-picker__option--suggest)`);
+      expectTrue(/^finance, n-[0-9a-f]{8}$/.test(await valueOf('pk-suggest')), 'the keys stay in the order of the list: ' + await valueOf('pk-suggest'));
+      expect(await shown('pk-suggest'), 'Finance, Invoices 2026', 'the field');
+      await page.click(`${panelOf('pk-suggest')} [data-picker-action]`);
+    });
+    await check('the arrow keys skip suggestions that are hidden, a suggested name that was created is that option, and Enter in an empty search never creates a suggested name', async () => {
+      await open1('pk-suggest');
+      // two values are chosen, so there are no suggestions: Home stays on the list
+      await page.focus(`${panelOf('pk-suggest')} .mat-picker__option[data-value="family"]:not(.mat-picker__option--suggest)`);
+      await page.keyboard.press('Home');
+      expect(await page.evaluate(() => [document.activeElement.getAttribute('data-value'), document.activeElement.classList.contains('mat-picker__option--suggest')]), ['finance', false], 'Home');
+      await page.evaluate(() => MatUi.picker.set('#pk-suggest', ''));
+      // the name that was created from the suggestion is an option now, and so it is suggested as the option
+      expect(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group [data-suggest-name]`).count(), 0, 'the created name is still a suggestion to create');
+      expect(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group .mat-picker__option`).count(), 3, 'three suggestions: two options and the one that was created');
+      // typed: the Create row first, then the first match and not a suggestion that is not shown
+      await page.fill(search('pk-suggest'), 'fam');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.classList.contains('mat-picker__create')), true, 'the Create row is first');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-value')), 'family', 'then the first match');
+      // an empty search and Enter: the first suggestion, an option that is there
+      await page.fill(search('pk-suggest'), '');
+      await page.focus(search('pk-suggest'));
+      const options = await page.locator(`${panelOf('pk-suggest')} .mat-picker__option[data-value]:not(.mat-picker__option--suggest)`).count();
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-suggest'), 'finance', 'Enter chose the first suggestion');
+      expect(await page.locator(`${panelOf('pk-suggest')} .mat-picker__option[data-value]:not(.mat-picker__option--suggest)`).count(), options, 'nothing was created');
+      await page.click(`${panelOf('pk-suggest')} [data-picker-action]`);
+    });
+    await check('suggestions without create: only options that are there; a click chooses and closes; a name that is not an option is ignored', async () => {
+      await open1('pk-folder');
+      await page.waitForSelector(`${panelOf('pk-folder')} .mat-picker__group:not([hidden])`);
+      expect((await page.locator(`${panelOf('pk-folder')} .mat-picker__group .mat-picker__name`).allTextContents()).map(t => t.trim()), ['Documents', 'Photos'], 'the suggestions');
+      expect(await page.locator(`${panelOf('pk-folder')} .mat-picker__create`).count(), 0, 'no create row without data-create-url');
+      await page.click(`${panelOf('pk-folder')} .mat-picker__group [data-value="photos"]`);
+      expect(await valueOf('pk-folder'), 'photos', 'the value');
+      expectTrue(!(await page.locator(panelOf('pk-folder')).isVisible()), 'the panel is still shown');
+      const counted = await page.evaluate(() => MatUi.picker.suggest('#pk-folder', [{ value: 'receipts' }, { value: 'nothing' }, { name: 'A new one' }, { name: 'MANUALS' }, { value: 'receipts' }, 'text', null]));
+      expect(counted, 2, 'receipts and the name of manuals; a missing option and a new name are ignored');
+    });
+    await check('in a form: required with the message at the field; the row has the wording of the field; a created option is a real one and takes the message away', async () => {
+      await page.evaluate(() => document.getElementById('pk-corr-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('form[action="/Components#pk-corr"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#pk-corr').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is invalid');
+      expect((await page.locator('#pk-corr').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose or create a correspondent.', 'the message');
+      await page.click('#pk-corr-trigger');
+      await page.fill(search('pk-corr'), 'Tax office');
+      expect((await page.textContent(createRow('pk-corr'))).trim(), 'Create correspondent "Tax office"', 'the wording of the field');
+      await page.click(createRow('pk-corr'));
+      await page.waitForFunction(() => document.getElementById('pk-corr').value !== '');
+      expect(await page.locator('#pk-corr').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after the choice');
+      expect(await shown('pk-corr'), 'Tax office', 'the field');
+    });
+    await check('from code: set chooses a value and fires change, addOption makes an option from text (never markup), suggest shows what a page fetched', async () => {
+      await page.evaluate(() => { window.__changes = []; MatUi.picker.set('#pk-corr', 'family'); });
+      expect([await valueOf('pk-corr'), await shown('pk-corr'), await page.evaluate(() => window.__changes)], ['family', 'Family', ['pk-corr=family']], 'set');
+      await page.evaluate(() => MatUi.picker.set(document.getElementById('pk-corr').closest('.mat-picker'), null));
+      expect(await shown('pk-corr'), '3 suggestions', 'set to nothing: nothing is chosen and the field has been asked for suggestions (the ones of the form above)');
+      const made = await page.evaluate(() => { const o = MatUi.picker.addOption('#pk-corr', { value: 'x1', name: '<b>Bold</b> & co', description: '<i>d</i>', tags: ['<u>t</u>'] }); return { html: o.innerHTML.includes('<b>'), name: o.querySelector('.mat-picker__name').textContent, tag: o.querySelector('.mat-tag').textContent, again: MatUi.picker.addOption('#pk-corr', { value: 'x1', name: 'other' }) === o }; });
+      expect(made, { html: false, name: '<b>Bold</b> & co', tag: '<u>t</u>', again: true }, 'addOption');
+      await page.evaluate(() => MatUi.picker.set('#pk-corr', 'x1'));
+      expect(await shown('pk-corr'), '<b>Bold</b> & co', 'the new option is shown as text');
+      await page.evaluate(() => MatUi.picker.set('#pk-corr', ''));
+      expect(await page.evaluate(() => MatUi.picker.suggest('#pk-corr', { items: [{ value: 'contracts' }, { name: 'Brand new' }, { name: 'family' }] })), 3, 'suggest takes { items } and names that exist or can be created');
+      expect(await shown('pk-corr'), '3 suggestions', 'the closed field');
+      expect(await page.evaluate(() => MatUi.picker.suggest('#pk-corr', [{ value: 'contracts' }])), 1, 'suggest again replaces the old ones');
+      expect(await shown('pk-corr'), '1 suggestion', 'singular');
+      expect(await page.evaluate(() => MatUi.picker.suggest('#pk-corr', [])), 0, 'no suggestions');
+      expect(await shown('pk-corr'), 'Choose a correspondent', 'the placeholder is back');
+    });
+    // the two refusals above are on purpose; the browser writes a request that failed into the console as an error
+    for (let i = consoleErrors.length - 1; i >= 0; i--) {
+      if (consoleErrors[i].startsWith('/Components#rich-select: ') && /status of 422|ERR_FAILED/.test(consoleErrors[i])) { consoleErrors.splice(i, 1); }
+    }
+    await check('the texts are English or German by lang and each can be replaced: data-create-label, data-pk-<name> on the field or on html', async () => {
+      await page.evaluate(() => { document.documentElement.lang = 'de'; MatUi.picker.suggest('#pk-corr', [{ value: 'contracts' }, { value: 'family' }]); });
+      expect(await shown('pk-corr'), '2 Vorschläge', 'German count');
+      await page.evaluate(() => MatUi.picker.suggest('#pk-corr', [{ value: 'contracts' }]));
+      expect(await shown('pk-corr'), '1 Vorschlag', 'German singular');
+      await page.evaluate(id => document.getElementById(id + '-trigger').scrollIntoView({ block: 'center' }), 'pk-create');
+      await page.click('#pk-create-trigger');
+      await page.fill(search('pk-create'), 'Neu');
+      expect((await page.textContent(createRow('pk-create'))).trim(), 'Anlegen: "Neu"', 'the German row');
+      await page.evaluate(() => document.getElementById('pk-create').closest('.mat-picker').setAttribute('data-pk-create', 'Neu anlegen: {0}'));
+      await page.fill(search('pk-create'), 'Neu2');
+      expect((await page.textContent(createRow('pk-create'))).trim(), 'Neu anlegen: Neu2', 'the text of the field');
+      await page.evaluate(() => { document.documentElement.lang = 'en'; document.documentElement.setAttribute('data-pk-suggestions', 'Tips'); });
+      await page.evaluate(() => MatUi.picker.suggest('#pk-corr', [{ value: 'contracts' }]));
+      await page.keyboard.press('Escape');
+      await page.click('#pk-corr-trigger');
+      expect((await page.locator(`${panelOf('pk-corr')} .mat-picker__group-head`).first().textContent()).trim(), 'Tips', 'the text of html');
+      await page.evaluate(() => document.documentElement.removeAttribute('data-pk-suggestions'));
+      await page.keyboard.press('Escape');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#rich-select');
+    await check('on a phone the panel with the Create row is a full-screen sheet; the keyboard does not pop up until the field is touched; the row can be pressed', async () => {
+      await page.evaluate(() => document.getElementById('pk-create-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('#pk-create-trigger');
+      const panel = '#pk-create-trigger ~ .mat-picker__panel';
+      const sheet = await page.$eval(panel, el => { const r = el.getBoundingClientRect(); return { full: Math.round(r.width) === innerWidth && Math.round(r.height) === innerHeight }; });
+      expect(sheet, { full: true }, 'the sheet');
+      expectTrue(await page.evaluate(() => document.activeElement.type !== 'search'), 'the search field has the focus on a phone');
+      await page.fill(panel + ' input[type=search]', 'Phone project');
+      await page.click(panel + ' .mat-picker__create');
+      await page.waitForFunction(() => document.getElementById('pk-create').value.startsWith('n-'));
+      expect((await page.textContent('#pk-create-trigger .mat-picker__value')).trim(), 'Phone project', 'the field');
+      expectTrue(!(await page.locator(panel).isVisible()), 'the sheet is still shown');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'no sideways scroll');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- layout and utilities
   console.log('\nLayout and utilities');
   {

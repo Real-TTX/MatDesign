@@ -108,6 +108,26 @@
   .mat-picker__search > .mat-icon { left: calc(var(--mat-space-3) + var(--mat-space-3)); top: calc(var(--mat-space-3) + (var(--mat-control-h) - 1.25em) / 2); }
 }
 
+/* ---- Select: create what is missing, and suggestions (FORM-16) ---- */
+/* "Create <text>" is the first row of the list, a suggested name another: the plus where a picture would be, the words in the colour of a link. While the request runs the row is busy
+   (aria-busy) and a ring turns where the plus was. A message under the search field says why it did not work. */
+.mat-picker__create, .mat-picker__option--new { color: var(--mat-accent-text); }
+.mat-picker__create .mat-picker__name, .mat-picker__option--new .mat-picker__name { font-weight: 650; }
+.mat-picker__create[hidden] { display: none; }
+.mat-picker__plus { flex: none; display: grid; place-items: center; width: 22px; height: 22px; }
+.mat-picker__option.is-busy { cursor: progress; opacity: .75; }
+.mat-picker__option.is-busy .mat-picker__plus > .mat-icon { display: none; }
+.mat-picker__option.is-busy .mat-picker__plus::after { content: ""; width: 14px; height: 14px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: mat-spin .7s linear infinite; }
+.mat-picker__create-msg { margin: 0; padding: var(--mat-space-1) var(--mat-space-4) var(--mat-space-2); color: var(--mat-danger-text); }
+.mat-picker__create-msg[hidden] { display: none; }
+/* Suggestions: a group with its heading above the whole list, which has the heading "All". The closed button counts them in the colour of a link. */
+.mat-picker__group { display: flex; flex-direction: column; gap: 2px; }
+.mat-picker__group[hidden] { display: none; }
+.mat-picker__group-head { padding: var(--mat-space-2) var(--mat-space-3) var(--mat-space-1); font-size: var(--mat-fs-sm); font-weight: 650; color: var(--mat-text-muted); }
+.mat-picker__group-head--all { margin-top: var(--mat-space-2); }
+.mat-picker__group-head[hidden] { display: none; }
+.mat-picker__value.is-suggest { color: var(--mat-accent-text); }
+
 /* ---- Calendar: a date, a period ---- */
 .mat-cal { display: flex; flex-direction: column; gap: var(--mat-space-3); min-width: 0; }
 .mat-cal__months { display: flex; gap: var(--mat-space-6); }

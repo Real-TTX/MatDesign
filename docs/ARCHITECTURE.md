@@ -83,6 +83,12 @@ It lives inside the wrapper, so a picker in a dialog is not cut off by it, and E
 browser message points at the right place, and whoever focuses it (a label, the validation) lands on the button. The texts are English and German (`data-pk-*` on `html` changes them; a test checks that
 both languages have every text). The same table holds the label of the theme button (`data-theme-label` and `data-theme-name-*` replace it), so no text that the script writes is English only ([ADOPTING.md](ADOPTING.md), "The language of the toolkit's own texts").
 
+A select can **create what is missing and suggest** (`FORM-16`), both opt-in attributes of the wrapper (`data-create-url`, `data-suggest-url`), so a list that a user keeps does not have to be left to add one more name. The
+panel stays the one of the select: the first row of the list is the row that creates (an option of its own kind, `mat-picker__create`, that the arrow keys reach like any other), a suggested entry is a copy of the option
+(or, for a name that is not an option yet, a row that creates it) in a group under a heading, and none of them is ever counted as an option of the list (`isReal`). The server is asked with a plain `fetch` (a POST of the name with the
+anti-forgery token of the page, a GET for suggestions) and answers JSON; what comes back is turned into an option with `textContent`, never markup, and a refusal keeps the panel open and says why at the row. The markup of an
+existing select is untouched and nothing about it changes unless one of the attributes is there. The pages that fetch for many pickers at once, and the app that sets a picker from a button, use `MatUi.picker.suggest`, `.set` and `.addOption`.
+
 ### Layout and utilities
 
 `matui.layout.css` is the last part before the apps: containers, a grid of twelve columns (`mat-cols`, `mat-col-N`, with `sm`, `md` and `lg` variants from 600, 900 and 1200 px, mobile first) and

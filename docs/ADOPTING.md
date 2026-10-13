@@ -134,6 +134,19 @@ A text that goes into the markup of a page (a label, a hint, the words of a `dat
   </div>
   ```
 
+- A select can **create what is missing** and **suggest** (`FORM-16`), both opt-in and both attributes of the wrapper; the markup of the options stays as it is.
+  - `data-create-url="/QuickCreate?kind=tag"` gives the panel the search field and, for a text that is not the name of an option (any case), a first row *Create "text"*. Choosing it (also with the arrow keys and Enter, and Enter in
+    the search where nothing matches) POSTs `application/x-www-form-urlencoded` `name=<text>`, with the anti-forgery token of the page (`__RequestVerificationToken`) when it has one, to that address. The answer is
+    **2xx with JSON** `{ "value": "<key>", "name": "<label>", "description": "…" }` (`description` is optional): the option is added and chosen (a select with several choices adds it, keeps the panel open and starts the
+    search again), the change event fires on the real input and a live region says what was created. **Anything else** (another status, no answer) keeps the panel open and shows `{ "error": "…" }` of the answer, or a default
+    text, under the search field. Only where creating is cheap, reversible and needs nothing but a name.
+  - `data-suggest-url="/Suggest?doc=5"` is fetched with GET when the panel opens first and nothing is chosen, and answers `[ { "value": "7" }, { "name": "New Corp" } ]` or `{ "items": [ … ] }`: a `value` is an option that is
+    there, a `name` that is not an option is a suggestion that creates it (only with `data-create-url`; a name that equals an option is that option). They stand under *Suggestions* above *All* while nothing is chosen
+    and nothing is searched, and the closed field says "3 suggestions" in the colour of a link. A page that gets the suggestions of many pickers in one request calls `MatUi.picker.suggest(wrapper, items)` itself.
+  - From code: `MatUi.picker.set(wrapper, value)` chooses a value and fires change (for several choices the whole value: a string joined by `data-sep`, or an array), `MatUi.picker.addOption(wrapper, { value, name, description, tags })` adds
+    an option (made with `textContent`, never markup). Texts: `data-create-label='Create tag "{0}"'` on the wrapper, and `data-pk-create`, `-creating`, `-created`, `-createfailed`, `-createhint`, `-suggestions`, `-all`,
+    `-suggestioncount`, `-suggestionone` on the wrapper or on `<html>` (section 3a).
+
 ## 4a. Layout and utilities
 
 - **Containers and the grid:** a page inside the shell is `mat-page`; one without it (sign-in, a shared link) is `mat-container`. For a layout you have decided use the twelve columns

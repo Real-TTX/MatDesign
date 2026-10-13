@@ -20,11 +20,16 @@ internal static class PickerComponents
                "<span class=\"mat-picker__text\"><span class=\"mat-picker__name\">" + name + "</span><span class=\"mat-picker__desc\">" + description + "</span>" + tagHtml + "</span></button>";
     }
 
+    /// <summary>An option that is only words: a name and, if there is one, a line under it. It is what the script makes of an option that is created.</summary>
+    private static string Plain(string value, string name, string? description = null)
+        => "<button type=\"button\" class=\"mat-picker__option\" data-value=\"" + value + "\"><span class=\"mat-picker__text\"><span class=\"mat-picker__name\">" + name + "</span>" +
+           (description is null ? string.Empty : "<span class=\"mat-picker__desc\">" + description + "</span>") + "</span></button>";
+
     public static IReadOnlyList<ComponentDoc> All { get; } =
     [
         new("rich-select", "Select with pictures and tags", "Forms", "tag",
             "A choice where the options need more than a word: a picture, a title, a description and tags. One choice or several, with a search for a long list.",
-            ["FORM-15", "DIALOG-03", "A11Y-02", "FORM-03"],
+            ["FORM-15", "DIALOG-03", "A11Y-02", "FORM-03", "FORM-16"],
             [
                 new("A choice with a picture, a description and tags", $"""
                     <div class="mat-field">
@@ -73,12 +78,78 @@ internal static class PickerComponents
                       <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Continue</span></button></div>
                     </form>
                     """, "Press Continue with nothing chosen: the message appears under the field, the field is marked and the focus goes to its button."),
+                new("Create what is missing", $"""
+                    <div class="mat-field">
+                      <label class="mat-label" for="pk-create">Project</label>
+                      <div class="mat-picker" data-picker="select" data-create-url="/api/demo/create" data-placeholder="Choose or create a project">
+                        <input class="mat-picker__input" id="pk-create" name="project" value="" />
+                        <div class="mat-picker__options" hidden>
+                    {Plain("website", "Website", "The pages of the shop.")}
+                    {Plain("app", "Mobile app")}
+                    {Plain("backoffice", "Back office", "Accounting and orders.")}
+                        </div>
+                      </div>
+                      <span class="mat-hint">Type a name that is not in the list: the first row creates it. <code>error</code> is refused on purpose, to show the message.</span>
+                    </div>
+                    """, "With `data-create-url` the panel always has the search field. While the text is not the name of an option (any case) the first row is Create and the name; it posts `name=…` and takes `{ value, name, description }` as the new option, which is chosen. Enter creates where nothing matches. A refusal keeps the panel open and says why under the search field."),
+                new("Suggestions, and a name that creates", $"""
+                    <div class="mat-field">
+                      <label class="mat-label" for="pk-suggest">Tags</label>
+                      <div class="mat-picker" data-picker="select" data-multiple data-create-url="/api/demo/create" data-suggest-url="/api/demo/suggest?set=tags" data-placeholder="Choose tags">
+                        <input class="mat-picker__input" id="pk-suggest" name="tags" value="" />
+                        <div class="mat-picker__options" hidden>
+                    {Plain("finance", "Finance")}
+                    {Plain("contracts", "Contracts")}
+                    {Plain("family", "Family")}
+                    {Plain("network", "Network")}
+                    {Plain("work", "Work")}
+                        </div>
+                      </div>
+                      <span class="mat-hint">Nothing is chosen, so the field counts the suggestions. They are asked for when the panel opens first.</span>
+                    </div>
+                    """, "`data-suggest-url` answers `{ \"items\": [ { \"value\": \"finance\" }, { \"name\": \"Invoices 2026\" } ] }`: a value is an option that is there, a name that is not an option creates it (with `data-create-url`). They stand under Suggestions, above All, until something is chosen or searched."),
+                new("Suggestions only", $"""
+                    <div class="mat-field">
+                      <label class="mat-label" for="pk-folder">Folder</label>
+                      <div class="mat-picker" data-picker="select" data-suggest-url="/api/demo/suggest?set=folders" data-placeholder="Choose a folder">
+                        <input class="mat-picker__input" id="pk-folder" name="folder" value="" />
+                        <div class="mat-picker__options" hidden>
+                    {Plain("documents", "Documents", "Letters, contracts, invoices.")}
+                    {Plain("photos", "Photos", "Scans of pictures.")}
+                    {Plain("receipts", "Receipts")}
+                    {Plain("manuals", "Manuals")}
+                        </div>
+                      </div>
+                      <span class="mat-hint">Without <code>data-create-url</code> only options that are there can be suggested.</span>
+                    </div>
+                    """),
+                new("Both, in a form: required, with the message at the field", $"""
+                    <form class="mat-form" method="get" action="/Components#pk-corr" novalidate>
+                      <div class="mat-field">
+                        <label class="mat-label" for="pk-corr">Correspondent <span class="mat-req" aria-hidden="true">*</span></label>
+                        <div class="mat-picker" data-picker="select" data-create-url="/api/demo/create" data-create-label="Create correspondent &quot;{"{0}"}&quot;" data-suggest-url="/api/demo/suggest?set=tags" data-placeholder="Choose a correspondent">
+                          <input class="mat-picker__input" id="pk-corr" name="correspondent" required data-msg-required="Please choose or create a correspondent." />
+                          <div class="mat-picker__options" hidden>
+                    {Plain("finance", "Finance", "The bank and the tax office.")}
+                    {Plain("contracts", "Contracts")}
+                    {Plain("family", "Family")}
+                          </div>
+                        </div>
+                        <span class="mat-error" aria-live="polite"></span>
+                      </div>
+                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Continue</span></button></div>
+                    </form>
+                    """, "`data-create-label` words the row for this field; `data-pk-create`, `-creating`, `-created`, `-createfailed`, `-createhint`, `-suggestions` and `-all` change the other texts, on the field or on `html`. The created option is a real option: the required message goes away and the change event fires."),
             ],
             [
                 "An option is a button with `data-value`: an optional picture (`mat-picker__img`: an `img` with an empty `alt`, or an icon in a tile), a `mat-picker__name`, a `mat-picker__desc` and `mat-picker__tags`. The options sit in a `mat-picker__options` list that the script moves into the panel.",
                 "The input holds the key of the option (`data-value`); with `data-multiple` it holds the keys joined by `data-sep` (default a comma and a space), so a field can change from one kind to the other without touching what it saved.",
                 "`data-search` adds a search field to the panel (on a phone it is not focused at once, so the keyboard does not cover the options); `data-keywords` on an option adds words that the search finds but the list does not show.",
                 "The label of the field names the button, and the button says what is chosen. On a phone the panel is full screen with an X at the top right (DIALOG-03).",
+                "Create (FORM-16): `data-create-url` on the wrapper. The first row is Create and the typed text, while that is not the name of an option; choosing it posts the name and takes `{ value, name, description }` back. Only where creating is cheap and needs nothing but a name.",
+                "A refusal (not 2xx, or no answer) keeps the panel open and writes the `error` of the answer, or a default text, under the search field, read aloud. While it runs the row is busy (`aria-busy`) and cannot be pressed twice; a success is announced in a live region.",
+                "Suggestions (FORM-16): `data-suggest-url` is fetched with GET when the panel opens first with nothing chosen. They stand under Suggestions above All, never while searching or once a value is chosen; the closed field says \"3 suggestions\" in the colour of a link.",
+                "A suggested value is that option; a suggested name that is not an option creates it (it needs `data-create-url`). From code: `MatUi.picker.set(wrapper, value)`, `.addOption(wrapper, { value, name, description, tags })` (made with `textContent`) and `.suggest(wrapper, items)`.",
             ]),
 
         new("date-picker", "Date and period", "Forms", "calendar",
