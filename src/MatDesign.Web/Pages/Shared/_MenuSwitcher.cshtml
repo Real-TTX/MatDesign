@@ -1,0 +1,25 @@
+@model (ShellModel Shell, string? Active, SwitcherPlace Place)
+@*
+    The button of the menu switcher (SHELL-15), drawn where Place says: under the logo (Top), at the foot of the menu directly above the user (Bottom), or at the end of
+    the menu, after the panels (End). Every button opens the same popup (_MenuSwitchPopup), which is drawn at the end of the page: from the top it opens downwards,
+    from the foot and from the end upwards. A menu that has a parent shows the name of the parent above its own name.
+*@
+@{
+    var shell = Model.Shell;
+    var current = shell.CurrentMenu(Model.Active);
+    var up = Model.Place != SwitcherPlace.Top;
+    var placeClass = Model.Place switch
+    {
+        SwitcherPlace.Bottom => " mat-nav__switch--foot",
+        SwitcherPlace.End => " mat-nav__switch--end",
+        _ => string.Empty,
+    };
+}
+<div class="mat-nav__switch@(placeClass)">
+    <button type="button" class="mat-switcher" data-menu-toggle="nav-switch-menu" data-menu-place="@(up ? "top" : "bottom")" aria-haspopup="menu" aria-expanded="false">
+        <span class="mat-switcher__icon">@Ui.Icon(current.Icon)</span>
+        <span class="mat-switcher__text"><small data-nav-label="Menu">@(current.Parent?.Title ?? "Menu")</small><span class="mat-switcher__name">@current.Title</span></span>
+        @Ui.Icon(up ? "chevron-up" : "chevron-down", "mat-switcher__chev")
+        <span class="mat-switcher__dot" hidden="@(!shell.Menus.Any(m => m != current && m.NeedsAttention))"></span>
+    </button>
+</div>

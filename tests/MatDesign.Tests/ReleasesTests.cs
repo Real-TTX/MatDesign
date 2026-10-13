@@ -3,6 +3,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text.Json;
 using MatDesign.Core;
+using MatDesign.Web.Services;
 using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -124,6 +125,10 @@ public sealed class ReleasesTests : IClassFixture<WebApplicationFactory<Program>
         Assert.Equal("*", css.Headers.GetValues("Access-Control-Allow-Origin").Single());
         Assert.Equal("text/css", css.Content.Headers.ContentType!.MediaType);
         Assert.Contains("MatMail", await _studio.Get("/releases/0.1.0/design.json"));
+        // the script of a release says the version of the release, and the release carries the changelog and names the version of the toolkit it holds
+        Assert.Contains("version: '0.1.0'", await _studio.Get("/releases/0.1.0/matui.js"));
+        Assert.Equal(Changelog.LoadText(), await _studio.Get("/releases/0.1.0/CHANGELOG.md"));
+        Assert.Equal(AppVersion.MatUi, manifest.Toolkit);
         using var zip = new ZipArchive(new MemoryStream(await _studio.Client.GetByteArrayAsync("/releases/0.1.0/matui-0.1.0.zip")));
         using (var readme = new StreamReader(zip.GetEntry("matui/README.txt")!.Open()))
         {

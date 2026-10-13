@@ -4,4 +4,11 @@
     <RootNamespace>MatDesign.Core</RootNamespace>
   </PropertyGroup>
 
+  <!-- The version of the toolkit (Directory.Build.props) is read at run time from the assembly (AppVersion.MatUi), and the changelog of the toolkit is embedded
+       (Changelog.Load), so a build always carries the notes that belong to it. -->
+  <ItemGroup>
+    <AssemblyMetadata Include="MatUiVersion" Value="$(MatUiVersion)" />
+    <EmbeddedResource Include="..\..\CHANGELOG.md" LogicalName="CHANGELOG.md" />
+  </ItemGroup>
+
 </Project>

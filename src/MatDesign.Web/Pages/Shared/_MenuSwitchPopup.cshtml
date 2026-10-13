@@ -1,22 +1,67 @@
 @model (ShellModel Shell, string? Active)
 @*
     The popup of the menu switcher (SHELL-15): one entry per menu, the current one checked. An entry of a menu that asks for attention has a dot.
+    Menus that have a parent (NavSet.Parent) are listed below it: the parent is a button that opens them (data-nav-group, aria-expanded), one level deep, and the
+    group that has the current menu is open. A menu with a start page (NavSet.Href) is a link instead of a button: choosing it loads that page, which shows its own menu.
     It is drawn at the end of the page, outside the menu, like the user menu.
 *@
 @{
     var shell = Model.Shell;
     var current = shell.CurrentMenu(Model.Active);
+
+    void Label(NavSet menu)
+    {
+        <text>
+            @Ui.Icon(menu.Icon)<span>@menu.Title</span>
+            @if (menu.NeedsAttention) { <span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn"><span class="mat-sr-only">needs attention</span></span> }
+            @Ui.Icon("check", "mat-menu__check")
+        </text>
+    }
+
+    void Entry(NavSet menu, bool sub)
+    {
+        var itemClass = "mat-menu__item" + (sub ? " mat-menu__item--sub" : string.Empty);
+        var isCurrent = menu == current ? "true" : "false";
+        var parent = menu.Parent is null ? string.Empty : $"data-nav-parent=\"{System.Net.WebUtility.HtmlEncode(menu.Parent.Title)}\"";
+        var attention = menu.NeedsAttention ? "data-nav-attention" : string.Empty;
+        if (menu.HasStartPage)
+        {
+            <a class="@itemClass" href="@menu.Href" role="menuitemradio" aria-checked="@isCurrent" data-nav-set="@menu.Id" data-nav-title="@menu.Title" @Html.Raw(parent) @Html.Raw(attention)>
+                @{ Label(menu); }
+            </a>
+        }
+        else
+        {
+            <button type="button" class="@itemClass" role="menuitemradio" aria-checked="@isCurrent" data-nav-set="@menu.Id" data-nav-title="@menu.Title" @Html.Raw(parent) @Html.Raw(attention)>
+                @{ Label(menu); }
+            </button>
+        }
+    }
 }
 @if (shell.HasSwitcher)
 {
     <div class="mat-menu" id="nav-switch-menu" role="menu" aria-label="Menus" data-nav-scope="mat-nav" hidden>
-        @foreach (var menu in shell.Menus)
+        @foreach (var entry in shell.SwitcherEntries)
         {
-            <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="@(menu == current ? "true" : "false")" data-nav-set="@menu.Id" data-nav-title="@menu.Title" @Html.Raw(menu.NeedsAttention ? "data-nav-attention" : string.Empty)>
-                @Ui.Icon(menu.Icon)<span>@menu.Title</span>
-                @if (menu.NeedsAttention) { <span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn"><span class="mat-sr-only">needs attention</span></span> }
-                @Ui.Icon("check", "mat-menu__check")
+            if (entry.Parent is null)
+            {
+                Entry(entry.Menus[0], false);
+                continue;
+            }
+
+            var open = entry.Menus.Contains(current);
+            var groupId = "nav-switch-group-" + entry.Parent.Key;
+            <button type="button" class="mat-menu__item mat-menu__parent" role="menuitem" aria-expanded="@(open ? "true" : "false")" aria-controls="@groupId" data-nav-group>
+                @Ui.Icon(entry.Parent.Icon)<span>@entry.Parent.Title</span>
+                @if (entry.NeedsAttention) { <span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn mat-nav__badge--sum" hidden="@(!entry.Menus.Any(m => m != current && m.NeedsAttention))"><span class="mat-sr-only">needs attention</span></span> }
+                @Ui.Icon("chevron-down", "mat-menu__chev")
             </button>
+            <div class="mat-menu__sub" id="@groupId" role="group" aria-label="@entry.Parent.Title" hidden="@(!open)">
+                @foreach (var menu in entry.Menus)
+                {
+                    Entry(menu, true);
+                }
+            </div>
         }
     </div>
 }

@@ -54,7 +54,7 @@ public sealed record NavItem(string Title, string? Href, string? Icon, NavBadge?
     public bool IsParent => Children is { Count: > 0 };
 
     /// <summary>A stable key for remembering whether the user opened the branch.</summary>
-    public string Key => Regex.Replace(Title.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+    public string Key => Navigation.Slug(Title);
 
     public bool Contains(string? href) => href is not null && (Href == href || (Children?.Any(c => c.Href == href) ?? false));
 
@@ -65,10 +65,25 @@ public sealed record NavItem(string Title, string? Href, string? Icon, NavBadge?
 public sealed record NavGroup(string? Title, IReadOnlyList<NavItem> Items);
 
 /// <summary>
-/// One menu of an app (SHELL-15). An app with distinct areas, such as an administration, has several; the switcher under the logo shows one at a time.
+/// The parent of some menus in the switcher (SHELL-15): an entry in its popup that opens the menus below it, one level deep like the submenus of the items (SHELL-13).
+/// It is not a menu itself and has no items; menus with the same <see cref="Title"/> belong to the same parent.
 /// </summary>
-public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<NavGroup> Groups)
+public sealed record NavSetParent(string Title, string Icon)
 {
+    /// <summary>Names the element that holds the menus of the parent in the popup.</summary>
+    public string Key => Navigation.Slug(Title);
+}
+
+/// <summary>
+/// One menu of an app (SHELL-15). An app with distinct areas, such as an administration, has several; the switcher shows one at a time.
+/// With a <see cref="Parent"/> the menu is listed below that parent in the switcher instead of at its top level. With a <see cref="Href"/> choosing the menu loads that page (its start page)
+/// instead of swapping the items: the entry of the switcher is a link, and the page that loads shows its own menu.
+/// </summary>
+public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<NavGroup> Groups, NavSetParent? Parent = null, string? Href = null)
+{
+    /// <summary>True when choosing the menu loads a page of its own, so that a page that belongs to another menu needs no panel for it.</summary>
+    public bool HasStartPage => Href is not null;
+
     /// <summary>Every item, parents included.</summary>
     public IEnumerable<NavItem> AllItems => Groups.SelectMany(g => g.Items).SelectMany(i => i.IsParent ? i.Children!.Prepend(i) : [i]);
 
@@ -97,6 +112,9 @@ public sealed record NavFacts(IReadOnlyList<MatApp> Apps, int Rules, int Compone
 /// <summary>The menus of the site. The item whose address is the longest prefix of the current path is the active one.</summary>
 public static class Navigation
 {
+    /// <summary>A lower-case key made of letters and digits, for ids and for remembering what the user opened.</summary>
+    public static string Slug(string text) => Regex.Replace(text.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
+
     /// <summary>The two menus of the site as the built-in data gives them. The pages use <see cref="Create"/> with the data the Studio changed.</summary>
     public static IReadOnlyList<NavSet> Sets { get; } = Create(NavFacts.BuiltIn);
 
@@ -138,13 +156,13 @@ public static class Navigation
                 new("Patterns", "/Patterns", "template"),
                 new("Builder", "/Builder", "wrench"),
             ]),
-            new("Use it", [new("Download", "/Download", "download")]),
+            new("Use it", [new("Download", "/Download", "download"), new("Changelog", "/Changelog", "file-text")]),
         ]),
     ];
 
     /// <summary>
     /// The menu of the Studio without counts (docs/STUDIO.md). It is a third menu behind the switcher, shown only to the signed-in administrator, so it is not one of
-    /// <see cref="Sets"/>; the pages use <see cref="StudioMenu"/>.
+    /// <see cref="Sets"/>; the pages use <see cref="StudioMenu"/>. Choosing it in the switcher opens the overview of the Studio (a start page).
     /// </summary>
     public static NavSet StudioSet { get; } = StudioMenu(NavFacts.BuiltIn);
 
@@ -170,7 +188,7 @@ public static class Navigation
             new("Releases", "/Studio/Releases", "rocket"),
             new("Versions", "/Studio/Versions", "tag"),
         ]),
-    ]);
+    ], Href: "/Studio");
 
     /// <summary>The menus a visitor sees: the two of the site, and the Studio for the signed-in administrator.</summary>
     public static IReadOnlyList<NavSet> For(NavFacts facts, bool studio) => studio ? [.. Create(facts), StudioMenu(facts)] : Create(facts);

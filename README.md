@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **113 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **121 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -50,7 +50,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   energy, sensors, rooms, garden, scenes) first. SVG, as one sprite, as single files or as an archive; MatUi works without it
 
 **The documentation**
-- **51 components with 128 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
+- **65 components with 195 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
   it uses and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined
@@ -71,7 +71,8 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 
 - **The menu is always on the left, the logo above it.** At the bottom: the user next to the **3-state theme
   button** (System / Light / Dark), and the version below them. The menu scrolls on its own.
-- **The menu can have badges, submenus and more than one menu**, with a **switcher** under the logo. The header bar
+- **The menu can have badges, submenus and more than one menu**, with a **switcher** under the logo, above the user at
+  the foot, or both; the menus in its popup can be **grouped** below a parent. The header bar
   can carry **icons at its right end**, and a page can end with a **footer**.
 - **The content always has a breadcrumb above it.** A long page has an index ("On this page") – on a small window
   it is an icon in the header bar that opens a dialog.
@@ -307,7 +308,7 @@ place that could.
 |---|---|---|
 | Toolkit | MatUi (ten CSS parts, one script, the icon sprite), colour maths, rulebook, app registry | ✅ |
 | Site | Rulebook, foundations, shell, identity, builder, download – tests, container, CI | ✅ |
-| Components | Menu badges, submenus and switcher, forms, **pickers**, content components, **layout system**, utilities | ✅ |
+| Components | Menu badges, submenus and switcher, forms (with a **number stepper**, a **slider and range slider** and a **code input**), **pickers** (select, a **dropdown with checkboxes** and Select all, date and period, time, colour, **tags**, **appointment**), a **calendar** that is always shown, **groups in a table** (rows under a heading that folds, the add row last), content components (with a **carousel** and a **schedule**: agenda, day, week, month and year with calendar weeks), **lists of rows** (like ion-list: contacts, inbox, settings, files, tasks, sliding actions, reordering), **layout system**, utilities | ✅ |
 | Flat look | No gradients, glow or blur; selected is a tint (`COLOR-08`); toolbar with search field | ✅ |
 | Studio 1–2 | Data store, sign-in, **apps** | ✅ |
 | Studio 3–4 | **Rules** and **components** with live examples | ✅ |
@@ -346,6 +347,9 @@ Each run of the browser checks makes one release (a release never changes), so t
 Other tools: `node tools/icons.js` rebuilds the icon sprite from `tools/icons.base.json` and `node tools/iconlib.js` the icon library from `tools/iconlib/`
 (CI fails when either is stale),
 `node tools/audit.js` rescans the other repositories for the audit snapshot.
+
+**Versions:** MatUi has a version of its own (`MatUiVersion`, semantic versioning), a [changelog](CHANGELOG.md) (also on the site at `/Changelog`) and a guide for updating an app ([docs/VERSIONING.md](docs/VERSIONING.md)).
+`node tools/bump.js <patch|minor|major>` makes the next version, `node tools/matui-check.js <folder of an app>` shows how an app's copy stands against it.
 
 **What the tests hold the site to**, among other things:
 

@@ -62,6 +62,15 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
 
     public string? Area { get; private set; }
 
+    /// <summary>
+    /// Where the sample draws its switcher: <c>?switcher=bottom</c> at the foot above the user, <c>both</c> at both places, <c>end</c> at the end of the menu,
+    /// otherwise under the logo.
+    /// </summary>
+    private SwitcherPlace Place => Request.Query["switcher"].ToString() switch { "bottom" => SwitcherPlace.Bottom, "both" => SwitcherPlace.Both, "end" => SwitcherPlace.End, _ => SwitcherPlace.Top };
+
+    /// <summary><c>?menus=tree</c>: the administration is two menus below one parent in the switcher.</summary>
+    private bool Tree => Request.Query["menus"].ToString() == "tree";
+
     /// <summary>The page of an area (a menu item that is not one of the basic views), or null.</summary>
     public (string Title, string Icon, IReadOnlyList<(string Text, string? Url)> Crumbs)? AreaPage
         => Area is not null && Areas.TryGetValue(Area, out var a)
@@ -86,6 +95,16 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             parts.Add($"scheme={scheme}");
         }
 
+        if (Place != SwitcherPlace.Top)
+        {
+            parts.Add($"switcher={Place.ToString().ToLowerInvariant()}");
+        }
+
+        if (Tree)
+        {
+            parts.Add("menus=tree");
+        }
+
         return string.Join("&", parts);
     }
 
@@ -100,7 +119,6 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
         var active = View == "auth" ? string.Empty : Query(View, Area);
         // ?action=1 draws the main action (SHELL-19) as the first item of the menu, in place of "New item"; ?switcher=end puts the switcher at the end of the menu (SHELL-15).
         var action = Request.Query["action"].ToString() == "1";
-        var switcherAtEnd = Request.Query["switcher"].ToString() == "end";
         List<NavItem> itemPages =
         [
             new("All items", Query("list"), null, NavBadge.Count(12, "plain", "items")),
@@ -118,6 +136,29 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             start.Insert(0, new("Add item", Query("form"), "plus", Primary: true));
         }
 
+        // The menu of the sample: a submenu with badges, and an administration behind the switcher. With ?menus=tree the administration is two menus below one
+        // parent in the switcher (SHELL-15); ?switcher=bottom|both puts the switcher at the foot of the menu, above the user.
+        var users = new NavItem("Users", Query("list", "users"), "users", NavBadge.Count(3, "warn", "invitations pending"));
+        var roles = new NavItem("Roles", Query("gallery", "roles"), "shield");
+        var settings = new NavItem("Settings", null, "settings", Children:
+        [
+            new("General", Query("settings", "general"), null),
+            new("Security", Query("form", "security"), null),
+            new("Backups", Query("dashboard", "backups"), null, NavBadge.Count(1, "error", "failed")),
+        ]);
+        var audit = new NavItem("Audit log", Query("list", "audit"), "clock");
+        var administration = new NavSetParent("Administration", "shield");
+        IReadOnlyList<NavSet> admin = Tree
+            ?
+            [
+                new("people", "People", "users", [new(null, [users, roles])], administration),
+                new("system", "System", "settings", [new(null, [settings, audit])], administration),
+            ]
+            :
+            [
+                new("admin", "Administration", "shield", [new(null, [users, roles]), new("System", [settings, audit])]),
+            ];
+
         Shell = new ShellModel
         {
             App = App,
@@ -127,10 +168,9 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             CustomAccent = customAccent,
             PreviewQuery = Base(),
             ActiveHref = active,
-            SwitcherAtEnd = switcherAtEnd,
+            SwitcherPlace = Place,
             Menus =
             [
-                // The menu of the sample: a submenu with badges, and an administration behind the switcher.
                 new("work", "Work", "briefcase",
                 [
                     new(null, start),
@@ -141,24 +181,7 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
                         new("Sign in page", Query("auth"), "login"),
                     ]),
                 ]),
-                new("admin", "Administration", "shield",
-                [
-                    new(null,
-                    [
-                        new("Users", Query("list", "users"), "users", NavBadge.Count(3, "warn", "invitations pending")),
-                        new("Roles", Query("gallery", "roles"), "shield"),
-                    ]),
-                    new("System",
-                    [
-                        new("Settings", null, "settings", Children:
-                        [
-                            new("General", Query("settings", "general"), null),
-                            new("Security", Query("form", "security"), null),
-                            new("Backups", Query("dashboard", "backups"), null, NavBadge.Count(1, "error", "failed")),
-                        ]),
-                        new("Audit log", Query("list", "audit"), "clock"),
-                    ]),
-                ]),
+                .. admin,
             ],
             UserName = "Alex Morgan",
             UserRole = "Administrator",
@@ -223,6 +246,8 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             ["theme"] = Request.Query["theme"].ToString(),
             ["accent"] = Request.Query["accent"].ToString(),
             ["scheme"] = ColorSchemes.Normalize(Request.Query["scheme"].ToString()) ?? string.Empty,
+            ["switcher"] = Place == SwitcherPlace.Top ? null : Place.ToString().ToLowerInvariant(),
+            ["menus"] = Tree ? "tree" : null,
             ["view"] = View,
         };
 

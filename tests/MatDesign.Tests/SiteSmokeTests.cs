@@ -367,6 +367,71 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("mat-nav__badge mat-nav__badge--error", backups);
     }
 
+    [Fact]
+    public async Task The_switcher_is_under_the_logo_by_default_and_not_at_the_foot()
+    {
+        var (_, html) = await Get("/Preview?app=matmail&view=list");
+        Assert.Equal(1, Regex.Count(html, "class=\"mat-switcher\""));
+        Assert.DoesNotContain("mat-nav__switch--foot", html);
+        Assert.Matches(@"mat-nav__brand.*?class=""mat-nav__switch"">.*?class=""mat-nav__scroll""", html.ReplaceLineEndings(" "));
+    }
+
+    [Fact]
+    public async Task The_switcher_can_sit_at_the_foot_directly_above_the_user_and_opens_upwards()
+    {
+        var (_, html) = await Get("/Preview?app=matmail&view=list&switcher=bottom");
+        var flat = html.ReplaceLineEndings(" ");
+        Assert.Equal(1, Regex.Count(html, "class=\"mat-switcher\""));
+        Assert.Matches(@"class=""mat-nav__foot"">\s*<div class=""mat-nav__switch mat-nav__switch--foot"">\s*<button[^>]*data-menu-place=""top""", flat);
+        Assert.Matches(@"mat-nav__switch--foot.*?class=""mat-nav__account""", flat);
+        Assert.DoesNotMatch(@"mat-nav__brand.*?class=""mat-nav__switch"">.*?class=""mat-nav__scroll""", flat);
+        // the links of the sample keep the choice
+        Assert.Contains("switcher=bottom", html);
+    }
+
+    [Fact]
+    public async Task The_switcher_can_be_at_both_places_and_both_open_the_same_popup()
+    {
+        var (_, html) = await Get("/Preview?app=matmail&view=list&switcher=both");
+        Assert.Equal(2, Regex.Count(html, "class=\"mat-switcher\""));
+        Assert.Equal(2, Regex.Count(html, "data-menu-toggle=\"nav-switch-menu\""));
+        Assert.Equal(1, Regex.Count(html, "id=\"nav-switch-menu\""));
+    }
+
+    [Fact]
+    public async Task Menus_below_a_parent_are_listed_in_a_group_that_a_button_opens_and_the_group_with_the_current_menu_is_open()
+    {
+        var (_, work) = await Get("/Preview?app=matmail&view=list&menus=tree");
+        var ids = IdAttribute().Matches(work).Select(m => m.Groups[1].Value).ToHashSet();
+        Assert.Matches(@"<button type=""button"" class=""mat-menu__item mat-menu__parent"" role=""menuitem"" aria-expanded=""false"" aria-controls=""nav-switch-group-administration"" data-nav-group>", work);
+        Assert.Contains("nav-switch-group-administration", ids);
+        Assert.Matches(@"<div class=""mat-menu__sub"" id=""nav-switch-group-administration"" role=""group"" aria-label=""Administration"" hidden", work);
+        Assert.Contains("data-nav-title=\"People\" data-nav-parent=\"Administration\"", work);
+        Assert.Contains("data-nav-title=\"System\" data-nav-parent=\"Administration\"", work);
+        Assert.DoesNotContain("data-nav-set=\"admin\"", work);
+        Assert.Contains("<small data-nav-label=\"Menu\">Menu</small><span class=\"mat-switcher__name\">Work</span>", work);
+        // a menu without a parent has no data-nav-parent
+        Assert.DoesNotMatch(@"data-nav-set=""work""[^>]*data-nav-parent", work);
+        // the parent carries the dot of the menus inside it that need attention
+        Assert.Matches(@"mat-nav__badge--sum"" ?(hidden=""[^""]*"")?>", Regex.Match(work, "<button[^>]*data-nav-group>.*?</button>", RegexOptions.Singleline).Value);
+
+        var (_, system) = await Get("/Preview?app=matmail&view=dashboard&area=backups&menus=tree");
+        Assert.Matches(@"aria-expanded=""true"" aria-controls=""nav-switch-group-administration"" data-nav-group>", system);
+        Assert.DoesNotMatch(@"id=""nav-switch-group-administration"" role=""group"" aria-label=""Administration"" hidden", system);
+        Assert.Contains("<small data-nav-label=\"Menu\">Administration</small><span class=\"mat-switcher__name\">System</span>", system);
+        Assert.Contains("aria-checked=\"true\" data-nav-set=\"system\"", system);
+        Assert.DoesNotContain(" hidden", Regex.Match(system, "<nav[^>]*data-nav-panel=\"system\"[^>]*>").Value);
+        Assert.Contains(" hidden", Regex.Match(system, "<nav[^>]*data-nav-panel=\"people\"[^>]*>").Value);
+    }
+
+    [Fact]
+    public async Task The_links_of_a_sample_with_grouped_menus_keep_the_grouping()
+    {
+        var (_, html) = await Get("/Preview?app=matmail&view=list&menus=tree&switcher=bottom");
+        Assert.Contains("menus=tree", Regex.Match(html, "href=\"([^\"]*view=gallery[^\"]*)\"").Groups[1].Value);
+        Assert.Contains("switcher=bottom", Regex.Match(html, "href=\"([^\"]*view=gallery[^\"]*)\"").Groups[1].Value);
+    }
+
     [Theory]
     [InlineData("/Rules/Detail?id=NOPE-99")]
     [InlineData("/Patterns/Detail?id=nope")]
@@ -479,7 +544,9 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, css.StatusCode);
         Assert.Equal("*", css.Headers.GetValues("Access-Control-Allow-Origin").Single());
         var text = await css.Content.ReadAsStringAsync();
-        Assert.StartsWith($"/* MatUi {AppVersion.Current}", text);
+        // the version of the toolkit first (what an app compares), then the build of the site that made the file
+        Assert.StartsWith($"/* MatUi {AppVersion.MatUi} (", text);
+        Assert.Contains($") - build {AppVersion.Current} - bundled from", text.Split('\n')[0]);
         foreach (var part in ToolkitFiles.CssParts)
         {
             Assert.Contains(File.ReadAllText(TestPaths.Toolkit($"css/{part}")).Split('\n')[^2].Trim(), text);

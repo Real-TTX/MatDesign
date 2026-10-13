@@ -71,6 +71,8 @@ function seenAt(page, selector) {
     page.on('pageerror', e => consoleErrors.push(url + ': ' + e.message));
     page.on('console', m => { if (m.type() === 'error') { consoleErrors.push(url + ': ' + m.text()); } });
     await page.goto(BASE + url, { waitUntil: 'networkidle' });
+    // the components page is two megabytes: the network can be quiet for half a second while the document is still being read, and its script has not run yet
+    await page.waitForFunction(() => document.readyState === 'complete');
     return { ctx, page };
   }
 
@@ -689,6 +691,32 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
+    // SHELL-15: an entry that is a link is the start page of its menu: the browser loads it, the script does not swap the items
+    const { ctx, page } = await open(desktopOptions, '/Components#switcher');
+    const entry = '#switch-pages-menu [data-nav-set="admin"]';
+    await check('an entry of the switcher that is a link loads its page and does not swap the items', async () => {
+      await page.click('#switch-pages-demo .mat-switcher');
+      expect(await page.evaluate(sel => document.querySelector(sel).tagName, entry), 'A', 'the entry is a link');
+      expect(await page.getAttribute(entry, 'role'), 'menuitemradio', 'role');
+      await page.click(entry);
+      await page.waitForTimeout(250);
+      expectTrue(await page.locator('#switch-pages-menu').isHidden(), 'the popup stays open after the choice');
+      expect((await page.textContent('#switch-pages-demo .mat-switcher__name')).trim(), 'Work', 'the items were swapped: the page that loads draws its menu');
+      expect(await page.getAttribute('#switch-pages-menu [data-nav-set="work"]', 'aria-checked'), 'true', 'the checked entry stays until the page is loaded');
+      expectTrue(page.url().endsWith('#'), 'the link was not followed: ' + page.url());
+    });
+    await check('a link in the popup of the switcher is chosen with the arrow keys and the Space key like a button', async () => {
+      await page.click('#switch-pages-demo .mat-switcher');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-nav-set')), 'work', 'the first entry has the focus when the popup opens');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-nav-set')), 'admin', 'the entry that has the focus');
+      await page.keyboard.press(' ');
+      await page.waitForTimeout(250);
+      expectTrue(await page.locator('#switch-pages-menu').isHidden(), 'the popup stays open after the Space key');
+    });
+    await ctx.close();
+  }
+  {
     const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list');
     await check('on a phone a parent opens its children without closing the drawer; a link closes it', async () => {
       await page.click('[data-nav-toggle]');
@@ -715,6 +743,106 @@ function seenAt(page, selector) {
       await page.click('[data-nav-set="admin"]');
       await page.waitForTimeout(250);
       expect((await page.textContent('.mat-switcher__name')).trim(), 'Administration', 'name');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- the switcher at the foot, menus in groups (SHELL-15)
+  console.log('\nThe switcher at the foot and menus in groups');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=dashboard&switcher=bottom&menus=tree');
+    const popup = () => page.locator('#nav-switch-menu').boundingBox();
+    await check('the switcher is at the foot directly above the user and not under the logo', async () => {
+      expect(await page.locator('.mat-switcher').count(), 1, 'switchers');
+      const sw = await page.locator('.mat-nav__foot .mat-switcher').boundingBox();
+      const user = await page.locator('.mat-user').boundingBox();
+      expectTrue(sw && user && sw.y + sw.height <= user.y + 1, 'the switcher is not above the user');
+      expect(await page.locator('.mat-nav__brand ~ .mat-nav__switch').count(), 0, 'a switcher under the logo');
+    });
+    await check('its popup opens upwards and still does not cover the switcher after a group was opened or closed', async () => {
+      await page.click('.mat-switcher');
+      const btn = await page.locator('.mat-switcher').boundingBox();
+      let p = await popup();
+      expectTrue(p.y + p.height <= btn.y + 1, 'the popup is not above the button');
+      expect(await page.getAttribute('[data-nav-group]', 'aria-expanded'), 'false', 'the group of another menu is closed');
+      await page.click('[data-nav-group]');
+      await page.waitForTimeout(150);
+      p = await popup();
+      expect(await page.getAttribute('[data-nav-group]', 'aria-expanded'), 'true', 'opened by the click');
+      expectTrue(p.y + p.height <= btn.y + 1, 'the popup covers the button after a group was opened');
+      expectTrue(await page.locator('#nav-switch-menu').isVisible(), 'the parent closed the popup');
+    });
+    await check('choosing a menu of a group swaps the items and names the parent above the menu', async () => {
+      await page.click('[data-nav-set="people"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'People', 'name');
+      expect((await page.textContent('.mat-switcher__text small')).trim(), 'Administration', 'the parent');
+      expectTrue(await page.locator('[data-nav-panel="people"]').isVisible() && !(await page.locator('[data-nav-panel="work"]').isVisible()), 'panels');
+      expectTrue(!(await page.locator('#nav-switch-menu').isVisible()), 'the popup stays open after a menu was chosen');
+      await page.click('.mat-switcher');
+      await page.click('[data-nav-set="work"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('.mat-switcher__text small')).trim(), 'Menu', 'the label when the menu has no parent');
+    });
+    await check('a closed parent carries the dot of the menus inside it, an open one does not', async () => {
+      await page.click('.mat-switcher');
+      const dot = page.locator('[data-nav-group] .mat-nav__badge--sum');
+      expect(await page.getAttribute('[data-nav-group]', 'aria-expanded'), 'true', 'the group stays open');
+      expectTrue(!(await dot.isVisible()), 'a dot on an open parent');
+      await page.click('[data-nav-group]');
+      expectTrue(await dot.isVisible(), 'no dot on the closed parent');
+      await page.keyboard.press('Escape');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=dashboard&switcher=bottom&menus=tree');
+    const focused = () => page.evaluate(() => (document.activeElement.getAttribute('data-nav-set') || (document.activeElement.hasAttribute('data-nav-group') ? 'group' : '?')));
+    const expanded = () => page.getAttribute('[data-nav-group]', 'aria-expanded');
+    await check('the arrow keys walk the popup: a closed parent hides its menus, right opens it and goes in, left goes back and closes', async () => {
+      await page.click('.mat-switcher');
+      expect(await focused(), 'work', 'the first entry');
+      await page.keyboard.press('ArrowDown');
+      expect(await focused(), 'group', 'the parent');
+      await page.keyboard.press('ArrowDown');
+      expect(await focused(), 'work', 'wraps around: the menus of a closed parent are not walked');
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('ArrowRight');
+      expect(await expanded(), 'true', 'opened by ArrowRight');
+      await page.keyboard.press('ArrowRight');
+      expect(await focused(), 'people', 'first menu of the group');
+      await page.keyboard.press('ArrowDown');
+      expect(await focused(), 'system', 'next menu');
+      await page.keyboard.press('ArrowLeft');
+      expect(await focused(), 'group', 'back to the parent');
+      expect(await expanded(), 'false', 'closed by ArrowLeft');
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator('#nav-switch-menu').isVisible()), 'Escape does not close the popup');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=dashboard&area=backups&menus=tree');
+    await check('a page of a menu in a group loads with the group open and the parent named above the menu', async () => {
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'System', 'name');
+      expect((await page.textContent('.mat-switcher__text small')).trim(), 'Administration', 'the parent');
+      await page.click('.mat-switcher');
+      expect(await page.getAttribute('[data-nav-group]', 'aria-expanded'), 'true', 'the group of the current menu is open');
+      expect(await page.getAttribute('[data-nav-set="system"]', 'aria-checked'), 'true', 'the current menu is checked');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=dashboard&switcher=both');
+    await check('with the switcher at both places the two stay in step', async () => {
+      expect(await page.locator('.mat-switcher').count(), 2, 'switchers');
+      await page.locator('.mat-nav__foot .mat-switcher').click();
+      await page.click('[data-nav-set="admin"]');
+      await page.waitForTimeout(250);
+      const names = await page.locator('.mat-switcher__name').allTextContents();
+      expect(names.map(n => n.trim()).join('|'), 'Administration|Administration', 'both name the menu');
+      const above = await page.evaluate(() => { const b = document.querySelector('.mat-nav__brand ~ .mat-nav__switch .mat-switcher').getBoundingClientRect(); return b.y < document.querySelector('.mat-nav__foot .mat-switcher').getBoundingClientRect().y; });
+      expectTrue(above, 'the one under the logo is not above the one at the foot');
     });
     await ctx.close();
   }
@@ -777,6 +905,26 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
+    const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list&switcher=bottom&menus=tree');
+    await check('on a phone the switcher at the foot of the drawer opens its popup above the drawer, inside the screen', async () => {
+      await page.click('[data-nav-toggle]');
+      await page.waitForTimeout(450);
+      await page.click('.mat-switcher');
+      await page.click('[data-nav-group]');
+      await page.waitForTimeout(250);
+      const ok = await page.evaluate(() => {
+        const m = document.getElementById('nav-switch-menu').getBoundingClientRect();
+        const hit = document.elementFromPoint(m.x + m.width / 2, m.y + 12);
+        return !!(hit && hit.closest('#nav-switch-menu')) && m.y >= 0 && m.bottom <= window.innerHeight;
+      });
+      expectTrue(ok, 'the popup is hidden behind the drawer or leaves the screen');
+      await page.click('[data-nav-set="people"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'People', 'name');
+    });
+    await ctx.close();
+  }
+  {
     const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list&action=1&switcher=end');
     await check('on a phone the drawer has the main action first and the switcher above the foot, and the popup stays on the screen', async () => {
       await page.click('[data-nav-toggle]');
@@ -791,6 +939,463 @@ function seenAt(page, selector) {
       await page.waitForTimeout(250);
       const popup = await page.evaluate(() => { const m = document.getElementById('nav-switch-menu').getBoundingClientRect(); const s = document.querySelector('.mat-switcher').getBoundingClientRect(); const hit = document.elementFromPoint(m.x + m.width / 2, m.y + 12); return { above: Math.round(m.bottom) <= Math.round(s.top), inside: m.top >= 0 && m.right <= innerWidth, seen: !!(hit && hit.closest('#nav-switch-menu')) }; });
       expect(popup, { above: true, inside: true, seen: true }, 'the popup on a phone');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#switcher');
+    await check('the example with a group: a parent opens its menus, choosing one names the parent', async () => {
+      await page.click('#switch-tree-demo .mat-switcher');
+      expect(await page.getAttribute('#switch-tree-menu [data-nav-group]', 'aria-expanded'), 'false', 'closed at first');
+      await page.click('#switch-tree-menu [data-nav-group]');
+      await page.click('#switch-tree-menu [data-nav-set="people"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('#switch-tree-demo .mat-switcher__name')).trim(), 'People', 'name');
+      expect((await page.textContent('#switch-tree-demo .mat-switcher__text small')).trim(), 'Administration', 'the parent');
+      expectTrue(await page.locator('#switch-tree-demo [data-nav-panel="people"]').isVisible(), 'the items of the menu');
+    });
+    await check('the example at the foot: the popup opens upwards', async () => {
+      await page.click('#switch-foot-demo .mat-switcher');
+      const btn = await page.locator('#switch-foot-demo .mat-switcher').boundingBox();
+      const p = await page.locator('#switch-foot-menu').boundingBox();
+      expectTrue(p.y + p.height <= btn.y + 1, 'the popup is not above the switcher');
+      await page.click('#switch-foot-menu [data-nav-set="admin"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('#switch-foot-demo .mat-switcher__name')).trim(), 'Administration', 'name');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- schedule (LIST-14)
+  console.log('\nSchedule');
+  // known dates and the ISO 8601 calendar week they are in (a unit test checks this list against .NET)
+  const weekCases = [['2026-10-12', 42], ['2021-01-03', 53], ['2024-12-30', 1], ['2026-12-31', 53], ['2027-01-01', 53], ['2027-01-04', 1], ['2020-12-31', 53], ['2025-12-29', 1], ['2016-01-03', 53], ['2026-01-01', 1], ['2026-03-29', 13], ['2026-10-25', 43]];
+  const norm = s => s.replace(/[   ]/g, ' ').replace(/\s+/g, ' ').trim();
+  // a schedule of the page is shown (and a new one made) from its own state, so nothing depends on the day the check runs: the examples pin their clock with data-now
+  const schedulePage = async (page) => {
+    await page.evaluate(() => {
+      window.__ranges = []; window.__picks = []; window.__days = [];
+      document.addEventListener('mat:schedule-range', e => window.__ranges.push(Object.assign({ id: e.target.id }, e.detail)));
+      document.addEventListener('mat:schedule-select', e => window.__picks.push({ id: e.target.id, event: e.detail }));
+      document.addEventListener('mat:schedule-day', e => window.__days.push(Object.assign({ id: e.target.id }, e.detail)));
+    });
+    const title = sel => page.$eval(`${sel} .mat-schedule__periodtext`, e => e.textContent).then(norm);
+    const go = (sel, date, view) => page.evaluate(([s, d, v]) => window.MatUi.schedule.go(document.querySelector(s), d, v), [sel, date, view || null]);
+    const view = sel => page.getAttribute(sel, 'data-view');
+    const pressed = sel => page.$$eval(`${sel} [data-sch-go]`, bs => bs.filter(b => b.getAttribute('aria-pressed') === 'true').map(b => b.getAttribute('data-sch-go')));
+    const lastRange = () => page.evaluate(() => window.__ranges.at(-1));
+    const active = () => page.evaluate(() => { const a = document.activeElement; return a ? (a.getAttribute('data-sch-day') || a.className) : null; });
+    // a schedule that is made here: at the top of the content, from the events of the practice example
+    const create = (id, attrs, copyEvents) => page.evaluate(([id, attrs, copyEvents]) => {
+      const el = document.createElement('section');
+      el.className = 'mat-schedule'; el.id = id; el.setAttribute('data-schedule', ''); el.setAttribute('aria-label', id);
+      Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+      if (copyEvents) { el.setAttribute('data-events', document.querySelector('#sched-practice').getAttribute('data-events')); }
+      document.querySelector('.mat-with-toc__main').prepend(el);
+      window.MatUi.schedule.init(el.parentNode);
+    }, [id, attrs, !!copyEvents]);
+    return { title, go, view, pressed, lastRange, active, create };
+  };
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#schedule');
+    const { title, go, view, pressed, lastRange, active, create } = await schedulePage(page);
+    const practice = '#sched-practice', school = '#sched-school', project = '#sched-project';
+    const next = sel => `${sel} .mat-schedule__next`, prev = sel => `${sel} .mat-schedule__prev`, today = sel => `${sel} .mat-schedule__today`;
+
+    await check('the agenda lists the days that have events, each under a heading that stays; today is marked and the calendar week told', async () => {
+      const s = await page.$eval(practice, root => {
+        const heads = [...root.querySelectorAll('.mat-schedule__dayhead')];
+        return {
+          heads: heads.map(h => h.querySelector('span').textContent.trim()), level: [...new Set(heads.map(h => h.tagName))],
+          sticky: heads.every(h => getComputedStyle(h).position === 'sticky'), today: heads.filter(h => h.querySelector('.mat-pill')).map(h => h.querySelector('span').textContent.trim()),
+          kw: [...root.querySelectorAll('.mat-schedule__kw')].map(k => k.textContent.trim()), rows: root.querySelectorAll('.mat-schedule__event--row').length,
+          wide: root.classList.contains('is-wide'), labelled: root.getAttribute('aria-label'),
+        };
+      });
+      expect(s.heads.length, 5, 'days with events in the week');
+      expectTrue(/^Monday,? 12 October$/.test(s.heads[0]), 'the first heading: ' + s.heads[0]);
+      expect(s.level, ['H3'], 'the level of the headings');
+      expect(s.sticky, true, 'the headings stay at the top (position: sticky)');
+      expect(s.today.length, 1, 'the marked day');
+      expectTrue(/^Wednesday,? 14 October$/.test(s.today[0]), 'today is Wednesday 14 October (the clock is pinned): ' + s.today[0]);
+      expect(s.kw, ['Week 42'], 'the calendar week');
+      expect(s.rows, 22, 'rows: the 21 events of the week, and the one that lasts two days on both of its days');
+      expect(s.wide, true, 'a schedule of 685 px is wide');
+      expect(s.labelled, 'Practice agenda', 'the name of the region');
+      expectTrue(/^Week 42 · 12 ?[–-] ?18 Oct 2026$/.test(await title(practice)), 'the title names the week: ' + await title(practice));
+      expect(await pressed(practice), ['agenda'], 'the pressed view');
+    });
+    await check('a tone is never the only sign: every event that has one has an icon, and a text (the status, or the name of the tone for a screen reader)', async () => {
+      const rows = await page.$$eval(`${practice} .mat-schedule__event--row`, list => list.map(r => ({
+        tone: [...r.classList].find(c => /--(accent|ok|warn|error|info|plain)$/.test(c)).split('--')[1], mark: !!r.querySelector('.mat-schedule__mark svg'),
+        text: !!r.querySelector('.mat-pill') || !!r.querySelector('.mat-sr-only'),
+      })));
+      expect([...new Set(rows.map(r => r.tone))].sort(), ['accent', 'error', 'info', 'ok', 'plain', 'warn'], 'the tones of the example');
+      expectTrue(rows.filter(r => r.tone !== 'plain').every(r => r.mark && r.text), 'a tone without an icon or a text');
+      expectTrue(rows.filter(r => r.tone === 'plain').every(r => !r.mark), 'a plain event has no icon');
+      expect(await page.locator(`${practice} .mat-schedule__event--row`, { hasText: 'J. Maier' }).locator('.mat-pill').textContent(), 'Cancelled', 'the status of the error');
+    });
+    await check('the views are switched by a row of buttons (aria-pressed): each draws what its name says', async () => {
+      const shape = sel => page.$eval(sel, root => ({
+        list: root.querySelectorAll('.mat-schedule__list').length, cols: root.querySelectorAll('.mat-schedule__col').length, rows: root.querySelectorAll('.mat-schedule__row:not(.mat-schedule__row--head)').length,
+        months: root.querySelectorAll('.mat-schedule__month').length, band: root.querySelectorAll('.mat-schedule__band').length,
+      }));
+      const want = { agenda: { list: 1, cols: 0, rows: 0, months: 0, band: 0 }, day: { list: 0, cols: 1, rows: 0, months: 0, band: 0 }, week: { list: 0, cols: 7, rows: 0, months: 0, band: 1 }, month: { list: 0, cols: 0, rows: 5, months: 0, band: 0 }, year: { list: 0, cols: 0, rows: 0, months: 12, band: 0 } };
+      for (const v of ['day', 'week', 'month', 'year', 'agenda']) {
+        await page.click(`${practice} [data-sch-go="${v}"]`);
+        expect(await view(practice), v, 'data-view after ' + v);
+        expect(await pressed(practice), [v], 'the pressed button after ' + v);
+        expect(await shape(practice), want[v], 'what ' + v + ' draws');
+      }
+    });
+    await check('Previous and Next move by the unit of the view (a week, a day, a week, a month, a year), the range of what is visible is sent, and Today comes back', async () => {
+      const cases = [
+        ['agenda', /^Week 43 · 19 ?[–-] ?25 Oct 2026$/, '2026-10-19', '2026-10-25'], ['day', /^Thursday,? 15 October 2026$/, '2026-10-15', '2026-10-15'],
+        ['week', /^Week 43 · 19 ?[–-] ?25 Oct 2026$/, '2026-10-19', '2026-10-25'], ['month', /^November 2026$/, '2026-10-26', '2026-12-06'], ['year', /^2027$/, '2027-01-01', '2027-12-31'],
+      ];
+      for (const [v, expected, from, to] of cases) {
+        await go(practice, '2026-10-14', v);
+        const before = await title(practice);
+        await page.click(next(practice));
+        const after = await title(practice);
+        expectTrue(expected.test(after), `${v}: the title after Next is ${after}`);
+        expect((({ id, from, to, view }) => ({ id, from, to, view }))(await lastRange()), { id: 'sched-practice', from, to, view: v }, `${v}: the range after Next`);
+        await page.click(prev(practice));
+        expect(await title(practice), before, `${v}: Previous goes back`);
+        await page.click(next(practice));
+        await page.click(today(practice));
+        expect(await title(practice), before, `${v}: Today comes back`);
+      }
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('after a page a live region says the period and how many events it has, and the focus stays on the button that was used', async () => {
+      await page.focus(next(practice));
+      await page.keyboard.press('Enter');
+      expect(norm(await page.textContent(`${practice} [role=status]`)).replace(/ ?[–-] ?/, '-'), 'Week 43 · 19-25 Oct 2026, 3 events', 'the live region');
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__next')), true, 'the focus after Enter on Next');
+      await page.click(prev(practice));
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__prev')), true, 'the focus after a click on Previous');
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('the calendar weeks are ISO 8601 for known dates (the end and the start of a year, a day that is a Sunday, the changes of the clock)', async () => {
+      await create('sched-wk', { 'data-view': 'week', 'data-week-numbers': '', 'data-now': '2026-10-14T10:20' });
+      for (const [date, week] of weekCases) {
+        await go('#sched-wk', date);
+        expectTrue((await title('#sched-wk')).startsWith(`Week ${week} · `), `${date} is in week ${week}, the title says ${await title('#sched-wk')}`);
+      }
+      // the week number is on the grid too, and a week that starts on Sunday has the number of the week that holds most of it
+      await go('#sched-wk', '2026-10-14');
+      expect(norm(await page.textContent('#sched-wk .mat-schedule__corner [aria-hidden]')), 'Wk 42', 'the number at the corner of the week');
+      await create('sched-sun', { 'data-view': 'week', 'data-week-numbers': '', 'data-week-start': '0', 'data-date': '2026-10-14', 'data-now': '2026-10-14T10:20' });
+      expectTrue(/^Week 42 · 11 ?[–-] ?17 Oct 2026$/.test(await title('#sched-sun')), 'a week from Sunday 11 to Saturday 17 October: ' + await title('#sched-sun'));
+      expect(await page.$eval('#sched-sun .mat-schedule__dow', e => e.textContent), 'Sun', 'the first day of the week');
+      expect(await page.$$eval(`${school} .mat-schedule__row:not(.mat-schedule__row--head) .mat-schedule__wk [aria-hidden]`, ns => ns.map(n => n.textContent)), ['40', '41', '42', '43', '44'], 'the weeks of October 2026 in the month');
+    });
+    await check('the arrow keys and PageUp and PageDown page, Shift with them pages by a year, and Escape closes what is open', async () => {
+      await go(practice, '2026-10-14', 'agenda');
+      await page.focus(`${practice} .mat-schedule__body`);
+      await page.keyboard.press('ArrowRight');
+      expectTrue((await title(practice)).startsWith('Week 43'), 'ArrowRight');
+      await page.keyboard.press('ArrowLeft');
+      expectTrue((await title(practice)).startsWith('Week 42'), 'ArrowLeft');
+      await page.keyboard.press('PageDown');
+      expectTrue((await title(practice)).startsWith('Week 43'), 'PageDown');
+      await page.keyboard.press('PageUp');
+      expectTrue((await title(practice)).startsWith('Week 42'), 'PageUp');
+      await page.keyboard.press('Shift+PageDown');
+      expectTrue((await title(practice)).includes('2027'), 'Shift+PageDown goes a year on: ' + await title(practice));
+      await page.keyboard.press('Shift+PageUp');
+      expectTrue((await title(practice)).startsWith('Week 42') && (await title(practice)).includes('2026'), 'Shift+PageUp goes a year back');
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__body')), true, 'the focus stays on the body that was paged');
+      await page.focus(prev(practice));
+      await page.keyboard.press('ArrowRight');
+      expectTrue((await title(practice)).startsWith('Week 43'), 'the arrow keys page from the buttons too');
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__prev')), true, 'the focus stays on the button');
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('the title opens a jump to a month and a year: the focus goes into it, a month is chosen, Escape and a click elsewhere close it', async () => {
+      await go(practice, '2026-10-14', 'month');
+      await page.click(`${practice} .mat-schedule__period`);
+      expectTrue(await page.locator(`${practice} .mat-schedule__jump`).isVisible(), 'the jump is shown');
+      expect(await page.getAttribute(`${practice} .mat-schedule__period`, 'aria-expanded'), 'true', 'aria-expanded');
+      expect(await page.locator(`${practice} [data-sch-pick]`).count(), 12, 'months');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('aria-current') && document.activeElement.textContent.trim()), 'Oct', 'the focus is on the month that is shown');
+      await page.click(`${practice} [data-sch-year="1"]`);
+      expect(await page.textContent(`${practice} .mat-schedule__jumpyear`), '2027', 'the year of the jump');
+      await page.click(`${practice} [data-sch-pick="1"]`);
+      expect(await title(practice), 'February 2027', 'the month chosen');
+      expectTrue(!(await page.locator(`${practice} .mat-schedule__jump`).isVisible()), 'the jump closes when a month is chosen');
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__period')), true, 'the focus goes back to the title');
+      await page.click(`${practice} .mat-schedule__period`);
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator(`${practice} .mat-schedule__jump`).isVisible()), 'Escape closes the jump');
+      expect(await page.evaluate(() => document.activeElement.className.includes('mat-schedule__period')), true, 'the focus is back on the title after Escape');
+      await page.click(`${practice} .mat-schedule__period`);
+      await page.click('h1');
+      expectTrue(!(await page.locator(`${practice} .mat-schedule__jump`).isVisible()), 'a click elsewhere closes the jump');
+      await go(practice, '2026-10-14', 'year');
+      await page.click(`${practice} .mat-schedule__period`);
+      await page.click(`${practice} [data-sch-pick="4"]`);
+      expect([await view(practice), await title(practice)], ['month', 'May 2026'], 'a month chosen in the year view opens that month');
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('in the month grid the arrow keys move from day to day, Home and End to the ends of the week and PageDown to the next month; Enter opens the day', async () => {
+      await go(practice, '2026-10-14', 'month');
+      expect(await page.locator(`${practice} [data-sch-day][tabindex="0"]`).count(), 1, 'one tab stop in the grid');
+      await page.focus(`${practice} [data-sch-day="2026-10-14"]`);
+      await page.keyboard.press('ArrowRight');
+      expect(await active(), '2026-10-15', 'ArrowRight');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), '2026-10-22', 'ArrowDown');
+      await page.keyboard.press('Home');
+      expect(await active(), '2026-10-19', 'Home');
+      await page.keyboard.press('End');
+      expect(await active(), '2026-10-25', 'End');
+      expect(await page.locator(`${practice} [data-sch-day][tabindex="0"]`).count(), 1, 'still one tab stop');
+      await page.keyboard.press('PageDown');
+      expect(await title(practice), 'November 2026', 'PageDown turns the month');
+      expect(await active(), '2026-11-25', 'the focus follows to the same day of the next month');
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('Enter');
+      expect(await view(practice), 'day', 'Enter on a day opens it');
+      expectTrue(/^Thursday,? 26 November 2026$/.test(await title(practice)), 'the day: ' + await title(practice));
+      expect((await page.evaluate(() => window.__days.at(-1))).date, '2026-11-26', 'mat:schedule-day');
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('an event is a button that sends mat:schedule-select with the event, also from the keyboard; one with a url is a link that a listener can stop', async () => {
+      await go(practice, '2026-10-14', 'agenda');
+      const keller = page.locator(`${practice} .mat-schedule__event--row`, { hasText: 'Check-up, M. Keller' });
+      expect(await keller.evaluate(e => e.tagName), 'BUTTON', 'an event without a url');
+      await keller.click();
+      let pick = await page.evaluate(() => window.__picks.at(-1));
+      expect([pick.id, pick.event.id, pick.event.title, pick.event.tone, pick.event.location], ['sched-practice', 'p1', 'Check-up, M. Keller', 'ok', 'Room 1'], 'the event of a click');
+      await page.locator(`${practice} .mat-schedule__event--row`, { hasText: 'Wound care' }).focus();
+      await page.keyboard.press('Enter');
+      expect((await page.evaluate(() => window.__picks.at(-1))).event.id, 'p8', 'Enter on an event');
+      await page.locator(`${practice} .mat-schedule__event--row`, { hasText: 'Team meeting' }).first().focus();
+      await page.keyboard.press(' ');
+      expect((await page.evaluate(() => window.__picks.at(-1))).event.id, 'p5', 'Space on an event');
+      await go(project, '2026-11-13', 'week');
+      const link = page.locator(`${project} a.mat-schedule__event`);
+      expect(await link.getAttribute('href'), '#sched-project', 'the url of the event');
+      await page.evaluate(() => { window.__stop = e => e.preventDefault(); document.addEventListener('mat:schedule-select', window.__stop); });
+      const hash = await page.evaluate(() => location.hash);
+      await link.click();
+      pick = await page.evaluate(() => window.__picks.at(-1));
+      expect([pick.id, pick.event.id], ['sched-project', 't7'], 'the link was chosen');
+      expect(await page.evaluate(() => location.hash), hash, 'a listener that stops the event keeps the page where it is');
+      await page.evaluate(() => document.removeEventListener('mat:schedule-select', window.__stop));
+      await link.click();
+      expect(await page.evaluate(() => location.hash), '#sched-project', 'without a listener the link goes where it points');
+    });
+    await check('the week is a time grid: events that overlap stand side by side, one that does not is as wide as the column, a line shows the time now, an event of two days is a bar over two columns', async () => {
+      await go(practice, '2026-10-12', 'day');
+      const blocks = await page.$$eval(`${practice} .mat-schedule__event--block`, list => list.map(b => { const r = b.getBoundingClientRect(); return { t: b.getAttribute('title'), l: r.left, r: r.right, w: r.width }; }));
+      const by = text => blocks.find(b => b.t.includes(text));
+      const a = by('Blood test'), b = by('Hygiene training'), alone = by('Check-up, M. Keller');
+      expectTrue(Math.abs(a.w - b.w) < 2 && a.r <= b.l + 3, `the two that overlap are side by side: ${JSON.stringify([a, b])}`);
+      expectTrue(alone.w > a.w * 1.8, 'an event that overlaps none has the whole column');
+      expect(await page.locator(`${practice} .mat-schedule__now`).count(), 0, 'no line of the time on another day than today');
+      await go(practice, '2026-10-14', 'day');
+      const line = await page.evaluate(() => {
+        const now = document.querySelector('#sched-practice .mat-schedule__now').getBoundingClientRect();
+        const lines = [...document.querySelectorAll('#sched-practice .mat-schedule__lines > div')].map(l => l.getBoundingClientRect());
+        return (now.top + 1 - lines[0].top) / lines[0].height;
+      });
+      expectTrue(Math.abs(line - (3 + 20 / 60)) < 0.04, `the line of 10:20 is 3 1/3 hours below the first hour (07:00), it is ${line}`);
+      await go(practice, '2026-10-14', 'week');
+      const bar = await page.evaluate(() => {
+        const bar = document.querySelector('#sched-practice .mat-schedule__event--bar').getBoundingClientRect();
+        const head = document.querySelector('#sched-practice .mat-schedule__colhead').getBoundingClientRect();
+        return { bar: bar.width, col: head.width, left: bar.left - head.left };
+      });
+      expectTrue(Math.abs(bar.bar - 2 * bar.col) < 6, `an event of two days is a bar of two columns: ${JSON.stringify(bar)}`);
+      expect(await page.locator(`${practice} .mat-schedule__colhead.is-today`).count(), 1, 'today is marked in the head');
+      expect(await page.locator(`${practice} .mat-schedule__col`).evaluateAll(cols => cols.map(c => c.getAttribute('role'))), Array(7).fill('group'), 'every column is a named group');
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('the month shows its events in the cells: a long event is one bar over its days, a crowded day says how many more, and the week numbers are in the first column', async () => {
+      await go(school, '2026-10-14', 'month');
+      const bars = await page.$$eval(`${school} .mat-schedule__event--chip[data-sch-span]`, list => list.filter(b => /Klassenarbeitswoche|Herbstferien|Klassenfahrt/.test(b.textContent)).map(b => ({ t: b.textContent.trim().replace(/\s+/g, ' '), span: b.getAttribute('data-sch-span'), w: Math.round(b.getBoundingClientRect().width) })));
+      expect(bars.map(b => b.span).sort(), ['3', '5', '5'], 'the span of the bars of 3 and 5 days');
+      expectTrue(bars.every(b => b.w > 150), 'a bar is wider than a cell: ' + JSON.stringify(bars));
+      await go(practice, '2026-10-14', 'month');
+      const more = page.locator(`${practice} .mat-schedule__more`).first();
+      expect((await more.textContent()).trim(), '+2 more', 'a crowded day says how many are not shown');
+      await more.click();
+      expect(await view(practice), 'day', '+n more opens the day');
+      expectTrue(/^Monday,? 12 October 2026$/.test(await title(practice)), 'the day: ' + await title(practice));
+      await go(practice, '2026-10-14', 'agenda');
+    });
+    await check('data-min and data-max stop the paging: the arrow is dimmed (aria-disabled), a click does nothing, and the days outside are dimmed in the month', async () => {
+      await go(project, '2026-11-30', 'week');
+      const at = await title(project);
+      expect(await page.getAttribute(next(project), 'aria-disabled'), 'true', 'Next in the last week');
+      await page.click(next(project), { force: true });
+      expect(await title(project), at, 'the title after a click on a dimmed Next');
+      await go(project, '2026-11-02', 'week');
+      expect(await page.getAttribute(prev(project), 'aria-disabled'), 'false', 'Previous in the first week, which has the first of November');
+      await page.click(prev(project));
+      expectTrue((await title(project)).startsWith('Week 44'), 'the week that holds the first of November');
+      expect(await page.getAttribute(prev(project), 'aria-disabled'), 'true', 'Previous in the week before the first one');
+      await go(project, '2026-12-24', 'week');
+      expectTrue((await title(project)).includes('30 Nov'), 'a date past the limit is brought back: ' + await title(project));
+      await go(project, '2026-11-15', 'month');
+      expect(await page.locator(`${project} .mat-schedule__cell.is-off`).count(), 12, 'the days of the grid that lie outside of November');
+      await go(project, '2026-11-11', 'week');
+    });
+    await check('the year has twelve months with a tint per day by how many events it has; a month opens the month view', async () => {
+      await go(school, '2026-10-14', 'year');
+      const s = await page.$eval(school, root => ({
+        months: root.querySelectorAll('.mat-schedule__month').length, l1: root.querySelectorAll('.mat-schedule__d.is-l1').length, l2: root.querySelectorAll('.mat-schedule__d.is-l2').length,
+        today: root.querySelectorAll('.mat-schedule__d.is-today').length, hint: root.querySelector('.mat-schedule__hint').textContent, aria: root.querySelector('.mat-schedule__mini').getAttribute('aria-hidden'),
+        name: root.querySelectorAll('.mat-schedule__monthname')[9].getAttribute('aria-label'),
+      }));
+      expect([s.months, s.l1 > 80, s.l2 > 0, s.today], [12, true, true, 1], 'months, days with one event, days with two, today');
+      expect(s.name, 'Oktober 2026 öffnen, 7 Termine', 'the name of a month says its number of events');
+      await page.click(`${school} .mat-schedule__monthname >> nth=9`);
+      expect([await view(school), await title(school)], ['month', 'Oktober 2026'], 'the month opened from the year');
+      await go(school, '2026-10-14', 'month');
+    });
+    await check('the texts and the formats follow the language: the school calendar has lang="de", the others are English', async () => {
+      const s = await page.$eval(school, root => ({
+        today: root.querySelector('.mat-schedule__today').textContent, views: [...root.querySelectorAll('[data-sch-go]')].map(b => b.textContent), wd: root.querySelector('.mat-schedule__wd').textContent,
+        kw: root.querySelector('.mat-schedule__wk [aria-hidden]').textContent, prev: root.querySelector('.mat-schedule__prev').getAttribute('aria-label'), area: root.querySelector('.mat-schedule__mgrid').getAttribute('aria-label'),
+      }));
+      expect(s, { today: 'Heute', views: ['Monat', 'Agenda', 'Jahr'], wd: 'Mo', kw: 'KW', prev: 'Vorheriger Monat', area: 'Oktober 2026' }, 'the German schedule');
+      await go(school, '2026-10-14', 'agenda');
+      expectTrue(/^KW 42 · 12\.? ?[–-] ?18\. Okt\.? 2026$/.test(await title(school)), 'the title in German: ' + await title(school));
+      expect(await page.$eval(`${school} .mat-schedule__day.is-today .mat-pill`, e => e.textContent), 'Heute', 'the mark of today');
+      await go(school, '2026-10-14', 'month');
+      expect(await page.$eval(`${practice} .mat-schedule__today`, e => e.textContent), 'Today', 'the English one');
+    });
+    await check('an empty period says so with a sentence of its own, and can still be paged', async () => {
+      const empty = '#sched-empty';
+      expect(await page.locator(`${empty} .mat-schedule__dayhead`).count(), 0, 'no day headings');
+      expect(norm(await page.textContent(`${empty} .mat-empty__title`)), 'Nothing planned', 'the title');
+      expect(norm(await page.textContent(`${empty} .mat-empty p:last-child`)), 'Nothing is booked this week. New appointments appear here as soon as they are made.', 'data-empty');
+      await page.click(next(empty));
+      expectTrue((await title(empty)).startsWith('Week 43') === false && /19 ?[–-] ?25 Oct 2026$/.test(await title(empty)), 'the next week: ' + await title(empty));
+      await go(empty, '2026-10-14', 'agenda');
+    });
+    await check('without data-now the clock of the browser decides which day is today (the check asks the page what day it is, so it does not depend on the day it runs)', async () => {
+      await create('sched-clock', { 'data-view': 'month' });
+      const expected = await page.evaluate(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); });
+      expect(await page.$$eval('#sched-clock .mat-schedule__cell.is-today [data-sch-day]', bs => bs.map(b => b.getAttribute('data-sch-day'))), [expected], 'the day that is marked');
+      expect(await page.$eval('#sched-clock .mat-schedule__period', b => b.getAttribute('title')).then(Boolean), true, 'the schedule is drawn');
+      expect(await page.$eval('#sched-clock .mat-schedule__body', b => b.getAttribute('aria-label')), norm(await title('#sched-clock')), 'the region is named by the period');
+      await go('#sched-clock', '2000-02-29', 'month');
+      expect(await title('#sched-clock'), 'February 2000', 'a date far from today');
+      await page.click('#sched-clock .mat-schedule__today');
+      expect(await page.$$eval('#sched-clock .mat-schedule__cell.is-today [data-sch-day]', bs => bs.map(b => b.getAttribute('data-sch-day'))), [expected], 'Today comes back to the real today');
+    });
+    await check('an app that loads events is told what is visible; data-lazy shows a loading state until it answers', async () => {
+      await page.evaluate(() => { window.__lazy = []; document.addEventListener('mat:schedule-range', e => { if (e.target.id === 'sched-lazy') { window.__lazy.push(e.detail); } }); });
+      await create('sched-lazy', { 'data-lazy': '', 'data-view': 'week', 'data-date': '2026-03-04', 'data-now': '2026-03-04T10:00' });
+      await page.waitForFunction(() => window.__lazy.length === 1, null, { timeout: 2000 });
+      expect(await page.evaluate(() => window.__lazy[0]), { from: '2026-03-02', to: '2026-03-08', view: 'week', date: '2026-03-04' }, 'the first range');
+      const busy = () => page.$eval('#sched-lazy', r => ({ cls: r.classList.contains('is-loading'), aria: r.querySelector('.mat-schedule__body').getAttribute('aria-busy'), spinner: !r.querySelector('.mat-schedule__busy').hidden }));
+      expect(await busy(), { cls: true, aria: 'true', spinner: true }, 'the loading state before the events come');
+      await page.evaluate(() => window.MatUi.schedule.setEvents(document.querySelector('#sched-lazy'), [{ id: 'x1', title: 'Loaded one', start: '2026-03-04T09:00', end: '2026-03-04T10:00', tone: 'ok' }]));
+      expect(await busy(), { cls: false, aria: 'false', spinner: false }, 'the state after setEvents');
+      expect(await page.locator('#sched-lazy .mat-schedule__event--block', { hasText: 'Loaded one' }).count(), 1, 'the event that was loaded is drawn');
+      await page.click(next('#sched-lazy'));
+      expect(await page.evaluate(() => window.__lazy.at(-1)), { from: '2026-03-09', to: '2026-03-15', view: 'week', date: '2026-03-11' }, 'the range after Next');
+      expect((await busy()).aria, 'true', 'loading again after a page');
+      await page.click('#sched-lazy [data-sch-go="agenda"]');
+      expect(await page.evaluate(() => window.__lazy.length), 2, 'a view that shows the same days does not ask again');
+      await page.click('#sched-lazy [data-sch-go="month"]');
+      expect(await page.evaluate(() => window.__lazy.at(-1)), { from: '2026-02-23', to: '2026-04-05', view: 'month', date: '2026-03-11' }, 'the month asks for the weeks of its grid');
+      await page.evaluate(() => window.MatUi.schedule.setLoading(document.querySelector('#sched-lazy'), false));
+      expect((await busy()).cls, false, 'setLoading(false) ends the state without events');
+      expect(await page.evaluate(() => window.MatUi.schedule.get(document.querySelector('#sched-lazy')).view), 'month', 'MatUi.schedule.get');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#schedule');
+    const { title, go, view, pressed, create, active } = await schedulePage(page);
+    // the schedule of a phone has the whole width of the content (358 px), unlike the examples, which sit in a box of the documentation
+    await create('sched-ph', { 'data-view': 'agenda', 'data-date': '2026-10-14', 'data-now': '2026-10-14T10:20', 'data-week-numbers': '' }, true);
+    const ph = '#sched-ph';
+    const height = sel => page.$eval(sel, e => Math.round(e.getBoundingClientRect().height));
+    await check('on a phone nothing scrolls sideways in any view, and the layout is the narrow one', async () => {
+      expect(await page.$eval(ph, r => r.clientWidth), 358, 'the width of the schedule');
+      expect(await page.$eval(ph, r => r.classList.contains('is-narrow')), true, 'narrow');
+      for (const v of ['agenda', 'day', 'week', 'month', 'year']) {
+        await go(ph, '2026-10-14', v);
+        const s = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, win: innerWidth, body: document.querySelector('#sched-ph .mat-schedule__body').scrollWidth - document.querySelector('#sched-ph .mat-schedule__body').clientWidth }));
+        expectTrue(s.page <= s.win && s.body <= 1, `${v}: the page is ${s.page} px wide in ${s.win} px, the body overflows by ${s.body} px`);
+      }
+    });
+    await check('on a phone a week is a row per day and a month is a compact grid with the chosen day listed under it', async () => {
+      await go(ph, '2026-10-14', 'week');
+      const week = await page.$eval(ph, r => ({ days: r.querySelectorAll('.mat-schedule__day').length, grid: r.querySelectorAll('.mat-schedule__grid').length, heads: r.querySelectorAll('h3.mat-schedule__dayhead').length }));
+      expect(week, { days: 7, grid: 0, heads: 7 }, 'the week of a phone');
+      await go(ph, '2026-10-14', 'month');
+      const month = await page.$eval(ph, r => ({ cells: r.querySelectorAll('.mat-schedule__daybtn').length, dots: r.querySelectorAll('.mat-schedule__dot').length, list: r.querySelectorAll('.mat-schedule__daylist .mat-schedule__event--row').length, chips: r.querySelectorAll('.mat-schedule__chips').length }));
+      expect(month.cells, 35, 'days');
+      expectTrue(month.dots > 10 && month.chips === 0, 'dots, no events in the cells');
+      expect(month.list, 6,'the events of the 14th are listed under the grid');
+      await page.click(`${ph} [data-sch-day="2026-10-13"]`);
+      expect(await page.$$eval(`${ph} .mat-schedule__daylist .mat-schedule__event--row`, rs => rs.length), 4, 'the day that was chosen is listed');
+      expectTrue((await page.textContent(`${ph} .mat-schedule__daylist .mat-schedule__dayhead`)).includes('4 events'), 'the heading of the list counts');
+      expect(await active(), '2026-10-13', 'the focus stays on the day');
+      expect(await page.getAttribute(`${ph} [data-sch-day="2026-10-13"]`, 'aria-label'), 'Tuesday, 13 October 2026, 4 events', 'the name of a day');
+      expect((await page.evaluate(() => window.__days.at(-1))).date, '2026-10-13', 'mat:schedule-day');
+    });
+    await check('on a phone the controls are 44 px high (the views, the arrows, Today, the title, a day, an event)', async () => {
+      await go(ph, '2026-10-14', 'month');
+      for (const sel of ['.mat-schedule__today', '.mat-schedule__prev', '.mat-schedule__next', '.mat-schedule__period', '[data-sch-go="week"]', '.mat-schedule__daybtn']) {
+        expectTrue(await height(`${ph} ${sel}`) >= 44, `${sel} is ${await height(`${ph} ${sel}`)} px high`);
+      }
+      await go(ph, '2026-10-14', 'agenda');
+      expectTrue(await height(`${ph} .mat-schedule__event--row`) >= 44, 'an event of the agenda');
+      const wide = await page.$eval(`${ph} .mat-schedule__views`, v => [...v.children].map(b => Math.round(b.getBoundingClientRect().width)));
+      expectTrue(wide.every(w => w >= 60), 'the five views fit in a row: ' + wide);
+    });
+    await check('a swipe to the left shows the next period, to the right the one before; a vertical pan does not page and the page does not move sideways', async () => {
+      await go(ph, '2026-10-14', 'agenda');
+      expect(await page.$eval(`${ph} .mat-schedule__body`, b => getComputedStyle(b).touchAction), 'pan-y pinch-zoom', 'touch-action of the body');
+      await page.evaluate(() => document.querySelector('#sched-ph .mat-schedule__body').scrollIntoView({ block: 'start' }));
+      const box = await page.locator(`${ph} .mat-schedule__body`).boundingBox();
+      const cdp = await ctx.newCDPSession(page);
+      const swipe = async (x0, y0, x1, y1) => {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y: y0 }] });
+        for (let i = 1; i <= 6; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + (x1 - x0) * i / 6, y: y0 + (y1 - y0) * i / 6 }] }); }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await page.waitForTimeout(120);
+      };
+      const y = Math.min(box.y + 160, 700);
+      await swipe(320, y, 80, y + 10);
+      expectTrue((await title(ph)).startsWith('Week 43'), 'a swipe to the left: ' + await title(ph));
+      await swipe(60, y, 300, y - 10);
+      expectTrue((await title(ph)).startsWith('Week 42'), 'a swipe to the right: ' + await title(ph));
+      await swipe(200, y + 200, 190, y - 120);
+      expectTrue((await title(ph)).startsWith('Week 42'), 'a vertical pan pages nothing: ' + await title(ph));
+      await swipe(300, y, 280, y);
+      expectTrue((await title(ph)).startsWith('Week 42'), 'a short move pages nothing');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page did not move sideways');
+      await go(ph, '2026-10-14', 'year');
+      await swipe(320, 400, 60, 400);
+      expect(await title(ph), '2027', 'a swipe in the year view turns the year');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open({ ...desktopOptions, reducedMotion: 'reduce' }, '/Components#schedule');
+    await check('for a user who asked for less motion a page does not slide', async () => {
+      await page.click('#sched-practice .mat-schedule__next');
+      expect(await page.$eval('#sched-practice .mat-schedule__body', b => b.classList.contains('is-from-next') || b.classList.contains('is-from-prev')), false, 'the class of the slide');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#schedule');
+    await check('a page slides in from the side it was turned to, for a user who did not ask for less motion', async () => {
+      await page.click('#sched-practice .mat-schedule__next');
+      await page.waitForFunction(() => document.querySelector('#sched-practice .mat-schedule__body').classList.contains('is-from-next'), null, { timeout: 500 });
+      await page.waitForFunction(() => !document.querySelector('#sched-practice .mat-schedule__body').classList.contains('is-from-next'), null, { timeout: 1500 });
     });
     await ctx.close();
   }
@@ -853,6 +1458,21 @@ function seenAt(page, selector) {
       expect(await page.getAttribute('.mat-toc-aside a[href="#dialogs"]', 'aria-current'), 'location', 'dialogs');
       expectTrue(!(await page.locator('.mat-toc-aside a[href="#table"]').getAttribute('aria-current')), 'table is still marked');
     });
+    await check('the index can be scrolled by the user: it follows the page when the section changes, and does not jump back while it is scrolled', async () => {
+      const top = () => page.evaluate(() => Math.round(document.querySelector('.mat-toc-aside').scrollTop));
+      await page.evaluate(() => { const m = document.querySelector('.mat-main'); m.scrollTop = m.scrollHeight; });
+      await page.waitForTimeout(600);
+      const followed = await top();
+      expectTrue(followed > 200, 'the index did not follow the page to the last section (scrollTop ' + followed + ')');
+      const box = await page.locator('.mat-toc-aside').boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.wheel(0, -300);
+      await page.waitForTimeout(400);
+      const up = await top();
+      expectTrue(up < followed - 100, 'the index jumped back when it was scrolled up: ' + followed + ' -> ' + up);
+      await page.waitForTimeout(500);
+      expectTrue(Math.abs((await top()) - up) < 4, 'the index moved again by itself after it was scrolled: ' + up + ' -> ' + (await top()));
+    });
     await check('the example inside a component works: a dependent field of a form example', async () => {
       await page.evaluate(() => document.getElementById('form-layout').scrollIntoView());
       expectTrue(await page.locator('#fl-mail').isVisible(), 'the e-mail field is hidden while the switch is on');
@@ -874,6 +1494,381 @@ function seenAt(page, selector) {
       expect(await page.evaluate(() => document.getElementById('toc-dialog').open), false, 'dialog after the jump');
       const top = await page.evaluate(() => document.getElementById('toolbar').getBoundingClientRect().top);
       expectTrue(top >= 40 && top < 200, 'the section is not near the top: ' + top);
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- lists of rows (LIST-15)
+  console.log('\nLists of rows');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#itemlist');
+    // the toasts of the documentation (it reports the events of the lists) would cover what the checks press
+    await page.addStyleTag({ content: '.mat-toasts { display: none; }' });
+    // what the lists report is collected in the page, so that each check can look at it
+    await page.evaluate(() => {
+      window.__il = [];
+      const note = (type, d) => window.__il.push({ type, action: d.action, key: d.item && d.item.getAttribute('data-item-key'), from: d.from, to: d.to, order: d.order, text: d.text, shown: d.shown, total: d.total });
+      for (const type of ['mat:item-action', 'mat:reorder', 'mat:item-filter']) { document.addEventListener(type, e => note(type, e.detail)); }
+    });
+    const events = type => page.evaluate(t => window.__il.filter(e => e.type === t), type);
+    const show = sel => page.locator(sel).first().scrollIntoViewIfNeeded();
+    const slide = '#il-slide';
+    const row = n => `${slide} > .mat-item:nth-child(${n})`;
+    const rowState = sel => page.$eval(sel, li => {
+      const end = li.querySelector('.mat-item__options--end'), start = li.querySelector('.mat-item__options--start');
+      const side = end || start;
+      return {
+        end: li.classList.contains('is-open-end'), start: li.classList.contains('is-open-start'), open: li.classList.contains('is-open'),
+        x: li.style.getPropertyValue('--mat-item-x'), width: side ? side.offsetWidth : 0,
+        visibility: side ? getComputedStyle(side).visibility : '', inert: side ? side.hasAttribute('inert') : null,
+        expanded: li.querySelector('.mat-item__more').getAttribute('aria-expanded'),
+        moved: Math.round(li.querySelector('.mat-item__row').getBoundingClientRect().left - li.getBoundingClientRect().left),
+      };
+    });
+    const active = () => page.evaluate(() => {
+      const a = document.activeElement, li = a.closest && a.closest('.mat-item');
+      return { cls: typeof a.className === 'string' ? a.className : '', key: li ? li.getAttribute('data-item-key') : null, action: a.getAttribute && a.getAttribute('data-item-action') };
+    });
+    // a drag of the row with the mouse, from its right part to the left (or the right)
+    const drag = async (sel, dx) => {
+      await show(sel);
+      const box = await page.locator(sel + ' .mat-item__main').boundingBox();
+      const y = box.y + box.height / 2, x0 = box.x + box.width - 80;
+      await page.mouse.move(x0, y);
+      await page.mouse.down();
+      for (let i = 1; i <= 10; i += 1) { await page.mouse.move(x0 + dx * i / 10, y); await page.waitForTimeout(25); }
+      return { up: async () => { await page.mouse.up(); await page.waitForTimeout(350); }, box };
+    };
+
+    // ---- the list and its rows
+    await check('a row is at least 48 px high, the lines are drawn by the rows (none under the last one) and from the text when the list says so', async () => {
+      await show('[aria-labelledby="ex-itemlist-2"]');
+      const s = await page.evaluate(() => {
+        const lists = [...document.querySelectorAll('[aria-labelledby="ex-itemlist-2"] .mat-itemlist')];
+        const line = li => getComputedStyle(li, '::after').content;
+        const first = lists[0].querySelector('.mat-item'), last = lists[0].querySelector('.mat-item:last-child');
+        const inset = lists[1], none = lists[2];
+        const left = li => { const a = getComputedStyle(li, '::after'); return parseFloat(a.left); };
+        return {
+          height: Math.round(first.getBoundingClientRect().height), line: line(first) !== 'none', lastLine: line(last),
+          insetLeft: Math.round(left(inset.querySelector('.mat-item'))), fullLeft: Math.round(left(first)), noneColour: getComputedStyle(none.querySelector('.mat-item'), '::after').backgroundColor,
+        };
+      });
+      expectTrue(s.height >= 48, 'a row is ' + s.height + ' px high');
+      expect(s.line, true, 'the line under the first row');
+      expect(s.lastLine, 'none', 'the line under the last row');
+      expect([s.fullLeft, s.insetLeft], [0, 68], 'where the lines begin (full, from the text)');
+      expect(s.noneColour, 'rgba(0, 0, 0, 0)', 'the lines of a list without lines');
+    });
+    await check('the grouped card is a rounded list with a border, and a selected row is a tint behind the whole row with no bar at a side', async () => {
+      await show('[aria-labelledby="ex-itemlist-5"]');
+      const s = await page.evaluate(() => {
+        const card = document.querySelector('[aria-labelledby="ex-itemlist-3"] .mat-itemlist--inset');
+        const sel = document.querySelector('[aria-labelledby="ex-itemlist-5"] .mat-item.is-selected');
+        const c = getComputedStyle(card), r = getComputedStyle(sel);
+        return {
+          radius: c.borderTopLeftRadius, border: c.borderTopWidth, tint: r.backgroundColor, left: r.borderLeftWidth, right: r.borderRightWidth, shadow: r.boxShadow,
+          weight: Number(getComputedStyle(sel.querySelector('.mat-item__title')).fontWeight), normal: Number(getComputedStyle(document.querySelector('[aria-labelledby="ex-itemlist-5"] .mat-item:first-child .mat-item__title')).fontWeight),
+        };
+      });
+      expect([s.radius, s.border], ['8px', '1px'], 'the card');
+      expectTrue(s.tint !== 'rgba(0, 0, 0, 0)' && s.tint !== 'transparent', 'the selected row has no tint');
+      expect([s.left, s.right, s.shadow], ['0px', '0px', 'none'], 'a bar at a side');
+      expectTrue(s.weight > s.normal, 'the selected title is not stronger');
+    });
+    await check('a row that is a link has its focus ring inside the row', async () => {
+      await show('[aria-labelledby="ex-itemlist-1"]');
+      await page.focus('[aria-labelledby="ex-itemlist-1"] .mat-item:first-child .mat-item__main');
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      const ring = await page.$eval('[aria-labelledby="ex-itemlist-1"] .mat-item:first-child .mat-item__main', el => getComputedStyle(el).boxShadow);
+      expectTrue(ring.includes('inset'), 'the focus ring is not inside the row: ' + ring);
+    });
+
+    // ---- sliding actions
+    await check('a list that the script has taken over names the More button of each row, and the options are hidden, inert and not in the tab order', async () => {
+      await show(slide);
+      const s = await page.$eval(slide, l => ({
+        ready: l.classList.contains('is-ready'),
+        labels: [...l.querySelectorAll('.mat-item__more')].map(b => b.getAttribute('aria-label')),
+        inert: [...l.querySelectorAll('.mat-item__options')].map(o => o.hasAttribute('inert')),
+        visibility: [...l.querySelectorAll('.mat-item__options')].map(o => getComputedStyle(o).visibility),
+        live: l.nextElementSibling && l.nextElementSibling.getAttribute('role'),
+        expanded: l.querySelector('.mat-item__more').getAttribute('aria-expanded'),
+      }));
+      expect(s.ready, true, 'the list is ready');
+      expect(s.labels, ['More actions for Jamie Doe', 'More actions for Sam Lee', 'More actions for Kim Park'], 'names of the More buttons');
+      expect(s.inert, [true, true, true], 'inert options');
+      expect(s.visibility, ['hidden', 'hidden', 'hidden'], 'visibility of the options');
+      expect([s.live, s.expanded], ['status', 'false'], 'live region and state');
+      await page.focus(row(1) + ' .mat-item__main');
+      await page.keyboard.press('Tab');
+      expectTrue((await active()).cls.includes('mat-item__more'), 'Tab does not go to the More button');
+      await page.keyboard.press('Tab');
+      const next = await active();
+      expect([next.key, next.cls.includes('mat-item__main')], ['lunch', true], 'Tab skips the options and goes to the next row');
+    });
+    await check('a drag of the row with the mouse slides it open to the width of its options; the click that ends it follows no link; a press on the row closes it', async () => {
+      const url = page.url();
+      const d = await drag(row(2), -240);
+      const mid = await page.$eval(row(2), li => ({ swiping: li.classList.contains('is-swiping'), x: li.style.getPropertyValue('--mat-item-x') }));
+      expect(mid.swiping, true, 'swiping while the button is down');
+      expectTrue(parseFloat(mid.x) < -100, 'the row did not follow the pointer: ' + mid.x);
+      await d.up();
+      const s = await rowState(row(2));
+      expect([s.end, s.open, s.expanded, s.inert, s.visibility], [true, true, 'true', false, 'visible'], 'the open row');
+      expect([s.x, s.moved], [`-${s.width}px`, -s.width], 'the row stands at the width of its options');
+      expect(page.url(), url, 'the swipe followed the link');
+      await page.mouse.click(d.box.x + 120, d.box.y + d.box.height / 2);
+      await page.waitForTimeout(350);
+      expect((await rowState(row(2))).open, false, 'the row is still open after a press on it');
+      expect(page.url(), url, 'the press that closes followed the link');
+    });
+    await check('a short drag, or a drag the other way, leaves the row closed; a vertical move is not a swipe', async () => {
+      let d = await drag(row(3), -40);
+      await d.up();
+      expect((await rowState(row(3))).open, false, 'a short drag');
+      d = await drag(row(3), 120);
+      await d.up();
+      expect((await rowState(row(3))).open, false, 'a drag to the right (there are no options at the start)');
+      await show(row(3));
+      const box = await page.locator(row(3) + ' .mat-item__main').boundingBox();
+      await page.mouse.move(box.x + box.width - 80, box.y + 10);
+      await page.mouse.down();
+      for (let i = 1; i <= 6; i += 1) { await page.mouse.move(box.x + box.width - 80 - i * 3, box.y + 10 + i * 8); }
+      await page.mouse.up();
+      expect((await rowState(row(3))).open, false, 'a vertical move');
+    });
+    await check('the More button opens the end side and focuses the first option; Escape closes the row and gives the focus back', async () => {
+      await show(row(1));
+      await page.click(row(1) + ' .mat-item__more');
+      const s = await rowState(row(1));
+      expect([s.end, s.expanded, s.inert, s.visibility], [true, 'true', false, 'visible'], 'the row after More');
+      expect((await active()).action, 'archive', 'the first option has the focus');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      expect((await rowState(row(1))).open, false, 'Escape');
+      expectTrue((await active()).cls.includes('mat-item__more'), 'the focus did not go back to the More button');
+      expect((await rowState(row(1))).inert, true, 'the options are inert again');
+    });
+    await check('the arrow keys on a row open its side; tabbing out of an open row, or pressing elsewhere, closes it', async () => {
+      await page.focus(row(1) + ' .mat-item__main');
+      await page.keyboard.press('ArrowLeft');
+      expect([(await rowState(row(1))).end, (await active()).action], [true, 'archive'], 'ArrowLeft');
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+      await page.keyboard.press('Tab');
+      expect((await active()).key, 'lunch', 'the focus left the open row');
+      expect((await rowState(row(1))).open, false, 'the row closes when the focus leaves it');
+      await page.click(row(2) + ' .mat-item__more');
+      expect((await rowState(row(2))).open, true, 'the second row is open');
+      await page.click('#h-itemlist-actions', { position: { x: 5, y: 5 } });
+      await page.waitForTimeout(300);
+      expect((await rowState(row(2))).open, false, 'a press elsewhere');
+    });
+    await check('an action sends mat:item-action and closes the row; an action that asks first sends it when the question is answered', async () => {
+      await page.click(row(2) + ' .mat-item__more');
+      await page.click(row(2) + ' .mat-item__option[data-item-action="archive"]');
+      await page.waitForTimeout(300);
+      expect(await events('mat:item-action'), [{ type: 'mat:item-action', action: 'archive', key: 'lunch' }], 'the event of Archive');
+      expect((await rowState(row(2))).open, false, 'the row after the action');
+      await page.click(row(3) + ' .mat-item__more');
+      await page.click(row(3) + ' .mat-item__option[data-item-action="delete"]');
+      try {
+        await page.waitForSelector('dialog[open]');
+        expect(await page.locator('dialog[open]').count(), 1, 'the question');
+        expect((await events('mat:item-action')).length, 1, 'the event before the answer');
+        await page.click('dialog[open] .mat-dialog__foot .mat-btn--primary');
+        await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+      } finally {
+        // a question that is left open would block every check that follows
+        await page.evaluate(() => document.querySelectorAll('dialog[open]').forEach(d => d.close()));
+      }
+      await page.waitForTimeout(350);
+      expect((await events('mat:item-action')).map(e => e.action + ':' + e.key), ['archive:lunch', 'delete:notes'], 'the events');
+      expect((await rowState(row(3))).open, false, 'the row after the answer');
+    });
+    await check('with actions on both sides the More button opens the end and closes it again; the Right arrow opens the start, the Left arrow closes it, and the focus goes back to the row', async () => {
+      const both = n => `#il-both > .mat-item:nth-child(${n})`;
+      await show(both(1));
+      await page.click(both(1) + ' .mat-item__more');
+      expect([(await rowState(both(1))).end, (await active()).action], [true, 'later'], 'first press');
+      await page.click(both(1) + ' .mat-item__more');
+      expect((await rowState(both(1))).open, false, 'second press');
+      await page.focus(both(2) + ' .mat-item__main');
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(350);
+      const start = await rowState(both(2));
+      expect([start.start, start.end, (await active()).action], [true, false, 'done'], 'ArrowRight');
+      expectTrue(start.moved > 0, 'the row did not slide to the right');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      expect([(await rowState(both(2))).open, (await active()).cls.includes('mat-item__main')], [false, true], 'Escape closes the start side and the focus goes to the row');
+      // among the options the arrows walk; from the last option of the start side the Tab key leads to the row, where the Left arrow closes the side
+      await page.click(both(1) + ' .mat-item__more');
+      await page.keyboard.press('ArrowRight');
+      expect((await active()).action, 'remove', 'ArrowRight among the options');
+      await page.keyboard.press('ArrowLeft');
+      expect((await active()).action, 'later', 'ArrowLeft among the options');
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(300);
+      await page.focus(both(2) + ' .mat-item__main');
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('Tab');
+      expect((await active()).cls.includes('mat-item__main'), true, 'Tab from the option of the start side leads to the row');
+      await page.keyboard.press('ArrowLeft');
+      await page.waitForTimeout(300);
+      expect((await rowState(both(2))).open, false, 'the Left arrow closes the start side');
+    });
+    await check('the texts of the lists come in German when the page is German', async () => {
+      const s = await page.evaluate(() => {
+        document.documentElement.lang = 'de';
+        const ul = document.createElement('ul');
+        ul.className = 'mat-itemlist'; ul.id = 'il-de'; ul.setAttribute('data-itemlist', ''); ul.setAttribute('data-reorder', '');
+        ul.innerHTML = '<li class="mat-item mat-item--sliding"><div class="mat-item__row"><div class="mat-item__main"><span class="mat-item__title">Anna</span></div><div class="mat-item__options mat-item__options--end"><button type="button" class="mat-item__option">Löschen</button></div><div class="mat-item__aside"><button type="button" class="mat-item__handle">x</button></div></div></li><li class="mat-item"><div class="mat-item__main"><span class="mat-item__title">Ben</span></div><div class="mat-item__aside"><button type="button" class="mat-item__handle">y</button></div></li>';
+        document.body.appendChild(ul);
+        window.MatUi.refresh(document.body);
+        const r = { more: ul.querySelector('.mat-item__more').getAttribute('aria-label'), handle: ul.querySelector('.mat-item__handle').getAttribute('aria-label') };
+        ul.nextElementSibling.remove();
+        ul.remove();
+        document.documentElement.lang = 'en';
+        return r;
+      });
+      expect(s, { more: 'Weitere Aktionen für Anna', handle: 'Anna verschieben' }, 'German names');
+    });
+
+    // ---- reordering
+    const reorder = '#il-reorder';
+    const handle = n => `${reorder} > .mat-item:nth-child(${n}) .mat-item__handle`;
+    const titles = () => page.$$eval(reorder + ' .mat-item__title', t => t.map(x => x.textContent.trim()));
+    const say = () => page.$eval(reorder + ' + [role=status]', s => s.textContent);
+    await check('a handle drags a row: the others make room, the list is in the new order when it is dropped, and mat:reorder tells it', async () => {
+      await show(reorder);
+      const hb = await page.locator(handle(1)).boundingBox();
+      const rb = await page.locator(`${reorder} > .mat-item:nth-child(2)`).boundingBox();
+      const x = hb.x + hb.width / 2, y = hb.y + hb.height / 2;
+      await page.mouse.move(x, y);
+      await page.mouse.down();
+      for (let i = 1; i <= 12; i += 1) { await page.mouse.move(x, y + rb.height * 2.2 * i / 12); }
+      const mid = await page.evaluate(sel => ({
+        dragging: document.querySelector(sel + ' > .mat-item:nth-child(1)').classList.contains('is-dragging'), reordering: document.querySelector(sel).classList.contains('is-reordering'),
+        shifts: [...document.querySelectorAll(sel + ' > .mat-item')].map(li => li.style.getPropertyValue('--mat-item-dy')),
+        shadow: getComputedStyle(document.querySelector(sel + ' > .mat-item:nth-child(1)')).boxShadow !== 'none',
+      }), reorder);
+      expect([mid.dragging, mid.reordering, mid.shadow], [true, true, true], 'while dragging');
+      expect(mid.shifts.slice(1, 3).every(s => parseFloat(s) < 0) && mid.shifts.slice(3).every(s => parseFloat(s) === 0), true, 'the rows between make room: ' + mid.shifts.join(' | '));
+      await page.mouse.up();
+      await page.waitForTimeout(400);
+      expect(await titles(), ['Commute', 'Focus', 'Morning', 'Evening', 'Night'], 'the new order');
+      expect((await events('mat:reorder')).map(e => [e.key, e.from, e.to, e.order.join(',')]), [['morning', 0, 2, 'commute,focus,morning,evening,night']], 'the event');
+      const clean = await page.evaluate(sel => [document.querySelector(sel).classList.contains('is-reordering'), [...document.querySelectorAll(sel + ' .mat-item')].some(li => li.classList.contains('is-dragging') || li.style.getPropertyValue('--mat-item-dy') !== '')], reorder);
+      expect(clean, [false, false], 'nothing of the drag is left');
+    });
+    await check('with the keyboard Space picks a row up, the arrow keys move it, Space drops it and mat:reorder tells it; a live region says each step', async () => {
+      await page.focus(handle(1));
+      await page.keyboard.press('Space');
+      expect(await page.getAttribute(handle(1), 'aria-pressed'), 'true', 'pressed');
+      expect(await say(), 'Commute picked up, position 1 of 5. Arrow keys move it, Space drops it, Escape cancels.', 'what is said when a row is picked up');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      expect(await titles(), ['Focus', 'Morning', 'Commute', 'Evening', 'Night'], 'the order while it is held');
+      expect(await say(), 'Commute, position 3 of 5', 'what is said when it moves');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Reorder Commute', 'the focus stays on the handle of the row');
+      await page.keyboard.press('Space');
+      expect(await say(), 'Commute dropped, position 3 of 5', 'what is said when it is dropped');
+      expect((await events('mat:reorder')).map(e => e.key + ':' + e.from + '>' + e.to), ['morning:0>2', 'commute:0>2'], 'the events');
+      expect(await page.getAttribute(handle(3), 'aria-pressed'), 'false', 'released');
+    });
+    await check('Escape puts a held row back and sends nothing; Home and End go to the ends', async () => {
+      const before = (await events('mat:reorder')).length;
+      await page.focus(handle(5));
+      await page.keyboard.press('Space');
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('ArrowUp');
+      expect((await titles()).indexOf('Night'), 2, 'Night moved up two places');
+      await page.keyboard.press('Escape');
+      expect(await titles(), ['Focus', 'Morning', 'Commute', 'Evening', 'Night'], 'the order after Escape');
+      expect(await say(), 'Reordering cancelled, Night is back at position 5', 'what is said');
+      expect((await events('mat:reorder')).length, before, 'an event was sent');
+      await page.focus(handle(2));
+      await page.keyboard.press('Space');
+      await page.keyboard.press('End');
+      expect((await titles()).at(-1), 'Morning', 'End');
+      await page.keyboard.press('Home');
+      expect((await titles())[0], 'Morning', 'Home');
+      await page.keyboard.press('Enter');
+      expect((await events('mat:reorder')).length, before + 1, 'one event for the move from the pick-up to the drop');
+    });
+
+    // ---- selecting and filtering
+    await check('select-all selects the rows that are shown, the state in between is shown, and the bar says how many', async () => {
+      await show('#il-select');
+      await page.check('#il-select-all');
+      const all = await page.evaluate(() => ({
+        rows: [...document.querySelectorAll('#il-select .mat-item')].map(li => li.classList.contains('is-selected')),
+        count: document.querySelector('#il-select').closest('[data-selectable]').querySelector('[data-bulk-count]').textContent, bar: !document.querySelector('#il-select').closest('[data-selectable]').querySelector('[data-bulk-bar]').hidden,
+      }));
+      expect(all, { rows: [true, true, true], count: '3', bar: true }, 'after select-all');
+      await page.uncheck('#il-sel-2');
+      const some = await page.evaluate(() => ({ state: document.getElementById('il-select-all').indeterminate, row: document.getElementById('il-sel-2').closest('.mat-item').classList.contains('is-selected'), count: document.querySelector('#il-select').closest('[data-selectable]').querySelector('[data-bulk-count]').textContent }));
+      expect(some, { state: true, row: false, count: '2' }, 'after one is unchecked');
+    });
+    await check('a filter field hides the rows that do not contain its text and the letters with no row left, says how many are shown, and shows the empty row', async () => {
+      await show('#il-contacts-q');
+      await page.fill('#il-contacts-q', 'CARTER');
+      const one = await page.evaluate(() => ({
+        rows: [...document.querySelectorAll('#il-contacts .mat-item:not([hidden]) .mat-item__title')].map(t => t.textContent),
+        groups: [...document.querySelectorAll('#il-contacts .mat-itemlist__group:not([hidden]) .mat-itemlist__divider')].map(t => t.textContent),
+        empty: document.querySelector('#il-contacts .mat-itemlist__empty').hidden, live: document.querySelector('#il-contacts + [role=status]').textContent,
+      }));
+      expect(one, { rows: ['Ben Carter'], groups: ['B'], empty: true, live: '1 of 10 shown' }, 'for carter');
+      expect((await events('mat:item-filter')).at(-1), { type: 'mat:item-filter', text: 'CARTER', shown: 1, total: 10 }, 'the event');
+      await page.fill('#il-contacts-q', 'zzz');
+      const none = await page.evaluate(() => ({ empty: document.querySelector('#il-contacts .mat-itemlist__empty').hidden, text: document.querySelector('#il-contacts .mat-itemlist__empty').textContent, live: document.querySelector('#il-contacts + [role=status]').textContent }));
+      expect(none, { empty: false, text: 'Nothing matches', live: 'Nothing matches' }, 'for zzz');
+      await page.fill('#il-contacts-q', '');
+      expect(await page.evaluate(() => [document.querySelectorAll('#il-contacts .mat-item:not([hidden])').length, document.querySelector('#il-contacts .mat-itemlist__empty').hidden]), [10, true], 'after the field is cleared');
+    });
+    await check('the letter of a group stays at the top of the scrolling list until the next one pushes it away', async () => {
+      await show('#il-contacts');
+      const top = async () => page.evaluate(() => {
+        const list = document.getElementById('il-contacts'), lt = list.getBoundingClientRect().top;
+        return [...list.querySelectorAll('.mat-itemlist__divider')].map(d => [d.textContent, Math.round(d.getBoundingClientRect().top - lt)]).filter(p => p[1] <= 2).map(p => p[0]).pop();
+      });
+      await page.$eval('#il-contacts', l => { l.scrollTop = 0; });
+      expect(await top(), 'A', 'at the start');
+      await page.$eval('#il-contacts', l => { l.scrollTop = 200; });
+      expect(await top(), 'B', 'after scrolling past the first group');
+      const pinned = await page.$eval('#il-contacts', l => { const d = [...l.querySelectorAll('.mat-itemlist__divider')].find(x => x.textContent === 'B'); return Math.round(d.getBoundingClientRect().top - l.getBoundingClientRect().top); });
+      expectTrue(pinned >= 0 && pinned <= 2, 'the letter is not at the top of the list: ' + pinned);
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#itemlist-actions');
+    await check('on a phone the rows, the handle and the options are touch targets, nothing scrolls sideways, and a swipe with a finger slides a row open', async () => {
+      const slide = '#il-slide', first = slide + ' > .mat-item:nth-child(1)';
+      await page.locator(slide).scrollIntoViewIfNeeded();
+      const s = await page.evaluate(() => ({
+        row: Math.round(document.querySelector('#il-slide .mat-item__main').getBoundingClientRect().height),
+        more: Math.round(document.querySelector('#il-slide .mat-item__more').getBoundingClientRect().width),
+        handle: (r => [Math.round(r.width), Math.round(r.height)])(document.querySelector('#il-reorder .mat-item__handle').getBoundingClientRect()),
+        option: Math.round(document.querySelector('#il-slide .mat-item__option').getBoundingClientRect().height),
+        sideways: document.documentElement.scrollWidth > innerWidth,
+      }));
+      expectTrue(s.row >= 52 && s.more >= 44 && s.handle[0] >= 44 && s.handle[1] >= 44 && s.option >= 52, 'sizes: ' + JSON.stringify(s));
+      expect(s.sideways, false, 'the page scrolls sideways');
+      const box = await page.locator(first + ' .mat-item__main').boundingBox();
+      const client = await ctx.newCDPSession(page);
+      const touch = (type, x, y) => client.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+      const y = box.y + box.height / 2, x0 = box.x + box.width - 90;
+      await touch('touchStart', x0, y);
+      for (let i = 1; i <= 8; i += 1) { await touch('touchMove', x0 - i * 22, y); }
+      await touch('touchEnd', 0, 0);
+      await page.waitForTimeout(400);
+      const o = await page.$eval(first, li => ({ open: li.classList.contains('is-open-end'), moved: Math.round(li.querySelector('.mat-item__row').getBoundingClientRect().left - li.getBoundingClientRect().left), width: li.querySelector('.mat-item__options--end').offsetWidth }));
+      expect([o.open, o.moved], [true, -o.width], 'the row after a swipe');
+      expectTrue(o.width <= 390 * 0.75, 'the options take more than three quarters of the phone: ' + o.width);
     });
     await ctx.close();
   }
@@ -977,6 +1972,419 @@ function seenAt(page, selector) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the code input
+  console.log('\nCode input');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#code-input');
+    await page.evaluate(() => {
+      window.__otp = [];
+      document.addEventListener('mat:otp-complete', e => window.__otp.push(e.target.querySelector('.mat-otp__input').id + ':' + e.detail.value));
+    });
+    const boxSel = id => `#${id} ~ .mat-otp__boxes .mat-otp__box`;
+    const vals = id => page.$$eval(boxSel(id), els => els.map(e => e.value).join('|'));
+    const real = id => page.$eval('#' + id, e => e.value);
+    const active = () => page.evaluate(() => document.activeElement.id);
+    const status = id => page.$eval('#' + id, el => { const s = el.closest('.mat-otp').querySelector('.mat-otp__status'); return s.hidden ? '' : s.textContent; });
+    const live = id => page.$eval('#' + id, el => el.closest('.mat-otp').querySelector('[role=status]').textContent);
+    const events = id => page.evaluate(id => window.__otp.filter(x => x.startsWith(id + ':')), id);
+    const paste = (id, text) => page.$eval('#' + id, (el, text) => {
+      const dt = new DataTransfer();
+      dt.setData('text/plain', text);
+      el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    }, text);
+
+    await check('the script draws one named box per character in a group named by the label and puts the real input out of the way', async () => {
+      const s = await page.evaluate(() => {
+        const input = document.getElementById('otp-totp');
+        const group = input.nextElementSibling;
+        const boxes = [...group.querySelectorAll('.mat-otp__box')];
+        return {
+          role: group.getAttribute('role'),
+          label: document.getElementById(group.getAttribute('aria-labelledby')).textContent.replace(/\s+/g, ' ').trim(),
+          names: boxes.map(b => b.getAttribute('aria-label')),
+          autocomplete: boxes.map(b => b.getAttribute('autocomplete')).join(','),
+          mode: boxes[0].getAttribute('inputmode'),
+          font: Math.min(...boxes.map(b => parseFloat(getComputedStyle(b).fontSize))),
+          stops: boxes.filter(b => b.tabIndex === 0).length,
+          posting: boxes.some(b => b.name),
+          real: { hidden: input.getAttribute('aria-hidden'), tab: input.tabIndex, opacity: getComputedStyle(input).opacity, autocomplete: input.getAttribute('autocomplete') },
+        };
+      });
+      expect(s.role, 'group', 'role');
+      expect(s.label, 'Authentication code *', 'the group is named by the label');
+      expect(s.names, ['Digit 1 of 6', 'Digit 2 of 6', 'Digit 3 of 6', 'Digit 4 of 6', 'Digit 5 of 6', 'Digit 6 of 6'], 'the names of the boxes');
+      expect(s.autocomplete, 'one-time-code,off,off,off,off,off', 'the SMS code is offered on the first box only');
+      expect(s.mode, 'numeric', 'the keyboard of a phone');
+      expectTrue(s.font >= 16, 'a phone would zoom into a box with type of ' + s.font + ' px');
+      expect(s.stops, 1, 'boxes that are a tab stop');
+      expect(s.posting, false, 'the boxes must not post a value of their own');
+      expect(s.real, { hidden: 'true', tab: -1, opacity: '0', autocomplete: 'off' }, 'the real input');
+    });
+    await check('typing fills a box and moves on, Backspace clears and goes back, Delete clears; the real input posts the digits joined', async () => {
+      await page.click('#otp-totp-1');
+      await page.keyboard.type('123');
+      expect(await vals('otp-totp'), '1|2|3|||', 'boxes after typing');
+      expect(await real('otp-totp'), '123', 'the posted value');
+      expect(await active(), 'otp-totp-4', 'the focus moves on');
+      await page.keyboard.press('Backspace');
+      expect(await vals('otp-totp'), '1|2||||', 'Backspace in an empty box clears the one before');
+      expect(await active(), 'otp-totp-3', 'and goes back');
+      await page.keyboard.type('9');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('Backspace');
+      expect(await vals('otp-totp'), '1|2||||', 'Backspace in a filled box clears it');
+      expect(await active(), 'otp-totp-3', 'and stays');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('Delete');
+      expect(await vals('otp-totp'), '1|||||', 'Delete clears the box');
+      expect(await active(), 'otp-totp-2', 'and stays');
+      expect(await real('otp-totp'), '1', 'the posted value follows');
+    });
+    await check('a character that is not allowed is refused with a message under the boxes and to a screen reader; a space is skipped without a word', async () => {
+      await page.keyboard.type('a');
+      expect(await vals('otp-totp'), '1|||||', 'boxes after a letter');
+      expect(await status('otp-totp'), 'Only digits are allowed.', 'the message under the boxes');
+      expect(await live('otp-totp'), 'Only digits are allowed.', 'the live region');
+      expect(await active(), 'otp-totp-2', 'the focus stays');
+      await page.keyboard.type(' ');
+      expect(await status('otp-totp'), '', 'a space says nothing');
+      await page.keyboard.type('-');
+      expect(await vals('otp-totp'), '1|||||', 'boxes after a space and a dash');
+    });
+    await check('the arrow keys, Home and End move between the boxes and a click selects the box, so that typing replaces it', async () => {
+      await page.keyboard.press('Home');
+      expect(await active(), 'otp-totp-1', 'Home');
+      await page.keyboard.press('ArrowLeft');
+      expect(await active(), 'otp-totp-1', 'ArrowLeft in the first box');
+      await page.keyboard.press('ArrowRight');
+      expect(await active(), 'otp-totp-2', 'ArrowRight');
+      await page.keyboard.press('End');
+      expect(await active(), 'otp-totp-6', 'End');
+      await page.click('#otp-totp-1');
+      expect(await page.$eval('#otp-totp-1', e => [e.selectionStart, e.selectionEnd]), [0, 1], 'the selection after a click');
+      await page.keyboard.type('7');
+      expect(await vals('otp-totp'), '7|||||', 'typing replaced the digit');
+      expect(await active(), 'otp-totp-2', 'and moved on');
+    });
+    await check('the boxes are one stop for the Tab key: Tab leaves them, Shift+Tab comes back to the box where it was', async () => {
+      expect(await page.$$eval(boxSel('otp-totp'), els => els.filter(b => b.tabIndex === 0).length), 1, 'boxes in the tab order');
+      await page.focus('#otp-totp-3');
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => ({ inside: !!document.activeElement.closest('.mat-otp'), text: document.activeElement.textContent.trim() })), { inside: false, text: 'Verify' }, 'after Tab');
+      await page.keyboard.press('Shift+Tab');
+      expect(await active(), 'otp-totp-3', 'after Shift+Tab');
+    });
+    await check('the focus ring of a box is the accent ring (A11Y-01), and the real input hands the focus to a box (a label, a message of the validation)', async () => {
+      await page.focus('#otp-totp-3');
+      const ring = await page.$eval('#otp-totp-3', e => getComputedStyle(e).boxShadow);
+      expectTrue(ring && ring !== 'none', 'a focused box has no ring');
+      await page.click('label[for="otp-lg"]');
+      expect(await active(), 'otp-lg-1', 'a click on the label');
+      await page.evaluate(() => { document.getElementById('otp-md').focus(); });
+      expect(await active(), 'otp-md-1', 'focus() on the real input');
+    });
+
+    await check('a pasted code is spread over the boxes, spaces and dashes are skipped, and the code is complete once', async () => {
+      await page.click('#otp-md-3');
+      await paste('otp-md-3', '123 456');
+      expect(await vals('otp-md'), '1|2|3|4|5|6', 'boxes after the paste');
+      expect(await real('otp-md'), '123456', 'the posted value');
+      expect(await events('otp-md'), ['otp-md:123456'], 'the events of completion');
+      await paste('otp-recovery-1', 'a1b2-c3d4');
+      expect(await vals('otp-recovery'), 'A|1|B|2|C|3|D|4', 'a recovery code with a dash, converted to upper case');
+      expect(await real('otp-recovery'), 'A1B2C3D4', 'the posted value');
+      await page.evaluate(() => MatUi.otp.clear('otp-md'));
+      await page.keyboard.type('12');
+      await paste('otp-md-3', '34');
+      expect(await vals('otp-md'), '1|2|3|4||', 'a part of a code goes in behind what is there');
+      await paste('otp-md-1', 'x-9');
+      expect(await status('otp-md'), 'Only digits are allowed.', 'a character in a pasted text is refused');
+      expect(await vals('otp-md'), '9|2|3|4||', 'and the others are taken');
+    });
+    await check('a class of characters is the rule: [A-Z2-7] with data-case upper converts, refuses 1 and 8 and fills the boxes from the real input', async () => {
+      expect(await vals('otp-base32'), 'J|B|S|W|Y|3|D|P', 'the value of the real input fills the boxes');
+      await page.evaluate(() => MatUi.otp.clear('otp-base32'));
+      await page.keyboard.type('a');
+      expect(await vals('otp-base32'), 'A|||||||', 'a lower-case letter is converted');
+      await page.keyboard.type('1');
+      expect(await vals('otp-base32'), 'A|||||||', 'a 1 is refused');
+      expect(await status('otp-base32'), 'That character is not allowed.', 'the message of a class');
+      await page.keyboard.type('8');
+      expect(await vals('otp-base32'), 'A|||||||', 'an 8 is refused');
+      await page.keyboard.type('7');
+      expect(await vals('otp-base32'), 'A|7||||||', 'a 7 is taken');
+      await paste('otp-base32-2', 'jbsw y3dp');
+      expect(await vals('otp-base32'), 'J|B|S|W|Y|3|D|P', 'a pasted key, converted, without the space');
+      expect(await real('otp-base32'), 'JBSWY3DP', 'the posted value');
+    });
+    await check('text that arrives without a key (a phone keyboard, autofill of an SMS code, an input method) is taken the same way', async () => {
+      // the box holds what the browser put there, and an input event says so
+      const arrive = (id, value, inputType) => page.$eval('#' + id, (el, a) => { el.value = a.value; el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: a.inputType, data: a.value })); }, { value, inputType });
+      await arrive('otp-lg-1', '7', 'insertText');
+      expect(await vals('otp-lg'), '7|||||', 'one character from a keyboard');
+      expect(await active(), 'otp-lg-2', 'the focus moves on');
+      await arrive('otp-lg-1', '77', 'insertText');
+      expect(await vals('otp-lg'), '7|||||', 'a second 7 typed into a box that kept its 7 is not a second box');
+      await arrive('otp-lg-1', '', 'deleteContentBackward');
+      expect(await vals('otp-lg'), '|||||', 'a deletion');
+      await arrive('otp-lg-1', 'q', 'insertText');
+      expect(await vals('otp-lg'), '|||||', 'a letter is refused');
+      expect(await status('otp-lg'), 'Only digits are allowed.', 'with the message');
+      await arrive('otp-lg-1', '135 790', 'insertReplacementText');
+      expect(await vals('otp-lg'), '1|3|5|7|9|0', 'the whole code of an SMS, with a space, is spread over the boxes');
+      expect(await real('otp-lg'), '135790', 'the posted value');
+      expect(await events('otp-lg'), ['otp-lg:135790'], 'and the code is complete');
+      // Backspace of a phone keyboard in an empty box arrives as beforeinput only
+      await page.evaluate(() => MatUi.otp.clear('otp-lg'));
+      await page.keyboard.type('24');
+      await page.$eval('#otp-lg-3', el => el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'deleteContentBackward' })));
+      expect(await vals('otp-lg'), '2|||||', 'Backspace in an empty box clears the box before it');
+      expect(await active(), 'otp-lg-2', 'and goes back');
+      await page.evaluate(() => MatUi.otp.clear('otp-lg'));
+    });
+    await check('groups: a gap after every fourth box, or two groups of four with a dash', async () => {
+      const seps = id => page.$eval('#' + id, el => [...el.nextElementSibling.children].map(c => c.classList.contains('mat-otp__sep') ? (c.classList.contains('mat-otp__sep--dash') ? '-' : '.') : 'b').join(''));
+      expect(await seps('otp-recovery'), 'bbbb-bbbb', 'groups 4-4');
+      expect(await seps('otp-base32'), 'bbbb.bbbb', 'groups 4');
+      expect(await seps('otp-md'), 'bbbbbb', 'no groups');
+      const dash = await page.$eval('#otp-recovery', el => { const s = el.nextElementSibling.querySelector('.mat-otp__sep--dash'); const r = s.getBoundingClientRect(); const d = getComputedStyle(s, '::before'); return { wide: r.width >= 12, line: d.height }; });
+      expect(dash, { wide: true, line: '2px' }, 'the dash');
+    });
+    await check('data-mask draws dots: the boxes are password fields, the real input still posts the digits, and a PIN is not sent by itself', async () => {
+      const url = page.url();
+      await page.click('#otp-pin-1');
+      await page.keyboard.type('1234');
+      expect(await page.$$eval(boxSel('otp-pin'), els => els.map(e => e.type).join(',')), 'password,password,password,password', 'the type of the boxes');
+      expect(await real('otp-pin'), '1234', 'the posted value');
+      await page.waitForTimeout(400);
+      expect(page.url(), url, 'a PIN has no data-submit: nothing was sent');
+      expect(await events('otp-pin'), ['otp-pin:1234'], 'the code is complete');
+      expect(await active(), 'otp-pin-4', 'the focus stays in the last box');
+    });
+    await check('completion fires mat:otp-complete with the value and tells a screen reader; it fires again for a changed code but not for the same one', async () => {
+      await page.click('#otp-sm-1');
+      await page.keyboard.type('123456');
+      expect(await events('otp-sm'), ['otp-sm:123456'], 'after the sixth digit');
+      expect(await live('otp-sm'), 'Code complete', 'the live region');
+      expect(await page.$eval('#otp-sm', e => e.closest('.mat-otp').classList.contains('is-complete')), true, 'is-complete');
+      await page.click('#otp-sm-3');
+      await page.keyboard.type('9');
+      expect(await events('otp-sm'), ['otp-sm:123456', 'otp-sm:129456'], 'a changed code');
+      await page.click('#otp-sm-3');
+      await page.keyboard.type('9');
+      expect((await events('otp-sm')).length, 2, 'the same digit again is no change');
+      await page.keyboard.press('Backspace');
+      expect(await page.$eval('#otp-sm', e => e.closest('.mat-otp').classList.contains('is-complete')), false, 'no longer complete');
+    });
+    await check('a disabled code input cannot be focused; a read-only one can be walked but not changed', async () => {
+      expect(await page.$$eval(boxSel('otp-off'), els => els.every(b => b.disabled)), true, 'the boxes of a disabled input');
+      expect(await vals('otp-off'), '4|8|2|9|1|3', 'its value');
+      expect(await page.$$eval(boxSel('otp-ro'), els => els.every(b => b.readOnly && !b.disabled)), true, 'the boxes of a read-only input');
+      await page.click('#otp-ro-2');
+      await page.keyboard.type('5');
+      await page.keyboard.press('Backspace');
+      await page.keyboard.press('Delete');
+      expect(await vals('otp-ro'), '4|8|2|9|1|3', 'a read-only code does not change');
+    });
+    await check('a code that a server rejected is drawn red with aria-invalid on every box', async () => {
+      const state = await page.evaluate(() => {
+        const probe = document.createElement('i');
+        probe.style.color = 'var(--mat-danger)';
+        document.body.appendChild(probe);
+        const danger = getComputedStyle(probe).color;
+        probe.remove();
+        const boxes = [...document.querySelectorAll('#otp-bad ~ .mat-otp__boxes .mat-otp__box')];
+        return { danger, borders: boxes.map(b => getComputedStyle(b).borderTopColor === danger), invalid: boxes.map(b => b.getAttribute('aria-invalid')).join(',') };
+      });
+      expect(state.borders.every(Boolean), true, 'the border of every box is the danger colour');
+      expect(state.invalid, 'true,true,true,true,true,true', 'aria-invalid');
+      expect(await page.evaluate(() => document.getElementById('otp-bad').closest('.mat-otp').nextElementSibling.textContent.trim()), 'That code is not valid or has expired. Check the app and try again.', 'the message of the field');
+    });
+    await ctx.close();
+  }
+  {
+    // the form validation and the application programming interface, on a page of their own (a complete code is sent by this field)
+    const { ctx, page } = await open(desktopOptions, '/Components#code-input');
+    const boxSel = id => `#${id} ~ .mat-otp__boxes .mat-otp__box`;
+    const vals = id => page.$$eval(boxSel(id), els => els.map(e => e.value).join('|'));
+    const active = () => page.evaluate(() => document.activeElement.id);
+    const field = id => page.$eval('#' + id, el => { const f = el.closest('.mat-field'); return { invalid: f.classList.contains('is-invalid'), message: f.querySelector('.mat-error').textContent.trim() }; });
+    const ariaInvalid = id => page.$$eval(boxSel(id), els => els.map(e => e.getAttribute('aria-invalid')).join(','));
+
+    await check('required: a form sent with an empty code says so at the field, and the focus goes to the first box', async () => {
+      await page.click('form:has(#otp-totp) button[type=submit]');
+      expect(await field('otp-totp'), { invalid: true, message: 'Please enter the six digits of the code.' }, 'the field');
+      expect(await active(), 'otp-totp-1', 'the focus');
+      await page.waitForFunction(() => document.getElementById('otp-totp-1').getAttribute('aria-invalid') === 'true');
+      expect(await ariaInvalid('otp-totp'), 'true,true,true,true,true,true', 'aria-invalid on the boxes');
+    });
+    await check('an incomplete code is not valid: the message of the pattern, the focus on the box where the code goes on, and the message goes when it is complete', async () => {
+      await page.keyboard.type('482');
+      expect(await field('otp-totp'), { invalid: true, message: 'Please enter the six digits of the code.' }, 'typing does not clear the message of an invalid field while the code is not valid');
+      await page.click('form:has(#otp-totp) button[type=submit]');
+      expect(await field('otp-totp'), { invalid: true, message: 'The code has six digits.' }, 'the message of the pattern');
+      expect(await active(), 'otp-totp-4', 'the focus goes on where the code goes on');
+      await page.click('#otp-pin-1');
+      await page.keyboard.type('12');
+      await page.click('form:has(#otp-pin) button[type=submit]');
+      expect(await field('otp-pin'), { invalid: true, message: 'The PIN has four digits.' }, 'the PIN');
+      await page.click('#otp-pin-3');
+      await page.keyboard.type('34');
+      expect(await field('otp-pin'), { invalid: false, message: '' }, 'the field once the PIN is complete');
+      await page.waitForFunction(() => document.getElementById('otp-pin-1').getAttribute('aria-invalid') === null);
+    });
+    await check('the application programming interface: value sets without sending, setInvalid marks with a message, clear empties and focuses the first box', async () => {
+      await page.evaluate(() => {
+        window.__otp = [];
+        document.addEventListener('mat:otp-complete', e => window.__otp.push(e.detail.value));
+        window.__value = MatUi.otp.value('otp-totp', '135790');
+      });
+      expect(await page.evaluate(() => window.__value), '135790', 'value() returns the code');
+      expect(await vals('otp-totp'), '1|3|5|7|9|0', 'the boxes follow');
+      await page.waitForTimeout(400);
+      expect(await page.evaluate(() => window.__otp), [], 'setting a code is not completing it: no event, nothing sent');
+      expectTrue(page.url().indexOf('code=') < 0, 'the form was sent: ' + page.url());
+      await page.evaluate(() => MatUi.otp.setInvalid('otp-totp', 'That code is not valid.'));
+      expect(await field('otp-totp'), { invalid: true, message: 'That code is not valid.' }, 'the field');
+      await page.waitForFunction(() => document.getElementById('otp-totp-6').getAttribute('aria-invalid') === 'true');
+      await page.evaluate(() => MatUi.otp.setInvalid('otp-totp', ''));
+      expect(await field('otp-totp'), { invalid: false, message: '' }, 'the mark taken away');
+      await page.evaluate(() => MatUi.otp.setInvalid('otp-totp', 'Rejected again.'));
+      await page.evaluate(() => MatUi.otp.clear('otp-totp'));
+      expect(await vals('otp-totp'), '|||||', 'clear() empties the boxes');
+      expect(await field('otp-totp'), { invalid: false, message: '' }, 'and takes the message away');
+      expect(await active(), 'otp-totp-1', 'and focuses the first box');
+      expect(await page.$eval('#otp-totp', e => e.value), '', 'the real input is empty');
+      await page.keyboard.type('12');
+      await page.evaluate(() => document.activeElement.blur());
+      await page.evaluate(() => MatUi.otp.focus('otp-totp'));
+      expect(await active(), 'otp-totp-3', 'focus() goes to the box where the code goes on');
+    });
+    await check('a complete code is sent by data-submit with the validation of the form, and an app can take over by cancelling the event', async () => {
+      await page.evaluate(() => MatUi.otp.clear('otp-totp'));
+      await page.evaluate(() => document.getElementById('otp-totp').closest('.mat-otp').addEventListener('mat:otp-complete', e => e.preventDefault(), { once: true }));
+      await page.keyboard.type('111222');
+      await page.waitForTimeout(500);
+      expectTrue(page.url().indexOf('code=') < 0, 'an app that cancelled the event does not want the form sent: ' + page.url());
+      await page.evaluate(() => MatUi.otp.clear('otp-totp'));
+      await Promise.all([page.waitForNavigation(), page.keyboard.type('482913')]);
+      expectTrue(page.url().includes('code=482913'), 'the form was not sent with the last digit: ' + page.url());
+    });
+    await check('data-submit="#id" clicks that button', async () => {
+      await page.evaluate(() => { localStorage.removeItem('otp-clicked'); document.getElementById('otp-signin-go').addEventListener('click', () => localStorage.setItem('otp-clicked', '1')); });
+      await page.click('#otp-signin-1');
+      await Promise.all([page.waitForNavigation(), page.keyboard.type('246810')]);
+      expectTrue(page.url().includes('signin=246810'), 'the form was not sent: ' + page.url());
+      expect(await page.evaluate(() => localStorage.getItem('otp-clicked')), '1', 'the button was clicked');
+    });
+    await ctx.close();
+  }
+  {
+    // markup that is added later, a form that is reset, another language and a code input outside a field
+    const { ctx, page } = await open(desktopOptions, '/Components#code-input');
+    await check('MatUi.refresh draws the boxes of markup added later: 12 boxes in three groups, in German, that a form reset puts back', async () => {
+      await page.evaluate(() => {
+        document.documentElement.lang = 'de';
+        const host = document.createElement('div');
+        host.id = 'otp-host';
+        host.innerHTML = '<form class="mat-form" id="otp-dyn-form" method="get" action="/Components#code-input" novalidate>' +
+          '<div class="mat-field"><label class="mat-label" for="otp-dyn">Schlüssel</label>' +
+          '<div class="mat-otp" data-otp data-length="12" data-chars="hex" data-group="4-4-4"><input class="mat-otp__input" id="otp-dyn" name="dyn" value="abc" required /></div>' +
+          '<span class="mat-error" aria-live="polite"></span></div>' +
+          '<button type="submit" class="mat-btn mat-btn--primary" id="otp-dyn-go">Senden</button></form>' +
+          '<div class="mat-otp" data-otp data-length="4" id="otp-bare"><input class="mat-otp__input" id="otp-bare-in" name="bare" /></div>';
+        document.getElementById('code-input').appendChild(host);
+        MatUi.refresh(host);
+      });
+      const s = await page.evaluate(() => {
+        const boxes = [...document.querySelectorAll('#otp-dyn ~ .mat-otp__boxes .mat-otp__box')];
+        return { count: boxes.length, first: boxes[0].getAttribute('aria-label'), last: boxes[11].getAttribute('aria-label'), values: boxes.map(b => b.value).join(''), seps: document.querySelectorAll('#otp-dyn ~ .mat-otp__boxes .mat-otp__sep--dash').length, ready: document.querySelector('#otp-dyn').closest('.mat-otp').classList.contains('is-ready') };
+      });
+      expect(s, { count: 12, first: 'Zeichen 1 von 12', last: 'Zeichen 12 von 12', values: 'abc', seps: 2, ready: true }, 'the boxes');
+      await page.click('#otp-dyn-4');
+      await page.keyboard.type('z');
+      expect(await page.$eval('#otp-dyn', el => el.closest('.mat-otp').querySelector('.mat-otp__status').textContent), 'Es sind nur die Ziffern 0 bis 9 und die Buchstaben A bis F erlaubt.', 'the refusal in German');
+      await page.click('#otp-dyn-go');
+      expect(await page.$eval('#otp-dyn', el => el.closest('.mat-field').querySelector('.mat-error').textContent), 'Bitte alle 12 Zeichen eingeben.', 'an incomplete code without a pattern, in German');
+      await page.keyboard.type('def0');
+      expect(await page.$eval('#otp-dyn', e => e.value), 'abcdef0', 'typed after the message');
+      await page.evaluate(() => document.getElementById('otp-dyn-form').reset());
+      await page.waitForTimeout(100);
+      expect(await page.$$eval('#otp-dyn ~ .mat-otp__boxes .mat-otp__box', els => els.map(b => b.value).join('')), 'abc', 'the boxes after a reset');
+      expect(await page.$eval('#otp-dyn', e => e.value), 'abc', 'the real input after a reset');
+    });
+    await check('a code input outside a field is marked on the wrapper, and the message is said under the boxes', async () => {
+      await page.evaluate(() => MatUi.otp.setInvalid('otp-bare-in', 'Not accepted.'));
+      const s = await page.evaluate(() => ({ cls: document.getElementById('otp-bare').classList.contains('is-invalid'), text: document.querySelector('#otp-bare .mat-otp__status').textContent, aria: document.getElementById('otp-bare-in').getAttribute('aria-invalid'), border: getComputedStyle(document.querySelector('#otp-bare .mat-otp__box')).borderTopColor }));
+      expect(s.cls && s.text === 'Not accepted.' && s.aria === 'true', true, 'the wrapper, the message and aria-invalid');
+      await page.evaluate(() => { document.getElementById('otp-host').remove(); document.documentElement.lang = 'en'; });
+    });
+    await ctx.close();
+  }
+  {
+    // without the script the real input is a text field
+    const ctx = await browser.newContext({ ...desktopOptions, javaScriptEnabled: false });
+    const page = await ctx.newPage();
+    await page.goto(BASE + '/Components#code-input', { waitUntil: 'networkidle' });
+    await check('without the script the real input is a visible text field with the look of a code', async () => {
+      const s = await page.evaluate(() => {
+        const i = document.getElementById('otp-totp');
+        const c = getComputedStyle(i);
+        return { boxes: document.querySelectorAll('#code-input .mat-otp__box').length, opacity: c.opacity, border: c.borderTopWidth, width: i.getBoundingClientRect().width > 100, mono: /mono|consolas|menlo|courier/i.test(c.fontFamily) };
+      });
+      expect(s, { boxes: 0, opacity: '1', border: '1px', width: true, mono: true }, 'the plain field');
+      await page.fill('#otp-totp', '123456');
+      expect(await page.inputValue('#otp-totp'), '123456', 'a code can be typed');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#code-input');
+    await check('on a phone eight boxes fit the screen, are 44 px high and keep 16 px type, and a code of twelve fits too', async () => {
+      await page.evaluate(() => {
+        const host = document.createElement('div');
+        host.id = 'otp-host';
+        host.innerHTML = '<div class="mat-field"><label class="mat-label" for="otp-twelve">Twelve</label><div class="mat-otp mat-otp--lg" data-otp data-length="12" data-chars="hex" data-group="4-4-4"><input class="mat-otp__input" id="otp-twelve" name="twelve" /></div></div>';
+        document.getElementById('code-input').appendChild(host);
+        MatUi.refresh(host);
+      });
+      const measure = id => page.evaluate(id => {
+        const wrap = document.getElementById(id).closest('.mat-otp');
+        const boxes = [...wrap.querySelectorAll('.mat-otp__box')];
+        const rects = boxes.map(b => b.getBoundingClientRect());
+        const field = wrap.closest('.mat-field').getBoundingClientRect();
+        return {
+          count: boxes.length,
+          inside: Math.max(...rects.map(r => r.right)) <= field.right + 0.5 && Math.min(...rects.map(r => r.left)) >= field.left - 0.5,
+          onScreen: Math.max(...rects.map(r => r.right)) <= innerWidth,
+          height: Math.round(Math.min(...rects.map(r => r.height))),
+          width: Math.round(Math.min(...rects.map(r => r.width))),
+          font: Math.min(...boxes.map(b => parseFloat(getComputedStyle(b).fontSize))),
+          scrolls: document.documentElement.scrollWidth > innerWidth,
+        };
+      }, id);
+      const eight = await measure('otp-recovery');
+      expect({ count: eight.count, inside: eight.inside, onScreen: eight.onScreen, scrolls: eight.scrolls }, { count: 8, inside: true, onScreen: true, scrolls: false }, 'eight boxes with a dash');
+      expectTrue(eight.height >= 44, 'the boxes are ' + eight.height + ' px high');
+      expectTrue(eight.font >= 16, 'the type is ' + eight.font + ' px');
+      expectTrue(eight.width >= 24, 'the boxes are ' + eight.width + ' px wide');
+      const small = await measure('otp-sm');
+      expectTrue(small.height >= 44, 'a small box is ' + small.height + ' px high on a touch screen');
+      const twelve = await measure('otp-twelve');
+      expect({ count: twelve.count, inside: twelve.inside, onScreen: twelve.onScreen, scrolls: twelve.scrolls }, { count: 12, inside: true, onScreen: true, scrolls: false }, 'twelve boxes in large');
+      expectTrue(twelve.font >= 16, 'the type of twelve is ' + twelve.font + ' px');
+    });
+    await check('on a phone a tap selects a box and the code is typed and pasted as on a computer', async () => {
+      await page.tap('#otp-recovery-1');
+      await page.keyboard.type('a1b2c3d4');
+      expect(await page.$eval('#otp-recovery', e => e.value), 'A1B2C3D4', 'the posted value');
+      await page.tap('#otp-md-2');
+      expect(await page.evaluate(() => document.activeElement.id), 'otp-md-2', 'the box that was tapped');
+      expect(await page.$eval('#otp-md-2', e => e.selectionEnd - e.selectionStart <= 1), true, 'selection');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- content components
   console.log('\nContent components');
   {
@@ -1017,7 +2425,7 @@ function seenAt(page, selector) {
     });
     await page.evaluate(() => document.getElementById('table').scrollIntoView());
     await check('the check in the header selects every row, shows the bulk bar with the count and marks the rows', async () => {
-      const box = '[data-selectable]:has(#tsel-all)';
+      const box = '[data-selectable]:has(#tsel-all)';   // the lists of rows have a bar of their own on the same page
       expectTrue(!(await page.locator(box + ' [data-bulk-bar]').isVisible()), 'the bulk bar is shown before a row is selected');
       await page.check('#tsel-all');
       expect((await page.textContent(box + ' [data-bulk-count]')).trim(), '3', 'selected');
@@ -1076,8 +2484,11 @@ function seenAt(page, selector) {
     });
     await check('a side dialog sits at the right edge and closes with its X', async () => {
       await page.evaluate(() => document.getElementById('dialogs').scrollIntoView());
+      // the animation is noted when it starts: on a page of two megabytes it can be over before a later look would find it
+      await page.evaluate(() => { window.__side = []; document.getElementById('dlg-side').addEventListener('animationstart', e => window.__side.push(e.animationName)); });
       await page.click('[data-dialog-open="dlg-side"]');
-      expect(await page.$eval('#dlg-side', el => el.getAnimations().map(a => a.animationName)), ['mat-panel-in-end'], 'the animation of the panel (not the one of the centred dialog)');
+      await page.waitForFunction(() => window.__side.length > 0);
+      expect(await page.evaluate(() => window.__side), ['mat-panel-in-end'], 'the animation of the panel (not the one of the centred dialog)');
       await page.waitForFunction(() => document.getElementById('dlg-side').getAnimations().length === 0);
       const state = await page.$eval('#dlg-side', el => { const r = el.getBoundingClientRect(); return { open: el.open, atRight: Math.abs(r.right - innerWidth) <= 1, height: Math.round(r.height) === innerHeight, narrow: r.width < innerWidth }; });
       expect(state, { open: true, atRight: true, height: true, narrow: true }, 'side dialog');
@@ -1096,6 +2507,486 @@ function seenAt(page, selector) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- number stepper (FORM-20)
+  console.log('\nNumber stepper');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#number-stepper');
+    const val = id => page.$eval(`#${id}`, el => el.value);
+    const dec = id => page.locator(`.mat-stepper:has(#${id}) > .mat-stepper__btn--dec`);
+    const inc = id => page.locator(`.mat-stepper:has(#${id}) > .mat-stepper__btn--inc`);
+    const disabledState = async (id, kind) => page.getAttribute(`.mat-stepper:has(#${id}) > .mat-stepper__btn--${kind}`, 'aria-disabled');
+    // what a person does: select the text, type, leave the field with the Tab key (the browser's change event follows)
+    const typeIn = async (id, text) => {
+      await page.focus('#' + id);
+      await page.keyboard.press('Control+A');
+      await page.keyboard.type(text);
+      await page.keyboard.press('Tab');
+    };
+    const record = id => page.evaluate(i => {
+      const input = document.getElementById(i);
+      window.__stepper = { events: [], times: [], seen: [] };
+      input.addEventListener('input', () => window.__stepper.events.push('input'));
+      input.addEventListener('change', () => { window.__stepper.events.push('change'); window.__stepper.times.push(performance.now()); window.__stepper.seen.push(input.value); });
+    }, id);
+    const recorded = () => page.evaluate(() => window.__stepper);
+
+    await page.evaluate(() => document.getElementById('number-stepper').scrollIntoView());
+    await check('a stepper has a button for less and one for more, named for a screen reader and out of the Tab order, and the native spinners are gone', async () => {
+      expect(await page.locator('.mat-stepper.is-ready').count(), 12, 'steppers that were wired');
+      expect(await page.locator('.mat-stepper__btn').count(), 24, 'buttons');
+      expect(await dec('stp-qty').getAttribute('aria-label'), 'Decrease Quantity', 'name of the button for less');
+      expect(await inc('stp-qty').getAttribute('aria-label'), 'Increase Quantity', 'name of the button for more');
+      expect(await inc('stp-qty').getAttribute('tabindex'), '-1', 'tabindex');
+      expect(await inc('stp-qty').getAttribute('type'), 'button', 'type');
+      expect(await page.$eval('#stp-qty', el => getComputedStyle(el).appearance), 'textfield', 'appearance of the field');
+      const order = await page.$eval('#stp-qty', el => [...el.parentNode.children].map(c => c.className.replace(/ .*/, '')));
+      expect(order.slice(0, 3), ['mat-stepper__btn', 'mat-input', 'mat-stepper__btn'], 'less, the field, more');
+    });
+    await check('a click changes the value by the step with an input and a change event, and a button at its limit is aria-disabled and keeps the focus', async () => {
+      await record('stp-qty');
+      await inc('stp-qty').click();
+      expect(await val('stp-qty'), '4', 'after more');
+      expect((await recorded()).events, ['input', 'change'], 'events of one press');
+      await dec('stp-qty').click();
+      await dec('stp-qty').click();
+      expect(await val('stp-qty'), '2', 'after two times less');
+      await dec('stp-qty').click();
+      expect(await val('stp-qty'), '1', 'at the lowest value');
+      expect(await disabledState('stp-qty', 'dec'), 'true', 'the button for less at the limit');
+      expect(await disabledState('stp-qty', 'inc'), 'false', 'the button for more');
+      const events = (await recorded()).events.length;
+      // (Playwright counts aria-disabled as disabled and waits for it to end: the press is forced)
+      await dec('stp-qty').click({ force: true });
+      expect(await val('stp-qty'), '1', 'a press at the limit');
+      expect((await recorded()).events.length, events, 'events of a press at the limit');
+      // a button that has the focus (a screen reader activates it) keeps it at the limit
+      await inc('stp-qty').focus();
+      for (let i = 0; i < 12; i += 1) { await page.keyboard.press('Enter'); }
+      expect(await val('stp-qty'), '10', 'after Enter on the button for more');
+      expect(await disabledState('stp-qty', 'inc'), 'true', 'the button for more at the highest value');
+      expect(await inc('stp-qty').evaluate(el => el === document.activeElement && !el.disabled), true, 'the focus and the disabled attribute');
+    });
+    await check('the arrow keys and Page up and down work in the field, with Shift and Page by ten steps, inside the limits', async () => {
+      await page.focus('#stp-gb');
+      expect(await val('stp-gb'), '20', 'storage at the start');
+      await page.keyboard.press('ArrowUp');
+      expect(await val('stp-gb'), '25', 'ArrowUp');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      expect(await val('stp-gb'), '15', 'ArrowDown twice');
+      await page.keyboard.press('PageUp');
+      expect(await val('stp-gb'), '65', 'PageUp is ten steps');
+      await page.keyboard.press('Shift+ArrowUp');
+      expect(await val('stp-gb'), '100', 'Shift and ArrowUp stop at the limit');
+      expect(await disabledState('stp-gb', 'inc'), 'true', 'the button for more at 100');
+      await page.keyboard.press('PageDown');
+      expect(await val('stp-gb'), '50', 'PageDown');
+      await page.keyboard.press('PageDown');
+      await page.keyboard.press('PageDown');
+      await page.keyboard.press('PageDown');
+      await page.keyboard.press('PageDown');
+      await page.keyboard.press('PageDown');
+      expect(await val('stp-gb'), '0', 'PageDown stops at the lowest value');
+      expect(await disabledState('stp-gb', 'dec'), 'true', 'the button for less at 0');
+    });
+    await check('Shift with a click is ten steps', async () => {
+      await typeIn('stp-gb', '20');
+      await inc('stp-gb').click({ modifiers: ['Shift'] });
+      expect(await val('stp-gb'), '70', 'twenty plus ten steps of five');
+      await dec('stp-gb').click({ modifiers: ['Shift'] });
+      expect(await val('stp-gb'), '20', 'and back');
+    });
+    await check('holding a button repeats after a short wait, faster and faster, and stops when it is released', async () => {
+      await typeIn('stp-gb', '0');
+      await record('stp-gb');
+      await inc('stp-gb').scrollIntoViewIfNeeded();
+      const box = await inc('stp-gb').boundingBox();
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.waitForTimeout(1600);
+      await page.mouse.up();
+      const held = await recorded();
+      const gaps = held.times.slice(1).map((t, i) => t - held.times[i]);
+      expectTrue(gaps.length >= 6, 'only ' + gaps.length + ' steps were made while the button was held');
+      expectTrue(gaps[0] >= 380, 'the first repeat came after ' + Math.round(gaps[0]) + ' ms: no short wait');
+      expectTrue(gaps[gaps.length - 1] < gaps[1] * 0.85, 'the steps do not get faster: ' + gaps.map(g => Math.round(g)).join(' '));
+      const after = await val('stp-gb');
+      await page.waitForTimeout(500);
+      expect(await val('stp-gb'), after, 'the value after the button was released');
+      expect(Number(after) % 5, 0, 'a value on the grid');
+    });
+    await check('what is typed is put inside the limits and on the grid before a listener hears of it', async () => {
+      await page.evaluate(() => { const i = document.getElementById('stp-qty'); window.__seen = []; i.addEventListener('change', () => window.__seen.push(i.value)); });
+      await typeIn('stp-qty', '99');
+      expect(await val('stp-qty'), '10', 'a value above the limit');
+      expect(await page.evaluate(() => window.__seen), ['10'], 'what a listener of change saw');
+      await typeIn('stp-qty', '0');
+      expect(await val('stp-qty'), '1', 'a value below the limit');
+      await typeIn('stp-gb', '23');
+      expect(await val('stp-gb'), '25', 'a value between two steps of five');
+      await typeIn('stp-gb', '22');
+      expect(await val('stp-gb'), '20', 'and the other way');
+    });
+    await check('decimals are exact: 0.1 plus 0.1 plus 0.1 is 0.3, data-precision keeps the decimals that are shown', async () => {
+      await page.$eval('#stp-opacity', el => { el.value = '0.1'; });
+      await inc('stp-opacity').click();
+      await inc('stp-opacity').click();
+      expect(await val('stp-opacity'), '0.3', 'three tenths');
+      await inc('stp-opacity').click();
+      expect(await val('stp-opacity'), '0.4', 'four tenths');
+      for (let i = 0; i < 6; i += 1) { await inc('stp-opacity').click(); }
+      expect(await val('stp-opacity'), '1', 'the highest value, without a trailing zero');
+      expect(await disabledState('stp-opacity', 'inc'), 'true', 'the button for more at 1');
+      await page.$eval('#stp-opacity', el => { el.value = '0.25'; el.dispatchEvent(new Event('change', { bubbles: true })); });
+      expect(await val('stp-opacity'), '0.3', 'a typed 0.25 goes to the nearest tenth');
+      expect(await val('stp-price'), '4.50', 'price at the start');
+      await inc('stp-price').click();
+      expect(await val('stp-price'), '4.75', 'a quarter more, two decimals');
+      await dec('stp-price').click();
+      expect(await val('stp-price'), '4.50', 'and back, with its trailing zero');
+      await page.$eval('#stp-price', el => { el.value = '0.1'; });
+      await dec('stp-price').click();
+      expect(await val('stp-price'), '0.00', 'down to the lowest value');
+      expect(await disabledState('stp-price', 'dec'), 'true', 'the button for less at 0');
+      expect(await disabledState('stp-price', 'inc'), 'false', 'a field without an upper limit has no limit for more');
+    });
+    await check('the unit sits inside the field before the button for more and is read with the field', async () => {
+      const state = await page.evaluate(() => {
+        const input = document.getElementById('stp-gb');
+        const unit = document.getElementById('stp-gb-unit');
+        const ir = input.getBoundingClientRect(), ur = unit.getBoundingClientRect(), br = input.parentNode.querySelector('.mat-stepper__btn--inc').getBoundingClientRect();
+        return { text: unit.textContent, inside: ur.left > ir.left + ir.width / 2 && ur.right <= ir.right, beforeButton: ur.right <= br.left, describedby: input.getAttribute('aria-describedby') };
+      });
+      expect(state, { text: 'GB', inside: true, beforeButton: true, describedby: 'stp-gb-unit' }, 'the unit');
+    });
+    await check('stacked arrows sit at the right of the field on a mouse and step like the buttons', async () => {
+      const state = await page.evaluate(() => {
+        const input = document.getElementById('stp-pages'), wrap = input.parentNode;
+        const up = wrap.querySelector('.mat-stepper__btn--inc').getBoundingClientRect(), down = wrap.querySelector('.mat-stepper__btn--dec').getBoundingClientRect(), box = wrap.getBoundingClientRect();
+        return { stacked: up.bottom <= down.top + 1 && up.top < down.top, right: Math.abs(box.right - up.right) <= 2, narrow: up.width < 40, height: Math.round(box.height) };
+      });
+      expect(state, { stacked: true, right: true, narrow: true, height: 40 }, 'stacked arrows');
+      // the field that has the focus does not cover them
+      await page.focus('#stp-pages');
+      const covered = await page.evaluate(() => ['inc', 'dec'].filter(k => {
+        const b = document.querySelector('#stp-pages').parentNode.querySelector('.mat-stepper__btn--' + k), r = b.getBoundingClientRect();
+        return !b.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
+      }));
+      expect(covered, [], 'arrows covered by the focused field');
+      await inc('stp-pages').click();
+      expect(await val('stp-pages'), '3', 'after the arrow up');
+      await dec('stp-pages').click();
+      await dec('stp-pages').click();
+      expect(await val('stp-pages'), '1', 'after two arrows down');
+      expect(await disabledState('stp-pages', 'dec'), 'true', 'the arrow down at 1');
+    });
+    await check('the sizes follow the input: 32, 40 and 48 px high, the buttons as high as the field', async () => {
+      const heights = await page.evaluate(() => ['stp-st-sm', 'stp-qty', 'stp-st-lg'].map(id => {
+        const input = document.getElementById(id);
+        return [Math.round(input.getBoundingClientRect().height), Math.round(input.parentNode.querySelector('.mat-stepper__btn--inc').getBoundingClientRect().height)];
+      }));
+      expect(heights, [[32, 32], [40, 40], [48, 48]], 'heights of the field and the button');
+    });
+    await check('a read-only stepper does not change and a disabled one has disabled buttons and is not sent', async () => {
+      await inc('stp-ro').click({ force: true });
+      await page.focus('#stp-ro');
+      await page.keyboard.press('ArrowUp');
+      expect(await val('stp-ro'), '4', 'read-only after a click and a key');
+      expect(await disabledState('stp-ro', 'inc'), 'true', 'the button of a read-only field');
+      expect(await page.$eval('.mat-stepper:has(#stp-off) > .mat-stepper__btn--inc', el => el.disabled), true, 'disabled button');
+      await inc('stp-off').click({ force: true });
+      expect(await val('stp-off'), '4', 'disabled after a click');
+      const colours = await page.evaluate(() => ['stp-off', 'stp-qty'].map(id => getComputedStyle(document.getElementById(id).parentNode.querySelector('.mat-stepper__btn--inc')).backgroundColor));
+      expectTrue(colours[0] !== colours[1], 'a disabled button looks like any other button');
+    });
+    await check('in a form: an empty required field gets its message and the border of the buttons follows, a press starts at the lowest value and takes the message away', async () => {
+      await page.evaluate(() => document.getElementById('stp-seats').scrollIntoView({ block: 'center' }));
+      await page.click('form[action="/Components#number-stepper"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#stp-seats').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked');
+      expect((await page.locator('#stp-seats').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please enter the number of seats.', 'the message');
+      expect(await page.evaluate(() => document.activeElement.id), 'stp-seats', 'the focus');
+      const colours = await page.evaluate(() => {
+        const input = document.getElementById('stp-seats');
+        return [getComputedStyle(input).borderTopColor, getComputedStyle(input.parentNode.querySelector('.mat-stepper__btn--inc')).borderTopColor];
+      });
+      expect(colours[0], colours[1], 'the border of the field and of the button');
+      await inc('stp-seats').click();
+      expect(await val('stp-seats'), '1', 'the first press of an empty field');
+      expect(await page.locator('#stp-seats').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after a valid value');
+    });
+    await check('a reset of the form puts the value back and the buttons follow', async () => {
+      await page.$eval('#stp-nights', el => { el.value = '30'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+      expect(await disabledState('stp-nights', 'inc'), 'true', 'the button for more at 30');
+      await page.$eval('#stp-nights', el => el.form.reset());
+      await page.waitForTimeout(50);
+      expect(await val('stp-nights'), '2', 'the value after the reset');
+      expect(await disabledState('stp-nights', 'inc'), 'false', 'the button for more after the reset');
+    });
+    await check('the grid is the browser\'s: counted from min (else the value attribute), the largest value of the grid below max, a value outside the limits can only come back, step="any" adds one', async () => {
+      // [attributes, presses (+ more, - less, P ten steps more, M ten steps less), the value after them, the buttons that cannot go further after them]
+      const cases = [
+        ['min="-5" max="5" step="1" value="0"', '-------', '-5', 'dec'],
+        ['min="0" max="10" step="3" value="9"', '+', '9', 'inc'],
+        ['min="0" max="10" step="3" value="10"', '+', '10', 'inc'],
+        ['min="0" max="10" step="3" value="10"', '-', '9', 'inc'],
+        ['min="0" max="1" step="0.1" value="0.7"', '+++', '1', 'inc'],
+        ['min="0" max="1" step="0.01" value="0.07"', '+++', '0.1', ''],
+        ['step="any" value="1.5"', '+', '2.5', ''],
+        ['step="5" value="2"', '++', '12', ''],
+        ['min="-1" max="1" step="0.5" value="-0.5"', '++', '0.5', ''],
+        ['min="5" max="9" step="1"', '+', '5', 'dec'],
+        ['min="5" max="9" step="1"', '-', '5', 'dec'],
+        ['min="0" max="100" step="1" value="500"', '+', '500', 'inc'],
+        ['min="0" max="100" step="1" value="500"', '-', '100', 'inc'],
+        ['min="0" max="100" step="5" value="0"', 'P', '50', ''],
+        ['min="0" max="100" step="5" value="35"', 'P-', '80', ''],
+        ['min="0" step="0.25" value="0" data-precision="2"', '+', '0.25', ''],
+      ];
+      const found = await page.evaluate(cases => {
+        const host = document.createElement('div');
+        host.id = 'stp-grid';
+        document.getElementById('number-stepper').appendChild(host);
+        host.innerHTML = cases.map((c, n) => {
+          const [attrs] = c;
+          const data = /data-precision/.test(attrs) ? ' data-precision="2"' : '';
+          return `<div class="mat-stepper" data-stepper${data}><input class="mat-input" type="number" id="stp-grid-${n}" name="g${n}" ${attrs.replace(/ ?data-precision="2"/, '')} /></div>`;
+        }).join('');
+        window.MatUi.refresh();
+        return cases.map((c, n) => {
+          const input = document.getElementById('stp-grid-' + n), wrap = input.parentNode;
+          const inc = wrap.querySelector('.mat-stepper__btn--inc'), dec = wrap.querySelector('.mat-stepper__btn--dec');
+          // a click without a press (detail 0) is what the keyboard and an assistive technology make
+          const press = (b, shift) => b.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0, shiftKey: shift }));
+          c[1].split('').forEach(p => press(p === '+' || p === 'P' ? inc : dec, p === 'P' || p === 'M'));
+          const limits = ['dec', 'inc'].filter(k => wrap.querySelector('.mat-stepper__btn--' + k).getAttribute('aria-disabled') === 'true').join(',');
+          return [input.value, limits];
+        });
+      }, cases);
+      cases.forEach((c, n) => {
+        expect(found[n][0], c[2], `${c[0]}, presses ${c[1]}: the value`);
+        expect(found[n][1], c[3], `${c[0]}, presses ${c[1]}: the buttons that cannot go further`);
+      });
+      await page.evaluate(() => document.getElementById('stp-grid').remove());
+    });
+    await check('MatUi.refresh makes the buttons of a stepper that came later, with the names in the language of the page', async () => {
+      await page.evaluate(() => {
+        document.documentElement.lang = 'de';
+        const host = document.createElement('div');
+        host.className = 'mat-field';
+        host.id = 'stp-late';
+        host.innerHTML = '<label class="mat-label" for="stp-late-n">Menge</label><div class="mat-stepper" data-stepper><input class="mat-input" type="number" id="stp-late-n" name="late" min="0" max="3" step="1" value="3" /></div>';
+        document.getElementById('number-stepper').appendChild(host);
+        window.MatUi.refresh();
+      });
+      expect(await page.getAttribute('#stp-late .mat-stepper__btn--dec', 'aria-label'), 'Menge verringern', 'German name of the button for less');
+      expect(await page.getAttribute('#stp-late .mat-stepper__btn--inc', 'aria-label'), 'Menge erhöhen', 'German name of the button for more');
+      expect(await page.getAttribute('#stp-late .mat-stepper__btn--inc', 'aria-disabled'), 'true', 'at the highest value');
+      await page.evaluate(() => { document.documentElement.lang = 'en'; document.getElementById('stp-late').remove(); });
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#number-stepper');
+    await check('on a phone every stepper has buttons of the size of a control (also the stacked one), a tap steps once and nothing is wider than the screen', async () => {
+      await page.evaluate(() => document.getElementById('number-stepper').scrollIntoView());
+      const state = await page.evaluate(() => {
+        const out = { coarse: matchMedia('(pointer: coarse)').matches, overflow: document.documentElement.scrollWidth > innerWidth, small: [] };
+        document.querySelectorAll('#number-stepper .mat-stepper__btn').forEach(b => {
+          const r = b.getBoundingClientRect();
+          const sm = b.closest('.mat-stepper').querySelector('.mat-input--sm');
+          if (r.width < (sm ? 36 : 44) - 1 || r.height < (sm ? 36 : 44) - 1) { out.small.push(Math.round(r.width) + 'x' + Math.round(r.height)); }
+        });
+        out.stackedPosition = getComputedStyle(document.querySelector('#stp-pages ~ .mat-stepper__btn--inc')).position;
+        return out;
+      });
+      expect(state, { coarse: true, overflow: false, small: [], stackedPosition: 'relative' }, 'steppers on a phone');
+      await page.tap('.mat-stepper:has(#stp-qty) > .mat-stepper__btn--inc');
+      expect(await page.$eval('#stp-qty', el => el.value), '4', 'after one tap');
+      await page.tap('.mat-stepper:has(#stp-pages) > .mat-stepper__btn--inc');
+      expect(await page.$eval('#stp-pages', el => el.value), '3', 'after one tap on the stacked one');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- dropdown with checkboxes (FORM-15)
+  console.log('\nDropdown with checkboxes');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#checkbox-select');
+    const panel = id => `#${id}-trigger ~ .mat-picker__panel`;
+    const val = id => page.$eval(`#${id}`, el => el.value);
+    const shown = async id => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
+    const all = id => page.locator(`${panel(id)} .mat-picker__all`);
+    const allState = id => page.getAttribute(`${panel(id)} .mat-picker__all`, 'aria-checked');
+    const allLabel = async id => (await all(id).textContent()).trim();
+    const active = () => page.evaluate(() => document.activeElement.classList.contains('mat-picker__all') ? 'all' : document.activeElement.getAttribute('data-value'));
+    const countChanges = id => page.evaluate(i => { window.__changes = 0; document.getElementById(i).addEventListener('change', () => { window.__changes += 1; }); }, id);
+
+    await page.evaluate(() => document.getElementById('checkbox-select').scrollIntoView());
+    await check('Select all is the first row, a checkbox in three states: the field starts with two days ticked, so the box is in between', async () => {
+      expect(await shown('cbs-days'), 'Monday, Wednesday', 'the field names one or two entries');
+      await page.click('#cbs-days-trigger');
+      expectTrue(await page.locator(panel('cbs-days')).isVisible(), 'the panel is not shown');
+      expect(await all('cbs-days').getAttribute('role'), 'checkbox', 'role of the row');
+      expect(await allState('cbs-days'), 'mixed', 'state with some entries ticked');
+      expect(await allLabel('cbs-days'), 'Select all', 'its text');
+      expect(await page.evaluate(sel => { const a = document.querySelector(sel + ' .mat-picker__all'); return a.nextElementSibling.classList.contains('mat-picker__options') && !a.closest('.mat-picker__options'); }, panel('cbs-days')), true, 'the row stands above the list');
+      expect(await page.locator(`${panel('cbs-days')} .mat-picker__option .mat-picker__desc`).count(), 0, 'plain entries have no description');
+    });
+    await check('a click on Select all ticks every entry with one change event, says All selected, and takes them all away when all are ticked', async () => {
+      await countChanges('cbs-days');
+      await all('cbs-days').click();
+      expect(await val('cbs-days'), 'mon, tue, wed, thu, fri, sat, sun', 'the value in the order of the entries');
+      expect(await allState('cbs-days'), 'true', 'the box with everything ticked');
+      expect(await shown('cbs-days'), 'All selected', 'the field');
+      expect(await page.evaluate(() => window.__changes), 1, 'change events of one click');
+      expect(await page.locator(`${panel('cbs-days')} .mat-picker__option[aria-selected="true"]`).count(), 7, 'entries ticked');
+      expect(await active(), 'all', 'the focus stays on the row');
+      await all('cbs-days').click();
+      expect(await val('cbs-days'), '', 'the value after the second click');
+      expect(await allState('cbs-days'), 'false', 'the box with nothing ticked');
+      expect(await shown('cbs-days'), 'Choose days', 'the field shows its placeholder');
+    });
+    await check('ticking entries updates the box and the field: names for one or two, the count from three, All selected for every one', async () => {
+      await page.click(`${panel('cbs-days')} [data-value="mon"]`);
+      expect(await shown('cbs-days'), 'Monday', 'one');
+      expect(await allState('cbs-days'), 'mixed', 'the box with one of seven');
+      await page.click(`${panel('cbs-days')} [data-value="tue"]`);
+      expect(await shown('cbs-days'), 'Monday, Tuesday', 'two');
+      await page.click(`${panel('cbs-days')} [data-value="wed"]`);
+      expect(await shown('cbs-days'), '3 selected', 'three');
+      await all('cbs-days').click();
+      expect(await val('cbs-days'), 'mon, tue, wed, thu, fri, sat, sun', 'a click on a box in between ticks the rest');
+      await page.click(`${panel('cbs-days')} [data-value="sun"]`);
+      expect(await shown('cbs-days'), '6 selected', 'six of seven');
+      await page.keyboard.press('Escape');
+    });
+    await check('keys: the arrow keys, Home and End walk Select all and the entries, Space ticks, Escape gives the focus back to the field', async () => {
+      await page.$eval('#cbs-days', el => { el.value = 'mon, wed'; });
+      await page.evaluate(() => window.MatUi.refresh());
+      await page.focus('#cbs-days-trigger');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'mon', 'the focus on opening is on the first ticked entry');
+      await page.keyboard.press('Home');
+      expect(await active(), 'all', 'Home goes to Select all');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'mon', 'ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'tue', 'ArrowDown again');
+      await page.keyboard.press('Space');
+      expect(await val('cbs-days'), 'mon, tue, wed', 'Space ticks the entry');
+      expect(await active(), 'tue', 'the focus stays on the entry');
+      await page.keyboard.press('Space');
+      expect(await val('cbs-days'), 'mon, wed', 'Space unticks it');
+      await page.keyboard.press('End');
+      expect(await active(), 'sun', 'End goes to the last entry');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'sun', 'ArrowDown at the end');
+      await page.keyboard.press('ArrowUp');
+      expect(await active(), 'sat', 'ArrowUp');
+      await page.keyboard.press('Home');
+      await page.keyboard.press('Space');
+      expect(await val('cbs-days'), 'mon, tue, wed, thu, fri, sat, sun', 'Space on Select all with some ticked');
+      await page.keyboard.press('Space');
+      expect(await val('cbs-days'), '', 'Space on Select all with all ticked');
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator(panel('cbs-days')).isVisible()), 'Escape did not close the panel');
+      expect(await page.evaluate(() => document.activeElement.id), 'cbs-days-trigger', 'the focus after Escape');
+    });
+    await check('with a search Select all means what is shown, its box looks at what is shown, and the others stay as they are', async () => {
+      await page.evaluate(() => document.getElementById('cbs-countries').scrollIntoView({ block: 'center' }));
+      await page.click('#cbs-countries-trigger');
+      const search = page.locator(`${panel('cbs-countries')} input[type=search]`);
+      await page.click(`${panel('cbs-countries')} [data-value="at"]`);
+      expect(await val('cbs-countries'), 'at', 'Austria ticked');
+      await search.fill('an');
+      expect(await page.locator(`${panel('cbs-countries')} .mat-picker__option:not([hidden])`).count(), 5, 'entries shown for an');
+      expect(await allLabel('cbs-countries'), 'Select all found', 'its text while a search narrows the list');
+      expect(await allState('cbs-countries'), 'false', 'none of the shown entries is ticked');
+      await all('cbs-countries').click();
+      expect(await val('cbs-countries'), 'at, fr, de, nl, pl, ch', 'the shown entries are ticked, Austria stays');
+      expect(await allState('cbs-countries'), 'true', 'all that are shown are ticked');
+      await search.fill('');
+      expect(await allLabel('cbs-countries'), 'Select all', 'its text without a search');
+      expect(await allState('cbs-countries'), 'mixed', 'six of eleven');
+      expect(await shown('cbs-countries'), '6 selected', 'the field');
+      await search.fill('an');
+      await all('cbs-countries').click();
+      expect(await val('cbs-countries'), 'at', 'a second click takes away only what is shown');
+      expect(await shown('cbs-countries'), 'Austria', 'the field');
+      await search.fill('zzz');
+      expectTrue(!(await all('cbs-countries').isVisible()), 'Select all is shown with nothing to select');
+      expectTrue(await page.locator(`${panel('cbs-countries')} .mat-picker__empty`).isVisible(), 'no message that nothing was found');
+      await search.fill('');
+      await all('cbs-countries').click();
+      expect(await shown('cbs-countries'), 'All selected', 'everything without a search');
+      expect(await val('cbs-countries'), 'at, be, dk, fr, de, it, nl, pl, es, se, ch', 'all eleven');
+      await page.click(`${panel('cbs-countries')} [data-picker-action]`);
+      await page.click('#cbs-countries-trigger ~ .mat-picker__clear');
+      expect(await val('cbs-countries'), '', 'the value after Clear');
+    });
+    await check('the arrow keys and Select all skip an entry that cannot be chosen, which keeps its state', async () => {
+      await page.evaluate(() => document.getElementById('cbs-channels').scrollIntoView({ block: 'center' }));
+      await page.click('#cbs-channels-trigger');
+      expect(await allState('cbs-channels'), 'mixed', 'one of three that can be chosen');
+      await all('cbs-channels').click();
+      expect(await val('cbs-channels'), 'mail, push, chat', 'the entry that cannot be chosen is not ticked');
+      expect(await allState('cbs-channels'), 'true', 'all that can be chosen');
+      expect(await shown('cbs-channels'), '3 selected', 'the field');
+      await page.keyboard.press('Home');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'chat', 'the arrow keys go from push to chat');
+      await page.keyboard.press('ArrowDown');
+      expect(await active(), 'chat', 'and do not enter the entry that cannot be chosen');
+      expect(await page.locator(`${panel('cbs-channels')} [data-value="sms"]`).getAttribute('aria-disabled'), 'true', 'aria-disabled of the entry');
+      await page.keyboard.press('Escape');
+    });
+    await check('in a form a dropdown with nothing ticked gets its message at the field and Select all clears it', async () => {
+      await page.evaluate(() => document.getElementById('cbs-req').scrollIntoView({ block: 'center' }));
+      await page.click('form[action="/Components#checkbox-select"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#cbs-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked');
+      expect((await page.locator('#cbs-req').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose at least one day.', 'the message');
+      expect(await page.evaluate(() => document.activeElement.id), 'cbs-req-trigger', 'the focus');
+      await page.click('#cbs-req-trigger');
+      await all('cbs-req').click();
+      expect(await page.locator('#cbs-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after the choice');
+      await page.keyboard.press('Escape');
+    });
+    await check('the texts of Select all and of the field follow the language of the page', async () => {
+      await page.evaluate(() => { document.documentElement.lang = 'de'; });
+      await page.evaluate(() => document.getElementById('cbs-days').scrollIntoView({ block: 'center' }));
+      await page.click('#cbs-days-trigger');
+      expect(await allLabel('cbs-days'), 'Alle auswählen', 'the row in German');
+      await all('cbs-days').click();
+      expect(await shown('cbs-days'), 'Alle gewählt', 'the field in German');
+      await page.keyboard.press('Escape');
+      await page.evaluate(() => { document.documentElement.lang = 'en'; });
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#checkbox-select');
+    await check('on a phone the dropdown with checkboxes fills the screen, Select all is as tall as a control and a tap ticks everything', async () => {
+      await page.evaluate(() => document.getElementById('cbs-countries').scrollIntoView({ block: 'center' }));
+      await page.tap('#cbs-countries-trigger');
+      const state = await page.evaluate(() => {
+        const panel = document.querySelector('#cbs-countries-trigger ~ .mat-picker__panel');
+        const r = panel.getBoundingClientRect(), a = panel.querySelector('.mat-picker__all').getBoundingClientRect();
+        return { position: getComputedStyle(panel).position, full: Math.round(r.width) === innerWidth && Math.round(r.height) === innerHeight, tall: a.height >= 44, overflow: document.documentElement.scrollWidth > innerWidth };
+      });
+      expect(state, { position: 'fixed', full: true, tall: true, overflow: false }, 'the panel on a phone');
+      await page.tap('#cbs-countries-trigger ~ .mat-picker__panel .mat-picker__all');
+      expect((await page.textContent('#cbs-countries-trigger .mat-picker__value')).trim(), 'All selected', 'the field after a tap on Select all');
+      expect(await page.getAttribute('#cbs-countries-trigger ~ .mat-picker__panel .mat-picker__all', 'aria-checked'), 'true', 'the box');
+      await page.tap('#cbs-countries-trigger ~ .mat-picker__panel [data-picker-action]');
+      expectTrue(!(await page.locator('#cbs-countries-trigger ~ .mat-picker__panel').isVisible()), 'Done did not close the panel');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- pickers
   console.log('\nPickers');
   {
@@ -1103,6 +2994,30 @@ function seenAt(page, selector) {
     const panelOf = id => page.locator(`#${id}-trigger ~ .mat-picker__panel`);
     const valueOf = id => page.$eval(`#${id}`, el => el.value);
     const shown = async id => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
+
+    await check('a picker panel is drawn at its place from the first frame on and only fades in (it does not move or grow into place)', async () => {
+      for (const id of ['pk-plan', 'pk-date', 'pk-period', 'pk-time', 'pk-colour']) {
+        await page.evaluate(sel => document.querySelector(sel).scrollIntoView({ block: 'center' }), `#${id}-trigger`);
+        await page.waitForTimeout(300);
+        await page.evaluate(sel => {
+          window.__frames = [];
+          const t0 = performance.now();
+          (function tick() {
+            const panel = document.querySelector(sel + ' ~ .mat-picker__panel');
+            if (panel && !panel.hidden) { const r = panel.getBoundingClientRect(); window.__frames.push({ x: r.x, y: r.y, w: r.width, h: r.height }); }
+            if (performance.now() - t0 < 700) { requestAnimationFrame(tick); }
+          })();
+        }, `#${id}-trigger`);
+        await page.click(`#${id}-trigger`);
+        await page.waitForTimeout(800);
+        const frames = await page.evaluate(() => window.__frames);
+        expectTrue(frames.length > 3, id + ': no frames of the panel');
+        const last = frames[frames.length - 1];
+        const off = Math.max(...frames.map(f => Math.abs(f.x - last.x) + Math.abs(f.y - last.y) + Math.abs(f.w - last.w) + Math.abs(f.h - last.h)));
+        expectTrue(off < 1.5, `${id}: the panel was ${off.toFixed(1)} px away from its place on an earlier frame`);
+        await page.keyboard.press('Escape');
+      }
+    });
 
     await check('a select with details shows the chosen option in the field, opens a panel with descriptions and tags, and a click chooses and closes', async () => {
       expectTrue((await shown('pk-plan')).startsWith('Team'), 'the field does not show the chosen plan: ' + await shown('pk-plan'));
@@ -1162,6 +3077,131 @@ function seenAt(page, selector) {
       await page.click('#pk-req-trigger');
       await page.click('#pk-req-trigger ~ .mat-picker__panel [data-value="vps"]');
       expect(await page.locator('#pk-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after a choice');
+    });
+
+    // ---- tags
+    const chips = id => page.$$eval(`#${id} ~ .mat-tagfield .mat-chip`, els => els.map(e => e.getAttribute('data-tag')).join('|'));
+    const status = id => page.$eval(`#${id} ~ .mat-picker__status`, el => el.hidden ? '' : el.textContent.trim());
+    await page.evaluate(() => document.getElementById('tag-input').scrollIntoView());
+    await check('a tag input draws the saved tags as chips and posts them joined by a comma', async () => {
+      expect(await chips('pk-tags'), 'finance|urgent', 'chips');
+      expect(await valueOf('pk-tags'), 'finance, urgent', 'the posted value');
+      expect(await page.locator('#pk-tags ~ .mat-tagfield .mat-chip__x').first().getAttribute('aria-label'), 'Remove tag finance', 'the name of a remove button');
+      expect(await page.getAttribute('#pk-tags-entry', 'placeholder'), '', 'no placeholder while there are tags');
+    });
+    await check('Enter and a comma add a tag, a tag that is there is refused with a message, Backspace removes the last one', async () => {
+      await page.click('#pk-tags-entry');
+      await page.keyboard.type('Planning');
+      await page.keyboard.press('Enter');
+      await page.keyboard.type('review,');
+      expect(await chips('pk-tags'), 'finance|urgent|Planning|review', 'chips after Enter and a comma');
+      expect(await valueOf('pk-tags'), 'finance, urgent, Planning, review', 'the posted value');
+      await page.keyboard.type('FINANCE');
+      await page.keyboard.press('Enter');
+      expect(await chips('pk-tags'), 'finance|urgent|Planning|review', 'a tag twice');
+      expect(await status('pk-tags'), 'FINANCE is already there', 'the message');
+      expect(await page.inputValue('#pk-tags-entry'), 'FINANCE', 'the text stays so that it can be corrected');
+      await page.fill('#pk-tags-entry', '');
+      await page.keyboard.press('Backspace');
+      expect(await chips('pk-tags'), 'finance|urgent|Planning', 'Backspace in the empty field');
+      expect(await status('pk-tags'), 'Removed review', 'the message');
+    });
+    await check('an X removes a tag and the focus stays in the field; pasted text is split at commas and line breaks', async () => {
+      await page.click('#pk-tags ~ .mat-tagfield .mat-chip[data-tag="urgent"] .mat-chip__x');
+      expect(await chips('pk-tags'), 'finance|Planning', 'after the X');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-tags-entry', 'the focus');
+      await page.evaluate(() => {
+        const dt = new DataTransfer();
+        dt.setData('text', 'alpha, beta\ngamma, Planning');
+        document.getElementById('pk-tags-entry').dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+      });
+      expect(await chips('pk-tags'), 'finance|Planning|alpha|beta|gamma', 'chips after the paste (Planning was there)');
+      expect(await status('pk-tags'), 'Planning is already there', 'the message about the one that was refused');
+      expect(await page.inputValue('#pk-tags-entry'), 'Planning', 'only the refused part stays in the text field');
+    });
+    await check('the arrow keys walk the remove buttons and Backspace removes the one in focus', async () => {
+      await page.fill('#pk-tags-entry', '');
+      await page.click('#pk-tags-entry');
+      await page.keyboard.press('ArrowLeft');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Remove tag gamma', 'the last remove button');
+      await page.keyboard.press('ArrowLeft');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Remove tag beta', 'the one before');
+      await page.keyboard.press('Backspace');
+      expect(await chips('pk-tags'), 'finance|Planning|alpha|gamma', 'after Backspace on a button');
+      expect(await page.evaluate(() => document.activeElement.classList.contains('mat-chip__x')), true, 'the focus stays on a remove button');
+      await page.keyboard.press('End');
+    });
+    await check('what is typed becomes a tag when the field is left', async () => {
+      await page.click('#pk-tags-entry');
+      await page.keyboard.type('last');
+      await page.keyboard.press('Tab');
+      expect(await chips('pk-tags'), 'finance|Planning|alpha|gamma|last', 'the typed text');
+      expect(await valueOf('pk-tags'), 'finance, Planning, alpha, gamma, last', 'the posted value');
+    });
+
+    await page.evaluate(() => document.getElementById('pk-labels').scrollIntoView({ block: 'center' }));
+    const suggestions = id => page.locator(`#${id} ~ .mat-picker__panel .mat-picker__option:not([hidden])`);
+    await check('suggestions: the list opens under the field, narrows while typing, the arrow keys and Enter take one and a taken one is not offered again', async () => {
+      await page.click('#pk-labels-entry');
+      expectTrue(await page.locator('#pk-labels ~ .mat-picker__panel').isVisible(), 'the list is not shown');
+      expect(await page.getAttribute('#pk-labels-entry', 'aria-expanded'), 'true', 'aria-expanded');
+      expect(await suggestions('pk-labels').count(), 5, 'the suggestions: Mail is taken');
+      await page.keyboard.type('ca');
+      expect(await suggestions('pk-labels').allTextContents(), ['Calendar'], 'the list for "ca"');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.getElementById(document.getElementById('pk-labels-entry').getAttribute('aria-activedescendant')).textContent.trim()), 'Calendar', 'the marked suggestion');
+      await page.keyboard.press('Enter');
+      expect(await chips('pk-labels'), 'Mail|Calendar', 'chips after Enter on a suggestion');
+      expect(await page.inputValue('#pk-labels-entry'), '', 'the text after the choice');
+      expect(await suggestions('pk-labels').count(), 4, 'Calendar is not offered again');
+      await page.waitForTimeout(400);   // the list fades in with a small scale: measure when it has settled
+      const field = await page.locator('#pk-labels ~ .mat-tagfield').boundingBox();
+      const panel = await page.locator('#pk-labels ~ .mat-picker__panel').boundingBox();
+      expectTrue(Math.abs(panel.width - field.width) < 3 && panel.y >= field.y + field.height - 2, 'the list is not under the field with its width');
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator('#pk-labels ~ .mat-picker__panel').isVisible()), 'Escape did not close the list');
+    });
+    await check('the limit: at five tags the sixth is refused with a message', async () => {
+      await page.click('#pk-labels ~ .mat-tagfield');
+      for (const name of ['Files', 'Photos', 'Notes']) { await page.click(`#pk-labels ~ .mat-picker__panel .mat-picker__option[data-value="${name}"]`); }
+      expect(await chips('pk-labels'), 'Mail|Calendar|Files|Photos|Notes', 'five tags');
+      await page.keyboard.type('Backups');
+      await page.keyboard.press('Enter');
+      expect(await chips('pk-labels'), 'Mail|Calendar|Files|Photos|Notes', 'the sixth');
+      expect(await status('pk-labels'), 'At most 5 tags', 'the message');
+      await page.keyboard.press('Escape');
+    });
+
+    await page.evaluate(() => document.getElementById('pk-topics').scrollIntoView({ block: 'center' }));
+    await check('only from the list: other text is refused, a required field writes its message and takes the focus into the field', async () => {
+      await page.click('form[action="/Components#tag-input"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#pk-topics').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked invalid');
+      expect((await page.locator('#pk-topics').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please add at least one topic.', 'the message');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-topics-entry', 'the focus');
+      expect(await page.getAttribute('#pk-topics-entry', 'aria-invalid'), 'true', 'aria-invalid of the text field');
+      await page.keyboard.type('zzz');
+      expect(await suggestions('pk-topics').count(), 0, 'suggestions for "zzz"');
+      expectTrue(await page.locator('#pk-topics ~ .mat-picker__panel .mat-picker__empty').isVisible(), 'no message that nothing was found');
+      await page.keyboard.press('Enter');
+      expect(await chips('pk-topics'), '', 'a tag that is not a suggestion');
+      expect(await status('pk-topics'), 'Choose one of the suggestions', 'the message');
+      await page.fill('#pk-topics-entry', 'sec');
+      await page.keyboard.press('Enter');
+      expect(await chips('pk-topics'), 'Security', 'the first match is taken by Enter');
+      expect(await page.locator('#pk-topics').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after a tag was added');
+      expect(await valueOf('pk-topics'), 'Security', 'the posted value');
+    });
+    await check('a disabled input locks the field, a read-only one has no text field', async () => {
+      const removable = await page.locator('#pk-tags ~ .mat-tagfield .mat-chip__x').count();
+      expectTrue(removable > 0, 'no remove buttons before the lock');
+      await page.evaluate(() => { document.getElementById('pk-labels').disabled = true; document.getElementById('pk-tags').readOnly = true; window.MatUi.refresh(); });
+      expect(await page.locator('#pk-labels ~ .mat-tagfield .mat-chip__x').count(), 0, 'remove buttons of a disabled field');
+      expect(await page.locator('#pk-labels-entry').isDisabled(), true, 'the text field of a disabled field');
+      expect(await page.locator('#pk-tags ~ .mat-tagfield .mat-chip__x').count(), 0, 'remove buttons of a read-only field');
+      expectTrue(!(await page.locator('#pk-tags-entry').isVisible()), 'the text field of a read-only field');
+      await page.evaluate(() => { document.getElementById('pk-labels').disabled = false; document.getElementById('pk-tags').readOnly = false; window.MatUi.refresh(); });
+      expect(await page.locator('#pk-tags ~ .mat-tagfield .mat-chip__x').count(), removable, 'remove buttons after the lock is gone');
     });
 
     await page.evaluate(() => document.getElementById('date-picker').scrollIntoView());
@@ -1349,6 +3389,1419 @@ function seenAt(page, selector) {
       await page.click('#pk-time-trigger');
       expect(await page.evaluate(() => document.activeElement.classList.contains('mat-timecol__item')), true, 'the focus');
       await page.click('#pk-time-trigger ~ .mat-picker__panel [data-picker-close]');
+    });
+    await check('on a phone the suggestions of a tag input are a dropdown under the field, not a full-screen sheet, and the chips wrap inside the field', async () => {
+      await page.evaluate(() => document.getElementById('pk-labels').scrollIntoView({ block: 'center' }));
+      await page.click('#pk-labels-entry');
+      const panel = '#pk-labels ~ .mat-picker__panel';
+      expectTrue(await page.locator(panel).isVisible(), 'the list is not shown');
+      await page.waitForTimeout(400);   // the list fades in with a small scale: measure when it has settled
+      const state = await page.evaluate(() => {
+        const f = document.querySelector('#pk-labels ~ .mat-tagfield').getBoundingClientRect();
+        const p = document.querySelector('#pk-labels ~ .mat-picker__panel').getBoundingClientRect();
+        return { sheet: Math.round(p.height) >= innerHeight, widthOk: Math.abs(p.width - f.width) < 3, beside: p.top >= f.bottom - 2 || p.bottom <= f.top + 2, inside: p.left >= 0 && p.right <= innerWidth, noLock: !document.documentElement.classList.contains('mat-lock'), overflow: document.documentElement.scrollWidth > innerWidth };
+      });
+      expect(state, { sheet: false, widthOk: true, beside: true, inside: true, noLock: true, overflow: false }, 'the list');
+      await page.keyboard.press('Escape');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- calendar (FORM-18)
+  // The checks do not depend on the day they run: what is about today is computed from the clock of the machine, the rest happens in March 2030.
+  console.log('\nCalendar');
+  const calPad = n => String(n).padStart(2, '0');
+  const calIso = d => `${d.getFullYear()}-${calPad(d.getMonth() + 1)}-${calPad(d.getDate())}`;
+  const calDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const calPlus = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + n); return d; };
+  // puts markup into the page (below the examples) and wires it, like an app that adds a calendar later
+  const calPut = (page, html) => page.evaluate(h => {
+    let box = document.getElementById('e2e-box');
+    if (!box) { box = document.createElement('div'); box.id = 'e2e-box'; document.querySelector('.mat-main').appendChild(box); }
+    box.innerHTML = h;
+    window.MatUi.refresh(box);
+  }, html);
+  const calField = (id, attrs, label = 'Day', extra = '') => `<div class="mat-field"><label class="mat-label" for="${id}">${label}</label><div class="mat-calendar" data-calendar ${attrs}><input class="mat-calendar__input" id="${id}" name="${id}" ${extra} /></div></div>`;
+  const calLog = (page, id) => page.evaluate(i => {
+    window.__events = [];
+    const el = document.getElementById(i);
+    ['input', 'change'].forEach(t => el.addEventListener(t, () => window.__events.push(t + ':' + el.value)));
+  }, id);
+  const calEvents = page => page.evaluate(() => window.__events);
+  const calGo = (page, id, day) => page.evaluate(([i, d]) => window.MatUi.calendar.go(document.getElementById(i), d), [id, day]);
+  const calDays = (page, root) => page.$$eval(`${root} .mat-cal__day`, els => els.map(b => ({ date: b.getAttribute('data-date'), off: b.disabled, cls: b.className, label: b.getAttribute('aria-label'), tab: b.tabIndex, marks: b.querySelectorAll('.mat-cal__mark').length })));
+  // the first day that can be chosen, looking at this month and at the next two
+  const calFirstOpen = async (page, root) => {
+    for (let i = 0; i < 3; i += 1) {
+      const open = (await calDays(page, root)).filter(d => !d.off)[0];
+      if (open) { return open.date; }
+      await page.click(`${root} [data-cal-nav="1"]`);
+    }
+    return null;
+  };
+  const calTitle = (page, root) => page.$eval(`${root} .mat-cal__title`, el => el.textContent.trim());
+  const calActive = page => page.evaluate(() => document.activeElement.getAttribute('data-date') || document.activeElement.getAttribute('data-cal-month') || document.activeElement.getAttribute('data-cal-year') || document.activeElement.className);
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#calendar');
+    const calRoot = '#e2e-box .mat-calendar';
+
+    await check('a calendar names itself after its label, shows one month from Monday with today marked, and posts nothing before a choice', async () => {
+      await calPut(page, calField('e2e-c1', '', 'Day of the visit'));
+      expect(await page.getAttribute(calRoot, 'aria-label'), 'Day of the visit', 'the name of the group');
+      expect(await page.getAttribute(calRoot, 'role'), 'group', 'the role');
+      expect(await page.locator(`${calRoot} .mat-cal__month`).count(), 1, 'months');
+      expect((await page.$$eval(`${calRoot} .mat-cal__dow`, els => els.map(e => e.textContent.trim()))).join(' '), 'Mon Tue Wed Thu Fri Sat Sun', 'the week days');
+      expect(await page.$$eval(`${calRoot} .mat-cal__day.is-today`, els => els.map(e => e.getAttribute('data-date'))), [calIso(calPlus(0))], 'today');
+      expect(await page.$eval('#e2e-c1', el => el.value), '', 'the value');
+      expect((await calDays(page, calRoot)).filter(d => d.tab === 0).length, 1, 'days that the Tab key stops at');
+      expectTrue(/\d{4}$/.test(await page.getAttribute(`${calRoot} .mat-cal__day.is-today`, 'aria-label')), 'a day is named with its full date');
+    });
+
+    await check('data-min="today" and data-max take the past and the far future away, closed weekdays are disabled, and a click posts one ISO date with input and change', async () => {
+      await calPut(page, calField('e2e-c2', 'data-min="today" data-max="+20d" data-disabled-weekdays="0,6"'));
+      await calLog(page, 'e2e-c2');
+      const today = calPlus(0), last = calPlus(20);
+      const wanted = d => { const x = calDate(d); return x < today || x > last || x.getDay() === 0 || x.getDay() === 6; };
+      const wrong = [];
+      for (let step = 0; step < 3; step += 1) {
+        (await calDays(page, calRoot)).forEach(d => { if (d.off !== wanted(d.date)) { wrong.push(d.date); } });
+        if (await page.locator(`${calRoot} [data-cal-nav="1"]`).isDisabled()) { break; }
+        await page.click(`${calRoot} [data-cal-nav="1"]`);
+      }
+      expect(wrong, [], 'days with the wrong state');
+      expect(await page.locator(`${calRoot} [data-cal-nav="1"]`).isDisabled(), true, 'no way to a month after data-max');
+      await calGo(page, 'e2e-c2', calIso(today));
+      expect(await page.locator(`${calRoot} [data-cal-nav="-1"]`).isDisabled(), true, 'no way to a month before data-min');
+      const first = await calFirstOpen(page, calRoot);
+      expectTrue(first !== null && calDate(first) >= today, 'a day that can be chosen: ' + first);
+      await page.click(`${calRoot} [data-date="${first}"]`);
+      expect(await page.$eval('#e2e-c2', el => el.value), first, 'the posted value');
+      expect(await calEvents(page), [`input:${first}`, `change:${first}`], 'the events of the real input');
+      expect(await page.getAttribute(`${calRoot} [data-date="${first}"]`, 'aria-selected'), 'true', 'aria-selected');
+      await page.click(`${calRoot} [data-date="${first}"]`);
+      expect(await page.$eval('#e2e-c2', el => el.value), first, 'a second click on the day keeps it (no event twice)');
+      expect((await calEvents(page)).length, 2, 'events after the second click');
+    });
+
+    await check('a limit can be a word or a distance: tomorrow, +3d and -1w', async () => {
+      await calPut(page, calField('e2e-c3', 'data-min="+3d" data-max="+3m"'));
+      // the first day that can be chosen is three days from now (in this month, or else in the next one, to which the arrow leads)
+      expect(await calFirstOpen(page, calRoot), calIso(calPlus(3)), 'the first day that can be chosen');
+      await calPut(page, calField('e2e-c3', 'data-min="tomorrow" data-max="today"'));
+      expect((await calDays(page, calRoot)).filter(d => !d.off).length, 0, 'tomorrow after today leaves no day');
+      await calPut(page, calField('e2e-c3', 'data-min="-1w" data-max="today"'));
+      const open = (await calDays(page, calRoot)).filter(d => !d.off).map(d => d.date);
+      expectTrue(open.every(d => calDate(d) >= calPlus(-7) && calDate(d) <= calPlus(0)), 'days outside the week behind today are open: ' + open.join(','));
+    });
+
+    await check('a period: the first click is the start, the pointer previews, the second completes it, a click before the start begins again', async () => {
+      await calPut(page, calField('e2e-c4', 'data-mode="range" data-clearable'));
+      await calLog(page, 'e2e-c4');
+      await calGo(page, 'e2e-c4', '2030-03-01');
+      const day = d => `${calRoot} [data-date="${d}"]`;
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), 'Choose the start date', 'the line before the start');
+      await page.click(day('2030-03-12'));
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), 'Choose the end date', 'the line after the start');
+      await page.hover(day('2030-03-15'));
+      expect(await page.$$eval(`${calRoot} .is-in-range`, els => els.map(e => e.getAttribute('data-date'))), ['2030-03-13', '2030-03-14'], 'the preview up to the pointer');
+      expect(await page.$eval('#e2e-c4', el => el.value), '', 'nothing is posted before both ends are chosen');
+      await page.click(day('2030-03-15'));
+      expect(await page.$eval('#e2e-c4', el => el.value), '2030-03-12..2030-03-15', 'the period');
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).replace(/\s+/g, ' ').trim(), '12 Mar 2030 – 15 Mar 2030 · 4 days', 'the line under the month');
+      expect(await page.$$eval(`${calRoot} .is-selected`, els => els.map(e => e.getAttribute('data-date'))), ['2030-03-12', '2030-03-15'], 'the ends');
+      await page.click(day('2030-03-05'));
+      expect(await page.$eval('#e2e-c4', el => el.value), '', 'a day before the start begins again');
+      await page.click(day('2030-03-07'));
+      expect(await page.$eval('#e2e-c4', el => el.value), '2030-03-05..2030-03-07', 'the new period');
+      expect((await calEvents(page)).filter(e => e.startsWith('change')), ['change:2030-03-12..2030-03-15', 'change:', 'change:2030-03-05..2030-03-07'], 'a change event for every change of the value (an unfinished period is an empty value)');
+      await page.click(`${calRoot} [data-cal-clear]`);
+      expect(await page.$eval('#e2e-c4', el => el.value), '', 'Clear');
+      expect(await page.$$eval(`${calRoot} .is-selected`, els => els.length), 0, 'nothing is marked after Clear');
+    });
+
+    await check('a period does not run across a taken day but runs across closed weekdays', async () => {
+      await calPut(page, calField('e2e-c5', 'data-mode="range" data-disabled="2030-03-14" data-disabled-weekdays="0,6"'));
+      await calGo(page, 'e2e-c5', '2030-03-01');
+      const day = d => `${calRoot} [data-date="${d}"]`;
+      await page.click(day('2030-03-11'));
+      await page.click(day('2030-03-15'));
+      expect(await page.$eval('#e2e-c5', el => el.value), '', 'the day behind a taken day only starts a new period');
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), 'Choose the end date', 'the line');
+      await page.click(day('2030-03-18'));
+      expect(await page.$eval('#e2e-c5', el => el.value), '2030-03-15..2030-03-18', 'a period across a weekend');
+      expect(await page.locator(day('2030-03-14')).isDisabled(), true, 'the taken day');
+      expect(await page.locator(day('2030-03-16')).isDisabled(), true, 'a Saturday');
+    });
+
+    await check('several days: a click adds or removes, the value is sorted, the count is told and data-max-dates refuses one more', async () => {
+      await calPut(page, calField('e2e-c6', 'data-mode="multiple" data-max-dates="3"', 'Days', 'value="2030-03-20"'));
+      await calLog(page, 'e2e-c6');
+      const day = d => `${calRoot} [data-date="${d}"]`;
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), '1 day chosen', 'the start (the value was read)');
+      await page.click(day('2030-03-05'));
+      await page.click(day('2030-03-12'));
+      expect(await page.$eval('#e2e-c6', el => el.value), '2030-03-05,2030-03-12,2030-03-20', 'sorted');
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), '3 days chosen', 'the count');
+      await page.click(day('2030-03-25'));
+      expect(await page.$eval('#e2e-c6', el => el.value), '2030-03-05,2030-03-12,2030-03-20', 'the fourth day is refused');
+      expect((await page.textContent(`${calRoot} .mat-picker__status`)).trim(), 'At most 3 days', 'the message');
+      await page.click(day('2030-03-12'));
+      expect(await page.$eval('#e2e-c6', el => el.value), '2030-03-05,2030-03-20', 'a chosen day is taken away by a second click');
+      expect(await page.getAttribute(day('2030-03-12'), 'aria-selected'), 'false', 'aria-selected after that');
+      expect((await calEvents(page)).length, 6, 'input and change for each of the three changes');
+    });
+
+    await check('days and periods in data-disabled and the weekdays can be changed with MatUi.calendar.setDisabled', async () => {
+      await calPut(page, calField('e2e-c7', 'data-disabled="2030-03-14,2030-03-20..2030-03-22"'));
+      await calGo(page, 'e2e-c7', '2030-03-01');
+      const off = async () => (await calDays(page, calRoot)).filter(d => d.off).map(d => d.date);
+      expect(await off(), ['2030-03-14', '2030-03-20', '2030-03-21', '2030-03-22'], 'what the attribute says');
+      await page.evaluate(() => window.MatUi.calendar.setDisabled(document.getElementById('e2e-c7'), { dates: ['2030-03-05'], weekdays: [0, 6] }));
+      expect((await off()).filter(d => calDate(d).getDay() !== 0 && calDate(d).getDay() !== 6), ['2030-03-05'], 'the days after setDisabled (the weekends apart)');
+      expect((await off()).length, 11, 'one day and the ten days of the weekends of March 2030');
+      await page.evaluate(() => window.MatUi.calendar.setDisabled(document.getElementById('e2e-c7'), { dates: null, weekdays: '', max: '2030-03-10' }));
+      expect((await calDays(page, calRoot)).filter(d => !d.off).map(d => d.date).at(-1), '2030-03-10', 'data-max through the API');
+    });
+
+    await check('days with events carry dots (up to three) and say how many in their name, and the agenda lists the events of the chosen day', async () => {
+      const events = JSON.stringify({
+        '2030-03-05': [{ title: 'Dentist', time: '09:00', end: '09:45' }, { title: 'Team lunch', time: '12:30' }, 'Hand in the form'],
+        '2030-03-12': [{ title: 'One' }, { title: 'Two' }, { title: 'Three' }, { title: 'Four', time: '07:00' }],
+        '2030-03-20': [{ title: 'Backup check', time: '08:00' }],
+      });
+      await calPut(page, calField('e2e-c8', `data-agenda data-events='${events}'`, 'Day', 'value="2030-03-05"'));
+      const days = Object.fromEntries((await calDays(page, calRoot)).map(d => [d.date, d]));
+      expect([days['2030-03-05'].marks, days['2030-03-12'].marks, days['2030-03-20'].marks, days['2030-03-21'].marks], [3, 3, 1, 0], 'dots');
+      expectTrue(days['2030-03-12'].label.endsWith(', 4 events') && days['2030-03-20'].label.endsWith(', 1 event'), 'the names of the days: ' + days['2030-03-12'].label);
+      const agenda = () => page.$eval(`${calRoot} .mat-calendar__agenda`, el => ({ title: el.querySelector('.mat-calendar__agenda-title').textContent.trim(), items: [...el.querySelectorAll('.mat-calendar__event')].map(li => li.innerText.replace(/\s+/g, ' ').trim()), none: !!el.querySelector('.mat-calendar__none') }));
+      expect((await agenda()).items, ['All day Hand in the form', '09:00 – 09:45 Dentist', '12:30 Team lunch'], 'the events of the chosen day in the order of the time (a day long event first)');
+      expectTrue(/March 2030/.test((await agenda()).title), 'the agenda names the day: ' + (await agenda()).title);
+      await page.click(`${calRoot} [data-date="2030-03-12"]`);
+      expect((await agenda()).items, ['All day One', 'All day Two', 'All day Three', '07:00 Four'], 'the events of the next day (the ones without a time first, in the order they were given)');
+      await page.click(`${calRoot} [data-date="2030-03-13"]`);
+      expect(await agenda(), { title: (await agenda()).title, items: [], none: true }, 'a day without events');
+      expect((await page.textContent(`${calRoot} .mat-calendar__none`)).trim(), 'Nothing on this day', 'the text');
+      await page.evaluate(() => window.MatUi.calendar.setEvents(document.getElementById('e2e-c8'), [{ date: '2030-03-13', title: 'Added later', time: '10:15' }]));
+      expect((await agenda()).items, ['10:15 Added later'], 'the agenda after setEvents');
+      const after = Object.fromEntries((await calDays(page, calRoot)).map(d => [d.date, d.marks]));
+      expect([after['2030-03-13'], after['2030-03-05']], [1, 0], 'the dots after setEvents (the old events are replaced)');
+    });
+
+    await check('week numbers are ISO weeks in a column of their own, and the first weekday can be Sunday', async () => {
+      await calPut(page, calField('e2e-c9', 'data-week-numbers'));
+      await calGo(page, 'e2e-c9', '2030-03-01');
+      // the ISO week by the rule of the Thursday, written down again here
+      const iso = s => { const d = calDate(s); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7)); return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 86400000 + 1) / 7); };
+      const weeks = await page.$$eval(`${calRoot} .mat-cal__wk`, els => els.map(e => +e.textContent));
+      expect(weeks, ['2030-03-01', '2030-03-04', '2030-03-11', '2030-03-18', '2030-03-25'].map(iso), 'the weeks of March 2030');
+      expect(await page.$$eval(`${calRoot} .mat-cal__dow`, els => els[0].textContent.trim()), 'Wk', 'the heading of the column');
+      await calPut(page, calField('e2e-c10', 'data-week-start="0"'));
+      expect((await page.$$eval(`${calRoot} .mat-cal__dow`, els => els.map(e => e.textContent.trim()))).join(' '), 'Sun Mon Tue Wed Thu Fri Sat', 'the week starts on Sunday');
+    });
+
+    await check('the title leads to the months and the years: a date of birth is a few clicks, Escape goes back, limits disable what is outside', async () => {
+      await calPut(page, calField('e2e-c11', 'data-min="2029-05-10" data-max="2031-09-20"'));
+      await calGo(page, 'e2e-c11', '2030-03-15');
+      expect(await calTitle(page, calRoot), 'March 2030', 'the title');
+      await page.click(`${calRoot} [data-cal-level="months"]`);
+      expect(await page.locator(`${calRoot} [data-cal-month]`).count(), 12, 'months');
+      expect(await page.getAttribute(`${calRoot} [data-cal-month="2"]`, 'aria-pressed'), 'true', 'the month that is shown');
+      expect(await calActive(page), '2', 'the focus is on that month');
+      await page.click(`${calRoot} [data-cal-nav="1"]`);
+      expect(await calTitle(page, calRoot), '2031', 'the year after the arrow');
+      expect(await page.$$eval(`${calRoot} [data-cal-month]`, els => els.filter(e => e.disabled).map(e => e.getAttribute('data-cal-month')).join(',')), '9,10,11', 'the months after data-max');
+      await page.click(`${calRoot} [data-cal-level="years"]`);
+      expect(await page.locator(`${calRoot} [data-cal-year]`).count(), 12, 'years');
+      expect(await page.$$eval(`${calRoot} [data-cal-year]`, els => els.filter(e => e.disabled).map(e => e.getAttribute('data-cal-year')).join(',')), '2028,2032,2033,2034,2035,2036,2037,2038,2039', 'the years outside the limits (twelve years from 2028)');
+      await page.click(`${calRoot} [data-cal-year="2029"]`);
+      expect(await page.$$eval(`${calRoot} [data-cal-month]`, els => els.filter(e => e.disabled).map(e => e.getAttribute('data-cal-month')).join(',')), '0,1,2,3', 'the months before data-min');
+      await page.click(`${calRoot} [data-cal-month="7"]`);
+      expect(await calTitle(page, calRoot), 'August 2029', 'back at the days');
+      expect(await page.evaluate(() => /^2029-08-/.test(document.activeElement.getAttribute('data-date') || '')), true, 'the focus is on a day of that month');
+      await page.keyboard.press('Escape');
+      await page.click(`${calRoot} [data-cal-level="months"]`);
+      await page.keyboard.press('Escape');
+      expect(await page.locator(`${calRoot} [data-cal-month]`).count(), 0, 'Escape in the months goes back to the days');
+      expect(await page.locator(`${calRoot} .mat-cal__day`).count() > 27, true, 'the days are there');
+    });
+
+    await check('the months and the years are walked with the arrow keys and the page keys', async () => {
+      await calGo(page, 'e2e-c11', '2030-03-15');
+      await page.click(`${calRoot} [data-cal-level="months"]`);
+      await page.keyboard.press('ArrowRight');
+      expect(await calActive(page), '3', 'a month on');
+      await page.keyboard.press('ArrowDown');
+      expect(await calActive(page), '6', 'a row down');
+      await page.keyboard.press('PageDown');
+      expect(await calTitle(page, calRoot), '2031', 'a year on');
+      await page.keyboard.press('Enter');
+      expect(await calTitle(page, calRoot), 'July 2031', 'Enter takes the month (the same cell stays the focus after the page key)');
+    });
+
+    await check('a calendar is a grid for the keyboard: arrows, Home and End, Page up and down (with Shift the year), disabled days are stepped over', async () => {
+      await calPut(page, calField('e2e-c12', 'data-disabled-weekdays="0,6" data-disabled="2030-03-19"'));
+      await calGo(page, 'e2e-c12', '2030-03-15');
+      await page.click(`${calRoot} [data-date="2030-03-15"]`);
+      await page.keyboard.press('ArrowRight');
+      expect(await calActive(page), '2030-03-18', 'Friday and one to the right: the weekend is stepped over');
+      await page.keyboard.press('ArrowLeft');
+      expect(await calActive(page), '2030-03-15', 'and back');
+      await page.keyboard.press('ArrowDown');
+      expect(await calActive(page), '2030-03-22', 'a week down');
+      await page.keyboard.press('ArrowUp');
+      await page.keyboard.press('ArrowUp');
+      expect(await calActive(page), '2030-03-08', 'two weeks up');
+      await page.keyboard.press('ArrowDown');
+      await page.keyboard.press('ArrowRight');
+      expect(await calActive(page), '2030-03-18', 'Friday the 15th to the Monday');
+      await page.keyboard.press('ArrowRight');
+      expect(await calActive(page), '2030-03-20', 'the taken Tuesday is stepped over too');
+      await page.keyboard.press('End');
+      expect(await calActive(page), '2030-03-22', 'End: the last day of the week that can be chosen (Friday)');
+      await page.keyboard.press('Home');
+      expect(await calActive(page), '2030-03-18', 'Home: the first one (Monday)');
+      await page.keyboard.press('PageDown');
+      expect(await calTitle(page, calRoot), 'April 2030', 'a month on');
+      expect(await calActive(page), '2030-04-18', 'the same day number');
+      await page.keyboard.press('Shift+PageUp');
+      expect(await calTitle(page, calRoot), 'April 2029', 'a year back');
+      await page.keyboard.press('Enter');
+      expect(await page.$eval('#e2e-c12', el => el.value), '2029-04-18', 'Enter chose the day');
+    });
+
+    await check('Today goes to the month of today and the focus to today (or the next day that can be chosen)', async () => {
+      await calPut(page, calField('e2e-c13', 'data-min="today"'));
+      await calGo(page, 'e2e-c13', '2030-03-15');
+      await page.click(`${calRoot} [data-cal-today]`);
+      const today = calPlus(0);
+      expect(await calTitle(page, calRoot), new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(today), 'the month');
+      expect(await calActive(page), calIso(today), 'the focus');
+    });
+
+    await check('a required calendar writes its message at the field, takes the focus to a day and forgets the choice on reset', async () => {
+      await calPut(page, `<form class="mat-form" id="e2e-form" method="get" action="/Components#calendar" novalidate>${calField('e2e-c14', 'data-min="today"', 'Day', 'required data-msg-required="Please choose a day."').replace('</div></div>', '</div><span class="mat-error" aria-live="polite"></span></div>')}<button type="submit" class="mat-btn mat-btn--primary" id="e2e-send">Continue</button><button type="reset" class="mat-btn mat-btn--secondary" id="e2e-reset">Reset</button></form>`);
+      const calmBorder = await page.$eval(calRoot, el => getComputedStyle(el).borderTopColor);
+      await page.click('#e2e-send');
+      await page.waitForTimeout(150);
+      expect(await page.$eval('#e2e-c14', el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked');
+      expect((await page.$eval('#e2e-c14', el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose a day.', 'the message');
+      expectTrue(await page.evaluate(() => !!document.activeElement.getAttribute('data-date')), 'the focus is on a day');
+      expectTrue((await page.$eval(calRoot, el => getComputedStyle(el).borderTopColor)) !== calmBorder, 'the line of the calendar turns red');
+      const first = await calFirstOpen(page, calRoot);
+      await page.click(`${calRoot} [data-date="${first}"]`);
+      expect(await page.$eval('#e2e-c14', el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after a choice');
+      await page.click('#e2e-reset');
+      await page.waitForTimeout(100);
+      expect(await page.$eval('#e2e-c14', el => el.value), '', 'the value after Reset');
+      expect(await page.$$eval(`${calRoot} .is-selected`, els => els.length), 0, 'no day is marked after Reset');
+    });
+
+    await check('the date picker takes the same limits (a distance from today) and the same jump to a month and a year', async () => {
+      await page.evaluate(() => {
+        const box = document.getElementById('e2e-box');
+        box.innerHTML = '<div class="mat-field"><label class="mat-label" for="e2e-dp">Delivery</label><div class="mat-picker" data-picker="date" data-min="+3d" data-max="+400d"><input class="mat-picker__input" id="e2e-dp" name="dp" /></div></div>';
+        window.MatUi.refresh(box);
+      });
+      await page.click('#e2e-dp-trigger');
+      const panel = '#e2e-dp-trigger ~ .mat-picker__panel';
+      const open = (await page.$$eval(`${panel} .mat-cal__day`, els => els.filter(b => !b.disabled).map(b => b.getAttribute('data-date'))));
+      expectTrue(open.length === 0 || open[0] >= calIso(calPlus(3)), 'the first day that can be chosen is not before three days from now: ' + open[0]);
+      expect(await page.locator(`${panel} [data-cal-level="months"]`).count(), 1, 'the title is a button');
+      await page.click(`${panel} [data-cal-level="months"]`);
+      await page.click(`${panel} [data-cal-level="years"]`);
+      const target = calPlus(300);
+      for (let i = 0; i < 3 && (await page.locator(`${panel} [data-cal-year="${target.getFullYear()}"]`).count()) === 0; i += 1) { await page.click(`${panel} [data-cal-nav="1"]`); }
+      await page.click(`${panel} [data-cal-year="${target.getFullYear()}"]`);
+      await page.click(`${panel} [data-cal-month="${target.getMonth()}"]`);
+      const iso = calIso(target);
+      await page.click(`${panel} [data-date="${calIso(new Date(target.getFullYear(), target.getMonth(), 15))}"]`);
+      expect(await page.$eval('#e2e-dp', el => el.value), calIso(new Date(target.getFullYear(), target.getMonth(), 15)), 'the posted value after a jump (' + iso + ')');
+      expectTrue(!(await page.locator(panel).isVisible()), 'the panel is closed');
+    });
+
+    await check('the examples of the page are alive: the events example shows its agenda and the rental example posts a period', async () => {
+      await page.evaluate(() => document.getElementById('cal-events').closest('.mat-field').scrollIntoView({ block: 'center' }));
+      expect(await page.locator('#cal-events').evaluate(el => el.closest('.mat-calendar').querySelectorAll('.mat-calendar__event').length), 3, 'the events of the 14th');
+      expect(await page.locator('#cal-days').evaluate(el => el.closest('.mat-calendar').querySelector('.mat-picker__status').textContent.trim()), '2 days chosen', 'the days off');
+    });
+
+    await check('a calendar names its days, has no second Tab stop inside the grid and puts the real input out of the way', async () => {
+      await calPut(page, calField('e2e-c15', 'data-min="today"'));
+      const tabStops = await page.$$eval(`${calRoot} .mat-cal__day`, els => els.filter(b => b.tabIndex === 0).length);
+      expect(tabStops, 1, 'Tab stops');
+      const input = await page.$eval('#e2e-c15', el => { const s = getComputedStyle(el); return { opacity: s.opacity, pointer: s.pointerEvents, hidden: el.getAttribute('aria-hidden'), tab: el.tabIndex }; });
+      expect(input, { opacity: '0', pointer: 'none', hidden: 'true', tab: -1 }, 'the real input');
+      await page.focus('#e2e-c15');
+      expectTrue(await page.evaluate(() => !!document.activeElement.getAttribute('data-date')), 'a label that focuses the input lands on a day');
+    });
+
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#calendar');
+    const calRoot = '#e2e-box .mat-calendar';
+    await check('on a phone a calendar fits the screen, its days are 44 px high, two months are one above the other and a click works with a touch', async () => {
+      await calPut(page, calField('e2e-p1', 'data-mode="range" data-months="2"') + calField('e2e-p2', 'data-agenda data-week-numbers'));
+      const sizes = await page.evaluate(() => {
+        const cal = document.querySelector('#e2e-box .mat-field:first-child .mat-calendar').getBoundingClientRect();
+        const day = document.querySelector('#e2e-box .mat-field:first-child .mat-cal__day').getBoundingClientRect();
+        const months = [...document.querySelectorAll('#e2e-box .mat-field:first-child .mat-cal__month')].map(m => m.getBoundingClientRect());
+        return { day: Math.round(day.height), within: cal.left >= 0 && cal.right <= innerWidth, stacked: months.length === 2 && months[1].top > months[0].bottom - 1, overflow: document.documentElement.scrollWidth > innerWidth };
+      });
+      expect(sizes, { day: 44, within: true, stacked: true, overflow: false }, 'the calendar on a phone');
+      await calGo(page, 'e2e-p1', '2030-03-01');
+      await page.tap('#e2e-box .mat-field:first-child [data-date="2030-03-12"]');
+      await page.tap('#e2e-box .mat-field:first-child [data-date="2030-04-02"]');
+      expect(await page.$eval('#e2e-p1', el => el.value), '2030-03-12..2030-04-02', 'a period over two months');
+    });
+    await check('on a phone the title leads to the months and the arrows are touch targets', async () => {
+      const box = await page.$eval('#e2e-box .mat-field:last-child .mat-cal__head [data-cal-nav="1"]', el => { const r = el.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height) }; });
+      expectTrue(box.w >= 36 && box.h >= 36, `the arrow is ${box.w} x ${box.h} px`);
+      await page.tap('#e2e-box .mat-field:last-child [data-cal-level="months"]');
+      expect(await page.locator('#e2e-box .mat-field:last-child [data-cal-month]').count(), 12, 'months');
+      const cell = await page.$eval('#e2e-box .mat-field:last-child [data-cal-month="0"]', el => Math.round(el.getBoundingClientRect().height));
+      expectTrue(cell >= 44, `a month is ${cell} px high`);
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- appointment picker (FORM-18)
+  console.log('\nAppointment picker');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#slot-picker');
+    // the availability of the checks: from tomorrow on, a free time in the morning and the afternoon, two taken ones, a day now and then fully booked or closed
+    const slotData = (from, to) => {
+      const data = {};
+      for (let n = from; n <= to; n += 1) {
+        const d = calPlus(n);
+        if (n % 5 === 0) { continue; }   // closed
+        data[calIso(d)] = n % 7 === 0
+          ? { free: [], taken: ['09:00', '09:15'] }
+          : { free: ['09:00', '09:15', '09:30', '10:00', '14:00', '14:15', '17:30'], taken: ['09:45', '14:30'] };
+      }
+      return data;
+    };
+    const slotPut = (attrs, data, id = 'e2e-s1', extra = '') => calPut(page, `<div class="mat-field"><label class="mat-label" for="${id}">Appointment</label><div class="mat-picker" data-picker="slot" ${data === null ? '' : `data-slots='${JSON.stringify(data)}'`} ${attrs}><input class="mat-picker__input" id="${id}" name="${id}" ${extra} /></div></div>`);
+    const panel = (id = 'e2e-s1') => `#${id}-trigger ~ .mat-picker__panel`;
+    const shown = async (id = 'e2e-s1') => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
+    const valueOf = (id = 'e2e-s1') => page.$eval(`#${id}`, el => el.value);
+    const monthDays = async (id = 'e2e-s1') => calDays(page, panel(id));
+    const fullDay = d => new Intl.DateTimeFormat('en-GB', { dateStyle: 'full' }).format(d);
+    // shows the month of a day in the open panel (forwards or backwards, whatever is needed)
+    const gotoDay = async (id, d) => {
+      for (let i = 0; i < 14 && (await page.locator(`${panel(id)} [data-date="${calIso(d)}"]`).count()) === 0; i += 1) {
+        const shownMonth = (await page.$eval(`${panel(id)} .mat-cal__day`, el => el.getAttribute('data-date'))).slice(0, 7);
+        await page.click(`${panel(id)} [data-cal-nav="${calIso(d).slice(0, 7) > shownMonth ? 1 : -1}"]`);
+      }
+    };
+    const dayOf = async (id, n) => { const d = calPlus(n); await gotoDay(id, d); return d; };
+
+    await check('the appointment picker shows a month: days with a free time are enabled and have a dot, the others are disabled and struck through, the past is not offered', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today" data-duration="15"', data);
+      expect(await shown(), 'Choose an appointment', 'the placeholder');
+      await page.click('#e2e-s1-trigger');
+      expectTrue(await page.locator(panel()).isVisible(), 'the panel is not shown');
+      const wrong = [];
+      const firstMonth = await monthDays();
+      expectTrue(/free appointments?/.test(firstMonth.find(d => d.marks === 1).label), 'the name of a free day says it: ' + firstMonth.find(d => d.marks === 1).label);
+      expectTrue(/no free appointment/.test(firstMonth.find(d => d.off && /is-unavailable/.test(d.cls)).label), 'the name of a day without one says it');
+      for (let step = 0; step < 3; step += 1) {
+        (await monthDays()).forEach(d => {
+          const free = !!data[d.date] && data[d.date].free.length > 0;
+          const past = calDate(d.date) < calPlus(0);
+          if (d.off !== !free) { wrong.push(`${d.date} off=${d.off}`); }
+          if ((d.marks === 1) !== free) { wrong.push(`${d.date} dot=${d.marks}`); }
+          if (!past && !free && !/is-unavailable/.test(d.cls)) { wrong.push(`${d.date} not struck`); }
+          if (past && /is-unavailable/.test(d.cls)) { wrong.push(`${d.date} (past) struck`); }
+        });
+        await page.click(`${panel()} [data-cal-nav="1"]`);
+      }
+      expect(wrong, [], 'days in the wrong state');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('a day shows its times: the free ones are buttons, the taken ones are disabled and say "Taken", in groups, with the length of an appointment', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today" data-duration="15" data-group', data);
+      await page.click('#e2e-s1-trigger');
+      const d = await dayOf('e2e-s1', 1);
+      const iso = calIso(d);
+      await page.click(`${panel()} [data-date="${iso}"]`);
+      const heading = (await page.textContent(`${panel()} .mat-slots__heading`)).trim();
+      expect(heading, fullDay(d), 'the heading of the times');
+      expect((await page.textContent(`${panel()} .mat-slots__hint`)).trim(), 'Appointments of 15 min', 'the length');
+      expect(await page.$$eval(`${panel()} .mat-slots__group-title`, els => els.map(e => e.textContent.trim())), ['Morning', 'Afternoon', 'Evening'], 'the groups');
+      const slots = await page.$$eval(`${panel()} .mat-slot`, els => els.map(b => ({ t: b.getAttribute('data-time'), off: b.disabled, note: (b.querySelector('.mat-slot__note') || {}).textContent || '', text: b.textContent.replace(/\s+/g, ' ').trim() })));
+      const expected = data[iso];
+      expect(slots.filter(s => !s.off).map(s => s.t), expected.free, 'the free times');
+      expect(slots.filter(s => s.off).map(s => s.t), expected.taken, 'the taken times');
+      expectTrue(slots.filter(s => s.off).every(s => s.note === 'Taken' && s.text.includes('Taken')), 'a taken time says Taken in words');
+      expect(slots.map(s => s.t), [...expected.free, ...expected.taken].sort(), 'in the order of the time');
+      const decoration = await page.$eval(`${panel()} .mat-slot:disabled .mat-slot__time`, el => getComputedStyle(el).textDecorationLine);
+      expect(decoration, 'line-through', 'a taken time is struck through besides');
+      const afternoon = await page.$$eval(`${panel()} .mat-slots__group`, gs => gs.map(g => g.querySelector('.mat-slots__group-title').textContent.trim() + ':' + [...g.querySelectorAll('.mat-slot')].map(b => b.getAttribute('data-time')).join(',')));
+      expect(afternoon, ['Morning:09:00,09:15,09:30,09:45,10:00', 'Afternoon:14:00,14:15,14:30', 'Evening:17:30'], 'which time is in which group');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('a taken time cannot be chosen, Apply waits for a free one, and the choice is posted as one value with its end', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today" data-duration="15"', data);
+      await calLog(page, 'e2e-s1');
+      await page.click('#e2e-s1-trigger');
+      const d = await dayOf('e2e-s1', 1);
+      await page.click(`${panel()} [data-date="${calIso(d)}"]`);
+      expect(await page.locator(`${panel()} [data-picker-action="apply"]`).isDisabled(), true, 'Apply before a choice');
+      expect((await page.textContent(`${panel()} .mat-slots__summary`)).trim(), 'Choose a day and a time', 'the line before a choice');
+      await page.locator(`${panel()} .mat-slot[data-time="09:45"]`).click({ force: true, timeout: 1000 }).catch(() => { /* a disabled button cannot be pressed: that is the point */ });
+      expect(await page.locator(`${panel()} .mat-slot[aria-pressed="true"]`).count(), 0, 'a taken time is not chosen');
+      expect(await page.locator(`${panel()} [data-picker-action="apply"]`).isDisabled(), true, 'Apply after a click on a taken time');
+      await page.click(`${panel()} .mat-slot[data-time="09:30"]`);
+      expect(await page.getAttribute(`${panel()} .mat-slot[data-time="09:30"]`, 'aria-pressed'), 'true', 'the chosen time');
+      expect((await page.textContent(`${panel()} .mat-slots__summary`)).trim(), `${fullDay(d)} · 09:30 – 09:45`, 'the line above the buttons');
+      expect(await valueOf(), '', 'nothing is posted before Apply');
+      await page.click(`${panel()} [data-picker-action="apply"]`);
+      expect(await valueOf(), `${calIso(d)}T09:30..09:45`, 'the posted value');
+      expect(await calEvents(page), [`input:${calIso(d)}T09:30..09:45`, `change:${calIso(d)}T09:30..09:45`], 'input and change');
+      expectTrue(!(await page.locator(panel()).isVisible()), 'the panel closed');
+      expectTrue((await shown()).endsWith('09:30 – 09:45') && /\d{4}/.test(await shown()), 'the field shows the choice: ' + await shown());
+      expect(await page.evaluate(() => document.activeElement.id), 'e2e-s1-trigger', 'the focus is back on the field');
+      // reopened: the choice is there
+      await page.click('#e2e-s1-trigger');
+      expect(await page.getAttribute(`${panel()} .mat-slot[data-time="09:30"]`, 'aria-pressed'), 'true', 'the chosen time when it is opened again');
+      expect(await page.getAttribute(`${panel()} [data-date="${calIso(d)}"]`, 'aria-selected'), 'true', 'the chosen day');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('without data-duration only the start is posted, and Cancel and Escape keep the old value', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today" data-clearable', data, 'e2e-s2', `value="${calIso(calPlus(2))}T10:00"`);
+      expectTrue((await shown('e2e-s2')).endsWith('10:00'), 'the value that was there is shown: ' + await shown('e2e-s2'));
+      await page.click('#e2e-s2-trigger');
+      expect(await page.locator(`${panel('e2e-s2')} .mat-slots__hint`).count(), 0, 'no length without data-duration');
+      await page.click(`${panel('e2e-s2')} .mat-slot[data-time="14:15"]`);
+      await page.click(`${panel('e2e-s2')} [data-picker-action="cancel"]`);
+      expect(await valueOf('e2e-s2'), `${calIso(calPlus(2))}T10:00`, 'Cancel');
+      await page.click('#e2e-s2-trigger');
+      await page.click(`${panel('e2e-s2')} .mat-slot[data-time="14:15"]`);
+      await page.keyboard.press('Escape');
+      expect(await valueOf('e2e-s2'), `${calIso(calPlus(2))}T10:00`, 'Escape');
+      await page.click('#e2e-s2-trigger');
+      await page.click(`${panel('e2e-s2')} .mat-slot[data-time="14:15"]`);
+      await page.click(`${panel('e2e-s2')} [data-picker-action="apply"]`);
+      expect(await valueOf('e2e-s2'), `${calIso(calPlus(2))}T14:15`, 'the start only');
+      await page.click('#e2e-s2-trigger ~ .mat-picker__clear');
+      expect(await valueOf('e2e-s2'), '', 'Clear');
+      expect(await shown('e2e-s2'), 'Choose an appointment', 'the placeholder after Clear');
+    });
+
+    await check('a click outside closes the panel without a choice', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today"', data);
+      await page.click('#e2e-s1-trigger');
+      expectTrue(await page.locator(panel()).isVisible(), 'not open');
+      await page.mouse.click(5, 450);
+      expectTrue(!(await page.locator(panel()).isVisible()), 'a click outside did not close the panel');
+      expect(await valueOf(), '', 'no value');
+    });
+
+    await check('data-min="+3d" and data-max take days away, and data-unavailable="hide" makes days and taken times absent', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="+3d" data-max="+40d" data-unavailable="hide"', data);
+      await page.click('#e2e-s1-trigger');
+      const lastOpen = calPlus(40), firstOpen = calPlus(3);
+      const wrong = [];
+      for (let step = 0; step < 3; step += 1) {
+        for (const d of await monthDays()) {
+          const x = calDate(d.date), free = !!data[d.date] && data[d.date].free.length > 0, within = x >= firstOpen && x <= lastOpen;
+          if (d.off !== !(free && within)) { wrong.push(`${d.date} off=${d.off}`); }
+          if (d.off && !/is-absent/.test(d.cls)) { wrong.push(`${d.date} is drawn`); }
+          if (!d.off && /is-absent/.test(d.cls)) { wrong.push(`${d.date} is absent`); }
+        }
+        if (await page.locator(`${panel()} [data-cal-nav="1"]`).isDisabled()) { break; }
+        await page.click(`${panel()} [data-cal-nav="1"]`);
+      }
+      expect(wrong, [], 'days in the wrong state');
+      const gone = await page.$eval(`${panel()} .mat-cal__day.is-absent`, el => ({ visibility: getComputedStyle(el).visibility, hidden: el.getAttribute('aria-hidden') }));
+      expect(gone, { visibility: 'hidden', hidden: 'true' }, 'an absent day');
+      const d = await dayOf('e2e-s1', 6);
+      await page.click(`${panel()} [data-date="${calIso(d)}"]`).catch(async () => { await page.click(`${panel()} .mat-cal__day:not(:disabled)`); });
+      expect(await page.locator(`${panel()} .mat-slot:disabled`).count(), 0, 'taken times are not listed');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('a time that starts before now plus data-min-notice is never offered, and Next free appointment finds the first one that is', async () => {
+      // a time every half hour for today and the next two days
+      const data = {};
+      for (let n = 0; n <= 2; n += 1) {
+        data[calIso(calPlus(n))] = { free: Array.from({ length: 48 }, (_, i) => `${calPad(Math.floor(i / 2))}:${i % 2 ? '30' : '00'}`) };
+      }
+      await slotPut('data-min="today" data-min-notice="2h"', data);
+      const first = (now) => {
+        const earliest = now + 2 * 3600000;
+        for (let n = 0; n <= 2; n += 1) {
+          for (let i = 0; i < 48; i += 1) {
+            const d = calPlus(n); d.setHours(Math.floor(i / 2), i % 2 ? 30 : 0);
+            if (d.getTime() >= earliest) { return `${calIso(d)}T${calPad(d.getHours())}:${calPad(d.getMinutes())}`; }
+          }
+        }
+        return null;
+      };
+      const before = first(Date.now());
+      await page.click('#e2e-s1-trigger');
+      await page.click(`${panel()} [data-slots-next]`);
+      const after = first(Date.now());
+      const chosen = await page.evaluate(sel => { const day = document.querySelector(sel + ' .mat-cal__day[aria-selected="true"]'); const slot = document.querySelector(sel + ' .mat-slot[aria-pressed="true"]'); return day && slot ? day.getAttribute('data-date') + 'T' + slot.getAttribute('data-time') : null; }, panel());
+      expectTrue(chosen === before || chosen === after, `the first free time is ${before}, the picker chose ${chosen}`);
+      expect(await page.evaluate(() => document.activeElement.classList.contains('mat-slot')), true, 'the focus is on the chosen time');
+      // the times of the day that was chosen: none before the notice (for today: before now plus two hours)
+      const day = chosen.slice(0, 10);
+      const listed = await page.$$eval(`${panel()} .mat-slot`, els => els.map(b => b.getAttribute('data-time')));
+      const earliestMs = Date.now() + 2 * 3600000;
+      expectTrue(listed.every(t => { const d = calDate(day); d.setHours(+t.slice(0, 2), +t.slice(3)); return d.getTime() >= earliestMs - 5000; }), 'a time before the notice is listed: ' + listed.join(','));
+      if (day === calIso(calPlus(0))) { expectTrue(listed.length < 48, 'today shows fewer times than a whole day'); }
+      await page.click(`${panel()} [data-picker-action="apply"]`);
+      expect(await valueOf(), chosen, 'Apply books it');
+    });
+
+    await check('Next free appointment goes to a later month and says so when there is nothing', async () => {
+      const far = calPlus(75);
+      await slotPut('data-min="today"', { [calIso(far)]: ['11:15', '11:30'] });
+      await page.click('#e2e-s1-trigger');
+      await page.click(`${panel()} [data-slots-next]`);
+      expect(await page.$$eval(`${panel()} .mat-cal__day[aria-selected="true"]`, els => els.map(e => e.getAttribute('data-date'))), [calIso(far)], 'the day in a later month');
+      expect(await page.$$eval(`${panel()} .mat-slot[aria-pressed="true"]`, els => els.map(e => e.getAttribute('data-time'))), ['11:15'], 'the first time of it');
+      expect((await page.textContent(`${panel()} .mat-picker__title, ${panel()} .mat-cal__title`)).trim(), new Intl.DateTimeFormat('en-GB', { month: 'long', year: 'numeric' }).format(far), 'the month is shown');
+      await page.keyboard.press('Escape');
+      await slotPut('data-min="today"', {});
+      await page.click('#e2e-s1-trigger');
+      await page.click(`${panel()} [data-slots-next]`);
+      expect((await page.textContent(`${panel()} .mat-slots__status`)).trim(), 'No free appointment found', 'the message');
+      expect(await page.locator(`${panel()} [data-picker-action="apply"]`).isDisabled(), true, 'nothing to apply');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('the keyboard: arrows walk the days over the ones that are not free, Enter moves to the times, arrows walk them like a grid, Space chooses, Escape closes', async () => {
+      const data = slotData(1, 60);
+      await slotPut('data-min="today" data-duration="15"', data);
+      await page.focus('#e2e-s1-trigger');
+      await page.keyboard.press('Enter');
+      expectTrue(await page.locator(panel()).isVisible(), 'Enter did not open the panel');
+      expectTrue(await page.evaluate(() => !!document.activeElement.getAttribute('data-date')), 'the focus is on a day');
+      const d = await dayOf('e2e-s1', 1);
+      await page.evaluate(i => document.querySelector(`#e2e-s1-trigger ~ .mat-picker__panel [data-date="${i}"]`).focus(), calIso(d));
+      // the next day that is free, found the slow way
+      const freeAfter = n => { for (let k = n + 1; k < 60; k += 1) { const e = data[calIso(calPlus(k))]; if (e && e.free.length) { return calPlus(k); } } return null; };
+      const want = freeAfter(1);
+      await page.keyboard.press('ArrowRight');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-date')), calIso(want), 'ArrowRight lands on the next day with a free time');
+      await page.keyboard.press('Enter');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-time')), '09:00', 'Enter on a day moves the focus to its first free time');
+      expect((await page.$$eval(`${panel()} .mat-slot`, els => els.length)) > 5, true, 'the times are listed');
+      await page.keyboard.press('ArrowRight');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-time')), '09:15', 'ArrowRight: the next free time');
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('ArrowRight');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-time')), '10:00', 'the taken time 09:45 is skipped');
+      await page.keyboard.press('ArrowDown');
+      const at = await page.evaluate(() => document.activeElement.getAttribute('data-time'));
+      expectTrue(at > '10:00', 'ArrowDown goes to a later row: ' + at);
+      await page.keyboard.press('ArrowUp');
+      const back = await page.evaluate(() => document.activeElement.getAttribute('data-time'));
+      expectTrue(back < at && back >= '10:00', `ArrowUp goes to the row above (${at} to ${back})`);
+      await page.evaluate(() => document.querySelector('#e2e-s1-trigger ~ .mat-picker__panel .mat-slot[data-time="10:00"]').focus());
+      await page.keyboard.press('Home');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-time')), '09:00', 'Home');
+      await page.keyboard.press('End');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-time')), '17:30', 'End');
+      await page.keyboard.press('Space');
+      expect(await page.getAttribute(`${panel()} .mat-slot[data-time="17:30"]`, 'aria-pressed'), 'true', 'Space chooses a time');
+      await page.keyboard.press('Escape');
+      expectTrue(!(await page.locator(panel()).isVisible()), 'Escape did not close the panel');
+      expect(await valueOf(), '', 'Escape does not choose');
+      expect(await page.evaluate(() => document.activeElement.id), 'e2e-s1-trigger', 'the focus is back on the field');
+    });
+
+    await check('the availability can be asked for per month: mat:slots-needed carries the month and the picker, the panel says it is loading, setSlots answers and the days appear', async () => {
+      await slotPut('data-min="today" data-duration="30"', null);
+      await page.evaluate(() => {
+        window.__asked = [];
+        document.querySelector('#e2e-s1').closest('.mat-picker').addEventListener('mat:slots-needed', e => { e.stopPropagation(); window.__asked.push({ month: e.detail.month, from: e.detail.from, to: e.detail.to, own: e.detail.picker === document.querySelector('#e2e-s1').closest('.mat-picker') }); });
+      });
+      await page.click('#e2e-s1-trigger');
+      const month = calIso(calPlus(0)).slice(0, 7);
+      const lastDay = calPad(new Date(calPlus(0).getFullYear(), calPlus(0).getMonth() + 1, 0).getDate());
+      expect(await page.evaluate(() => window.__asked), [{ month, from: month + '-01', to: `${month}-${lastDay}`, own: true }], 'the question');
+      expect((await page.textContent(`${panel()} .mat-slots__status`)).trim(), 'Loading the free appointments …', 'the loading state');
+      expect(await page.getAttribute(`${panel()} .mat-slots`, 'aria-busy'), 'true', 'aria-busy');
+      expect((await monthDays()).every(d => d.off), true, 'no day can be chosen while it loads');
+      expect((await monthDays()).every(d => !/is-unavailable/.test(d.cls)), true, 'and none is struck through before it is known');
+      expect(await page.locator(`${panel()} [data-slots-next]`).count(), 1, 'the shortcut is there');
+      // the answer: three days of this month (or, at the end of the month, the days that are left)
+      const days = [];
+      for (let n = 1; n <= 6 && days.length < 3; n += 1) { if (calIso(calPlus(n)).slice(0, 7) === month) { days.push(calIso(calPlus(n))); } }
+      await page.evaluate(([m, d]) => window.MatUi.picker.setSlots(document.querySelector('#e2e-s1').closest('.mat-picker'), Object.fromEntries(d.map(x => [x, ['09:00', '09:30']])), m), [month, days]);
+      expect(await page.evaluate(() => window.__asked.length), 1, 'the month is asked for once');
+      expect((await page.textContent(`${panel()} .mat-slots__status`)).trim(), '', 'the loading state is gone');
+      expect(await page.getAttribute(`${panel()} .mat-slots`, 'aria-busy'), 'false', 'aria-busy after the answer');
+      expect((await monthDays()).filter(d => !d.off).map(d => d.date), days, 'the days with a free time');
+      // the next month is asked for when it is shown, and an empty answer for it ends the loading as well
+      await page.click(`${panel()} [data-cal-nav="1"]`);
+      const next = calIso(new Date(calPlus(0).getFullYear(), calPlus(0).getMonth() + 1, 1)).slice(0, 7);
+      expect((await page.evaluate(() => window.__asked)).map(a => a.month), [month, next], 'the second question');
+      await page.evaluate(m => window.MatUi.picker.setSlots(document.querySelector('#e2e-s1').closest('.mat-picker'), {}, m), next);
+      expect((await page.textContent(`${panel()} .mat-slots__status`)).trim(), '', 'an empty answer ends the loading');
+      expect((await monthDays()).every(d => d.off), true, 'a month without a free time has no day to choose');
+      await page.click(`${panel()} [data-cal-nav="-1"]`);
+      expect(await page.evaluate(() => window.__asked.length), 2, 'a month that is known is not asked for again');
+      expect((await monthDays()).filter(d => !d.off).map(d => d.date), days, 'the days of the first month are still there');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('when the answer is a failure the panel says so and Try again asks for the month once more', async () => {
+      await slotPut('data-min="today"', null, 'e2e-s3');
+      await page.evaluate(() => {
+        window.__asked = [];
+        document.querySelector('#e2e-s3').closest('.mat-picker').addEventListener('mat:slots-needed', e => { e.stopPropagation(); window.__asked.push(e.detail.month); });
+      });
+      await page.click('#e2e-s3-trigger');
+      const month = calIso(calPlus(0)).slice(0, 7);
+      await page.evaluate(m => window.MatUi.picker.slotsFailed(document.querySelector('#e2e-s3').closest('.mat-picker'), m), month);
+      expectTrue((await page.textContent(`${panel('e2e-s3')} .mat-slots__status`)).includes('The appointments could not be loaded.'), 'the message');
+      await page.click(`${panel('e2e-s3')} [data-slots-retry]`);
+      expect(await page.evaluate(() => window.__asked), [month, month], 'the month is asked for again');
+      expectTrue((await page.textContent(`${panel('e2e-s3')} .mat-slots__status`)).includes('Loading'), 'loading again');
+      await page.evaluate(m => window.MatUi.picker.setSlots(document.querySelector('#e2e-s3').closest('.mat-picker'), { [m + '-28']: ['08:00'] }, m), month);
+      expect((await page.textContent(`${panel('e2e-s3')} .mat-slots__status`)).trim(), '', 'the message is gone after an answer');
+      await page.keyboard.press('Escape');
+    });
+
+    await check('Next free appointment asks for the following months one after the other when the data is lazy', async () => {
+      await slotPut('data-min="today"', null, 'e2e-s4');
+      const target = calPlus(70);
+      await page.evaluate(([iso]) => {
+        window.__asked = [];
+        const wrap = document.querySelector('#e2e-s4').closest('.mat-picker');
+        wrap.addEventListener('mat:slots-needed', e => {
+          e.stopPropagation();
+          window.__asked.push(e.detail.month);
+          setTimeout(() => window.MatUi.picker.setSlots(wrap, e.detail.month === iso.slice(0, 7) ? { [iso]: ['08:45', '09:00'] } : {}, e.detail.month), 20);
+        });
+      }, [calIso(target)]);
+      await page.click('#e2e-s4-trigger');
+      await page.click(`${panel('e2e-s4')} [data-slots-next]`);
+      await page.waitForFunction(sel => !!document.querySelector(sel + ' .mat-slot[aria-pressed="true"]'), panel('e2e-s4'), { timeout: 5000 });
+      expect(await page.$$eval(`${panel('e2e-s4')} .mat-cal__day[aria-selected="true"]`, els => els.map(e => e.getAttribute('data-date'))), [calIso(target)], 'the day');
+      const asked = await page.evaluate(() => window.__asked);
+      expectTrue(asked[0] === calIso(calPlus(0)).slice(0, 7) && asked.at(-1) === calIso(target).slice(0, 7) && new Set(asked).size === asked.length, 'the months are asked for in order, each once: ' + asked.join(' '));
+      await page.click(`${panel('e2e-s4')} [data-picker-action="apply"]`);
+      expect(await valueOf('e2e-s4'), `${calIso(target)}T08:45`, 'Apply');
+    });
+
+    await check('the examples of the page ask the script of the site, which answers: days appear, Next free appointment chooses a time on a weekday and the value has the end', async () => {
+      await page.evaluate(() => document.getElementById('pk-slot-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('#pk-slot-trigger');
+      await page.waitForFunction(() => document.querySelector('#pk-slot-trigger ~ .mat-picker__panel .mat-slots').getAttribute('aria-busy') === 'false' && !!document.querySelector('#pk-slot-trigger ~ .mat-picker__panel .mat-cal__day:not(:disabled)'), null, { timeout: 5000 });
+      await page.click('#pk-slot-trigger ~ .mat-picker__panel [data-slots-next]');
+      const p = '#pk-slot-trigger ~ .mat-picker__panel';
+      const day = await page.getAttribute(`${p} .mat-cal__day[aria-selected="true"]`, 'data-date');
+      expectTrue(![0, 6].includes(calDate(day).getDay()), 'the practice is closed at weekends: ' + day);
+      await page.click(`${p} [data-picker-action="apply"]`);
+      expectTrue(/^\d{4}-\d\d-\d\dT\d\d:\d\d\.\.\d\d:\d\d$/.test(await valueOf('pk-slot')), 'the value: ' + await valueOf('pk-slot'));
+      await page.click('#pk-slot-trigger ~ .mat-picker__clear');
+      expect(await valueOf('pk-slot'), '', 'Clear');
+    });
+
+    await check('a required appointment writes its message at the field and the focus goes to its button', async () => {
+      await page.evaluate(() => document.getElementById('pk-slot-req-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('form[action="/Components#slot-picker"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#pk-slot-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked invalid');
+      expect((await page.locator('#pk-slot-req').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose an appointment.', 'the message');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-slot-req-trigger', 'the focus');
+    });
+
+    await check('a free appointment can be chosen with a data-slots that has the times as objects too and a duration over an hour', async () => {
+      await slotPut('data-min="today" data-duration="90"', { [calIso(calPlus(2))]: { free: [{ time: '09:00' }, '23:00'], taken: [{ time: '09:30' }] } }, 'e2e-s5');
+      await page.click('#e2e-s5-trigger');
+      const d = await dayOf('e2e-s5', 2);
+      await page.click(`${panel('e2e-s5')} [data-date="${calIso(d)}"]`);
+      expect((await page.textContent(`${panel('e2e-s5')} .mat-slots__hint`)).trim(), 'Appointments of 1 h 30 min', 'the length of 90 minutes');
+      await page.click(`${panel('e2e-s5')} .mat-slot[data-time="23:00"]`);
+      await page.click(`${panel('e2e-s5')} [data-picker-action="apply"]`);
+      expect(await valueOf('e2e-s5'), `${calIso(d)}T23:00..00:30`, 'an end after midnight is the next day, as in a time range');
+    });
+
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#slot-picker');
+    const days = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + n); return d; };
+    const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    await check('on a phone the appointment picker is a full-screen sheet with an X, the month above the times, 44 px targets, and the page behind does not scroll', async () => {
+      const data = {};
+      for (let n = 1; n <= 40; n += 1) { data[iso(days(n))] = { free: ['09:00', '09:15', '09:30', '10:00', '14:00', '14:15', '17:30'], taken: ['09:45'] }; }
+      await page.evaluate(d => {
+        const box = document.createElement('div');
+        box.id = 'e2e-box';
+        document.querySelector('.mat-main').appendChild(box);
+        box.innerHTML = `<div class="mat-field"><label class="mat-label" for="e2e-ps">Appointment</label><div class="mat-picker" data-picker="slot" data-min="today" data-duration="15" data-group data-slots='${JSON.stringify(d)}'><input class="mat-picker__input" id="e2e-ps" name="ps" /></div></div>`;
+        window.MatUi.refresh(box);
+        box.scrollIntoView({ block: 'center' });
+      }, data);
+      await page.tap('#e2e-ps-trigger');
+      const p = '#e2e-ps-trigger ~ .mat-picker__panel';
+      const state = await page.$eval(p, el => { const r = el.getBoundingClientRect(); return { width: Math.round(r.width) === innerWidth, height: Math.round(r.height) === innerHeight, x: getComputedStyle(el.querySelector('.mat-picker__head')).display !== 'none' }; });
+      expect(state, { width: true, height: true, x: true }, 'the sheet');
+      expect(await page.evaluate(() => document.documentElement.classList.contains('mat-lock')), true, 'the page behind does not scroll');
+      const layout = await page.evaluate(sel => {
+        const cal = document.querySelector(sel + ' .mat-slots__cal').getBoundingClientRect(), day = document.querySelector(sel + ' .mat-slots__day').getBoundingClientRect();
+        const first = [...document.querySelectorAll(sel + ' .mat-cal__day:not(:disabled)')][0].getBoundingClientRect();
+        return { above: day.top >= cal.bottom - 1, sameWidth: Math.abs(day.width - cal.width) < 2, dayHeight: Math.round(first.height), overflow: document.documentElement.scrollWidth > innerWidth };
+      }, p);
+      expect(layout, { above: true, sameWidth: true, dayHeight: 44, overflow: false }, 'the layout of the sheet');
+      await page.tap(`${p} .mat-cal__day:not(:disabled) >> nth=1`);
+      await page.waitForTimeout(100);
+      const sizes = await page.$$eval(`${p} .mat-slot`, els => els.map(b => Math.round(b.getBoundingClientRect().height)));
+      expectTrue(sizes.length > 6 && sizes.every(h => h >= 44), 'the times are at least 44 px high: ' + sizes.join(','));
+      const view = await page.evaluate(sel => { const body = document.querySelector(sel + ' .mat-picker__body'), apply = document.querySelector(sel + ' [data-picker-action="apply"]').getBoundingClientRect(), heading = document.querySelector(sel + ' .mat-slots__heading').getBoundingClientRect(); return { applyVisible: apply.bottom <= innerHeight && apply.top >= 0, headingVisible: heading.top >= 0 && heading.bottom <= innerHeight, scrolled: body.scrollTop > 0 }; }, p);
+      expect(view, { applyVisible: true, headingVisible: true, scrolled: true }, 'after a day the times are brought into view and the buttons stay in reach');
+      await page.tap(`${p} .mat-slot:not(:disabled) >> nth=2`);
+      expectTrue(!(await page.locator(`${p} [data-picker-action="apply"]`).isDisabled()), 'Apply after a choice');
+      await page.tap(`${p} [data-picker-close]`);
+      expectTrue(!(await page.locator(p).isVisible()), 'the X did not close the sheet');
+      expect(await page.$eval('#e2e-ps', el => el.value), '', 'the X does not choose');
+      expect(await page.evaluate(() => document.documentElement.classList.contains('mat-lock')), false, 'the page is free again');
+    });
+    await ctx.close();
+  }
+  {
+    // the language of the page: the texts and the names of the months come in German when the page says lang="de"
+    const ctx = await browser.newContext({ ...desktopOptions, locale: 'de-DE' });
+    const page = await ctx.newPage();
+    page.on('pageerror', e => consoleErrors.push('/Components (de): ' + e.message));
+    await page.route('**/Components', async route => {
+      const response = await route.fetch();
+      await route.fulfill({ response, body: (await response.text()).replace('<html lang="en"', '<html lang="de"') });
+    });
+    await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+    await check('in German the calendar and the appointment picker speak German: days, months, buttons, placeholder, Taken', async () => {
+      await calPut(page, calField('e2e-de1', 'data-min="today" data-clearable data-week-numbers') + `<div class="mat-field"><label class="mat-label" for="e2e-de2">Termin</label><div class="mat-picker" data-picker="slot" data-min="today" data-group data-slots='${JSON.stringify({ [calIso(calPlus(1))]: { free: ['09:00', '14:00'], taken: ['09:15'] } })}'><input class="mat-picker__input" id="e2e-de2" name="de2" /></div></div>`);
+      const root = '#e2e-box .mat-calendar';
+      const dow = d => new Intl.DateTimeFormat('de-DE', { weekday: 'short' }).format(new Date(2024, 0, d));   // 1 January 2024 is a Monday
+      expect((await page.$$eval(`${root} .mat-cal__dow`, els => els.map(e => e.textContent.trim()))).slice(0, 3), ['KW', dow(1), dow(2)], 'the week days');
+      expect(await calTitle(page, root), new Intl.DateTimeFormat('de-DE', { month: 'long', year: 'numeric' }).format(calPlus(0)), 'the month in German');
+      expect((await page.textContent(`${root} [data-cal-today]`)).trim(), 'Heute', 'Today');
+      expect((await page.textContent(`${root} [data-cal-clear]`)).trim(), 'Löschen', 'Clear');
+      expect(await page.getAttribute(`${root} [data-cal-nav="-1"]`, 'aria-label'), 'Vorheriger Monat', 'the arrow');
+      await page.click(`${root} [data-cal-level="months"]`);
+      expect(await page.getAttribute(`${root} [data-cal-nav="1"]`, 'aria-label'), 'Nächstes Jahr', 'the arrow of the years');
+      expect((await page.textContent(`${root} [data-cal-month="2"]`)).trim().toLowerCase().startsWith('mär'), true, 'a month');
+      expect((await page.textContent('#e2e-de2-trigger .mat-picker__value')).trim(), 'Termin wählen', 'the placeholder');
+      await page.click('#e2e-de2-trigger');
+      const p = '#e2e-de2-trigger ~ .mat-picker__panel';
+      expect((await page.textContent(`${p} [data-slots-next]`)).trim(), 'Nächster freier Termin', 'the shortcut');
+      expect((await page.textContent(`${p} .mat-slots__empty`)).trim(), 'Tag wählen, um die freien Termine zu sehen', 'the hint before a day');
+      await page.click(`${p} [data-date="${calIso(calPlus(1))}"]`);
+      expect((await page.textContent(`${p} .mat-slot:disabled .mat-slot__note`)).trim(), 'Belegt', 'a taken time');
+      expect(await page.$$eval(`${p} .mat-slots__group-title`, els => els.map(e => e.textContent.trim())), ['Vormittag', 'Nachmittag'], 'the groups');
+      await page.click(`${p} .mat-slot[data-time="14:00"]`);
+      expect((await page.textContent(`${p} .mat-slots__summary`)).trim(), `${new Intl.DateTimeFormat('de-DE', { dateStyle: 'full' }).format(calPlus(1))} · 14:00`, 'the line above the buttons');
+      await page.click(`${p} [data-picker-action="apply"]`);
+      expect(await page.$eval('#e2e-de2', el => el.value), `${calIso(calPlus(1))}T14:00`, 'the posted value is the same in every language');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- carousel (LIST-13)
+  console.log('\nCarousel');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#carousel');
+    const tour = 'section[aria-label="A tour of the toolkit"]';
+    const state = sel => page.$eval(sel, c => {
+      const slides = [...c.querySelectorAll('.mat-carousel__slide')];
+      const dots = [...c.querySelectorAll('.mat-carousel__dot')];
+      return {
+        slides: slides.length, dots: dots.length,
+        inert: slides.map(s => s.hasAttribute('inert')).join(','),
+        current: dots.findIndex(d => d.getAttribute('aria-current') === 'true'),
+        prev: c.querySelector('.mat-carousel__prev').getAttribute('aria-disabled'),
+        next: c.querySelector('.mat-carousel__next').getAttribute('aria-disabled'),
+        live: c.querySelector('[role=status]').textContent.trim(),
+        left: Math.round(c.querySelector('.mat-carousel__track').scrollLeft),
+      };
+    });
+    await page.evaluate(() => document.getElementById('carousel').scrollIntoView());
+
+    await check('a carousel names its slides, adds Previous, a dot per page and Next, and only the slide in view can be reached with the Tab key', async () => {
+      const s = await state(tour);
+      expect(s.slides, 4, 'slides');
+      expect(s.dots, 4, 'dots');
+      expect(s.inert, 'false,true,true,true', 'inert slides');
+      expect(s.current, 0, 'current dot');
+      expect(s.prev, 'true', 'Previous on the first page');
+      expect(s.next, 'false', 'Next on the first page');
+      expect(await page.getAttribute(`${tour} .mat-carousel__slide`, 'aria-label'), '1 of 4', 'the name of a slide');
+      expect(await page.getAttribute(`${tour} .mat-carousel__slide`, 'aria-roledescription'), 'slide', 'the role of a slide');
+      expect(await page.getAttribute(`${tour} .mat-carousel__dot >> nth=1`, 'aria-label'), 'Show 2', 'the name of a dot');
+      expect(await page.getAttribute(`${tour} .mat-carousel__prev`, 'aria-label'), 'Previous', 'the name of Previous');
+    });
+    await check('Next, a dot and the keys move the strip, the current dot follows and a screen reader is told', async () => {
+      await page.click(`${tour} .mat-carousel__next`);
+      await page.waitForTimeout(700);
+      let s = await state(tour);
+      expect(s.current, 1, 'the dot after Next');
+      expect(s.inert, 'true,false,true,true', 'inert slides after Next');
+      expect(s.prev, 'false', 'Previous after Next');
+      expect(s.live, 'Showing 2 of 4', 'the live region');
+      await page.click(`${tour} .mat-carousel__dot >> nth=3`);
+      await page.waitForTimeout(700);
+      s = await state(tour);
+      expect(s.current, 3, 'the last dot');
+      expect(s.next, 'true', 'Next on the last page');
+      expect(await page.evaluate(sel => document.activeElement === document.querySelector(sel + ' .mat-carousel__dot:nth-child(4)'), tour), true, 'the focus stays on the dot');
+      await page.focus(`${tour} .mat-carousel__track`);
+      await page.keyboard.press('Home');
+      await page.waitForTimeout(700);
+      expect((await state(tour)).current, 0, 'Home');
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(700);
+      expect((await state(tour)).current, 1, 'ArrowRight');
+      await page.keyboard.press('ArrowLeft');
+      await page.waitForTimeout(700);
+      expect((await state(tour)).current, 0, 'ArrowLeft');
+      await page.keyboard.press('End');
+      await page.waitForTimeout(700);
+      expect((await state(tour)).current, 3, 'End');
+    });
+    await check('Next on the last page does nothing without data-loop, and the button keeps the focus that is on it', async () => {
+      await page.focus(`${tour} .mat-carousel__next`);
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(500);
+      expect((await state(tour)).current, 3, 'still the last page');
+      expect(await page.evaluate(sel => document.activeElement === document.querySelector(sel + ' .mat-carousel__next'), tour), true, 'the focus');
+    });
+
+    const apps = 'section[aria-label="Apps of the family"]';
+    await page.evaluate(() => document.querySelector('section[aria-label="Apps of the family"]').scrollIntoView({ block: 'center' }));
+    await check('several slides at once: three fit on a wide screen, the dots are pages of them', async () => {
+      const s = await state(apps);
+      expect(s.slides, 5, 'slides');
+      expect(s.dots, 2, 'pages');
+      expect(s.inert, 'false,false,false,true,true', 'the three in view can be reached');
+      await page.click(`${apps} .mat-carousel__dot >> nth=1`);
+      await page.waitForTimeout(700);
+      const t = await state(apps);
+      expect(t.current, 1, 'the second page');
+      expect(t.inert, 'true,true,false,false,false', 'the last three, the strip ends at the last slide');
+      expect(t.next, 'true', 'Next on the last page');
+    });
+
+    const news = 'section[aria-label="News"]';
+    await page.evaluate(() => document.querySelector('section[aria-label="News"]').scrollIntoView({ block: 'center' }));
+    await check('a show that moves by itself has a Pause button, waits for the pointer, and stops for good after a click', async () => {
+      // a copy of the example with a short interval, so that the check does not wait six seconds
+      await page.evaluate(() => {
+        const src = document.querySelector('section[aria-label="News"]');
+        const copy = src.cloneNode(true);
+        copy.setAttribute('aria-label', 'Fast news');
+        copy.setAttribute('data-autoplay', '500');
+        copy.querySelector('.mat-carousel__bar')?.remove();
+        copy.querySelector('[role=status]')?.remove();
+        delete copy._matCarousel;
+        copy.className = 'mat-carousel';
+        src.parentNode.insertBefore(copy, src);
+        window.MatUi.carousel.init(copy.parentNode);
+      });
+      const fast = 'section[aria-label="Fast news"]';
+      await page.mouse.move(0, 0);   // the pointer of an earlier click may rest over the copy, and a show waits for the pointer
+      expect(await page.getAttribute(`${fast} .mat-carousel__toggle`, 'aria-label'), 'Pause the slide show', 'the button while it plays');
+      // it moves by itself: some page other than the first is shown within two seconds
+      await page.waitForFunction(sel => [...document.querySelectorAll(sel + ' .mat-carousel__dot')].findIndex(d => d.getAttribute('aria-current') === 'true') > 0, fast, { timeout: 2500 });
+      expect((await state(fast)).live, '', 'a moving show says nothing to a screen reader');
+      // the pointer is inside: it waits (a scroll that had begun is let to end first)
+      await page.hover(`${fast} .mat-carousel__track`);
+      await page.waitForTimeout(700);
+      const held = (await state(fast)).current;
+      await page.waitForTimeout(1300);
+      expect((await state(fast)).current, held, 'the show moved while the pointer was inside');
+      // a click on Pause stops it for good, also when the pointer has left
+      await page.click(`${fast} .mat-carousel__toggle`);
+      expect(await page.getAttribute(`${fast} .mat-carousel__toggle`, 'aria-label'), 'Start the slide show', 'the button after Pause');
+      await page.mouse.move(0, 0);
+      await page.waitForTimeout(700);
+      const stopped = (await state(fast)).current;
+      await page.waitForTimeout(1300);
+      expect((await state(fast)).current, stopped, 'the show moved after Pause');
+      expect(await page.evaluate(() => document.querySelector('section[aria-label="Fast news"]')._matCarousel.playing), false, 'the show is still marked as playing');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open({ ...desktopOptions, reducedMotion: 'reduce' }, '/Components#carousel');
+    await check('for a user who asked for less motion a show does not start by itself, and the button can start it', async () => {
+      const news = 'section[aria-label="News"]';
+      await page.evaluate(() => document.querySelector('section[aria-label="News"]').scrollIntoView({ block: 'center' }));
+      await page.waitForTimeout(500);
+      expect(await page.getAttribute(`${news} .mat-carousel__toggle`, 'aria-label'), 'Start the slide show', 'the button');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#carousel');
+    await check('on a phone one slide fills the strip, every card has a dot and the page does not scroll sideways', async () => {
+      const apps = 'section[aria-label="Apps of the family"]';
+      await page.evaluate(() => document.querySelector('section[aria-label="Apps of the family"]').scrollIntoView({ block: 'center' }));
+      await page.waitForTimeout(300);
+      const s = await page.$eval(apps, c => {
+        const track = c.querySelector('.mat-carousel__track').getBoundingClientRect();
+        const slide = c.querySelector('.mat-carousel__slide').getBoundingClientRect();
+        return {
+          dots: c.querySelectorAll('.mat-carousel__dot').length, oneAtATime: Math.abs(slide.width - track.width) < 2,
+          inert: [...c.querySelectorAll('.mat-carousel__slide')].map(x => x.hasAttribute('inert')).join(','),
+          sideways: document.documentElement.scrollWidth > innerWidth,
+          dotSize: Math.round(c.querySelector('.mat-carousel__dot').getBoundingClientRect().width),
+        };
+      });
+      expect(s, { dots: 5, oneAtATime: true, inert: 'false,true,true,true,true', sideways: false, dotSize: 36 }, 'the phone');
+      await page.click(`${apps} .mat-carousel__next`);
+      await page.waitForTimeout(700);
+      expect(await page.$eval(apps, c => [...c.querySelectorAll('.mat-carousel__dot')].findIndex(d => d.getAttribute('aria-current') === 'true')), 1, 'the page after Next');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- slider and range slider (FORM-17)
+  console.log('\nSlider and range slider');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#slider');
+    await page.evaluate(() => document.getElementById('slider').scrollIntoView());
+    await page.evaluate(() => {
+      window.__events = [];
+      for (const type of ['input', 'change']) {
+        document.addEventListener(type, e => { if (e.target.classList && e.target.classList.contains('mat-slider__input')) { window.__events.push(type + ':' + e.target.id); } });
+      }
+    });
+    const events = () => page.evaluate(() => window.__events.splice(0));
+    // what a slider looks like at the moment: the value, the thumb of the input, its bubble
+    const info = id => page.$eval('#' + id, input => {
+      const w = input.closest('.mat-slider');
+      w.scrollIntoView({ block: 'center', behavior: 'instant' });
+      const thumb = w.querySelectorAll('.mat-slider__thumb')[[...w.querySelectorAll('.mat-slider__input')].indexOf(input)];
+      const rail = w.querySelector('.mat-slider__rail').getBoundingClientRect();
+      const t = thumb.getBoundingClientRect();
+      const bubble = thumb.querySelector('.mat-slider__bubble');
+      return {
+        value: input.value, min: +input.min, max: +input.max, valuetext: input.getAttribute('aria-valuetext'), name: input.getAttribute('aria-label'),
+        railLeft: rail.left, railWidth: rail.width, railY: rail.top + rail.height / 2, thumbX: t.left + t.width / 2, thumbW: Math.round(t.width), thumbH: Math.round(t.height),
+        bubble: getComputedStyle(bubble).opacity, bubbleText: bubble.textContent, top: thumb.classList.contains('is-top'), z: getComputedStyle(thumb).zIndex, key: thumb.classList.contains('is-key'),
+        fill: [w.style.getPropertyValue('--mat-slider-from'), w.style.getPropertyValue('--mat-slider-to')],
+      };
+    });
+    const value = id => page.$eval('#' + id, el => el.value);
+    const at = async (id, v) => { const i = await info(id); return i.railLeft + (i.railWidth * (v - i.min)) / (i.max - i.min); };
+    const drag = async (id, to, steps = 6) => {
+      const i = await info(id);
+      await page.mouse.move(i.thumbX, i.railY);
+      await page.mouse.down();
+      await page.mouse.move(await at(id, to), i.railY, { steps });
+    };
+
+    await check('a slider is dressed by the script and keeps its native input: a thumb with a bubble, labels at the ends, the value as text', async () => {
+      const s = await page.$eval('#sl-vol', input => {
+        const w = input.closest('.mat-slider');
+        input.focus();
+        return {
+          ready: w.classList.contains('is-ready'), thumbs: w.querySelectorAll('.mat-slider__thumb').length, ends: [...w.querySelectorAll('.mat-slider__end')].map(e => e.textContent),
+          opacity: getComputedStyle(input).opacity, focus: document.activeElement === input, valuetext: input.getAttribute('aria-valuetext'),
+          out: document.getElementById('sl-vol-out').textContent, railHidden: w.querySelector('.mat-slider__rail').getAttribute('aria-hidden'),
+        };
+      });
+      expect(s, { ready: true, thumbs: 1, ends: ['0 %', '100 %'], opacity: '0', focus: true, valuetext: '40 %', out: '40 %', railHidden: 'true' }, 'the slider');
+      expect((await info('sl-vol')).fill, ['0%', '40%'], 'the filled part');
+    });
+
+    await check('dragging the thumb with the mouse sets the value, sends input while it moves and one change at the end, and the bubble shows while it is dragged', async () => {
+      await events();
+      await drag('sl-vol', 60);
+      await page.waitForTimeout(250);
+      const during = await info('sl-vol');
+      expect({ value: during.value, bubble: during.bubble, text: during.bubbleText }, { value: '60', bubble: '1', text: '60 %' }, 'while dragging');
+      await page.mouse.up();
+      const ev = await events();
+      expectTrue(ev.filter(e => e === 'input:sl-vol').length >= 2, 'input is sent while the thumb moves: ' + ev.join());
+      expect(ev.filter(e => e.startsWith('change')), ['change:sl-vol'], 'one change at the end');
+      const after = await info('sl-vol');
+      expect({ valuetext: after.valuetext, out: await page.textContent('#sl-vol-out'), fill: after.fill }, { valuetext: '60 %', out: '60 %', fill: ['0%', '60%'] }, 'after the drag');
+    });
+
+    await check('a press on the track moves the thumb there; a press on the thumb beside its centre moves nothing', async () => {
+      const g = await info('sl-vol');
+      await page.mouse.click(await at('sl-vol', 10), g.railY);
+      expect(await value('sl-vol'), '10', 'after a press on the track');
+      const k = await info('sl-vol');
+      await page.mouse.move(k.thumbX + 8, k.railY);
+      await page.mouse.down();
+      await page.mouse.up();
+      expect(await value('sl-vol'), '10', 'a press on the thumb');
+    });
+
+    await check('keys: the arrows move by a step, Page Up and Page Down by a tenth, Home and End to the ends, and every key sends input and change', async () => {
+      await page.focus('#sl-vol');
+      await events();
+      const steps = [['ArrowRight', '11'], ['ArrowUp', '12'], ['ArrowLeft', '11'], ['ArrowDown', '10'], ['PageUp', '20'], ['PageDown', '10'], ['End', '100'], ['Home', '0']];
+      for (const [key, expected] of steps) {
+        await page.keyboard.press(key);
+        expect(await value('sl-vol'), expected, key);
+      }
+      const ev = await events();
+      expect([ev.filter(e => e.startsWith('input')).length, ev.filter(e => e.startsWith('change')).length], [8, 8], 'input and change per key');
+      // a tenth of the scale, but at least one step
+      await page.focus('#sl-bright');
+      await page.keyboard.press('PageUp');
+      expect(await value('sl-bright'), '75', 'Page Up on 0..100 in steps of 5');
+      await page.focus('#sl-keep');
+      await page.keyboard.press('PageUp');
+      expect(await value('sl-keep'), '21', 'Page Up on 7..28 in steps of 7: one step');
+      await page.keyboard.press('End');
+      await page.keyboard.press('ArrowRight');
+      expect(await value('sl-keep'), '28', 'nothing beyond the maximum');
+    });
+
+    await check('the bubble shows with the focus (the ring only for the keyboard) and stays where data-bubble="always" says so', async () => {
+      await page.evaluate(() => document.activeElement.blur());
+      await page.waitForTimeout(250);
+      expect([(await info('sl-vol')).bubble, (await info('sl-bright')).bubble], ['0', '1'], 'the bubbles at rest');
+      await page.focus('#sl-vol');
+      await page.keyboard.press('Tab');
+      await page.waitForTimeout(250);
+      const b = await info('sl-bright');
+      expect([b.key, (await info('sl-vol')).bubble, (await info('sl-vol')).key], [true, '0', false], 'the keyboard moved the focus to the next slider');
+      const ring = await page.$eval('#sl-bright', input => getComputedStyle(input.closest('.mat-slider').querySelector('.mat-slider__thumb'), '::before').boxShadow);
+      expectTrue(ring.includes('3px'), 'the ring of the focus: ' + ring);
+    });
+
+    await check('data-format reaches the bubble, the labels, the output and what a screen reader says; marks and labels follow data-ticks', async () => {
+      const s = await page.$eval('#sl-disk', input => {
+        const w = input.closest('.mat-slider');
+        return {
+          valuetext: input.getAttribute('aria-valuetext'), bubble: w.querySelector('.mat-slider__bubble').textContent, out: document.getElementById('sl-disk-out').textContent,
+          ticks: w.querySelectorAll('.mat-slider__tick').length, on: w.querySelectorAll('.mat-slider__tick.is-on').length, labels: [...w.querySelectorAll('.mat-slider__tick-label')].map(l => l.textContent),
+        };
+      });
+      expect(s, { valuetext: '40 GB', bubble: '40 GB', out: '40 GB', ticks: 10, on: 4, labels: ['10 GB', '40 GB', '70 GB', '100 GB'] }, 'the storage slider');
+      await page.focus('#sl-disk');
+      await page.keyboard.press('ArrowRight');
+      expect(await page.textContent('#sl-disk-out'), '50 GB', 'the output follows');
+    });
+
+    await check('a disabled slider cannot be moved with the pointer or focused, and is dimmed', async () => {
+      const g = await info('sl-off');
+      await page.mouse.click(await at('sl-off', 10), g.railY);
+      const s = await page.$eval('#sl-off', input => { input.focus(); return { value: input.value, focused: document.activeElement === input, opacity: getComputedStyle(input.closest('.mat-slider')).opacity }; });
+      expect(s, { value: '70', focused: false, opacity: '0.5' }, 'the disabled slider');
+    });
+
+    await check('a range slider is one track with two thumbs; each input is named from the label, says its value with its unit and the output reads From 20 € to 80 €', async () => {
+      const a = await info('sl-price-from'), b = await info('sl-price-to');
+      expect([a.name, b.name, a.valuetext, b.valuetext], ['Price from', 'Price to', '20 €', '80 €'], 'names and values');
+      const s = await page.$eval('#sl-price-from', el => {
+        const w = el.closest('.mat-slider');
+        return { role: w.getAttribute('role'), label: w.getAttribute('aria-label'), thumbs: w.querySelectorAll('.mat-slider__thumb').length, rails: w.querySelectorAll('.mat-slider__rail').length, out: document.getElementById('sl-price-out').textContent };
+      });
+      expect(s, { role: 'group', label: 'Price', thumbs: 2, rails: 1, out: 'From 20 € to 80 €' }, 'the wrapper');
+      expect(a.fill, ['10%', '40%'], 'the filled part is between the thumbs');
+    });
+
+    await check('a press on the track moves the nearest thumb', async () => {
+      const g = await info('sl-price-from');
+      await page.mouse.click(await at('sl-price-from', 40), g.railY);
+      expect([await value('sl-price-from'), await value('sl-price-to')], ['40', '80'], 'nearer to the left thumb');
+      await page.mouse.click(await at('sl-price-from', 100), g.railY);
+      expect([await value('sl-price-from'), await value('sl-price-to')], ['40', '100'], 'nearer to the right thumb');
+    });
+
+    await check('the thumbs cannot cross: a thumb that is dragged past the other stops a gap before it, and the two bubbles become one', async () => {
+      await drag('sl-price-from', 190, 10);
+      await page.waitForTimeout(250);
+      expect([await value('sl-price-from'), await value('sl-price-to')], ['90', '100'], 'from stops at to minus the gap of 10');
+      const s = await page.$eval('#sl-price-from', el => {
+        const w = el.closest('.mat-slider'), [from, to] = [...w.querySelectorAll('.mat-slider__bubble')];
+        return { merged: w.classList.contains('is-merged'), from: getComputedStyle(from).opacity, to: getComputedStyle(to).opacity, text: to.textContent };
+      });
+      expect(s, { merged: true, from: '0', to: '1', text: '90 € – 100 €' }, 'one bubble for both');
+      await page.mouse.up();
+      expect(await page.textContent('#sl-price-out'), 'From 90 € to 100 €', 'the output');
+    });
+
+    await check('the keys of a range slider stop at the other thumb too; Home on the right thumb goes to the left one, not past it', async () => {
+      const g = await info('sl-price-from');
+      await page.mouse.click(await at('sl-price-from', 150), g.railY);
+      expect(await value('sl-price-to'), '150', 'the right thumb went to the press');
+      await page.focus('#sl-price-to');
+      await page.keyboard.press('Home');
+      expect([await value('sl-price-from'), await value('sl-price-to')], ['90', '100'], 'Home on the right thumb: the left one plus the gap');
+      await page.keyboard.press('End');
+      await page.focus('#sl-price-from');
+      await page.keyboard.press('End');
+      expect([await value('sl-price-from'), await value('sl-price-to')], ['190', '200'], 'End on the left thumb: the right one minus the gap');
+      await page.keyboard.press('Home');
+      expect(await value('sl-price-from'), '0', 'Home on the left thumb');
+      expect((await info('sl-price-from')).valuetext, '0 €', 'what a screen reader says');
+    });
+
+    await check('a bubble at an end stays inside the slider', async () => {
+      const s = await page.$eval('#sl-price-from', el => {
+        const w = el.closest('.mat-slider'), box = w.getBoundingClientRect(), [from, to] = [...w.querySelectorAll('.mat-slider__bubble')].map(b => b.getBoundingClientRect());
+        return { left: from.left >= box.left - 1, right: to.right <= box.right + 1, merged: w.classList.contains('is-merged') };
+      });
+      expect(s, { left: true, right: true, merged: false }, 'bubbles at 0 and 200');
+    });
+
+    // a range slider without a gap, added after the page was drawn
+    await page.evaluate(() => {
+      document.getElementById('sl-price-from').closest('.mat-field').insertAdjacentHTML('afterend',
+        '<div class="mat-field" id="sl-dyn"><label class="mat-label" for="sl-dyn-from">Weight</label>' +
+        '<div class="mat-slider mat-slider--range" data-slider data-format="{0} kg"><input class="mat-slider__input" type="range" id="sl-dyn-from" name="wf" min="0" max="100" value="50" />' +
+        '<input class="mat-slider__input" type="range" id="sl-dyn-to" name="wt" min="0" max="100" value="50" /></div></div>');
+      window.MatUi.refresh(document.getElementById('sl-dyn'));
+    });
+    await page.evaluate(() => document.getElementById('sl-dyn').scrollIntoView({ block: 'center' }));
+
+    await check('MatUi.refresh picks up a slider that was added later; its names come from the label', async () => {
+      const s = await page.$eval('#sl-dyn-from', el => ({ ready: el.closest('.mat-slider').classList.contains('is-ready'), from: el.getAttribute('aria-label'), to: document.getElementById('sl-dyn-to').getAttribute('aria-label') }));
+      expect(s, { ready: true, from: 'Weight from', to: 'Weight to' }, 'the new slider');
+    });
+
+    await check('with both thumbs at one value a press beside them takes the one on that side and the thumb that moved last is on top', async () => {
+      const g = await info('sl-dyn-from');
+      await page.mouse.click(await at('sl-dyn-from', 20), g.railY);
+      expect([await value('sl-dyn-from'), await value('sl-dyn-to')], ['20', '50'], 'a press left of both');
+      await page.mouse.click(await at('sl-dyn-from', 80), g.railY);
+      expect([await value('sl-dyn-from'), await value('sl-dyn-to')], ['20', '80'], 'a press right of both');
+      await drag('sl-dyn-from', 100, 8);
+      await page.mouse.up();
+      const a = await info('sl-dyn-from'), b = await info('sl-dyn-to');
+      expect([a.value, b.value, a.top, b.top, a.z, b.z], ['80', '80', true, false, '2', '1'], 'the left thumb reached the right one: it is on top');
+      // both at 80: the thumbs are pressed and the first movement says which one is meant
+      await page.mouse.move(a.thumbX, a.railY);
+      await page.mouse.down();
+      await page.mouse.move(a.thumbX - 60, a.railY, { steps: 6 });
+      await page.mouse.up();
+      expect([Number(await value('sl-dyn-from')) < 80, await value('sl-dyn-to')], [true, '80'], 'a movement to the left takes the left thumb');
+      const from = await value('sl-dyn-from');
+      await drag('sl-dyn-to', 0, 8);
+      await page.mouse.up();
+      expect([await value('sl-dyn-from'), await value('sl-dyn-to'), (await info('sl-dyn-to')).top], [from, from, true], 'the right thumb stops at the left one and is on top now');
+      const c = await info('sl-dyn-to');
+      await page.mouse.move(c.thumbX, c.railY);
+      await page.mouse.down();
+      await page.mouse.move(c.thumbX + 40, c.railY, { steps: 6 });
+      await page.mouse.up();
+      expect([await value('sl-dyn-from'), Number(await value('sl-dyn-to')) > Number(from)], [from, true], 'a movement to the right takes the right thumb');
+    });
+
+    await check('MatUi.slider.update reads a changed scale again: the labels at the ends and the thumbs follow', async () => {
+      await page.evaluate(() => {
+        for (const id of ['sl-dyn-from', 'sl-dyn-to']) { document.getElementById(id).max = '50'; }
+        window.MatUi.slider.update(document.getElementById('sl-dyn-from').closest('.mat-slider'));
+      });
+      const s = await page.$eval('#sl-dyn-from', el => {
+        const w = el.closest('.mat-slider');
+        return { ends: [...w.querySelectorAll('.mat-slider__end')].map(e => e.textContent), to: document.getElementById('sl-dyn-to').value, at: getComputedStyle(w.querySelectorAll('.mat-slider__thumb')[1]).left };
+      });
+      expect(s.ends, ['0 kg', '50 kg'], 'the labels at the ends');
+      expectTrue(Number(s.to) <= 50, 'the value is inside the new scale: ' + s.to);
+    });
+
+    await check('the names are German on a German page, and the bubble is readable in light and dark', async () => {
+      const s = await page.evaluate(() => {
+        document.documentElement.lang = 'de';
+        document.getElementById('sl-dyn').insertAdjacentHTML('afterend',
+          '<div class="mat-field" id="sl-de"><label class="mat-label" for="sl-de-from">Preis</label><div class="mat-slider mat-slider--range" data-slider>' +
+          '<input class="mat-slider__input" type="range" id="sl-de-from" name="df" value="20" /><input class="mat-slider__input" type="range" id="sl-de-to" name="dt" value="60" /></div></div>');
+        window.MatUi.refresh(document.getElementById('sl-de'));
+        document.documentElement.lang = 'en';
+        return [document.getElementById('sl-de-from').getAttribute('aria-label'), document.getElementById('sl-de-to').getAttribute('aria-label')];
+      });
+      expect(s, ['Preis von', 'Preis bis'], 'German names');
+      const contrast = theme => page.evaluate(t => {
+        document.documentElement.setAttribute('data-theme', t);
+        const rgb = c => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+        const lum = c => { const [r, g, b] = rgb(c).map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+        const b = getComputedStyle(document.querySelector('#sl-bright').closest('.mat-slider').querySelector('.mat-slider__bubble'));
+        const [l1, l2] = [lum(b.color), lum(b.backgroundColor)].sort((x, y) => y - x);
+        return (l1 + 0.05) / (l2 + 0.05);
+      }, theme);
+      for (const theme of ['light', 'dark']) { expectTrue((await contrast(theme)) >= 4.5, 'the bubble in ' + theme); }
+      await page.evaluate(() => document.documentElement.removeAttribute('data-theme'));
+    });
+
+    await check('the values go into the form and a reset puts the markup back: the thumbs, the bubbles, the output and the words for a screen reader are drawn again', async () => {
+      await page.evaluate(() => document.getElementById('sl-f-from').scrollIntoView({ block: 'center' }));
+      await page.focus('#sl-f-from');
+      await page.keyboard.press('End');
+      await page.keyboard.press('ArrowLeft');
+      await page.focus('#sl-f-rating');
+      await page.keyboard.press('End');
+      const sent = await page.$eval('#sl-f-from', el => Object.fromEntries(new FormData(el.form)));
+      expect(sent, { price_from: '65', price_to: '80', rating: '5' }, 'what the form sends');
+      expect(await page.textContent('#sl-f-price-out'), 'From 65 € to 80 €', 'the output');
+      await page.click('form:has(#sl-f-from) button[type=reset]');
+      await page.waitForTimeout(150);
+      const s = await page.$eval('#sl-f-from', el => {
+        const f = el.form, w = id => document.getElementById(id).closest('.mat-slider');
+        return {
+          sent: Object.fromEntries(new FormData(f)), price: [w('sl-f-from').style.getPropertyValue('--mat-slider-from'), w('sl-f-from').style.getPropertyValue('--mat-slider-to')], rating: w('sl-f-rating').style.getPropertyValue('--mat-slider-to'),
+          out: document.getElementById('sl-f-price-out').textContent, out2: document.getElementById('sl-f-rating-out').textContent, text: document.getElementById('sl-f-rating').getAttribute('aria-valuetext'),
+        };
+      });
+      expect(s, { sent: { price_from: '20', price_to: '80', rating: '3' }, price: ['10%', '40%'], rating: '50%', out: 'From 20 € to 80 €', out2: '3 / 5', text: '3 / 5' }, 'after the reset');
+    });
+
+    await check('a slider in a dialog is placed right when the dialog opens: the thumbs, the bubbles, no sideways scroll', async () => {
+      await page.evaluate(() => document.querySelector('[data-dialog-open="sl-dialog"]').scrollIntoView({ block: 'center' }));
+      await page.click('[data-dialog-open="sl-dialog"]');
+      await page.waitForTimeout(450);
+      const from = await info('sl-d-from'), to = await info('sl-d-to');
+      expectTrue(from.railWidth > 100, 'the rail has a width: ' + from.railWidth);
+      expectTrue(Math.abs(from.thumbX - (from.railLeft + from.railWidth * 0.1)) < 1.5 && Math.abs(to.thumbX - (to.railLeft + to.railWidth * 0.7)) < 1.5, 'the thumbs are at 10% and 70% of the rail');
+      expect([from.bubble, to.bubble, await page.$eval('#sl-d-from', el => el.closest('.mat-slider').classList.contains('is-merged'))], ['1', '1', false], 'two bubbles');
+      expect(await page.$eval('#sl-dialog .mat-dialog__body', b => b.scrollWidth <= b.clientWidth + 1), true, 'no sideways scroll in the dialog');
+      await page.keyboard.press('Escape');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#slider');
+    await page.evaluate(() => document.getElementById('slider').scrollIntoView());
+    await check('on a phone the thumb is a target of 44 px (a small slider 36 px), and nothing scrolls sideways, also with every thumb at an end (MOBILE-04)', async () => {
+      const sizes = await page.evaluate(() => {
+        const size = id => { const t = document.getElementById(id).closest('.mat-slider').querySelector('.mat-slider__thumb').getBoundingClientRect(); return [Math.round(t.width), Math.round(t.height)]; };
+        return { sm: size('sl-sm'), md: size('sl-md'), lg: size('sl-lg'), touch: getComputedStyle(document.querySelector('#sl-md').closest('.mat-slider').querySelector('.mat-slider__rail')).touchAction };
+      });
+      expect(sizes, { sm: [36, 36], md: [44, 44], lg: [52, 52], touch: 'pan-y' }, 'targets');
+      for (const edge of ['min', 'max']) {
+        await page.evaluate(which => document.querySelectorAll('#slider .mat-slider__input:not(:disabled)').forEach((input, n) => {
+          input.value = (which === 'min') === (n % 2 === 0) ? input.min : input.max;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }), edge);
+        const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth, thumbs: [...document.querySelectorAll('#slider .mat-slider__thumb')].filter(t => t.getBoundingClientRect().right > innerWidth || t.getBoundingClientRect().left < 0).length }));
+        expect(widths, { page: 390, window: 390, thumbs: 0 }, 'width with the thumbs at ' + edge);
+      }
+    });
+    await check('a tap on the track moves the nearest thumb, a touch drag follows the finger with the bubble above it, and one change is sent when the finger lifts', async () => {
+      await page.evaluate(() => document.getElementById('sl-price-from').scrollIntoView({ block: 'center' }));
+      await page.evaluate(() => {
+        for (const [id, v] of [['sl-price-from', 20], ['sl-price-to', 80]]) { const i = document.getElementById(id); i.value = v; i.dispatchEvent(new Event('input', { bubbles: true })); }
+        window.__events = [];
+        for (const type of ['input', 'change']) { document.addEventListener(type, e => { if (e.target.id && e.target.id.startsWith('sl-price')) { window.__events.push(type + ':' + e.target.id); } }); }
+      });
+      const info2 = id => page.$eval('#' + id, input => {
+        const w = input.closest('.mat-slider'), rail = w.querySelector('.mat-slider__rail').getBoundingClientRect();
+        const t = w.querySelectorAll('.mat-slider__thumb')[[...w.querySelectorAll('.mat-slider__input')].indexOf(input)];
+        const r = t.getBoundingClientRect();
+        return { value: input.value, left: rail.left, width: rail.width, y: rail.top + rail.height / 2, x: r.left + r.width / 2, bubble: getComputedStyle(t.querySelector('.mat-slider__bubble')).opacity };
+      });
+      const g = await info2('sl-price-from');
+      await page.touchscreen.tap(g.left + g.width * 0.6, g.y);
+      expect([await page.$eval('#sl-price-from', el => el.value), await page.$eval('#sl-price-to', el => el.value)], ['20', '120'], 'a tap nearer to the right thumb moves it');
+      const cdp = await ctx.newCDPSession(page);
+      const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+      await page.evaluate(() => { window.__events.length = 0; });
+      const f = await info2('sl-price-from');
+      await touch('touchStart', f.x, f.y);
+      for (let k = 1; k <= 6; k++) { await touch('touchMove', f.x + k * 18, f.y); }
+      await page.waitForTimeout(250);
+      // the bubble of the thumb that is touched is shown (or the one that two near thumbs share), with the value in it
+      const mid = await page.$eval('#sl-price-from', input => {
+        const w = input.closest('.mat-slider');
+        return [...w.querySelectorAll('.mat-slider__bubble')].filter(b => getComputedStyle(b).opacity === '1').map(b => b.textContent).join('|');
+      });
+      expectTrue(mid.includes(await page.$eval('#sl-price-from', el => el.value) + ' €'), 'the bubble while the finger is down: ' + mid);
+      await touch('touchEnd');
+      const end = await info2('sl-price-from');
+      expectTrue(Number(end.value) > 20 && Number(end.value) <= 120 - 10, 'the thumb followed the finger: ' + end.value);
+      expectTrue(Math.abs(end.x - (f.x + 108)) < f.width / 40 + 4, `the thumb is under the finger: ${end.x} against ${f.x + 108}`);
+      const ev = await page.evaluate(() => window.__events.splice(0));
+      expect(ev.filter(e => e.startsWith('change')), ['change:sl-price-from'], 'one change');
+      expectTrue(ev.filter(e => e.startsWith('input')).length >= 2, 'input while the finger moves');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- the version of the toolkit and its changelog
+  console.log('\nThe version of the toolkit');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Changelog');
+    const api = async url => (await page.request.get(BASE + url)).json();
+    await check('the script, the manifest and the API say the same version, and the first line of the stylesheet names it', async () => {
+      const served = await api('/api/version');
+      expectTrue(/^\d+\.\d+\.\d+$/.test(served.matui), 'the version is not three numbers: ' + served.matui);
+      expect(await page.evaluate(() => window.MatUi.version), served.matui, 'MatUi.version');
+      expect((await api('/ui/manifest.json')).version, served.matui, 'the manifest');
+      const css = await (await page.request.get(BASE + '/ui/matui.css')).text();
+      expectTrue(css.startsWith(`/* MatUi ${served.matui} (`), 'the first line of matui.css: ' + css.split('\n')[0]);
+      expectTrue(css.split('\n')[0].includes(' - build '), 'the build is not in the first line');
+    });
+    await check('the changelog page lists the versions with their sections and shows what is not released yet', async () => {
+      expect((await page.textContent('h1')).trim(), 'Changelog', 'h1');
+      expectTrue(await page.locator('#unreleased').isVisible(), 'no Unreleased');
+      expectTrue((await page.locator('.mat-card h3').allTextContents()).some(t => t.startsWith('Version ')), 'no version');
+      expectTrue((await page.locator('.doc-changes__name').allTextContents()).includes('Added'), 'no section Added');
+      // the toolkit classes in the text of an entry are code
+      expectTrue(await page.locator('.doc-changes code').count() > 5, 'the `code` of the entries is not drawn as code');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways');
+    });
+    await check('what an update takes with it: a version that is older, the current one and one that is no version', async () => {
+      const current = (await api('/api/version')).matui;
+      await page.fill('#since', '0.0.1');
+      await page.click('form button[type=submit]');
+      await page.waitForLoadState('networkidle');
+      expectTrue((await page.textContent('.mat-alert--info, .mat-alert--warning')).includes('newer version'), 'no summary of the newer versions');
+      await page.fill('#since', current);
+      await page.click('form button[type=submit]');
+      await page.waitForLoadState('networkidle');
+      expectTrue((await page.textContent('.mat-alert--success')).includes('up to date'), 'the current version is not up to date');
+      await page.fill('#since', 'banana');
+      await page.click('form button[type=submit]');
+      await page.waitForLoadState('networkidle');
+      expectTrue((await page.textContent('.mat-error')).includes('three numbers'), 'no message for something that is not a version');
+      expect(await page.getAttribute('#since', 'value'), 'banana', 'the input is kept');
+    });
+    await check('the changelog as data answers for a version, and the page is in the menu', async () => {
+      const since = await api('/api/changelog?since=0.0.1');
+      expect(since.upToDate, false, 'upToDate');
+      expectTrue(since.releases.length > 0, 'no versions after 0.0.1');
+      expectTrue(since.releases.every(r => typeof r.version === 'string' && typeof r.breaking === 'boolean' && Array.isArray(r.migration)), 'the shape of a version');
+      expect((await page.request.get(BASE + '/api/changelog?since=old')).status(), 400, 'a bad version');
+      expectTrue((await page.locator('.mat-nav a[href="/Changelog"]').getAttribute('aria-current')) === 'page', 'the page is not the open item of the menu');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Download');
+    await check('the download page names the version and where to read what changed, and the archive carries its manifest', async () => {
+      const version = (await (await page.request.get(BASE + '/api/version')).json()).matui;
+      const text = await page.textContent('main');
+      expectTrue(text.includes(`MatUi ${version}`), 'the version is not on the page');
+      for (const address of ['/Changelog', '/ui/CHANGELOG.md', '/ui/manifest.json', '/api/changelog']) { expectTrue(await page.locator(`a[href^="${address}"]`).count() > 0, 'no link to ' + address); }
+      const manifest = await (await page.request.get(BASE + '/ui/manifest.json')).json();
+      expect(manifest.version, version, 'the manifest');
+      for (const file of manifest.files.slice(0, 3)) {
+        const body = await (await page.request.get(BASE + file.url)).text();
+        expect(require('crypto').createHash('sha256').update(body, 'utf8').digest('hex'), file.sha256, 'the hash of ' + file.name);
+      }
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Changelog');
+    await check('on a phone the changelog is one column and the form fits', async () => {
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways');
+      const form = await page.locator('form[action="/Changelog"] .mat-btn--primary').boundingBox();
+      expectTrue(form && form.x >= 0 && form.x + form.width <= 390, 'the button leaves the screen');
     });
     await ctx.close();
   }
@@ -2122,6 +5575,7 @@ function seenAt(page, selector) {
     });
     await check('"Show in a page" at a component opens the panel of its group and outlines the component there', async () => {
       await page.goto(BASE + '/Components#group-lists-and-data', { waitUntil: 'networkidle' });
+      await page.waitForFunction(() => document.readyState === 'complete');
       await page.click('#toolbar [data-context-show]');
       await page.waitForFunction(() => { const f = document.querySelector('#context-group-lists-and-data iframe'); return f && f.getAttribute('data-loaded') === 'true'; });
       await page.waitForTimeout(300);
@@ -2136,6 +5590,7 @@ function seenAt(page, selector) {
       expect(await (await frameOf('group-lists-and-data')).evaluate(() => getComputedStyle(document.querySelector('.mat-gallery')).outlineStyle), 'solid', 'the outline of the gallery');
       expectTrue((await page.getAttribute('#context-group-lists-and-data [data-context-open-page]', 'href')).includes('view=gallery'), 'the link to the page is still the table');
       await page.goto(BASE + '/Components#group-feedback', { waitUntil: 'networkidle' });
+      await page.waitForFunction(() => document.readyState === 'complete');
       await page.click('#dialogs [data-context-show]');
       await page.waitForFunction(() => { const f = document.querySelector('#context-group-feedback iframe'); return f && f.getAttribute('data-loaded') === 'true'; });
       await page.waitForTimeout(500);
@@ -2296,12 +5751,31 @@ function seenAt(page, selector) {
         expect(await page.textContent('main h1'), 'Activity', 'the page after the sign-in');
       });
       await check('the Studio is a third menu behind the switcher, and the user is the administrator', async () => {
-        await page.click('.mat-switcher');
+        // the site has the switcher at the foot of the menu, above the user
+        await page.click('.mat-nav__foot .mat-switcher');
         expect(await page.locator('#nav-switch-menu [data-nav-set]').evaluateAll(els => els.map(e => e.getAttribute('data-nav-set'))), ['design', 'toolkit', 'studio'], 'menus in the switcher');
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
         const names = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').evaluateAll(els => els.map(e => { const c = e.cloneNode(true); c.querySelectorAll('.mat-nav__badge').forEach(b => b.remove()); return c.textContent.trim(); }));
         expect(names, ['Overview', 'Apps', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'Versions'], 'items of the Studio menu');
+      });
+      await check('choosing the Studio in the switcher loads its overview (a start page); the other menus swap the items', async () => {
+        await page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
+        expect(await page.locator('.mat-nav [data-nav-panel="studio"]').count(), 0, 'the page of the site has no panel of the Studio');
+        await page.click('.mat-nav__foot .mat-switcher');
+        expect(await page.evaluate(() => document.querySelector('#nav-switch-menu [data-nav-set="studio"]').tagName), 'A', 'the Studio is a link');
+        expect(await page.evaluate(() => document.querySelector('#nav-switch-menu [data-nav-set="toolkit"]').tagName), 'BUTTON', 'the Toolkit is a button');
+        await Promise.all([page.waitForURL('**/Studio'), page.click('#nav-switch-menu [data-nav-set="studio"]')]);
+        expect((await page.textContent('.mat-switcher__name')).trim(), 'Studio', 'the menu of the page that loaded');
+        expectTrue(await page.locator('.mat-nav [data-nav-panel="studio"]').isVisible(), 'the Studio menu is shown');
+        expect(await page.getAttribute('#nav-switch-menu [data-nav-set="studio"]', 'aria-checked'), 'true', 'checked');
+        // from there a menu without a start page is still swapped without a request
+        await page.click('.mat-nav__foot .mat-switcher');
+        await page.click('#nav-switch-menu [data-nav-set="toolkit"]');
+        await page.waitForTimeout(250);
+        expect(new URL(page.url()).pathname, '/Studio', 'the address after swapping');
+        expectTrue(await page.locator('.mat-nav [data-nav-panel="toolkit"]').isVisible(), 'the toolkit menu is shown');
+        await page.goto(BASE + '/Studio/Activity', { waitUntil: 'networkidle' });   // where the next checks expect to be
       });
       await check('the activity list has its toolbar above it and the sort dialog opens', async () => {
         const bar = await page.locator('.mat-toolbar').boundingBox();
@@ -2472,6 +5946,7 @@ function seenAt(page, selector) {
       });
       await check('the component is on its page, live, in its group and in the index of the page', async () => {
         await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+        await page.waitForFunction(() => document.readyState === 'complete');
         expect(await page.locator('#' + compId + ' .mat-pill--ok').count(), 1, 'the example drawn live on the page');
         expect(await page.locator('.mat-toc-aside a[href="#' + compId + '"]').count(), 1, 'the link in the index');
         expectTrue((await page.locator('#group-content').evaluate((el, id) => !!el.querySelector('#' + id), compId)), 'the component is not in the group Content');
@@ -2647,6 +6122,85 @@ function seenAt(page, selector) {
       expect(widths.page <= widths.window, true, `the page is ${widths.page} px wide in a window of ${widths.window} px`);
     });
     await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- groups in a table (LIST-16)
+  console.log('\nGroups in a table');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#table-groups');
+    const table = '#grp-hosts';
+    const group = n => `${table} tbody.mat-group >> nth=${n}`;
+    const within = (n, sel) => `${group(n)} >> ${sel}`;
+    await page.evaluate(() => document.getElementById('table-groups').scrollIntoView());
+
+    await check('a group is open or closed as the markup says, and its toggle says so', async () => {
+      expect(await page.$eval(group(0), g => g.classList.contains('is-collapsed')), false, 'the first group');
+      expect(await page.$eval(group(1), g => g.classList.contains('is-collapsed')), true, 'the second group');
+      expect(await page.getAttribute(within(1, '[data-group-toggle]'), 'aria-expanded'), 'false', 'aria-expanded of the closed group');
+      expect(await page.isVisible(within(0, '.mat-group__item >> nth=0')), true, 'a row of the open group');
+      expect(await page.isVisible(within(1, '.mat-group__item >> nth=0')), false, 'a row of the closed group');
+    });
+    await check('the heading opens and closes its group with the mouse, Enter and Space, and aria-expanded follows', async () => {
+      await page.click(within(1, '[data-group-toggle]'));
+      expect(await page.isVisible(within(1, '.mat-group__item >> nth=0')), true, 'opened by a click');
+      expect(await page.getAttribute(within(1, '[data-group-toggle]'), 'aria-expanded'), 'true', 'aria-expanded after opening');
+      await page.focus(within(0, '[data-group-toggle]'));
+      await page.keyboard.press('Enter');
+      expect(await page.isVisible(within(0, '.mat-group__item >> nth=0')), false, 'closed by Enter');
+      await page.keyboard.press('Space');
+      expect(await page.isVisible(within(0, '.mat-group__item >> nth=0')), true, 'opened by Space');
+    });
+    await check('the button in the first column header opens every group when all are closed, and closes every group otherwise', async () => {
+      await page.click(`${table} [data-groups-set]`);
+      expect(await page.$$eval(`${table} tbody.mat-group.is-collapsed`, g => g.length), 2, 'all closed');
+      await page.click(`${table} [data-groups-set]`);
+      expect(await page.$$eval(`${table} tbody.mat-group.is-collapsed`, g => g.length), 0, 'all open');
+    });
+    await check('what the user chose is remembered, except in a group with data-group-fixed', async () => {
+      await page.click(within(0, '[data-group-toggle]'));
+      await page.click('#grp-files tbody.mat-group >> nth=0 >> [data-group-toggle]');
+      await page.reload();
+      await page.evaluate(() => document.getElementById('table-groups').scrollIntoView());
+      expect(await page.$eval(group(0), g => g.classList.contains('is-collapsed')), true, 'the closed group stays closed after a reload');
+      expect(await page.$eval('#grp-files tbody.mat-group >> nth=0', g => g.classList.contains('is-collapsed')), false, 'the fixed group is as drawn');
+    });
+    await check('the add row is the last row of its group and the line of the group ends on it', async () => {
+      await page.click(within(0, '[data-group-toggle]'));
+      const rows = await page.$$eval(`${table} tbody.mat-group:first-of-type tr`, trs => trs.map(t => t.className));
+      expect(rows[rows.length - 1], 'mat-group__add', 'the last row');
+      expect(rows[0], 'mat-group__head', 'the first row');
+      const line = await page.$eval(`${table} tbody.mat-group:first-of-type .mat-group__add td`, td => {
+        const before = getComputedStyle(td, '::before');
+        return { position: before.position, bottom: before.bottom, height: td.getBoundingClientRect().height };
+      });
+      expect(line.position, 'absolute', 'the line is drawn');
+      expect(Math.abs(parseFloat(line.bottom) - line.height / 2) < 2, true, 'the line ends at the middle of the last row: ' + line.bottom + ' of ' + line.height);
+    });
+    await ctx.close();
+
+    const phone = await open(phoneOptions, '/Components#table-groups');
+    await phone.page.evaluate(() => document.getElementById('table-groups').scrollIntoView());
+    await check('on a phone the rows of a group are cards, without the line, with their labels, and the add row is a card with its button', async () => {
+      const s = await phone.page.$eval('#grp-hosts tbody.mat-group >> nth=0', g => {
+        const item = g.querySelector('.mat-group__item td');
+        const add = g.querySelector('.mat-group__add td');
+        return {
+          itemDisplay: getComputedStyle(item.closest('tr')).display,
+          label: getComputedStyle(item, '::before').content,
+          linePosition: getComputedStyle(item, '::before').position,
+          after: getComputedStyle(item, '::after').content,
+          addAlign: getComputedStyle(add).justifyContent,
+          sideways: document.documentElement.scrollWidth > innerWidth,
+        };
+      });
+      expect(s.itemDisplay, 'block', 'a row is a card');
+      expect(s.label, '"Host"', 'the first cell has its label');
+      expect(s.linePosition, 'static', 'no line');
+      expect(s.after, 'none', 'no branch');
+      expect(s.addAlign, 'flex-start', 'the add button at the start');
+      expect(s.sideways, false, 'sideways scroll');
+    });
+    await phone.ctx.close();
   }
 
   // ---------------------------------------------------------------------------------------------------- the end

@@ -185,6 +185,240 @@ internal static class FormComponents
             [
                 "Show the value: a slider alone does not say what it is set to. For an exact number use a number field with the slider as a help.",
                 "The track is the accent colour in the filled part and a neutral grey in the rest, so it never relies on a colour that means something.",
+                "A value bubble above the thumb, marks, a unit and a range with two ends are the slider below (FORM-17); the range here stays for the plain case.",
+            ]),
+
+        new("slider", "Slider and range slider", "Forms", "sliders",
+            "A value on a scale (a slider) or a from and to (a range slider): a bubble with the value, marks, a unit, thumbs that cannot cross. Native range inputs underneath, so a form posts them and a screen reader reads them.",
+            ["FORM-17", "FORM-12", "FORM-03", "FORM-08", "A11Y-01", "A11Y-02", "MOBILE-04", "COLOR-04"],
+            [
+                new("A slider with its value", """
+                    <div class="mat-stack">
+                      <div class="mat-field">
+                        <div class="mat-field__meta"><label class="mat-label" for="sl-vol">Volume</label><output class="mat-range-out" id="sl-vol-out" for="sl-vol">40 %</output></div>
+                        <div class="mat-slider" data-slider data-format="{0} %" data-output="sl-vol-out">
+                          <input class="mat-slider__input" type="range" id="sl-vol" name="volume" min="0" max="100" step="1" value="40" />
+                        </div>
+                      </div>
+                      <div class="mat-field">
+                        <div class="mat-field__meta"><label class="mat-label" for="sl-bright">Brightness</label><output class="mat-range-out" id="sl-bright-out" for="sl-bright">65 %</output></div>
+                        <div class="mat-slider" data-slider data-format="{0} %" data-output="sl-bright-out" data-bubble="always">
+                          <input class="mat-slider__input" type="range" id="sl-bright" name="brightness" min="0" max="100" step="5" value="65" />
+                        </div>
+                        <span class="mat-hint">The bubble with the value is always there (data-bubble="always"); in the first slider it shows while the thumb is dragged or has the focus.</span>
+                      </div>
+                    </div>
+                    """, "Drag the thumb, press on the track (the thumb goes there), or use the keys: the arrows move it by one step, Page Up and Page Down by a tenth of the scale, Home and End to the ends. The minimum and the maximum are labelled at the ends; data-labels=\"none\" takes them away."),
+                new("Marks, labels and a unit", """
+                    <div class="mat-stack">
+                      <div class="mat-field">
+                        <div class="mat-field__meta"><label class="mat-label" for="sl-disk">Storage</label><output class="mat-range-out" id="sl-disk-out" for="sl-disk">40 GB</output></div>
+                        <div class="mat-slider" data-slider data-format="{0} GB" data-output="sl-disk-out" data-bubble="always" data-ticks data-tick-labels="3">
+                          <input class="mat-slider__input" type="range" id="sl-disk" name="disk" min="10" max="100" step="10" value="40" />
+                        </div>
+                        <span class="mat-hint">A mark at every step (data-ticks), a label under every third (data-tick-labels).</span>
+                      </div>
+                      <div class="mat-field">
+                        <div class="mat-field__meta"><label class="mat-label" for="sl-keep">Keep backups for</label><output class="mat-range-out" id="sl-keep-out" for="sl-keep">14 days</output></div>
+                        <div class="mat-slider" data-slider data-format="{0} days" data-output="sl-keep-out" data-ticks data-tick-labels="1">
+                          <input class="mat-slider__input" type="range" id="sl-keep" name="keep" min="7" max="28" step="7" value="14" />
+                        </div>
+                      </div>
+                    </div>
+                    """, "data-format is a template for every value that is shown (the bubble, the labels, the output) and for what a screen reader says (aria-valuetext): {0} stands for the number, written for the language of the page. data-ticks=\"10\" divides the scale in ten parts."),
+                new("Sizes and disabled", """
+                    <div class="mat-stack">
+                      <div class="mat-slider mat-slider--sm" data-slider data-labels="none"><input class="mat-slider__input" type="range" id="sl-sm" name="sm" aria-label="Small slider" min="0" max="100" value="30" /></div>
+                      <div class="mat-slider" data-slider data-labels="none"><input class="mat-slider__input" type="range" id="sl-md" name="md" aria-label="Default slider" min="0" max="100" value="50" /></div>
+                      <div class="mat-slider mat-slider--lg" data-slider data-labels="none"><input class="mat-slider__input" type="range" id="sl-lg" name="lg" aria-label="Large slider" min="0" max="100" value="70" /></div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="sl-off">Disabled</label>
+                        <div class="mat-slider" data-slider data-format="{0} %"><input class="mat-slider__input" type="range" id="sl-off" name="off" min="0" max="100" value="70" disabled /></div>
+                        <span class="mat-hint">It is not sent and cannot be focused.</span>
+                      </div>
+                    </div>
+                    """, "The thumb is a target of 44 px in every size but the small one, which is a compact control (36 px, MOBILE-04); what is seen is a knob of 16, 20 or 26 px."),
+                new("A range slider: from and to", """
+                    <div class="mat-field">
+                      <div class="mat-field__meta"><label class="mat-label" for="sl-price-from">Price</label><output class="mat-range-out" id="sl-price-out">From 20 € to 80 €</output></div>
+                      <div class="mat-slider mat-slider--range" data-slider data-min-gap="10" data-format="{0} €" data-range-format="From {0} to {1}" data-output="sl-price-out" data-bubble="always">
+                        <input class="mat-slider__input" type="range" id="sl-price-from" name="from" min="0" max="200" step="5" value="20" />
+                        <input class="mat-slider__input" type="range" id="sl-price-to" name="to" min="0" max="200" step="5" value="80" />
+                      </div>
+                    </div>
+                    """, "Two native inputs in one wrapper, from and to, and one track. The thumbs cannot cross and stay at least data-min-gap apart (here 10 €); a press on the track moves the nearest thumb, and the thumb that was moved last is on top. Drag one thumb up to the other: the two bubbles become one."),
+                new("Time of day", """
+                    <div class="mat-field">
+                      <div class="mat-field__meta"><label class="mat-label" for="sl-hours-from">Opening hours</label><output class="mat-range-out" id="sl-hours-out">8 h – 18 h</output></div>
+                      <div class="mat-slider mat-slider--range" data-slider data-min-gap="1" data-format="{0} h" data-output="sl-hours-out" data-ticks="6" data-tick-labels="1">
+                        <input class="mat-slider__input" type="range" id="sl-hours-from" name="open" min="0" max="24" step="1" value="8" />
+                        <input class="mat-slider__input" type="range" id="sl-hours-to" name="close" min="0" max="24" step="1" value="18" />
+                      </div>
+                    </div>
+                    """, "Without data-range-format the output reads \"8 h – 18 h\". Each input has a name of its own for a screen reader, made from the label: \"Opening hours from\" and \"Opening hours to\" (in German \"von\" and \"bis\"), and says its value in the format (\"8 h\")."),
+                new("In a form: a filter that is sent and reset", $$"""
+                    <form class="mat-form" method="get" action="/Components#slider" novalidate>
+                      <div class="mat-field">
+                        <div class="mat-field__meta"><label class="mat-label" for="sl-f-from">Price</label><output class="mat-range-out" id="sl-f-price-out">From 20 € to 80 €</output></div>
+                        <div class="mat-slider mat-slider--range" data-slider data-min-gap="10" data-format="{0} €" data-range-format="From {0} to {1}" data-output="sl-f-price-out">
+                          <input class="mat-slider__input" type="range" id="sl-f-from" name="price_from" min="0" max="200" step="5" value="20" />
+                          <input class="mat-slider__input" type="range" id="sl-f-to" name="price_to" min="0" max="200" step="5" value="80" />
+                        </div>
+                      </div>
+                      <div class="mat-field">
+                        <div class="mat-field__meta"><label class="mat-label" for="sl-f-rating">At least</label><output class="mat-range-out" id="sl-f-rating-out" for="sl-f-rating">3 / 5</output></div>
+                        <div class="mat-slider" data-slider data-format="{0} / 5" data-output="sl-f-rating-out" data-ticks data-tick-labels="1">
+                          <input class="mat-slider__input" type="range" id="sl-f-rating" name="rating" min="1" max="5" step="1" value="3" />
+                        </div>
+                      </div>
+                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{{I("sliders")}}<span>Apply</span></button><button type="reset" class="mat-btn mat-btn--secondary">Reset</button></div>
+                    </form>
+                    ""","Apply sends price_from, price_to and rating as they are set; Reset puts the values of the markup back and the sliders are drawn again. Both inputs of the range slider are in the form and are checked like any other (min, max, required)."),
+                new("In a dialog (a filter)", $$"""
+                    <button type="button" class="mat-btn mat-btn--secondary" data-dialog-open="sl-dialog" aria-haspopup="dialog">{{I("sliders")}}<span>Filter by price</span></button>
+                    <dialog class="mat-dialog mat-dialog--sm" id="sl-dialog" aria-labelledby="sl-dialog-title">
+                      <form class="mat-dialog__form" method="dialog">
+                        <div class="mat-dialog__head">{{I("sliders")}}<h2 class="mat-dialog__title" id="sl-dialog-title">Filter by price</h2><button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">{{I("x")}}</button></div>
+                        <div class="mat-dialog__body mat-form">
+                          <div class="mat-field">
+                            <div class="mat-field__meta"><label class="mat-label" for="sl-d-from">Price</label><output class="mat-range-out" id="sl-d-out">20 € – 140 €</output></div>
+                            <div class="mat-slider mat-slider--range" data-slider data-min-gap="10" data-format="{0} €" data-output="sl-d-out" data-bubble="always">
+                              <input class="mat-slider__input" type="range" id="sl-d-from" name="price_from" min="0" max="200" step="5" value="20" />
+                              <input class="mat-slider__input" type="range" id="sl-d-to" name="price_to" min="0" max="200" step="5" value="140" />
+                            </div>
+                          </div>
+                        </div>
+                        <div class="mat-dialog__foot"><div class="mat-btn-row mat-btn-row--plain"><button type="submit" class="mat-btn mat-btn--primary">Apply</button><button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button></div></div>
+                      </form>
+                    </dialog>
+                    """, "The slider is drawn while the dialog is closed and has no width yet: it is placed again when the dialog opens. On a phone the dialog is full screen like every dialog (DIALOG-03)."),
+            ],
+            [
+                "The markup is a wrapper `mat-slider[data-slider]` around a native `input.mat-slider__input[type=range]` with its own id, name, `min`, `max`, `step` and `value`, so a form posts it and it works without the script. `mat-slider--range` takes two inputs, from and to.",
+                "Under the script the inputs are invisible but stay in place (opacity, never `display: none`): they keep the Tab key, the keyboard, validation, the form and the screen reader. The thumbs, the track and the bubbles are drawn over them and marked `aria-hidden`.",
+                "The label of the field points to the slider (`for`); for a range slider to the first input, and the script names the two inputs from it (\"Price from\", \"Price to\") unless they have an `aria-label` of their own. The value is also said in words: `aria-valuetext` follows `data-format`.",
+                "Keys: arrows by one `step`, Page Up and Page Down by a tenth of the scale (at least one step), Home and End to the ends. A thumb of a range slider stops at the other one (and at `data-min-gap`); Home on the right thumb goes to the left one, not past it.",
+                "Pointer: a press on the track moves the nearest thumb, a press on a thumb grabs it where it is. With both thumbs at one value a press beside them takes the one on that side, a press on them waits for the first movement. `input` is sent while it moves, `change` when it lets go.",
+                "`data-min`, `data-max` and `data-step` on the wrapper are copied to the inputs, which can carry them as well. `MatUi.refresh(scope)` and `MatUi.slider.init(scope)` pick up new sliders; `MatUi.slider.update(wrapper)` reads a changed `min`, `max`, `step` or format again.",
+                "The value is always shown as text as well (the output, the labels at the ends or a bubble that stays): a slider alone does not say what it is set to (FORM-12). For an exact number use a number field.",
+            ]),
+
+        new("number-stepper", "Number stepper", "Forms", "plus",
+            "A number field with a button for less and one for more, for a value that people change by a step or two: a quantity, a number of seats, a timeout. The native number field only has tiny spinners.",
+            ["FORM-20", "FORM-12", "FORM-03", "A11Y-02", "BUTTON-05", "MOBILE-04"],
+            [
+                new("A number with a button for less and one for more", """
+                    <div class="mat-form__grid">
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-qty">Quantity</label>
+                        <div class="mat-stepper" data-stepper>
+                          <input class="mat-input" type="number" id="stp-qty" name="qty" min="1" max="10" step="1" value="3" />
+                        </div>
+                        <span class="mat-hint">From 1 to 10. Hold a button to repeat, with Shift ten at a time.</span>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-opacity">Opacity</label>
+                        <div class="mat-stepper" data-stepper>
+                          <input class="mat-input" type="number" id="stp-opacity" name="opacity" min="0" max="1" step="0.1" value="0.3" />
+                        </div>
+                        <span class="mat-hint">In steps of a tenth: 0.3 plus 0.1 is 0.4 and never 0.30000000000000004.</span>
+                      </div>
+                    </div>
+                    """, "Click a button, or use the arrow keys in the field. Holding a button repeats and gets faster; Page up and Page down (and Shift with a button or an arrow key) move by ten steps. Without the script this is the native number field."),
+                new("With a unit and a fixed number of decimals", """
+                    <div class="mat-form__grid">
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-gb">Storage</label>
+                        <div class="mat-stepper" data-stepper data-unit="GB">
+                          <input class="mat-input" type="number" id="stp-gb" name="storage" min="0" max="100" step="5" value="20" />
+                        </div>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-min">Timeout</label>
+                        <div class="mat-stepper" data-stepper data-unit="min">
+                          <input class="mat-input" type="number" id="stp-min" name="timeout" min="1" max="60" step="1" value="15" />
+                        </div>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-price">Price</label>
+                        <div class="mat-stepper" data-stepper data-unit="EUR" data-precision="2">
+                          <input class="mat-input" type="number" id="stp-price" name="price" min="0" step="0.25" value="4.50" />
+                        </div>
+                        <span class="mat-hint">No upper limit; two decimals are always shown.</span>
+                      </div>
+                    </div>
+                    """, "`data-unit` is drawn at the right end of the field and read to a screen reader with the field. `data-precision` is the number of decimals that are shown; without it the field shows what the step needs."),
+                new("Stacked arrows, and the sizes", """
+                    <div class="mat-stack">
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-pages">Pages per sheet</label>
+                        <div class="mat-stepper mat-stepper--stacked" data-stepper>
+                          <input class="mat-input" type="number" id="stp-pages" name="pages" min="1" max="16" step="1" value="2" />
+                        </div>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-st-sm">Small</label>
+                        <div class="mat-stepper" data-stepper data-unit="px">
+                          <input class="mat-input mat-input--sm" type="number" id="stp-st-sm" name="small" min="0" max="64" step="4" value="16" />
+                        </div>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-st-lg">Large</label>
+                        <div class="mat-stepper" data-stepper>
+                          <input class="mat-input mat-input--lg" type="number" id="stp-st-lg" name="large" min="0" max="99" step="1" value="12" />
+                        </div>
+                      </div>
+                    </div>
+                    """, "The stacked variant is the compact one, for a toolbar or a table row. On a touch screen two small arrows would be too small to hit (MOBILE-04), so there it is drawn like the default. The size is the one of the input inside (`mat-input--sm`, `mat-input--lg`), like every field."),
+                new("Read-only and disabled", """
+                    <div class="mat-form__grid">
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-ro">Read-only</label>
+                        <div class="mat-stepper" data-stepper>
+                          <input class="mat-input" type="number" id="stp-ro" name="ro" min="0" max="10" step="1" value="4" readonly />
+                        </div>
+                        <span class="mat-hint">It is sent with the form; the buttons do nothing.</span>
+                      </div>
+                      <div class="mat-field">
+                        <label class="mat-label" for="stp-off">Disabled</label>
+                        <div class="mat-stepper" data-stepper>
+                          <input class="mat-input" type="number" id="stp-off" name="off" min="0" max="10" step="1" value="4" disabled />
+                        </div>
+                        <span class="mat-hint">It is not sent and cannot be focused.</span>
+                      </div>
+                    </div>
+                    """),
+                new("In a form: required, with the message at the field", $"""
+                    <form class="mat-form" method="get" action="/Components#number-stepper" novalidate>
+                      <div class="mat-form__grid">
+                        <div class="mat-field">
+                          <label class="mat-label" for="stp-seats">Seats <span class="mat-req" aria-hidden="true">*</span></label>
+                          <div class="mat-stepper" data-stepper>
+                            <input class="mat-input" type="number" id="stp-seats" name="seats" min="1" max="12" step="1" required data-msg-required="Please enter the number of seats." data-msg-range="Please enter a number from 1 to 12." />
+                          </div>
+                          <span class="mat-error" aria-live="polite"></span>
+                        </div>
+                        <div class="mat-field">
+                          <label class="mat-label" for="stp-nights">Nights <span class="mat-opt">(optional)</span></label>
+                          <div class="mat-stepper" data-stepper data-unit="nights">
+                            <input class="mat-input" type="number" id="stp-nights" name="nights" min="1" max="30" step="1" value="2" />
+                          </div>
+                          <span class="mat-error" aria-live="polite"></span>
+                        </div>
+                      </div>
+                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Continue</span></button></div>
+                    </form>
+                    """, "Press Continue with Seats empty: the message appears under the field and the field is marked. The first press of a button then starts at the lowest value (an empty field counts as 0, put inside the limits)."),
+            ],
+            [
+                "The wrapper is `mat-stepper` with `data-stepper` around a native `input type=\"number\"` (`min`, `max`, `step`), which is what is validated and posted. Without the script it is the native number field; the script adds the buttons and `is-ready`, which hides the spinners of the browser.",
+                "A press changes the value by `step`, with Shift by ten steps. Holding a button repeats after a short wait and gets faster. In the field the arrow keys do the same and Page up and Page down move ten steps.",
+                "The value stays inside `min` and `max` and on the grid of `step`, counted from `min` as the browser counts it; a value off the grid goes to the next one first. What is typed is put in order when the field is left.",
+                "The arithmetic is done in whole numbers, so 0.1 plus 0.2 is 0.3. `data-precision` sets the number of decimals that are shown; without it the field shows what the step needs.",
+                "A button that cannot go further is `aria-disabled`, never `disabled`, so the focus stays on it. The buttons are named in English and German (\"Increase Quantity\") and are not a stop of the Tab key, because the field has the keys.",
+                "A change through a button is read out, and `data-unit` is read with the field (`aria-describedby`). The unit is drawn at the right end of the field.",
+                "The value changes like the browser changes it: an `input` and a `change` event, both bubbling. `MatUi.refresh()` adds buttons to steppers that came later and reads `min`, `max` and `disabled` again.",
+                "An error is the `is-invalid` of the `mat-field`; the border of the buttons follows the border of the field. On a touch screen the stacked variant is drawn like the default (MOBILE-04).",
             ]),
 
         new("input-groups", "Input groups", "Forms", "link",

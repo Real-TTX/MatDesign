@@ -203,6 +203,88 @@ public class SiteHelpersTests
         Assert.Equal("design", shell.CurrentMenu(null).Id);
     }
 
+    // ---------------------------------------------------------------------------------------------------- the switcher: place and groups (SHELL-15)
+
+    private static ShellModel Shell(SwitcherPlace place, params NavSet[] menus) => new()
+    {
+        App = MatDesign.Core.AppRegistry.Get("matdesign")!,
+        Menus = menus,
+        UserName = "A",
+        UserRole = "B",
+        Version = "v",
+        SwitcherPlace = place,
+    };
+
+    private static NavSet Menu(string id, NavSetParent? parent = null, bool attention = false)
+        => new(id, id.ToUpperInvariant(), "list", [new(null, [new("Page " + id, "/" + id, "list", attention ? NavBadge.Count(1, "warn", "to look at") : null)])], parent);
+
+    [Theory]
+    [InlineData(SwitcherPlace.Top, true, false, false)]
+    [InlineData(SwitcherPlace.Bottom, false, true, false)]
+    [InlineData(SwitcherPlace.Both, true, true, false)]
+    [InlineData(SwitcherPlace.End, false, false, true)]
+    public void The_switcher_is_under_the_logo_at_the_foot_at_both_or_at_the_end_of_the_menu(SwitcherPlace place, bool top, bool bottom, bool end)
+    {
+        var shell = Shell(place, Menu("a"), Menu("b"));
+        Assert.Equal(top, shell.SwitcherAtTop);
+        Assert.Equal(bottom, shell.SwitcherAtBottom);
+        Assert.Equal(end, shell.SwitcherAtEnd);
+        // with one menu there is nothing to switch, wherever it would sit
+        var single = Shell(place, Menu("a"));
+        Assert.False(single.SwitcherAtTop || single.SwitcherAtBottom || single.SwitcherAtEnd);
+    }
+
+    [Fact]
+    public void The_switcher_is_under_the_logo_unless_the_app_says_otherwise_and_only_with_two_menus()
+    {
+        Assert.True(Shell(SwitcherPlace.Top, Menu("a"), Menu("b")).SwitcherAtTop);
+        Assert.Equal(SwitcherPlace.Top, new ShellModel { App = MatDesign.Core.AppRegistry.Get("matdesign")!, Menus = [Menu("a"), Menu("b")], UserName = "A", UserRole = "B", Version = "v" }.SwitcherPlace);
+        // the site itself has it at the foot, above the user, and not under the logo
+        var site = ShellModel.Site();
+        Assert.True(site.SwitcherAtBottom);
+        Assert.False(site.SwitcherAtTop);
+        var single = Shell(SwitcherPlace.Both, Menu("a"));
+        Assert.False(single.SwitcherAtTop);
+        Assert.False(single.SwitcherAtBottom);
+    }
+
+    [Fact]
+    public void Menus_of_one_parent_are_gathered_below_it_where_its_first_menu_is()
+    {
+        var admin = new NavSetParent("Administration", "shield");
+        var shell = Shell(SwitcherPlace.Top, Menu("work"), Menu("people", admin), Menu("docs"), Menu("system", admin));
+        var entries = shell.SwitcherEntries;
+        Assert.Equal(3, entries.Count);
+        Assert.Null(entries[0].Parent);
+        Assert.Equal(["people", "system"], entries[1].Menus.Select(m => m.Id));
+        Assert.Equal("administration", entries[1].Parent!.Key);
+        Assert.Null(entries[2].Parent);
+        Assert.Equal("docs", entries[2].Menus.Single().Id);
+    }
+
+    [Fact]
+    public void A_parent_carries_the_attention_of_the_menus_below_it()
+    {
+        var admin = new NavSetParent("Administration", "shield");
+        var shell = Shell(SwitcherPlace.Top, Menu("work"), Menu("people", admin, attention: true), Menu("system", admin));
+        Assert.False(shell.SwitcherEntries[0].NeedsAttention);
+        Assert.True(shell.SwitcherEntries[1].NeedsAttention);
+    }
+
+    [Fact]
+    public void A_menu_has_a_start_page_when_it_names_an_address_and_only_the_studio_of_the_site_does()
+    {
+        Assert.False(Menu("a").HasStartPage);
+        Assert.True(new NavSet("b", "B", "list", Menu("b").Groups, Href: "/b").HasStartPage);
+        Assert.All(Navigation.Sets, s => Assert.False(s.HasStartPage, s.Id));
+        Assert.Equal("/Studio", Navigation.StudioSet.Href);
+        Assert.Contains(Navigation.StudioSet.Pages, p => p.Href == Navigation.StudioSet.Href);   // the start page is a page of the menu
+    }
+
+    [Fact]
+    public void The_menus_of_the_site_are_not_grouped()
+        => Assert.All(Navigation.Sets, s => Assert.Null(s.Parent));
+
     [Fact]
     public void A_menu_asks_for_attention_when_an_item_has_a_warning_or_an_error_badge()
     {
@@ -320,7 +402,7 @@ public class SiteHelpersTests
     public void The_shell_skeleton_is_the_one_of_the_layout()
     {
         // The skeleton on the shell page is written by hand: it must still name every part of the shell the layout draws.
-        var layout = File.ReadAllText(TestPaths.Web("Pages/Shared/_Layout.cshtml")) + File.ReadAllText(TestPaths.Web("Pages/Shared/_Menu.cshtml")) + File.ReadAllText(TestPaths.Web("Services/Navigation.cs"));
+        var layout = File.ReadAllText(TestPaths.Web("Pages/Shared/_Layout.cshtml")) + File.ReadAllText(TestPaths.Web("Pages/Shared/_Menu.cshtml")) + File.ReadAllText(TestPaths.Web("Pages/Shared/_MenuSwitcher.cshtml")) + File.ReadAllText(TestPaths.Web("Services/Navigation.cs"));
         foreach (var part in new[] { "mat-app", "mat-nav", "mat-nav__brand", "mat-nav__close", "mat-nav__switch", "mat-switcher", "mat-nav__branch", "mat-nav__sub", "mat-nav__badge", "mat-nav__scroll", "mat-nav__foot", "mat-user", "mat-theme", "mat-nav__version", "mat-main", "mat-topbar", "mat-burger", "mat-crumbs", "mat-page", "mat-page__head", "mat-menu" })
         {
             Assert.Contains(part, layout);

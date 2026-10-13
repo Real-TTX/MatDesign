@@ -15,6 +15,14 @@
          release : <major>.<minor>.<build>-<date>   e.g. 0.1.42-20261010
          nightly : nightly-<build>-<date>
          local   : local-<date>                      -->
+  <!-- The version of the toolkit MatUi (the CSS, the script and the sprite that the apps copy), semantic versioning: docs/VERSIONING.md.
+       It is the version of the LAST RELEASE of the toolkit; what is not released yet is listed under "Unreleased" in CHANGELOG.md.
+       Change it with `node tools/bump.js <patch|minor|major>`, not by hand: a unit test holds it equal to the newest released version of CHANGELOG.md.
+       (MatDesignMajor/Minor below are the version of the SITE, the container image; they do not tell an app what to update.) -->
+  <PropertyGroup>
+    <MatUiVersion>0.1.0</MatUiVersion>
+  </PropertyGroup>
+
   <PropertyGroup>
     <MatDesignMajor>0</MatDesignMajor>
     <MatDesignMinor>1</MatDesignMinor>

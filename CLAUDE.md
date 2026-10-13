@@ -34,6 +34,7 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
 - **Icon library (optional, ICON-05):** `node tools/iconlib.js` builds `src/MatUi/wwwroot/iconlib/` (sprite `mat-il-*`, catalogue, licence, README) from `tools/iconlib/`: `lucide.json` (vendored Lucide, written by
   `import-lucide.js <checkout>` when Lucide is updated), `custom.json` (icons drawn for MatDesign: one line each, with tags and categories; look at them on a contact sheet before keeping one) and `categories.json`
   (General, Home automation and its areas as curated lists). An icon can be in any number of categories. Nothing in `matui.css`/`matui.js` may refer to the library (a test checks); CI fails when the committed files are stale.
+- **Versions of the toolkit:** `node tools/bump.js <patch|minor|major>` turns Unreleased of `CHANGELOG.md` into the next version and writes the number where it is kept (docs/VERSIONING.md); `node tools/matui-check.js <folder of an app>` shows how an app's copy stands against the changelog (and whether a file was changed by hand).
 - **Audit:** `node tools/audit.js [folder with the repositories]` rewrites `src/MatDesign.Web/Data/audit.json`, a snapshot of how close the other apps are to the rules.
 
 ## Map
@@ -43,6 +44,8 @@ src/MatUi                  Razor class library = the toolkit. wwwroot/css (10 pa
 src/MatDesign.Core         no web types
   Colors.cs                  OKLab, mixing like CSS color-mix, WCAG contrast, distance
   AppRegistry.cs             the apps and their accent, AccentPresets
+  AppVersion.cs              the build of the site (Current) and the version of the toolkit (MatUi, from MatUiVersion in Directory.Build.props)
+  Changelog.cs               the changelog of the toolkit (CHANGELOG.md, embedded in this project): parse, the versions since a version, the problems of the file
   AccentReport.cs            what the toolkit derives from an accent + the contrast checks (also on the surfaces of a colour scheme)
   ColorSchemes.cs            the colour schemes (paper, contrast, oled), SchemeSurfaces (a scheme in one mode, read from the CSS) and the checks per scheme, mode and accent
   PaletteAdvisor.cs          accents that are too close, proposals
@@ -53,6 +56,7 @@ src/MatDesign.Core         no web types
   Studio/AppValidator.cs     what an app has to be (id, name, glyph, port, contrast), Normalize, IsSafe
   Studio/RuleValidator.cs    what a rule has to be (an id of its area, title, statement, level, source), Normalize, IsSafe, NextId
   Studio/Diff.cs             what changed between two revisions: the fields (Flatten, Changes) and the lines (Lines)
+  Studio/HtmlFormatter.cs    indents and wraps the markup of an example for showing it as code (white space only; a test holds that for every example)
   Studio/MarkupChecks.cs     the contract of the markup of an example (classes, icons, no inline/outside/script, labels, ids ...): the unit tests and the Studio use this one code
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /releases/* (the releases of the Studio), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
@@ -63,16 +67,17 @@ src/MatDesign.Web          the site
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
   Pages/Studio/              Setup (the assistant of the first administrator), Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, IconLibrary (the optional icon library: sprite, catalogue, single icons, archive, served under /ui/iconlib/), Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
-                             ComponentCatalog (+ FormComponents, PickerComponents, ContentComponents, LayoutComponents; CatalogSection = what a page shows),
+                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, ListComponents, LayoutComponents, ScheduleComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
                              PatternCatalog, ShellSkeleton, SchemeDocs (the numbers and tokens of the colour schemes for the pages), AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
-  Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (switcher, items, badges, submenus), _MenuSwitchPopup, _Head, _Toolbar, _Pager,
+  Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (items, badges, submenus; the switcher under the logo or at the end of the menu), _MenuSwitcher (the switcher button, under the logo,
+                             in the foot or at the end of the menu: `ShellModel.SwitcherPlace`), _MenuSwitchPopup (its popup; menus grouped below a `NavSetParent`), _Head, _Toolbar, _Pager,
                              _DocSection + _Toc + _Component + _ContextPage (the components, layout and utilities pages), _AccentSwatches, _ContrastCard (+ _ContrastRows, _SchemeChecks), _FoundationsTabs
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
 tests/e2e                  run.js: the behaviour in a real browser against a running site
-tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js
+tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js, bump.js (makes a version of the toolkit), matui-check.js (checks an app's copy of it)
 ```
 
 ## Conventions
@@ -100,17 +105,57 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   outside of it is seen above it. The host moves in `openDialog` and in the `close` handler, which runs before a dialog the script built removes itself, so no toast is lost with it.
 - Selection (`data-selectable`): a check per item (`data-select-row`), maybe `data-select-all` and a `[data-bulk-bar]` with `[data-bulk-count]`. The script marks the item of a ticked check `is-selected`: the nearest `tr`,
   `.mat-tile` or `[data-select-item]` inside the box. A selected row is `--mat-accent-soft-strong`, a selected `[data-select-item]` is `--mat-accent-soft` with the accent as its line (like a ticked `.mat-choice`): a tint, no bar (`COLOR-08`).
-- The menu: a main action (`SHELL-19`) is the first item and filled with the accent (`mat-nav__item--primary`, `NavItem.Primary`; the current page keeps the fill, a step darker). The switcher (`SHELL-15`) is under the logo,
-  or, with `mat-nav__switch--end` (`ShellModel.SwitcherAtEnd`), after the panels and above the foot with its popup upwards (`data-menu-place="top"`). In the header bar a main action is a `mat-btn--primary mat-btn--icon` in
+- The menu: a main action (`SHELL-19`) is the first item and filled with the accent (`mat-nav__item--primary`, `NavItem.Primary`; the current page keeps the fill, a step darker). The switcher (`SHELL-15`, `ShellModel.SwitcherPlace`) is under the logo (`Top`),
+  in the foot directly above the user (`Bottom`, `mat-nav__switch--foot`; `Both` draws it in both places), or, with `mat-nav__switch--end` (`End`, `ShellModel.SwitcherAtEnd`), after the panels and above the foot; from the foot and the end its popup opens upwards (`data-menu-place="top"`). In the header bar a main action is a `mat-btn--primary mat-btn--icon` in
   `mat-topbar__actions` (`SHELL-17`, one icon in the accent colour, last; a second one beside it is `mat-btn--secondary mat-btn--icon`). The sample app shows the menu pieces with `/Preview?...&action=1&switcher=end`.
-- Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour"]` around the real input `mat-picker__input`, which posts one value in a fixed
-  format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone). Texts in English and German
+- Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour|tags|slot"]` around the real input `mat-picker__input`, which posts one value in a fixed
+  format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`, `2026-10-14T09:30`, the tags joined by a comma); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone; `tags` is
+  `inline`: a field of chips, no button, its suggestions a dropdown under it). Texts in English and German
   (`PK_TEXT`: both languages must have every key, a test checks; it also holds the label of the theme button and the AM and PM, so the script writes no text an app cannot change: `data-pk-*`,
   `data-theme-label`, `data-dlg-*`, `data-msg-*`, `data-copied` on `<html>`, see ADOPTING.md 3a). A hidden element that has a `display` in the CSS needs its own `[hidden]` rule (tests list them).
   A select can create what is missing and suggest (`FORM-16`): `data-create-url` (POST `name=`, answer `{ value, name, description? }`) and `data-suggest-url` (GET, `[ { value } | { name } ]`) on the wrapper, `MatUi.picker.set`,
   `.addOption`, `.suggest`; the create row and the suggested rows are never options (`isReal`), what comes back is made with `textContent`, the demo endpoints are `/api/demo/create` and `/api/demo/suggest` (stateless).
 - Colours a user chose (`COLOR-10`): `data-colour="#rrggbb"` (or `#rgb`) on `mat-tag`, `mat-dot`, `mat-icon` or a picker option; the script writes `--mat-swatch` and `is-coloured` (at the start and in `MatUi.refresh`), the CSS draws a
   dot or colours the icon. It is never the colour of the text and never the only signal; `MarkupChecks.Colour` flags a value the script would ignore. No inline style, no literal colour.
+- Code input (`FORM-19`): `.mat-otp[data-otp data-length data-chars data-case data-mask data-group data-submit]` around the real input `.mat-otp__input` (a text field without the script; it is what is validated, posted and reset). The script hides it
+  and draws one `.mat-otp__box` per character in a `role="group"` named by the label (`Digit 3 of 6`), **one tab stop** (roving tabindex, the arrow keys walk inside), no `maxlength` (an SMS code arrives whole on the first box, which has the
+  `autocomplete` of the real input) and no `name` on a box. An incomplete code is not valid (`setCustomValidity`), so `required`, `pattern` and `data-msg-*` work; the boxes follow `disabled`, `readonly` and `aria-invalid` of the real input
+  (a `MutationObserver`). Completion fires `mat:otp-complete` (cancelable); the form is sent only with `data-submit` (`requestSubmit()`). 16 px type or more in every size, boxes shrink in width and never overflow. API `MatUi.otp.clear/focus/setInvalid/value`.
+  Texts in `OTP_TEXT` (English and German, a test checks).
+  A dropdown with a list of checkboxes is `data-picker="select"` with `data-multiple` and plain options; `data-select-all` adds a first row, a `role="checkbox"` button with `aria-checked` true, false or
+  mixed that acts on the options that are shown (the search narrows it). Texts `selectAll`, `selectFound`, `allSelected` in `PK_TEXT`.
+- Number stepper (`FORM-20`): `.mat-stepper[data-stepper]` around a native `input type="number"`; the script adds the two buttons, `is-ready` (which hides the browser's spinners: without the script it is the
+  native field), `data-unit` and `data-precision`. Whole-number arithmetic with the step base of the browser, a press on `pointerdown` (hold repeats and accelerates), a click with `detail` 0 steps once, the keys
+  of the field (arrows, Page up and down, Shift = ten steps). A button at a limit is `aria-disabled`, never `disabled`; the buttons are not in the Tab order. `mat-stepper--stacked` only with `(pointer: fine)`.
+  Texts in `STEP_TEXT` (English and German, a test checks). Size comes from the input (`mat-input--sm` / `--lg`).
+- Calendar (`FORM-18`): `.mat-calendar[data-calendar]` around the real input `mat-calendar__input` (`data-mode="single|range|multiple"`, `data-min`/`data-max` as a date, `today` or `+3d`, `data-disabled`,
+  `data-disabled-weekdays`, `data-events` JSON with `data-agenda`, `data-week-numbers`). It draws the **month grid that the date picker shares** (one `calMonth`, `calPaint`, `calKeys`, driven by a state
+  object): never copy the grid, change it there. Its texts are in `CAL_TEXT` (both languages, a test checks), found through `pkText`. API: `MatUi.calendar.setEvents/setDisabled/setValue/go`.
+- Appointment picker (`FORM-18`): `data-picker="slot"` (`KINDS.slot`) posts `2026-10-14T09:30` (`..09:45` with `data-duration`). Its panel is the same grid plus the times of the chosen day. Availability is
+  `data-slots` JSON or, without it, asked per month with the event `mat:slots-needed` and answered with `MatUi.picker.setSlots(detail.picker, data, detail.month)`; the examples of the site are answered by
+  `doc.js`, the browser checks stop the event and answer it themselves. A taken time says "Taken" in words (`COLOR-04`); a time in the past is never offered.
+- Carousel (`LIST-13`): `.mat-carousel[data-carousel]` around `.mat-carousel__track` > `.mat-carousel__slide`. The strip scrolls and snaps in CSS (a scrollable strip without the script); the script names the slides,
+  adds the bar (Previous, a dot per page, Next, Pause with `data-autoplay`), makes the slides out of view `inert` and says which page is shown. The buttons at the ends are `aria-disabled`, never `disabled` (the focus stays).
+  Autoplay waits for the pointer and the focus, stops for good after any use of a control and never starts under `prefers-reduced-motion`. Texts in `CAR_TEXT` (English and German, a test checks).
+- Groups in a table (`LIST-16`): `<table class="mat-table" data-groups="key">` with one `<tbody class="mat-group" data-group="name">` per group: the heading row `.mat-group__head` (a cell `.mat-group__cell` with `colspan`,
+  `.mat-group__bar` around the toggle `button.mat-group__toggle[data-group-toggle][aria-expanded]` and optional `.mat-group__actions`), the items `.mat-group__item` and, last, the add row `.mat-group__add`. The script only toggles
+  `is-collapsed` (the CSS hides the other rows) and `aria-expanded`, remembers it in `localStorage` per app, table key and group (`mat-groups`) and leaves a group with `data-group-fixed` as the server drew it (a search hit);
+  `data-groups-set="open|closed|toggle"` on a button works on all groups. The line of the tree is the `::before` and `::after` of the first cell of an item row (`::before` is also the label of the cell on a phone: the phone
+  rule gives it back, a test and a browser check hold that). The add row is always the last row of its group (`LIST-16`: not in the heading).
+- Slider and range slider (`FORM-17`): `.mat-slider[data-slider]` around a native `input.mat-slider__input[type=range]`, or `.mat-slider--range` around two (`from`, `to`). The native inputs stay the truth (value, form, validity,
+  `aria-valuetext`, keyboard, Tab stop) and are invisible, never `display: none`, once the script has drawn the rail, the thumbs (44 px targets), the bubbles, marks and labels (`is-ready`); without the script they are native controls.
+  The script handles the pointer and the keys itself and sends `input` and `change` like the native control. `data-format="{0} GB"` is the template of every value shown; the names of the two inputs of a range come
+  from the label (`SL_TEXT`, English and German, a test checks). Options: `data-min-gap`, `data-bubble="always"`, `data-ticks`, `data-tick-labels`, `data-labels="none"`, `data-output`, `data-range-format`.
+- Schedule (`LIST-14`): `.mat-schedule[data-schedule]` is an empty root with `data-events` (JSON: `id`, `title`, `start`, `end`, `tone`, `location`, `note`, `url`, `status`); the script draws the bar, the five views
+  (Agenda, Day, Week, Month, Year) and the jump to a month and year. It is **not** the date picker (`FORM-15`). The layout follows the width of the schedule (`is-wide` from 640 px, set by a `ResizeObserver`), not the window;
+  a length or a column that is data is a `--mat-sch-*` property set by the script (`data-sch-*` in the markup it draws), never an inline style. A tone is a tint with a line all around plus an icon and a text (`COLOR-04`, `COLOR-08`).
+  Events: `mat:schedule-select`, `mat:schedule-range` (lazy loading with `data-lazy`), `mat:schedule-day`; API `MatUi.schedule.setEvents|go|setLoading|get`. The calendar weeks are ISO 8601 (`isoWeek`; a test ports the formula and
+  checks it against .NET for 40 years). The examples pin the clock (`data-now`) and write their dates, so that nothing depends on the day: do the same in a test. Texts in `SCH_TEXT` (English and German, a test checks).
+- Lists of rows (`LIST-15`, like ion-list): `ul.mat-itemlist` of `li.mat-item`; a row is `mat-item__main` (a link, a button, a label or a div: the whole row is the target) with `__lead`, `__body` (`__title`, `__text` lines) and
+  `__end`; what else is pressed (switch, button, handle) is `mat-item__aside` beside it, never inside a link. The look is the list's (`--lines-inset|none`, `--inset` card, `--sticky` dividers with `--scroll`, `--choices`, `--tasks`,
+  `--lead-lg`, `--compact`); do not call anything `mat-list*` (that is the list block of a page). `data-itemlist` adds, by what the markup has: sliding actions (`mat-item--sliding` > `__row` > `__main` + `__options--start|end` of
+  `__option` buttons; swipe, a More button the script adds, arrow keys; options are `inert` while hidden; `mat:item-action`), reordering (`data-reorder`, `__handle`; pointer and Space/arrows/Escape; `mat:reorder`; the DOM changes on drop),
+  `data-item-filter` (a field hides rows, `.mat-itemlist__empty` shows) and the `data-selectable` of tables around a list. Texts in `IL_TEXT` (English and German, quoted keys: the picker test takes the first unquoted `en:` table).
 - Layout and utilities: mobile first with `sm` 600, `md` 900, `lg` 1200 px; no `!important`; values from the tokens; the grid spans by `grid-column-end`. An example in the catalogue uses
   toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.
@@ -141,4 +186,5 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - Commit and push **under the user's name**, never add a Claude/Anthropic co-author trailer or "generated with" line (global rule of the user, it overrides any default).
 - Branches: `main` = release, `dev` = development. Versions: release `<major>.<minor>.<build>-<date>`, development `nightly-<build>-<date>`, local `local-<date>`
   (`Directory.Build.props`, `.github/workflows/build.yml`).
+- **The toolkit has a version of its own** (`MatUiVersion` in `Directory.Build.props`, semantic versioning, docs/VERSIONING.md: the number an app compares with its copy). Every change under `src/MatUi` that an app can see gets a line under `## [Unreleased]` of `CHANGELOG.md` **in the same commit** (CI fails a pull request that changes `src/MatUi` without it); a change that makes an app change something is a **Breaking** entry with a **Migration**. A version is made with `node tools/bump.js`, never by editing the number: `MatUiVersion`, the newest entry of the changelog and the literals in `matui.js` and `matui.boot.js` are held to each other by tests.
 - Push without asking (the user's standing instruction, 2026-10-11); a push to `main` or `dev` starts the GitHub action, which builds and publishes the image. The audit snapshot and the screenshots in `docs/images` show real content of this site only, never user data.

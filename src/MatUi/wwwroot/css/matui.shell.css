@@ -204,6 +204,21 @@ button.mat-nav__item:hover { background: var(--mat-surface-3); }
 .mat-menu__item .mat-nav__badge + .mat-menu__check { margin-left: var(--mat-space-2); }
 .mat-menu__item > span:not([class]) { flex: 1 1 auto; }
 
+/* The switcher at the foot of the menu (SHELL-15), directly above the user; the foot keeps its order whatever order the markup has. */
+.mat-nav__switch--foot { padding: 0; }
+.mat-nav__foot > .mat-nav__switch { order: 0; }
+.mat-nav__foot > .mat-nav__account { order: 1; }
+.mat-nav__foot > .mat-nav__version { order: 2; }
+
+/* Menus in groups (SHELL-15): a parent entry in the popup opens the menus below it, one level deep. The group with the current menu is open; a closed parent
+   carries the dot of the menus inside it that ask for attention (the sum, as in a submenu of the items). */
+.mat-menu__parent .mat-nav__badge[hidden] { display: none; }
+.mat-menu__chev { flex: none; margin-left: var(--mat-space-2); color: var(--mat-text-muted); font-size: 1rem; transition: transform var(--mat-dur) var(--mat-ease); }
+.mat-menu__parent[aria-expanded="true"] .mat-menu__chev { transform: rotate(180deg); }
+.mat-menu__parent[aria-expanded="true"] .mat-nav__badge--sum { display: none; }
+.mat-menu__sub { margin: 2px 0 var(--mat-space-1) calc(var(--mat-space-3) + .6rem); padding-left: var(--mat-space-2); border-left: 1px solid var(--mat-border-strong); }
+.mat-menu .mat-menu__item--sub { min-height: var(--mat-control-h-sm); font-size: var(--mat-fs-sm); }
+
 /* ---- The foot of the menu: theme button + user (context menu) + version ---- */
 .mat-nav__foot {
   flex: none;

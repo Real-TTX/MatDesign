@@ -175,7 +175,7 @@ public static partial class MarkupChecks
         foreach (Match cell in TableCell().Matches(html))
         {
             var attributes = cell.Groups[1].Value;
-            if (!attributes.Contains("data-label=", StringComparison.Ordinal) && !attributes.Contains("mat-table__cell-actions", StringComparison.Ordinal))
+            if (!attributes.Contains("data-label=", StringComparison.Ordinal) && !attributes.Contains("mat-table__cell-actions", StringComparison.Ordinal) && !attributes.Contains("mat-group__cell", StringComparison.Ordinal))
             {
                 yield return new(CellLabel, index, $"a <td> without data-label (TABLE-02): {cell.Value}");
             }

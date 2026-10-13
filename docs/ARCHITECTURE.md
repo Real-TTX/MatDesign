@@ -60,10 +60,20 @@ dialogs belong to **one GET form** through the `form` attribute, so each dialog 
 The items of the menu are not markup an app writes but a model the partial `_Menu` draws: a `NavSet` (one menu: id, title, icon) holds `NavGroup`s (a small heading) of `NavItem`s
 (title, address, icon, an optional `NavBadge`, optional children). A parent has children and no address: it is a button that opens them, one level deep (`NavSet.IsValid` and a test
 check this). A `NavBadge` is a count (above 99 it reads `99+`) or a dot, in a tone that follows the status colours; a closed parent shows the sum of its children's badges in the most
-urgent tone. An app with more than one `NavSet` gets the switcher under the logo; the set that has the current page is the one drawn visible, the others are in the page with `hidden`, so
-choosing another one in the switcher swaps them without a request. The popup of the switcher is drawn at the end of the page like the user menu, because the menu has a backdrop filter and
+urgent tone. An app with more than one `NavSet` gets the switcher; the set that has the current page is the one drawn visible, the others are in the page with `hidden`, so
+choosing another one in the switcher swaps them without a request. A `NavSet` with an `Href` is the other kind: an area with a page of its own, whose entry in the popup is a link, so choosing it
+loads that start page; the page that loads draws its own menu, and the pages of the other menus carry no hidden panel of it (`_Menu` leaves it out). The popup of the switcher is drawn at the end of the page like the user menu, because the menu has a backdrop filter and
 that would make it the frame of a fixed popup; it names the element that holds the panels (`data-nav-scope`) so that an example in the documentation can show a menu without touching the menu
 of the page. The choice of open and closed branches is remembered in the browser per app and never overrides the branch of the current page.
+
+The switcher has two choices that belong to the app, both in the model and not in the markup an app writes: **where it sits** (`ShellModel.SwitcherPlace`: `Top` under the logo, the default;
+`Bottom` as the first thing in the foot, directly above the user, where its popup opens upwards; `Both`, the buttons stay in step because the script updates every `.mat-switcher` in the scope;
+`End` after the panels and above the foot, for a menu that starts with a main action (`SHELL-19`), the popup opening upwards too)
+and **whether menus are grouped** (`NavSet.Parent`, a `NavSetParent` with a title and an icon). `ShellModel.SwitcherEntries` gathers the menus of one parent below it: in the popup the parent is a
+button (`data-nav-group`, `aria-expanded`, `aria-controls`) that opens a `role="group"` with the menus (`data-nav-parent`), one level deep like the submenus of the items; it is not a menu itself.
+The group with the current menu is open when the page loads, the switcher then names the parent above the name of the menu, and a closed parent carries the dot of the menus inside it that
+need attention. The popup is placed again whenever a group is opened or closed, so that it never covers the switcher it came from. The sample app shows both with
+`/Preview?switcher=bottom|both|end&menus=tree`.
 
 ### Forms are a part of their own
 
@@ -72,12 +82,29 @@ validation summary. The catalogue of the form components is its own file (`FormC
 forms read like a manual). The script adds only what CSS cannot do: the filled part and the output of a range, a counter, the eye of a password, the names in a drop zone, an indeterminate check and the
 summary of the errors of a form; validation itself stays the browser's (`required`, `type`, `pattern`) with the messages of `data-msg-*`.
 
+### The code input
+
+A code that is read from somewhere else (an authenticator or SMS code, a PIN, a recovery code, a key) is one box per character (`mat-otp`, `FORM-19`). Like a picker it is a wrapper around a **real input** that is
+validated, posted and reset; the script hides it and draws the boxes, and without the script it is a text field. The decisions: the boxes are **one tab stop** with the arrow keys inside (roving tabindex, like a toolbar), because
+a code is one value and Tab should go to the next field, and a screen reader gets one group named by the label with each box named by its place; the boxes have **no `maxlength`**, so that an SMS code that arrives whole on the first box
+is not cut but spread over the boxes, and no name, so that only the real input posts; an incomplete code is made **invalid** on the real input (`setCustomValidity`), so `required`, `pattern` and the messages of the form work without a
+second validation, and the boxes follow `disabled`, `readonly` and `aria-invalid` of the real input; **nothing is sent by itself** unless the author writes `data-submit` (then `requestSubmit()`, so the validation and `data-confirm` still
+run). The type stays 16 px or more (a phone zooms into smaller type) and the boxes shrink in width instead of overflowing, so a code of twelve fits a phone.
+The **number stepper** (`FORM-20`) is a native number field in a `mat-stepper[data-stepper]` wrapper. The script adds a button for less and one for more and marks the wrapper `is-ready`; only then
+the CSS hides the spinners of the browser, so without the script it is the native field. The arithmetic is done in whole numbers (the decimals of `step`, `min`, `max` and the value decide the scale), with the
+step base of the browser (`min`, else the `value` attribute, else 0), so a value that the script produces is one that the browser's own validation accepts. A button that cannot go further is
+`aria-disabled` and never `disabled` (the focus must not be lost); a press is handled on `pointerdown` (so that holding repeats, faster and faster) and a click without a press (`detail` 0, the keyboard or an
+assistive technology) steps once. The buttons are not in the Tab order, the field has the keys (arrows, Page up and down, Shift for ten steps). The stacked variant exists only for `(pointer: fine)`: two arrows
+that share the height of one control are too small for a finger (`MOBILE-04`), so a touch screen draws the default. The texts are in `STEP_TEXT` (English and German, a test checks).
+
 ### Pickers
 
-A picker is a field whose value is chosen in a panel: a select with pictures, descriptions and tags, a date or a period, a time or a time range, a colour (`FORM-15`). They are a part of their own
+A picker is a field whose value is chosen in a panel: a select with pictures, descriptions and tags, a date or a period, a time or a time range, a colour, an appointment (`FORM-15`, `FORM-18`). The tag input is the one
+picker that is a field of its own and has no panel to open (`KINDS.tags` is `inline`: no button, it draws chips and a text field from the value; its suggestions are the options of a select, as a
+dropdown under the field on every screen size, never a full-screen sheet, because the keyboard stays in the field). They are a part of their own
 (`matui.pickers.css`) and one section of `matui.js`; the select and the calendar were taken over from MatCMS, the time and the colour were made in the same style. The markup is a wrapper
 `mat-picker[data-picker]` around the real input (`mat-picker__input`), which is what is validated, posted and reset. It holds the value in a **fixed format** (`2026-10-10`,
-`2026-10-10..2026-10-14~2`, `09:30`, `09:00..17:30`, `#b4235f`, the keys of the options), whatever the language of the page; the script adds the button that shows it in the language of the
+`2026-10-10..2026-10-14~2`, `09:30`, `09:00..17:30`, `#b4235f`, `2026-10-14T09:30`, the keys of the options), whatever the language of the page; the script adds the button that shows it in the language of the
 page (`Intl`) and the panel. The panel is `position: fixed` next to the button (below, above, or covering it when neither side has room) and full screen with an X on a phone, like every dialog.
 It lives inside the wrapper, so a picker in a dialog is not cut off by it, and Escape closes the picker first and the dialog second. The real input is invisible but lies over the button, so a
 browser message points at the right place, and whoever focuses it (a label, the validation) lands on the button. The texts are English and German (`data-pk-*` on `html` changes them; a test checks that
@@ -96,6 +123,54 @@ writes it into `--mat-swatch`, the property that the colour picker and the swatc
 colour that is not a hex colour is ignored and blocked from being inherited (the mark looks neutral). The point of the design is what the colour is *not*: it is never the colour of the text. A tag keeps the muted text colour that reaches AA, so
 white, black or a colour that nothing reads well on is as safe as any other, and a thin ring in the colour of the text keeps a white dot visible in light mode and a black one in dark mode. The colour is never the only signal either: the name stands
 next to it (`COLOR-04`). `MarkupChecks` flags a `data-colour` that the script would ignore, because that typo would show nothing.
+
+### Slider and range slider
+
+A slider (`FORM-17`) is a native `input type="range"` in a wrapper `mat-slider[data-slider]`; a range slider (`mat-slider--range`) holds two of them, `from` and `to`. The native inputs stay the truth: they post
+the values, are validated, have the keyboard and the role of the browser and are what a screen reader reads, so the script only dresses them. Without it the inputs are drawn as native controls in the
+look of the toolkit (the two of a range slider one under the other); with it (`is-ready`) they lie invisible over the slider (opacity, never `display: none`, so they keep the focus) and the script draws
+one track with the filled part, a thumb per input, a bubble with the value, the marks and the labels, and handles the pointer itself: a press on the rail moves the nearest thumb (both at one value: the
+side of the press, or the first movement when the thumbs themselves are pressed), the thumbs of a range slider cannot cross (`data-min-gap`), the one moved last is on top. The thumb is a target of 44 px
+(36 px for `--sm`) and the rail has `touch-action: pan-y`, so the page can still be scrolled. The keys are handled by the script as well (arrows, Page Up and Page Down by a tenth of the scale, Home and
+End, every key sending `input` and `change`), and a capture listener on `input` puts a value that a screen reader or a script made right (the gap, the grid of the steps) before anybody reads it. Every value
+shown (the bubble, the labels, the output) and `aria-valuetext` come from one template, `data-format="{0} GB"`; the two inputs of a range slider are named from the label, "Price from" and "Price to"
+(`SL_TEXT`, English and German). Two bubbles that would cover each other become one. A form reset is picked up after the event, `MatUi.refresh` and `initForms` pick up new sliders, and
+`MatUi.slider.update(wrapper)` reads a changed scale again.
+A **dropdown with a list of checkboxes** is the select picker with `data-multiple`: the box in front of every option is drawn by CSS, so an option stays one button. `data-select-all` adds a first row
+that is a `role="checkbox"` button (a `role="option"` has no state in between) with `aria-checked` true, false or mixed; it looks at, and acts on, the options that are shown and can be chosen, so the search
+narrows it and a disabled option is left alone. The arrow keys, Home and End walk the rows (that row first), Space is the click of the button. The field names one or two options, counts three or more and says
+All selected when every option of a list of more than two is ticked.
+The month grid of the date picker is shared, not copied (`FORM-18`): one `calMonth`, one `calPaint`, one set of keys, driven by a **state** (mode `single`, `range` or `multiple`; min and max; `off(date)` for
+days that cannot be chosen; marks, a level of days, months or years). The calendar that is always shown (`mat-calendar[data-calendar]`, with a real input `mat-calendar__input`) draws the same grid into the
+page; the picker only adds a button and a panel. A limit is a date, `today` or a distance (`dateExpr`: `+3d`). Texts that only the calendar needs live in their own table (`CAL_TEXT`), found through `pkText`.
+
+The appointment picker (`KINDS.slot`, one value `2026-10-14T09:30`, with the length `..09:45`) is a panel picker whose panel holds that grid, with a dot on the days that have a free time, next to the
+list of the times of the chosen day (below it on a phone). It adds only what is its own: the availability (`data-slots`, or asked for per month through the event `mat:slots-needed` and answered with
+`MatUi.picker.setSlots`, with a loading and a failed state), the minimum notice, the shortcut to the next free appointment and the summary line. A time that has passed is never offered, and a time or a day
+that is not free says so in words, not only in a colour (`COLOR-04`). The browser checks answer the event themselves, so that no check depends on the day it runs; the documentation site answers it with
+generated days near today (`doc.js`), so that its examples keep working.
+### The schedule
+
+The schedule (`LIST-14`, `mat-schedule`) shows events in time: an agenda under sticky day headings, a day, a week, a month and a year, paged by the unit of the view (buttons, keys, a swipe). It is data in, markup out: the author writes an
+empty root and a JSON list of events (`data-events`), the script draws the rest, so that the five views, the paging and the texts are one code path. Three decisions are worth knowing. **It follows its own width**, not the window's
+(`is-wide` from 640 px, by a `ResizeObserver`): the week is a time grid or a row per day, the month shows events or dots, and the same schedule works in a narrow column of a page. **A length that is data stays out of the markup**: the place of a block
+in the hours, a bar over columns and the number of columns are `--mat-sch-*` properties that the script sets with `style.setProperty`, so a strict content security policy holds. **Time is an input**: the calendar weeks are ISO 8601 (a formula that a
+test ports and checks against .NET for forty years), today comes from the browser unless `data-now` pins it, and the examples pin it, so that neither a test nor the documentation changes with the day. An app that loads events is told what is
+visible (`mat:schedule-range`) and answers with `MatUi.schedule.setEvents`; `data-lazy` shows a loading state in between.
+### Lists of rows
+
+The list that a phone app is full of (contacts, messages, settings, files, tasks) is a part of its own (`LIST-15`, in `matui.lists.css` and one section of `matui.js`; the catalogue is `ListComponents`). It is a
+`ul.mat-itemlist` of `li.mat-item`, and a row is **one target** with slots: `mat-item__main` (a link, a button, a label or a div) holds the lead, the body and the end, and what else has to be pressed stands beside it
+in `mat-item__aside`, because an interactive element inside a link is invalid and a bad target. The list decides the look (lines from the text or none, the grouped card, sticky dividers), the row the content. The names avoid
+`mat-list*`, which is the list block of a page (toolbar, table, pager). A flat look needs three decisions that are easy to get wrong: the focus ring is drawn **inside** the row (a row that clips, as the grouped card and a sliding
+row do, would cut an outer ring); a hover or press adds a little of the text colour over whatever is behind, so that a selected row keeps its tint; and the card **clips** (`overflow: clip`) instead of hiding, because `hidden` makes a
+scroll container of it and a sticky divider would stick to that.
+
+The script does only what CSS cannot, and only for a list with `data-itemlist`. **Sliding actions**: the options stand outside the box of the row (`right: 100%`, `left: 100%`) and the row slides by `--mat-item-x`, so they are never
+under a tint that is transparent; they are `inert` and `visibility: hidden` while closed, so the Tab key does not enter them, and a swipe is never the only way: the script adds a More button and the arrow keys open the sides.
+**Reordering** moves the other rows with transforms while the pointer holds one, and changes the DOM when it is dropped (moving the node that holds the pointer capture would lose the capture); the keyboard path (Space, arrows,
+Escape) moves the node at once and puts the focus back on its handle, and a live region says every step. Both paths end in `mat:reorder` with the keys of the rows in their new order. The checks of rows are the ones of tables
+(`data-selectable`), and a filter hides rows by their text, ignoring case and accents. All texts are English and German (`IL_TEXT`).
 
 ### Layout and utilities
 
@@ -128,7 +203,7 @@ All of this is values in `matui.tokens.css` and a few rules per file, so a diffe
 
 ### What is deliberately not in the toolkit
 
-Compared with a general kit such as Bootstrap there is **no navbar** (the shell replaces it, `SHELL-01`), **no carousel**, **no jumbotron or hero** (an app is not a landing page), **no off-canvas as a
+Compared with a general kit such as Bootstrap there is **no navbar** (the shell replaces it, `SHELL-01`), **no jumbotron or hero** (an app is not a landing page), **no off-canvas as a
 component of its own** (a dialog from the side, `mat-dialog--end`, does it), and **no theming with Sass variables** (the tokens are custom properties and an app sets one colour). What an app needs
 beyond that is a component of its own with the app's prefix (`CODE-04`).
 

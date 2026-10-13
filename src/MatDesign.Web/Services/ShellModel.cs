@@ -11,6 +11,27 @@ namespace MatDesign.Web.Services;
 public sealed record UserMenuItem(string Title, string Href, string Icon, bool Danger = false, bool SeparatorBefore = false, bool Post = false);
 
 /// <summary>
+/// Where the menu switcher is drawn (SHELL-15): under the logo, at the foot of the menu directly above the user, at both places, or at the end of the menu
+/// (after the panels, above the foot) for an app whose menu starts with a main action (SHELL-19).
+/// </summary>
+public enum SwitcherPlace
+{
+    Top,
+    Bottom,
+    Both,
+    End,
+}
+
+/// <summary>
+/// An entry of the popup of the switcher: one menu, or a <see cref="Parent"/> with the <see cref="Menus"/> below it. A parent is not a menu itself.
+/// </summary>
+public sealed record SwitcherEntry(NavSetParent? Parent, IReadOnlyList<NavSet> Menus)
+{
+    /// <summary>True when a menu below the parent asks for attention (a dot on the parent while it is closed).</summary>
+    public bool NeedsAttention => Menus.Any(m => m.NeedsAttention);
+}
+
+/// <summary>
 /// Everything the shell (the layout) needs to draw an app: which app, its menu, the user, the version. The site draws itself with
 /// <see cref="Site"/>; the preview pages draw a sample app of the family with the same layout, so the shell is one code base (CODE-01).
 /// </summary>
@@ -18,15 +39,48 @@ public sealed class ShellModel
 {
     public required MatApp App { get; init; }
 
-    /// <summary>The menus of the app. With more than one, the switcher under the logo appears (SHELL-15).</summary>
+    /// <summary>The menus of the app, every one a panel of items. With more than one, the switcher appears (SHELL-15).</summary>
     public required IReadOnlyList<NavSet> Menus { get; init; }
 
     public string? ActiveHref { get; init; }
 
     public bool HasSwitcher => Menus.Count > 1;
 
+    /// <summary>Where the switcher is drawn: under the logo (the default), at the foot above the user, both, or at the end of the menu.</summary>
+    public SwitcherPlace SwitcherPlace { get; init; } = SwitcherPlace.Top;
+
+    public bool SwitcherAtTop => HasSwitcher && SwitcherPlace is SwitcherPlace.Top or SwitcherPlace.Both;
+
+    public bool SwitcherAtBottom => HasSwitcher && SwitcherPlace is SwitcherPlace.Bottom or SwitcherPlace.Both;
+
     /// <summary>The switcher sits at the end of the menu, directly above the foot, instead of under the logo (SHELL-15): for an app whose menu starts with a main action (SHELL-19).</summary>
-    public bool SwitcherAtEnd { get; init; }
+    public bool SwitcherAtEnd => HasSwitcher && SwitcherPlace == SwitcherPlace.End;
+
+    /// <summary>
+    /// What the popup of the switcher lists, in the order of <see cref="Menus"/>: a menu without a parent is an entry of its own, the menus of one parent are
+    /// gathered below that parent, which stands where its first menu is.
+    /// </summary>
+    public IReadOnlyList<SwitcherEntry> SwitcherEntries
+    {
+        get
+        {
+            var entries = new List<SwitcherEntry>();
+            foreach (var menu in Menus)
+            {
+                var at = menu.Parent is null ? -1 : entries.FindIndex(e => e.Parent?.Key == menu.Parent.Key);
+                if (at < 0)
+                {
+                    entries.Add(new SwitcherEntry(menu.Parent, [menu]));
+                }
+                else
+                {
+                    entries[at] = entries[at] with { Menus = [.. entries[at].Menus, menu] };
+                }
+            }
+
+            return entries;
+        }
+    }
 
     /// <summary>The menu that is shown: the one that has the current page, otherwise the first.</summary>
     public NavSet CurrentMenu(string? active) => Menus.FirstOrDefault(m => m.Contains(active)) ?? Menus[0];
@@ -108,6 +162,8 @@ public sealed class ShellModel
             App = design?.App("matdesign") ?? AppRegistry.Get("matdesign")!,
             Tagline = "Identity of the Mat apps",
             Menus = Navigation.For(facts, signedIn),
+            // the site has its switcher at the foot of the menu, directly above the user (SHELL-15); an app may choose SwitcherPlace.Top or Both instead
+            SwitcherPlace = SwitcherPlace.Bottom,
             UserName = signedIn ? "Admin" : "Visitor",
             UserRole = signedIn ? "Studio" : "Guest",
             UserLine = signedIn ? "Signed in to the Studio" : needsSetup ? "Set up the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",

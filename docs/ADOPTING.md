@@ -101,7 +101,9 @@ Replace the app's own frame with the shell:
 | Page head: icon, title (`h1`), one line | `SHELL-09` |
 | Badges at the right end of an item: a count (`99+` above 99) or a dot, in the tone of the meaning, with a text for screen readers | `SHELL-14` |
 | Submenus: a parent is a button that opens its children, one level deep; the branch with the current page is open | `SHELL-13` |
-| More than one menu (for example Administration): one panel of items per menu and the switcher under the logo, or at the end of the menu directly above the foot (`mat-nav__switch--end`, after the panels in the markup, its popup `data-menu-place="top"`) | `SHELL-15` |
+| More than one menu (for example Administration): one panel of items per menu and the switcher, under the logo, directly above the user at the foot (`mat-nav__switch--foot`), both, or at the end of the menu directly above the foot (`mat-nav__switch--end`, after the panels in the markup); the popup of the two lower places opens upwards (`data-menu-place="top"`) | `SHELL-15`, `SHELL-03` |
+| A menu that is an area with a page of its own (mail, administration, account): make its entry in the popup a link, `<a class="mat-menu__item" href="/start" role="menuitemradio" data-nav-set="id" data-nav-title="Title">` (`NavSet.Href` in the model of this site): choosing it loads that page, which draws its own menu; the pages of the other menus need no hidden panel of it | `SHELL-15` |
+| Many menus: group them below a parent in the switcher's popup (a button with `data-nav-group`; the menus carry `data-nav-parent`), one level deep | `SHELL-15` |
 | A main action first in the menu, filled with the accent: `<a class="mat-nav__item mat-nav__item--primary">` with an icon and a label, one per app, no badge | `SHELL-19` |
 | A long page has an index beside it ("On this page"), an icon in the header bar that opens it in a dialog on small screens | `SHELL-16` |
 | Icons at the right end of the header bar (`mat-topbar__actions`), at most four; the main action (scan, add) filled with the accent, last: `mat-btn--primary mat-btn--icon` instead of `mat-btn--ghost`, and a second one beside it as `mat-btn--secondary mat-btn--icon` | `SHELL-17` |
@@ -139,6 +141,19 @@ A text that goes into the markup of a page (a label, a hint, the words of a `dat
 - The right control for the value (`FORM-12`): the type of the value (`email`, `tel`, `number`, `date`) with `autocomplete` and `inputmode`; radios up to five choices, a select above; a switch applies at once, a check is saved.
   A form with errors shows a **summary** at the top with a link to every field (`data-validation-summary`, `FORM-03`). Layouts: columns, label beside the field on a wide screen, one line, sections (`FORM-14`).
 - Every table cell has `data-label`: on a phone the rows become cards (`TABLE-02`).
+- A value on a scale whose exact number does not matter is a **slider**, a from and to a **range slider** (`FORM-17`): native `input type="range"` (one, or two named `from` and `to`) in a wrapper
+  `mat-slider[data-slider]` (`mat-slider--range` for two), so a form posts them and they work without the script. The script draws the track, the thumbs (a target of 44 px) and the bubble with the
+  value; `data-format="{0} €"` is the template of every value shown, `data-min-gap` keeps two thumbs apart, `data-bubble="always"`, `data-ticks` and `data-output="id"` are optional:
+
+  ```html
+  <div class="mat-field">
+    <label class="mat-label" for="price-from">Price</label>
+    <div class="mat-slider mat-slider--range" data-slider data-min-gap="10" data-format="{0} €">
+      <input class="mat-slider__input" type="range" id="price-from" name="from" min="0" max="200" step="5" value="20" />
+      <input class="mat-slider__input" type="range" id="price-to" name="to" min="0" max="200" step="5" value="80" />
+    </div>
+  </div>
+  ```
 - A list that acts on several items at once is a `data-selectable` element: a check per item (`data-select-row`, with an `aria-label` that says which item), maybe one that selects all of them (`data-select-all`) and a
   `data-bulk-bar` with a `data-bulk-count` that shows while something is selected. **The item of a ticked check is marked `is-selected`**, a tint behind the whole item (`COLOR-08`): its table row, its `.mat-tile`, or the
   nearest element with `data-select-item`, so a list of cards, or of rows of your own, needs no script of its own to show what is selected.
@@ -154,6 +169,61 @@ A text that goes into the markup of a page (a label, a hint, the words of a `dat
       <input class="mat-picker__input" id="due" name="due" value="2026-10-10" />
     </div>
   </div>
+  ```
+- Things that are looked at, opened or ticked off one by one (contacts, messages, settings, files, tasks) are a **list of rows** (`LIST-15`): `ul.mat-itemlist` of `li.mat-item`, a row is one target
+  (`mat-item__main`: a link, a button or a label) with a lead, a body and an end; a switch or a button beside it goes in `mat-item__aside`, never inside the link. Add `data-itemlist` for sliding actions
+  (`mat-item--sliding`, listen to `mat:item-action`), reordering (`data-reorder` and a `mat-item__handle`, listen to `mat:reorder`) and a filter field (`data-item-filter`). A table that is searched and sorted stays a table (`LIST-02`).
+
+- A **code** that is read from somewhere else (an authenticator or SMS code, a PIN, a recovery code) is a **code input** (`FORM-19`): one box per character, drawn by the script around a real input that posts the code joined.
+  `data-chars` is `digits` (the default), `letters`, `alphanumeric`, `hex` or a class such as `[A-Z2-7]`; `data-mask` shows dots; `data-group="4-4"` draws groups; a form is sent with the last character only if you write `data-submit`.
+  An app that rejects a code calls `MatUi.otp.clear(el)` and `MatUi.otp.setInvalid(el, "Message")`:
+
+  ```html
+  <div class="mat-field">
+    <label class="mat-label" for="code">Authentication code</label>
+    <div class="mat-otp" data-otp data-length="6" data-chars="digits" data-submit>
+      <input class="mat-otp__input" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6}" />
+    </div>
+    <span class="mat-error" aria-live="polite"></span>
+  A dropdown that holds a **list of checkboxes** is the same select with plain options (a button with `data-value` and a label) and `data-multiple`; `data-select-all` adds a first row Select all
+  whose box is empty, ticked or in between and acts on the options that are shown, so `data-search` narrows it.
+- A number that people change by a step or two (a quantity, a timeout) is a **number stepper** (`FORM-20`): a native number field in `<div class="mat-stepper" data-stepper>` gets a button for less and one
+  for more from the script (`data-unit="GB"` for a suffix, `mat-stepper--stacked` for two small arrows, `mat-input--sm` / `--lg` for the size); without the script it stays the native field:
+
+  ```html
+  <div class="mat-field">
+    <label class="mat-label" for="qty">Quantity</label>
+    <div class="mat-stepper" data-stepper>
+      <input class="mat-input" type="number" id="qty" name="qty" min="1" max="10" step="1" value="3" />
+    </div>
+  </div>
+  ```
+
+- A month that is **always shown** (`FORM-18`) is a calendar: `mat-calendar` with `data-calendar` around the real input `mat-calendar__input`, for one day, a period (`data-mode="range"`) or several days
+  (`data-mode="multiple"`). It posts `2026-10-10`, `2026-10-10..2026-10-14` or `2026-10-10,2026-10-12`. `data-min="today"` (also `tomorrow`, `+3d`, `-1w`) means nobody can pick the past, `data-disabled`
+  and `data-disabled-weekdays="0,6"` close days, `data-events` (JSON) marks days with dots and `data-agenda` lists the events of the chosen day. The date picker takes the same `data-min` and `data-max`.
+
+  ```html
+  <div class="mat-calendar" data-calendar data-min="today" data-disabled-weekdays="0,6">
+    <input class="mat-calendar__input" id="visit" name="visit" />
+  </div>
+  ```
+
+- An **appointment** (a doctor's practice, a rental pick-up) is booked with the appointment picker (`data-picker="slot"`, `FORM-18`): a month in which the days with a free time carry a dot and the others cannot
+  be chosen, then the times of the chosen day, taken ones disabled with the word "Taken". It posts `2026-10-14T09:30` (with `data-duration="15"`: `2026-10-14T09:30..09:45`). The availability is data:
+  `data-slots='{"2026-10-14": ["09:00", "09:15"]}'`, or the page answers `mat:slots-needed` per month (the event carries the month) with `MatUi.picker.setSlots(detail.picker, data, detail.month)`, so that a
+  server decides. `data-min="today"`, `data-min-notice="2h"`, `data-unavailable="hide"` and `data-group` shape it; Next free appointment jumps to the first free time.
+
+  ```html
+  <div class="mat-picker" data-picker="slot" data-min="today" data-min-notice="2h" data-duration="15">
+    <input class="mat-picker__input" id="appointment" name="appointment" />
+  </div>
+  <script>
+    document.addEventListener('mat:slots-needed', async e => {
+      const data = await (await fetch('/api/slots?month=' + e.detail.month)).json();   // { "2026-10-14": ["09:00", ...] }
+      MatUi.picker.setSlots(e.detail.picker, data, e.detail.month);
+    });
+  </script>
   ```
 
 - A select can **create what is missing** and **suggest** (`FORM-16`), both opt-in and both attributes of the wrapper; the markup of the options stays as it is.
@@ -212,6 +282,8 @@ When the Studio is on, MatDesign publishes **releases**: the toolkit files of on
 with the one it carries, and when the release is newer copies `/releases/<version>/matui.css`, `matui.js`, `matui.boot.js` and `matui-icons.svg` into its static files (or the archive `matui-<version>.zip`),
 checking each file against the SHA-256 of the manifest. Every release also carries `styleguide.html`, the rules and every component with its examples as one static page (`/releases/<version>/styleguide.html`), and `design.json` with the same as data. The app still carries its own copy (`CODE-03`): the release is where the copy comes from, not something it loads at run time. The Studio's **Versions** page is where it is written down which release each app has,
 and which apps are behind.
+
+**The toolkit has a version of its own** (semantic versioning): it is in the first line of `matui.css` and in `MatUi.version`, and `/Changelog` (also `/ui/CHANGELOG.md` and `/api/changelog?since=0.1.0`) says what changed in each version, what breaks and what an app has to do. `node tools/matui-check.js <folder of the app>` finds the app's copy, says which version it is, whether the files are all one version and whether one was changed by hand, and what an update takes with it. How a version is made and how an app updates, step by step: [VERSIONING.md](VERSIONING.md).
 
 ## 7. Check it
 
