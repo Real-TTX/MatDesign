@@ -41,6 +41,7 @@ public static class ShellSkeleton
               <nav class="mat-nav__scroll" aria-label="Work" data-nav-panel="work">
                 <ul class="mat-nav__list">
                   <li><a class="mat-nav__item is-active" href="/" aria-current="page"><svg class="mat-icon"><use href="#mat-i-home"></use></svg><span>Inbox</span><span class="mat-nav__badge">12<span class="mat-sr-only"> unread</span></span></a></li>
+                  <!-- a heading may carry one small icon action at its right end: <li class="mat-nav__group mat-nav__group--action" role="presentation"><span class="mat-nav__group-title">Lists</span><a class="mat-nav__group-action" href="/lists" aria-label="Manage lists">icon</a></li> -->
                   <li class="mat-nav__group" role="presentation">Settings</li>
                   <li class="mat-nav__branch">
                     <button type="button" class="mat-nav__item mat-nav__parent" aria-expanded="false" aria-controls="nav-sub-settings" data-nav-branch="settings">

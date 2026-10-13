@@ -766,6 +766,29 @@ public static class ComponentCatalog
                       </ul>
                     </nav>
                     """, "The one thing the app is mostly used for, first in the menu and filled with the accent (SHELL-19): an icon and a label, no badge. On its own page it stays filled, a step darker.", Frame: "menu"),
+                new("A list with its action", $"""
+                    <nav class="mat-nav__scroll" aria-label="Demo menu with a list">
+                      <ul class="mat-nav__list">
+                        <li><a class="mat-nav__item is-active" href="#" aria-current="page">{I("home")}<span>Overview</span></a></li>
+                        <li class="mat-nav__group mat-nav__group--action" role="presentation">
+                          <span class="mat-nav__group-title">Lists</span>
+                          <a class="mat-nav__group-action" href="#" aria-label="Manage lists" title="Manage lists">{I("settings")}</a>
+                        </li>
+                        <li><a class="mat-nav__item" href="#">{I("list")}<span>Groceries</span><span class="mat-nav__badge mat-nav__badge--plain">8<span class="mat-sr-only"> items</span></span></a></li>
+                        <li><a class="mat-nav__item" href="#">{I("list")}<span>Holiday</span></a></li>
+                        <li><a class="mat-nav__item" href="#">{I("list")}<span>Home</span></a></li>
+                        <li class="mat-nav__group mat-nav__group--action" role="presentation">
+                          <span class="mat-nav__group-title">Folders</span>
+                          <button type="button" class="mat-nav__group-action" data-menu-toggle="demo-folders-menu" data-menu-place="bottom" aria-haspopup="menu" aria-expanded="false" aria-label="Folder actions" title="Folder actions">{I("plus")}</button>
+                        </li>
+                        <li><a class="mat-nav__item" href="#">{I("folder")}<span>Projects</span></a></li>
+                      </ul>
+                    </nav>
+                    <div class="mat-menu" id="demo-folders-menu" role="menu" aria-label="Folder actions" hidden>
+                      <button type="button" class="mat-menu__item" role="menuitem">{I("folder")}<span>New folder</span></button>
+                      <button type="button" class="mat-menu__item" role="menuitem">{I("sort")}<span>Sort folders</span></button>
+                    </div>
+                    """, "A list that the user can change has its action in the heading, at the right end, instead of a Manage or New item below the list: a gear (settings) to manage it, a plus to add to it. It is a link, or a button that opens a menu (data-menu-toggle) when there is more than one thing to do. It has a name for screen readers (aria-label); the row keeps its height and on a touch screen the target is 44 px.", Frame: "menu"),
                 new("A submenu", $"""
                     <nav class="mat-nav__scroll" aria-label="Demo submenu">
                       <ul class="mat-nav__list">
@@ -797,6 +820,7 @@ public static class ComponentCatalog
                     """, "The parent is a button, not a page: it opens its children. The branch that has the current page is open when the page loads (is-open, is-current); the sum of the children's badges stands in for them while it is closed.", Frame: "menu"),
             ],
             [
+                "A group heading can carry one icon action at its right end (`NavGroup.Action`: a link or a menu, `mat-nav__group--action`, `mat-nav__group-action`); it needs a heading and an `aria-label`.",
                 "A submenu is one level deep; the children show no icon. If the section has a page of its own, that page is its first child.",
                 "The user's choice (open or closed) is remembered per app; the branch with the current page is open whatever was saved.",
                 "Arrow keys: up and down walk the visible items, right opens a parent or goes to its first child, left closes it or goes back to the parent.",

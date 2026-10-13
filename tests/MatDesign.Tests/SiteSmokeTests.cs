@@ -378,6 +378,21 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
+    public async Task A_group_heading_of_the_sample_can_carry_an_icon_action_at_its_right_end()
+    {
+        // SHELL-02: ?groupaction=1 puts a gear at the right end of the heading "Work", a link with a name for screen readers
+        var (_, html) = await Get("/Preview?app=matmail&view=list&groupaction=1");
+        Assert.Matches(@"<li class=""mat-nav__group mat-nav__group--action"" role=""presentation"">\s*<span class=""mat-nav__group-title"">Work</span>\s*<a class=""mat-nav__group-action"" href=""[^""]+"" aria-label=""Manage lists"" title=""Manage lists"">\s*<svg class=""mat-icon""[^>]*><use href=""#mat-i-settings""></use></svg></a>\s*</li>", html);
+        Assert.Equal(1, Regex.Count(html, "mat-nav__group--action\" role"));
+
+        // without the option the headings are what they were
+        var (_, plain) = await Get("/Preview?app=matmail&view=list");
+        Assert.DoesNotContain("mat-nav__group--action", plain);
+        Assert.DoesNotContain("mat-nav__group-action", plain);
+        Assert.Contains("<li class=\"mat-nav__group\" role=\"presentation\">Work</li>", plain);
+    }
+
+    [Fact]
     public async Task The_sample_app_has_an_administration_behind_the_switcher_with_badges_and_a_submenu()
     {
         var (_, work) = await Get("/Preview?app=matmail&view=list");

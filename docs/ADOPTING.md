@@ -95,6 +95,7 @@ Replace the app's own frame with the shell:
 |---|---|
 | Menu on the left, logo and name above it | `SHELL-01` |
 | Items: icon + label, the current one marked, groups with small headings, counts as badges | `SHELL-02` |
+| A list the user can change (folders, lists): its action is a small icon at the right end of the group heading, `<li class="mat-nav__group mat-nav__group--action" role="presentation"><span class="mat-nav__group-title">…</span><a class="mat-nav__group-action" href="…" aria-label="Manage lists">icon</a></li>` (or a `<button data-menu-toggle>` that opens a menu; `NavGroup.Action` in the model of this site), instead of a Manage or New item below the list | `SHELL-02` |
 | At the bottom: the user (opens a context menu, *Sign out* last) next to the 3-state theme button, the version below | `SHELL-03`, `SHELL-04`, `SHELL-05`, `SHELL-06` |
 | The menu scrolls on its own; the page never scrolls | `SHELL-07` |
 | A breadcrumb above every page | `SHELL-08` |

@@ -62,7 +62,18 @@ public sealed record NavItem(string Title, string? Href, string? Icon, NavBadge?
     public NavBadge? SumOfChildren => IsParent && Badge is null ? NavBadge.Sum(Children!.Where(c => c.Badge is not null).Select(c => c.Badge!)) : null;
 }
 
-public sealed record NavGroup(string? Title, IReadOnlyList<NavItem> Items);
+/// <summary>
+/// The one small action at the right end of a group heading (SHELL-02): a gear to manage the list below it, a plus to add to it. It replaces a "Manage" or "New" item
+/// below the list. It is a link (<see cref="Href"/>) or it opens a menu that the app draws at the end of the page (<see cref="MenuId"/>), one of the two.
+/// </summary>
+public sealed record NavGroupAction(string Label, string Icon = "settings", string? Href = null, string? MenuId = null)
+{
+    /// <summary>Exactly one of the address and the menu.</summary>
+    public bool IsValid => (Href is null) != (MenuId is null) && !string.IsNullOrWhiteSpace(Label);
+}
+
+/// <summary>A group of items under a small heading. The <see cref="Action"/> needs a <see cref="Title"/>: it stands at the right end of the heading.</summary>
+public sealed record NavGroup(string? Title, IReadOnlyList<NavItem> Items, NavGroupAction? Action = null);
 
 /// <summary>
 /// The parent of some menus in the switcher (SHELL-15): an entry in its popup that opens the menus below it, one level deep like the submenus of the items (SHELL-13).
@@ -97,7 +108,8 @@ public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<
     public bool NeedsAttention => AllItems.Any(i => i.Badge is { Tone: "warn" or "error" });
 
     /// <summary>A menu has at most one level of submenus.</summary>
-    public bool IsValid => Groups.SelectMany(g => g.Items).All(i => !i.IsParent || i.Children!.All(c => !c.IsParent && c.Href is not null));
+    public bool IsValid => Groups.SelectMany(g => g.Items).All(i => !i.IsParent || i.Children!.All(c => !c.IsParent && c.Href is not null))
+        && Groups.All(g => g.Action is null || (g.Title is not null && g.Action.IsValid));
 }
 
 /// <summary>

@@ -691,6 +691,57 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
+    // SHELL-02: a group heading can carry one small icon action at its right end; the row keeps its height
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=list&groupaction=1');
+    await check('the action stands at the right end of the heading and the heading is not taller than one without an action', async () => {
+      const row = await page.locator('.mat-nav__group--action').boundingBox();
+      const action = await page.locator('.mat-nav__group-action').boundingBox();
+      const title = await page.locator('.mat-nav__group--action .mat-nav__group-title').boundingBox();
+      const plain = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__group:not(.mat-nav__group--action)').first().boundingBox();
+      const nav = await page.locator('.mat-nav').boundingBox();
+      expectTrue(action.x > title.x + title.width - 1, 'the action is not after the title');
+      expectTrue(action.x + action.width <= nav.x + nav.width + 1, 'the action sticks out of the menu');
+      expectTrue(action.width >= 24 && action.height >= 24, 'the target is smaller than 24 px: ' + action.width + 'x' + action.height);
+      expectTrue(Math.abs(action.y + action.height / 2 - (title.y + title.height / 2)) < 6, 'the action is not centred on the line of the title');
+      if (plain) { expectTrue(Math.abs(row.height - plain.height) <= 6, 'the heading with an action is taller: ' + row.height + ' against ' + plain.height); }
+    });
+    await check('the action is a link with a name, it is reached by the Tab key and it leads to its page', async () => {
+      expect(await page.getAttribute('.mat-nav__group-action', 'aria-label'), 'Manage lists', 'name');
+      await page.focus('.mat-nav__group-action');
+      expectTrue(await page.evaluate(() => document.activeElement.matches('.mat-nav__group-action:focus-visible')), 'no focus ring');
+      await Promise.all([page.waitForURL(/view=settings/), page.click('.mat-nav__group-action')]);
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list&groupaction=1');
+    await check('on a touch screen the action has a target of 44 px and the heading keeps its height', async () => {
+      await page.click('[data-nav-toggle]');
+      await page.waitForTimeout(450);
+      const action = await page.locator('.mat-nav__group-action').boundingBox();
+      const row = await page.locator('.mat-nav__group--action').boundingBox();
+      const plain = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__group:not(.mat-nav__group--action)').first().boundingBox();
+      expectTrue(action.width >= 43.5 && action.height >= 43.5, 'the target is smaller than 44 px: ' + action.width + 'x' + action.height);
+      if (plain) { expectTrue(Math.abs(row.height - plain.height) <= 6, 'the heading with an action is taller: ' + row.height + ' against ' + plain.height); }
+    });
+    await ctx.close();
+  }
+  {
+    // the variant that opens a menu: documented in the components
+    const { ctx, page } = await open(desktopOptions, '/Components#navmenu');
+    const button = '#navmenu button.mat-nav__group-action';
+    await check('a group action can open a menu: the popup is shown, the button says so, Escape closes it', async () => {
+      expect(await page.getAttribute(button, 'aria-haspopup'), 'menu', 'haspopup');
+      expect(await page.getAttribute(button, 'aria-expanded'), 'false', 'closed');
+      await page.click(button);
+      expect(await page.getAttribute(button, 'aria-expanded'), 'true', 'opened');
+      expectTrue(await page.locator('#demo-folders-menu').isVisible(), 'the popup is not shown');
+      await page.keyboard.press('Escape');
+      expectTrue(await page.locator('#demo-folders-menu').isHidden(), 'the popup stays open after Escape');
+    });
+    await ctx.close();
+  }
+  {
     // SHELL-15: choices (the tenant) are a closed parent with a form button each, between the menus and the administration
     const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=list&switcher=bottom&tenants=1');
     const parent = '#nav-switch-menu [aria-controls="nav-switch-choices-tenants"]';

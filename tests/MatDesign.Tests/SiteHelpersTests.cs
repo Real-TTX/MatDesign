@@ -303,6 +303,21 @@ public class SiteHelpersTests
     }
 
     [Fact]
+    public void A_group_action_needs_a_heading_and_exactly_one_of_an_address_and_a_menu()
+    {
+        static NavSet With(string? title, NavGroupAction? action) => new("x", "X", "list", [new(title, [new("A", "/a", "list")], action)]);
+
+        Assert.True(With("Lists", null).IsValid);
+        Assert.True(With("Lists", new NavGroupAction("Manage lists", "settings", "/lists")).IsValid);
+        Assert.True(With("Lists", new NavGroupAction("Folder actions", "plus", MenuId: "folders-menu")).IsValid);
+        Assert.False(With("Lists", new NavGroupAction("Both", "plus", "/x", "menu")).IsValid);
+        Assert.False(With("Lists", new NavGroupAction("Neither")).IsValid);
+        Assert.False(With(null, new NavGroupAction("No heading", "plus", "/x")).IsValid);   // the action stands at the end of a heading
+        Assert.False(With("Lists", new NavGroupAction(" ", "plus", "/x")).IsValid);         // and has a name for screen readers
+        Assert.All(Navigation.Sets.Append(Navigation.StudioSet), s => Assert.True(s.IsValid, s.Id));
+    }
+
+    [Fact]
     public void The_menus_of_the_site_are_not_grouped()
         => Assert.All(Navigation.Sets, s => Assert.Null(s.Parent));
 

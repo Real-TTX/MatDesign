@@ -71,6 +71,9 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
     /// <summary><c>?menus=tree</c>: the administration is two menus below one parent in the switcher.</summary>
     private bool Tree => Request.Query["menus"].ToString() == "tree";
 
+    /// <summary><c>?groupaction=1</c>: the group "Work" of the menu has a gear at the right end of its heading (SHELL-02).</summary>
+    private bool GroupAction => Request.Query["groupaction"].ToString() == "1";
+
     /// <summary><c>?tenants=1</c>: the switcher offers the tenants as choices between the menus and the administration (SHELL-15).</summary>
     private bool Tenants => Request.Query["tenants"].ToString() == "1";
 
@@ -111,6 +114,11 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
         if (Tenants)
         {
             parts.Add("tenants=1");
+        }
+
+        if (GroupAction)
+        {
+            parts.Add("groupaction=1");
         }
 
         return string.Join("&", parts);
@@ -185,7 +193,7 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
                 new("work", "Work", "briefcase",
                 [
                     new(null, start),
-                    new("Work", [new("Items", null, "list", Children: itemPages)]),
+                    new("Work", [new("Items", null, "list", Children: itemPages)], GroupAction ? new NavGroupAction("Manage lists", "settings", Query("settings")) : null),
                     new("Account",
                     [
                         new("Settings", Query("settings"), "settings"),
@@ -260,6 +268,7 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             ["switcher"] = Place == SwitcherPlace.Top ? null : Place.ToString().ToLowerInvariant(),
             ["menus"] = Tree ? "tree" : null,
             ["tenants"] = Tenants ? "1" : null,
+            ["groupaction"] = GroupAction ? "1" : null,
             ["view"] = View,
         };
 

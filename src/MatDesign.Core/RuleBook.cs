@@ -104,7 +104,7 @@ public static class RuleBook
             "The menu is always on the left. At its top is the logo with the app name; clicking it leads to the start page.",
             RuleLevel.Must, Owner, Do: "<aside class=\"mat-nav\"> brand, scroll area, foot </aside>"),
         new("SHELL-02", "SHELL", "Menu items",
-            "A menu item is an icon and a label. The current page is marked (`aria-current=\"page\"`): a tint of the accent behind the whole item and the accent on its icon, never a bar at one edge (COLOR-08). Related items are grouped under short headings in sentence case. A count goes into a badge at the right end of the item.",
+            "A menu item is an icon and a label. The current page is marked (`aria-current=\"page\"`): a tint of the accent behind the whole item and the accent on its icon, never a bar at one edge (COLOR-08). Related items are grouped under short headings in sentence case. A count goes into a badge at the right end of the item. A heading can carry one small icon action at its right end (a gear to manage the list below it, a plus to add to it) instead of a \"Manage\" or \"New\" item below the list: a link or a button that opens a menu, with a name for screen readers (`aria-label`).",
             RuleLevel.Should, Mattiverse),
         new("SHELL-03", "SHELL", "The foot of the menu",
             "At the bottom of the menu, in this order from top to bottom: the 3-state theme button together with the user, and below them the version. Nothing else lives down there, except the menu switcher, which an app may put directly above the user (SHELL-15).",

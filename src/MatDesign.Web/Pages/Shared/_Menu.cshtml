@@ -31,7 +31,22 @@
         <ul class="mat-nav__list">
             @foreach (var group in menu.Groups)
             {
-                if (group.Title is not null)
+                if (group.Title is not null && group.Action is { } action)
+                {
+                    @* A small icon action at the right end of the heading (SHELL-02): a link, or a button that opens a menu drawn at the end of the page *@
+                    <li class="mat-nav__group mat-nav__group--action" role="presentation">
+                        <span class="mat-nav__group-title">@group.Title</span>
+                        @if (action.Href is not null)
+                        {
+                            <a class="mat-nav__group-action" href="@action.Href" aria-label="@action.Label" title="@action.Label">@Ui.Icon(action.Icon)</a>
+                        }
+                        else
+                        {
+                            <button type="button" class="mat-nav__group-action" data-menu-toggle="@action.MenuId" data-menu-place="bottom" aria-haspopup="menu" aria-expanded="false" aria-label="@action.Label" title="@action.Label">@Ui.Icon(action.Icon)</button>
+                        }
+                    </li>
+                }
+                else if (group.Title is not null)
                 {
                     <li class="mat-nav__group" role="presentation">@group.Title</li>
                 }
