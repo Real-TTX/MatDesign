@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **110 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **112 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -41,6 +41,8 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 - **91 design tokens**, read from the CSS itself, so the documentation cannot go out of date
 - Optional **colour schemes** – *paper*, *high contrast* and *black (OLED)* – as one attribute on `<html>` (`data-scheme`):
   surfaces, lines and text change, the accent never does, and every combination of scheme, mode and accent is checked for AA
+- A select **picker** that can **create what is missing and suggest** (`data-create-url`, `data-suggest-url`), and **marks in a colour a user chose**
+  (`data-colour` on a tag, a dot or an icon) that can never make a text unreadable, because the colour is only the dot
 - A **flat look on purpose**: borders instead of shadows, no gradients, and what is selected is a tint behind
   the whole item, never a bar at one side
 - An optional **icon library** in files of its own: **1,925 icons in 54 categories** – an icon can be in several –
@@ -48,7 +50,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   energy, sensors, rooms, garden, scenes) first. SVG, as one sprite, as single files or as an archive; MatUi works without it
 
 **The documentation**
-- **51 components with 118 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
+- **51 components with 124 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
   it uses and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined

@@ -20,9 +20,10 @@ internal static class PickerComponents
                "<span class=\"mat-picker__text\"><span class=\"mat-picker__name\">" + name + "</span><span class=\"mat-picker__desc\">" + description + "</span>" + tagHtml + "</span></button>";
     }
 
-    /// <summary>An option that is only words: a name and, if there is one, a line under it. It is what the script makes of an option that is created.</summary>
-    private static string Plain(string value, string name, string? description = null)
-        => "<button type=\"button\" class=\"mat-picker__option\" data-value=\"" + value + "\"><span class=\"mat-picker__text\"><span class=\"mat-picker__name\">" + name + "</span>" +
+    /// <summary>An option that is only words: a name and, if there is one, a line under it and a colour (a dot before the name). It is what the script makes of an option that is created.</summary>
+    private static string Plain(string value, string name, string? description = null, string? colour = null)
+        => "<button type=\"button\" class=\"mat-picker__option\" data-value=\"" + value + "\"" + (colour is null ? string.Empty : " data-colour=\"" + colour + "\"") +
+           "><span class=\"mat-picker__text\"><span class=\"mat-picker__name\">" + name + "</span>" +
            (description is null ? string.Empty : "<span class=\"mat-picker__desc\">" + description + "</span>") + "</span></button>";
 
     public static IReadOnlyList<ComponentDoc> All { get; } =
@@ -84,9 +85,9 @@ internal static class PickerComponents
                       <div class="mat-picker" data-picker="select" data-create-url="/api/demo/create" data-placeholder="Choose or create a project">
                         <input class="mat-picker__input" id="pk-create" name="project" value="" />
                         <div class="mat-picker__options" hidden>
-                    {Plain("website", "Website", "The pages of the shop.")}
-                    {Plain("app", "Mobile app")}
-                    {Plain("backoffice", "Back office", "Accounting and orders.")}
+                    {Plain("website", "Website", "The pages of the shop.", "#2563eb")}
+                    {Plain("app", "Mobile app", null, "#16a34a")}
+                    {Plain("backoffice", "Back office", "Accounting and orders.", "#d97706")}
                         </div>
                       </div>
                       <span class="mat-hint">Type a name that is not in the list: the first row creates it. <code>error</code> is refused on purpose, to show the message.</span>
@@ -150,6 +151,7 @@ internal static class PickerComponents
                 "A refusal (not 2xx, or no answer) keeps the panel open and writes the `error` of the answer, or a default text, under the search field, read aloud. While it runs the row is busy (`aria-busy`) and cannot be pressed twice; a success is announced in a live region.",
                 "Suggestions (FORM-16): `data-suggest-url` is fetched with GET when the panel opens first with nothing chosen. They stand under Suggestions above All, never while searching or once a value is chosen; the closed field says \"3 suggestions\" in the colour of a link.",
                 "A suggested value is that option; a suggested name that is not an option creates it (it needs `data-create-url`). From code: `MatUi.picker.set(wrapper, value)`, `.addOption(wrapper, { value, name, description, tags })` (made with `textContent`) and `.suggest(wrapper, items)`.",
+                "An option with `data-colour=\"#2563eb\"` (COLOR-10) has a dot before its name, in the list and in the closed field; `addOption` and the answer of the create endpoint take `colour`.",
             ]),
 
         new("date-picker", "Date and period", "Forms", "calendar",

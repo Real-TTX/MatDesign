@@ -1390,6 +1390,127 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- coloured marks (COLOR-10)
+  console.log('\nColoured marks');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#pills');
+    const swatchOf = sel => page.$eval(sel, el => el.style.getPropertyValue('--mat-swatch').trim());
+    const dotOf = sel => page.$eval(sel, el => { const s = getComputedStyle(el, '::before'); return { content: s.content, width: s.width, height: s.height, radius: s.borderTopLeftRadius, background: s.backgroundColor }; });
+    await check('a tag with data-colour gets a dot of that colour before its text; the colour is written into --mat-swatch (any case, #rgb too) and the text stays muted', async () => {
+      expect(await swatchOf('.mat-tag[data-colour="#dc2626"]'), '#dc2626', 'the swatch');
+      expect(await swatchOf('.mat-tag[data-colour="#fff"]'), '#ffffff', 'a short colour is written out');
+      expect(await page.$eval('.mat-tag[data-colour="#dc2626"]', el => el.classList.contains('is-coloured')), true, 'the state class');
+      const red = await dotOf('.mat-tag[data-colour="#dc2626"]');
+      expect(red, { content: '""', width: '10px', height: '10px', radius: '50%', background: 'rgb(220, 38, 38)' }, 'the dot');
+      const plain = await page.$eval('.mat-tag:not([data-colour])', el => ({ dot: getComputedStyle(el, '::before').content, colour: getComputedStyle(el).color }));
+      expect(plain.dot, 'none', 'a tag without a colour has no dot');
+      const text = await page.$eval('.mat-tag[data-colour="#dc2626"]', el => getComputedStyle(el).color);
+      expect(text, plain.colour, 'the text of a coloured tag is the colour of any tag: it is never derived from the colour');
+      const white = await dotOf('.mat-tag[data-colour="#fff"]');
+      expect(white.background, 'rgb(255, 255, 255)', 'a white dot');
+    });
+    await check('a dot has 10 px, a colour or a neutral grey; an icon takes the colour; a ring in the colour of the text keeps white and black dots visible in both modes', async () => {
+      const dot = await page.$eval('.mat-dot[data-colour="#d97706"]', el => { const s = getComputedStyle(el); return { w: s.width, h: s.height, r: s.borderTopLeftRadius, bg: s.backgroundColor, ring: s.boxShadow }; });
+      expect([dot.w, dot.h, dot.r, dot.bg], ['10px', '10px', '50%', 'rgb(217, 119, 6)'], 'the dot');
+      expectTrue(/inset/.test(dot.ring), 'the ring: ' + dot.ring);
+      const neutral = await page.$eval('.mat-dot:not([data-colour])', el => [getComputedStyle(el).backgroundColor, getComputedStyle(document.documentElement).getPropertyValue('--mat-text-faint').trim()]);
+      expectTrue(neutral[0] === 'rgb(133, 130, 122)', 'the neutral dot is the faint grey: ' + neutral[0]);
+      const icon = await page.$eval('.mat-icon[data-colour="#7c3aed"]', el => ({ colour: getComputedStyle(el).color, stroke: getComputedStyle(el).stroke }));
+      expect(icon.colour, 'rgb(124, 58, 237)', 'the icon is in that colour');
+      for (const theme of ['light', 'dark']) {
+        await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
+        const black = await page.$eval('.mat-tag[data-colour="#000000"]', el => { const s = getComputedStyle(el, '::before'); return [s.backgroundColor, s.boxShadow]; });
+        expect(black[0], 'rgb(0, 0, 0)', 'a black dot in ' + theme);
+        const ring = black[1].match(/rgba?\([^)]*\)|color\([^)]*\)/)[0];
+        expectTrue(ring.length > 0 && !/ 0\)$/.test(ring), 'the ring in ' + theme + ': ' + black[1]);
+      }
+      await page.evaluate(() => document.documentElement.removeAttribute('data-theme'));
+    });
+    await check('what is not #rgb or #rrggbb is ignored (no dot, no class, nothing inherited) and the table of the unit test gives the same answers here', async () => {
+      const table = [['#abc', true], ['#ABC', true], ['#aBc', true], ['#aabbcc', true], ['#AABBCC', true], ['#d6336c', true], ['#000', true], ['#fff', true],
+        ['abc', false], ['aabbcc', false], ['#ab', false], ['#abcd', false], ['#abcde', false], ['#aabbccd', false], ['#aabbccdd', false], ['#ggg', false], ['#12345g', false],
+        ['red', false], ['rgb(0, 0, 0)', false], ['', false], [' #abc', false], ['#abc ', false], ['url(#abc)', false]];
+      const answers = await page.evaluate(values => {
+        const box = document.createElement('div');
+        box.innerHTML = values.map(([v]) => '<span class="mat-tag" data-colour="' + v.replace(/"/g, '&quot;') + '">x</span>').join('');
+        // inside something that has a colour of its own: an invalid mark must not take it over
+        box.setAttribute('style', '--mat-swatch: #ff00ff');
+        document.querySelector('.mat-page').appendChild(box);
+        MatUi.refresh(box);
+        const out = [...box.children].map(el => [el.classList.contains('is-coloured'), el.style.getPropertyValue('--mat-swatch').trim(), getComputedStyle(el, '::before').content]);
+        box.remove();
+        return out;
+      }, table);
+      table.forEach(([value, valid], i) => {
+        const [coloured, swatch, content] = answers[i];
+        expect([coloured, content === '""'], [valid, valid], `"${value}" is ${valid ? '' : 'not '}a colour`);
+        if (valid) {
+          const h = value.slice(1).toLowerCase();
+          expect(swatch, '#' + (h.length === 3 ? [...h].map(c => c + c).join('') : h), `the swatch of "${value}"`);
+        } else {
+          expect(swatch, 'initial', `"${value}" does not take the colour of what is around it`);
+        }
+      });
+    });
+    await check('markup that is added later needs MatUi.refresh(scope); a colour that changes or goes away is followed', async () => {
+      const steps = await page.evaluate(() => {
+        const box = document.createElement('div');
+        box.innerHTML = '<span class="mat-tag" id="late-tag" data-colour="#123456">Late</span>';
+        document.querySelector('.mat-page').appendChild(box);
+        const tag = document.getElementById('late-tag');
+        const state = () => [tag.classList.contains('is-coloured'), tag.style.getPropertyValue('--mat-swatch').trim()];
+        const before = state();
+        MatUi.refresh(box);
+        const after = state();
+        tag.setAttribute('data-colour', '#abc');
+        MatUi.refresh(box);
+        const changed = state();
+        tag.setAttribute('data-colour', 'nope');
+        MatUi.refresh(box);
+        const ignored = state();
+        const other = document.createElement('span');
+        other.className = 'mat-tag';
+        other.setAttribute('data-colour', '#fedcba');
+        box.appendChild(other);
+        MatUi.refresh(box);
+        const had = [other.classList.contains('is-coloured'), other.style.getPropertyValue('--mat-swatch').trim()];
+        other.removeAttribute('data-colour');
+        MatUi.refresh(box);
+        const gone = [other.classList.contains('is-coloured'), other.style.getPropertyValue('--mat-swatch').trim()];
+        box.remove();
+        return { before, after, changed, ignored, had, gone };
+      });
+      expect(steps, { before: [false, ''], after: [true, '#123456'], changed: [true, '#aabbcc'], ignored: [false, 'initial'], had: [true, '#fedcba'], gone: [false, ''] }, 'the steps');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#rich-select');
+    await check('an option of a picker with data-colour has the dot in the list and in the closed field; addOption and the answer of the create endpoint take a colour', async () => {
+      const dotIn = sel => page.$eval(sel, el => getComputedStyle(el, '::before').backgroundColor);
+      await page.evaluate(() => document.getElementById('pk-create-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('#pk-create-trigger');
+      expect(await dotIn('#pk-create-trigger ~ .mat-picker__panel [data-value="website"]'), 'rgb(37, 99, 235)', 'the dot of the option in the list');
+      await page.click('#pk-create-trigger ~ .mat-picker__panel [data-value="website"]');
+      expect(await page.$eval('#pk-create-trigger .mat-picker__value .mat-dot', el => getComputedStyle(el).backgroundColor), 'rgb(37, 99, 235)', 'the dot in the closed field');
+      expect((await page.textContent('#pk-create-trigger .mat-picker__value')).trim(), 'Website', 'and the name, the dot is no text');
+      expect(await page.getAttribute('#pk-create-trigger .mat-picker__value .mat-dot', 'aria-hidden'), 'true', 'the dot is decoration');
+      await page.evaluate(() => MatUi.picker.addOption('#pk-create', { value: 'c-red', name: 'Red thing', colour: '#ff0000' }));
+      await page.click('#pk-create-trigger');
+      expect(await dotIn('#pk-create-trigger ~ .mat-picker__panel [data-value="c-red"]'), 'rgb(255, 0, 0)', 'addOption with a colour');
+      await page.route('**/api/demo/create', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ value: 'c-green', name: 'Green thing', colour: '#00ff00' }) }));
+      try {
+        await page.fill('#pk-create-trigger ~ .mat-picker__panel input[type=search]', 'Green thing');
+        await page.click('#pk-create-trigger ~ .mat-picker__panel .mat-picker__create');
+        await page.waitForFunction(() => document.getElementById('pk-create').value === 'c-green');
+      } finally {
+        await page.unroute('**/api/demo/create');
+      }
+      expect(await page.$eval('#pk-create-trigger .mat-picker__value .mat-dot', el => getComputedStyle(el).backgroundColor), 'rgb(0, 255, 0)', 'a created option with the colour of the answer');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- layout and utilities
   console.log('\nLayout and utilities');
   {

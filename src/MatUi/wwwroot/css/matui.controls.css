@@ -139,6 +139,12 @@ a.mat-card:hover, .mat-card--link:hover { border-color: var(--mat-text-faint); b
 
 .mat-tag { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: var(--mat-radius-xs); background: var(--mat-surface-3); color: var(--mat-text-muted); font-size: var(--mat-fs-xs); font-weight: 600; }
 
+/* A colour a user chose is a mark next to the name (COLOR-10): data-colour="#rrggbb" on a tag, a dot or an icon, which matui.js writes into --mat-swatch (and marks is-coloured). The text of a tag
+   stays muted and readable whatever the colour; a thin ring in the colour of the text keeps a white dot visible in light mode and a black one in dark mode. Without a valid colour: the neutral look. */
+.mat-dot { display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--mat-swatch, var(--mat-text-faint)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mat-text) 35%, transparent); }
+.mat-tag[data-colour].is-coloured::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--mat-swatch); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mat-text) 35%, transparent); }
+.mat-icon[data-colour] { color: var(--mat-swatch); }
+
 .mat-chips { display: flex; flex-wrap: wrap; gap: var(--mat-space-2); }
 .mat-chip {
   display: inline-flex; align-items: center; gap: var(--mat-space-2);

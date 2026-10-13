@@ -127,6 +127,8 @@
 .mat-picker__group-head--all { margin-top: var(--mat-space-2); }
 .mat-picker__group-head[hidden] { display: none; }
 .mat-picker__value.is-suggest { color: var(--mat-accent-text); }
+/* An option with a colour (data-colour, COLOR-10) has the dot before its name; the closed field shows it too. */
+.mat-picker__option[data-colour].is-coloured::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--mat-swatch); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mat-text) 35%, transparent); }
 
 /* ---- Calendar: a date, a period ---- */
 .mat-cal { display: flex; flex-direction: column; gap: var(--mat-space-3); min-width: 0; }

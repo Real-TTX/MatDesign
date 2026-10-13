@@ -89,6 +89,14 @@ panel stays the one of the select: the first row of the list is the row that cre
 anti-forgery token of the page, a GET for suggestions) and answers JSON; what comes back is turned into an option with `textContent`, never markup, and a refusal keeps the panel open and says why at the row. The markup of an
 existing select is untouched and nothing about it changes unless one of the attributes is there. The pages that fetch for many pickers at once, and the app that sets a picker from a button, use `MatUi.picker.suggest`, `.set` and `.addOption`.
 
+### Colours that users choose
+
+A colour a user picked for a tag, a project or a folder is **data**, not a part of the design (`COLOR-10`), and it has one way in: `data-colour="#rrggbb"` (`#rgb` too) on a tag, a dot (`mat-dot`, 10 px), an icon or an option of a picker. The script
+writes it into `--mat-swatch`, the property that the colour picker and the swatches already use, and marks the element `is-coloured`; the CSS draws a dot or colours the icon from it, so no page needs an inline style or a literal colour. A
+colour that is not a hex colour is ignored and blocked from being inherited (the mark looks neutral). The point of the design is what the colour is *not*: it is never the colour of the text. A tag keeps the muted text colour that reaches AA, so
+white, black or a colour that nothing reads well on is as safe as any other, and a thin ring in the colour of the text keeps a white dot visible in light mode and a black one in dark mode. The colour is never the only signal either: the name stands
+next to it (`COLOR-04`). `MarkupChecks` flags a `data-colour` that the script would ignore, because that typo would show nothing.
+
 ### Layout and utilities
 
 `matui.layout.css` is the last part before the apps: containers, a grid of twelve columns (`mat-cols`, `mat-col-N`, with `sm`, `md` and `lg` variants from 600, 900 and 1200 px, mobile first) and

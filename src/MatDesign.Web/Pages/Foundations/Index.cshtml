@@ -163,7 +163,7 @@
 <section class="mat-section" aria-labelledby="rules-title">
     <div class="mat-section__head"><h2 id="rules-title">Rules for colour</h2></div>
     <div class="mat-grid">
-        @foreach (var id in new[] { "COLOR-01", "COLOR-02", "COLOR-03", "COLOR-04", "COLOR-05", "COLOR-09", "IDENT-02" })
+        @foreach (var id in new[] { "COLOR-01", "COLOR-02", "COLOR-03", "COLOR-04", "COLOR-05", "COLOR-09", "COLOR-10", "IDENT-02" })
         {
             var rule = Design.Rule(id)!;
             <a class="mat-card" href="/Rules/Detail?id=@rule.Id"><div class="mat-card__body mat-stack mat-stack--sm"><div class="mat-row"><span class="doc-rule-id">@rule.Id</span></div><strong>@rule.Title</strong></div></a>

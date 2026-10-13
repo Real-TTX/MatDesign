@@ -70,6 +70,23 @@ more) and **`oled`** (a black page and menu, near-black surfaces; dark mode only
 
 - A scheme is a set of surfaces only. An app that has a second dark mode or its own greys deletes them (`COLOR-02`) and offers a scheme instead.
 
+## 2b. Colours a user chooses (`COLOR-10`)
+
+A tag, a project or a folder can have a colour that the user picked. That colour is **data**, shown as a mark next to the name and set with one attribute, `data-colour="#rrggbb"` (`#rgb` works, in any case), never with an
+inline style:
+
+```html
+<span class="mat-tag" data-colour="#d6336c">Invoices</span>                                    <!-- a tag with a dot before its text -->
+<span class="mat-dot" data-colour="#0d9488" aria-hidden="true"></span> Receipts                <!-- a dot of its own, 10 px -->
+<svg class="mat-icon" data-colour="#7c3aed" aria-hidden="true" focusable="false"><use href="#mat-i-folder"></use></svg> Project Alpha  <!-- the icon in that colour -->
+<button type="button" class="mat-picker__option" data-value="7" data-colour="#2563eb">…</button>  <!-- a dot before the name of an option, also in the closed field -->
+```
+
+- The script writes the colour into `--mat-swatch` when the page loads and in `MatUi.refresh(scope)`, so markup that is added later (a row from a request) needs one call. Anything that is not a hex colour is ignored: no dot,
+  nothing inherited. `MatUi.picker.addOption(wrapper, { value, name, colour })` and the answer of a create endpoint (`{ value, name, colour }`) take a colour too.
+- The colour is a mark, never the text: the text of a tag stays muted and reaches AA whatever the colour, a thin ring in the colour of the text keeps a white dot visible in light mode and a black one in dark mode, and the name
+  is always beside it (`COLOR-04`). So any colour a user can choose is safe, and the toolkit never works out a text colour from it.
+
 ## 3. The shell (`SHELL-*`)
 
 Replace the app's own frame with the shell:

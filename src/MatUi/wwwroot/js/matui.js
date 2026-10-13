@@ -35,6 +35,8 @@
                                             for a text that is not an option; data-create-label is its text) and data-suggest-url="/y" (GET, the answer [ { value } | { name } ] or { items }:
                                             "Suggestions" above "All" while nothing is chosen). MatUi.picker.set(wrapper, value), .addOption(wrapper, { value, name, description, tags })
                                             and .suggest(wrapper, items) do the same from code.
+     data-colour="#rrggbb"                  a colour a user chose (COLOR-10), on .mat-tag (a dot before the text), .mat-dot, .mat-icon (the colour of the icon) or an option of a select
+                                            picker (a dot before the name): written into --mat-swatch; #rgb works, anything else is ignored; MatUi.refresh(scope) for markup added later
      data-menu-toggle="id"                  open the context menu #id next to the button; data-menu-place="top|bottom"
      data-dialog-open="id" / data-dialog-close   open / close a <dialog class="mat-dialog">
      data-confirm="Question?"               ask in a dialog before a submit button, a form or a link goes ahead
@@ -1294,6 +1296,7 @@
     o.setAttribute('role', 'option');
     o.setAttribute('aria-selected', 'false');
     o.tabIndex = -1;
+    if (spec.colour) { o.setAttribute('data-colour', String(spec.colour)); markColour(o); }
     var text = doc.createElement('span');
     text.className = 'mat-picker__text';
     var name = doc.createElement('span');
@@ -1329,7 +1332,7 @@
   function pkCreated(p, data, typed) {
     var value = String(data.value);
     var name = typeof data.name === 'string' && data.name ? data.name : typed;
-    pickerAddOption(p.wrap, { value: value, name: name, description: data.description });
+    pickerAddOption(p.wrap, { value: value, name: name, description: data.description, colour: data.colour });
     createError(p, '');
     announce(p, pkTextOf(p, 'created', name));
     if (p.search) { p.search.value = ''; }
@@ -1571,6 +1574,15 @@
       }
       var img = $('.mat-picker__img', chosen[0]);
       if (img) { out.appendChild(img.cloneNode(true)); }
+      if (chosen[0].classList.contains('is-coloured')) {
+        // the colour of the option (data-colour) goes with its name into the closed field
+        var dot = doc.createElement('span');
+        dot.className = 'mat-dot';
+        dot.setAttribute('aria-hidden', 'true');
+        dot.setAttribute('data-colour', chosen[0].getAttribute('data-colour'));
+        markColour(dot);
+        out.appendChild(dot);
+      }
       var name = doc.createElement('span');
       name.textContent = optionName(chosen[0]);
       out.appendChild(name);
@@ -2252,9 +2264,28 @@
     $$(".mat-meter__fill[data-value]", scope).forEach(function (m) { m.style.setProperty("--mat-meter", Math.max(0, Math.min(100, parseFloat(m.getAttribute("data-value")) || 0)) + "%"); });
   }
 
+  // a colour a user chose is data (COLOR-10): data-colour="#rrggbb" (or #rgb, any case) on a tag, a dot, an icon or an option of a picker is written into --mat-swatch, which the CSS draws as a
+  // dot or as the colour of the icon, and the element is marked is-coloured. Anything else is ignored: no dot, the colour of the text. Markup that is added later needs MatUi.refresh(scope).
+  var MARK_COLOUR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+  function markColour(el) {
+    var m = MARK_COLOUR.exec(el.getAttribute('data-colour') || '');
+    if (!m) { el.classList.remove('is-coloured'); el.style.setProperty('--mat-swatch', 'initial'); return; }
+    var h = m[1].toLowerCase();
+    if (h.length === 3) { h = h.charAt(0) + h.charAt(0) + h.charAt(1) + h.charAt(1) + h.charAt(2) + h.charAt(2); }
+    el.style.setProperty('--mat-swatch', '#' + h);
+    el.classList.add('is-coloured');
+  }
+  function applyColours(scope) {
+    if (scope && scope.matches && scope.matches('[data-colour]')) { markColour(scope); }
+    $$('[data-colour]', scope).forEach(markColour);
+    // what has lost its data-colour is neutral again
+    $$('.is-coloured:not([data-colour])', scope).forEach(function (el) { el.classList.remove('is-coloured'); el.style.removeProperty('--mat-swatch'); });
+  }
+
   function init() {
     scheduleSpy();
     initForms();
+    applyColours();
     initPickers();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
@@ -2293,6 +2324,6 @@
     scrollspy: { update: updateSpy },
     nav: { set: setNavSet, branch: function (key, open) { var b = $('[data-nav-branch="' + key + '"]'); if (b) { setBranch(b, open !== false, true); } } },
     picker: { init: initPickers, close: closePicker, set: pickerSet, addOption: pickerAddOption, suggest: pickerSuggest },
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); }
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); }
   };
 })();

@@ -504,5 +504,48 @@ internal static class ContentComponents
                     """, "A title says it in a line; the text and the link say what to do; the actions are small buttons with the usual order (positive first)."),
             ],
             []),
+
+        new("pills", [
+                new("A colour a user chose, next to the name", """
+                    <div class="mat-stack">
+                      <div class="mat-row">
+                        <span class="mat-tag" data-colour="#dc2626">Urgent</span>
+                        <span class="mat-tag" data-colour="#2563eb">Finance</span>
+                        <span class="mat-tag" data-colour="#16a34a">Done</span>
+                        <span class="mat-tag" data-colour="#fff">White</span>
+                        <span class="mat-tag" data-colour="#000000">Black</span>
+                        <span class="mat-tag">No colour</span>
+                      </div>
+                      <div class="mat-row">
+                        <span class="mat-row mat-row--nowrap mat-gap-2"><span class="mat-dot" data-colour="#d97706" aria-hidden="true"></span>Inbox</span>
+                        <span class="mat-row mat-row--nowrap mat-gap-2"><span class="mat-dot" data-colour="#0d9488" aria-hidden="true"></span>Receipts</span>
+                        <span class="mat-row mat-row--nowrap mat-gap-2"><span class="mat-dot" aria-hidden="true"></span>No colour: a grey dot</span>
+                      </div>
+                      <div class="mat-row">
+                        <span class="mat-row mat-row--nowrap mat-gap-2"><svg class="mat-icon" data-colour="#7c3aed" aria-hidden="true" focusable="false"><use href="#mat-i-folder"></use></svg><strong>Project Alpha</strong></span>
+                        <span class="mat-row mat-row--nowrap mat-gap-2"><svg class="mat-icon" data-colour="#db2777" aria-hidden="true" focusable="false"><use href="#mat-i-tag"></use></svg><strong>Invoices</strong></span>
+                      </div>
+                    </div>
+                    """, "`data-colour=\"#rrggbb\"` (`#rgb` too, any case) is written into `--mat-swatch` by the script: no inline style. The text of a tag stays muted whatever the colour, and a ring keeps a white or a black dot visible. Anything that is not a hex colour is ignored: the neutral look."),
+                new("Tags on the rows of a list", """
+                    <div class="mat-table-wrap">
+                      <table class="mat-table">
+                        <caption class="mat-sr-only">Documents with their tags</caption>
+                        <thead><tr><th scope="col">Name</th><th scope="col">Tags</th></tr></thead>
+                        <tbody>
+                          <tr><td data-label="Name">Invoice 2026-04</td><td data-label="Tags"><span class="mat-chips"><span class="mat-tag" data-colour="#2563eb">Finance</span><span class="mat-tag" data-colour="#dc2626">Urgent</span></span></td></tr>
+                          <tr><td data-label="Name">Lease agreement</td><td data-label="Tags"><span class="mat-chips"><span class="mat-tag" data-colour="#0d9488">Contracts</span></span></td></tr>
+                          <tr><td data-label="Name">Holiday photos</td><td data-label="Tags"><span class="mat-chips"><span class="mat-tag" data-colour="#f5f5f5">Family</span><span class="mat-tag">Archive</span></span></td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    """, "The colour is a mark next to the name, never the only information (COLOR-04): even a colour that is hard to see, like the nearly white one, has its name beside it."),
+            ],
+            [
+                "A colour a user chose is data (COLOR-10): `data-colour=\"#rrggbb\"` on `mat-tag` (a dot before the text), `mat-dot`, `mat-icon` (the icon in that colour) or an option of a select picker (a dot before the name). Never an inline style.",
+                "The colour is a mark, never the colour of the text: the text of a tag stays muted and reaches AA, so any colour a user can pick is safe. A thin ring in the colour of the text keeps a white dot visible in light mode and a black one in dark mode.",
+                "Markup that is added later (a row from a request) needs `MatUi.refresh(scope)`. A picker takes `colour` in `MatUi.picker.addOption(wrapper, { value, name, colour })`.",
+            ],
+            Rules: ["COLOR-10"]),
     ];
 }
