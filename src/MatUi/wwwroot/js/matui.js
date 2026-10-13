@@ -27,6 +27,12 @@
      data-indeterminate                     a checkbox that starts in the indeterminate state
      data-password-toggle="id"              the eye button of a password field: shows and hides the password (aria-pressed)
      data-selectable                        a table with data-select-row checks, a data-select-all check in its header and a [data-bulk-bar] with [data-bulk-count]
+                                            (the same around a .mat-itemlist: the rows are marked is-selected and select-all works on the rows that are shown)
+     data-itemlist                          a list of rows (.mat-itemlist of .mat-item, LIST-15): the script adds sliding actions (a row with .mat-item__options: a swipe, the More
+                                            button or the arrow keys; an option sends mat:item-action, data-item-action names it) and, with data-reorder, reordering by a
+                                            .mat-item__handle (pointer, or Space + arrow keys; mat:reorder, data-item-key names a row). The texts: data-il-<name> on <html>
+     data-item-filter="id"                  a search field that hides the rows of the list with that id which do not contain its text (.mat-itemlist__empty is shown when none is left;
+                                            data-item-search on a row replaces the text that is searched; mat:item-filter)
      data-stepper                           a number field with a button for less and one for more (FORM-16): <div class="mat-stepper" data-stepper> around an input type=number
                                             (min, max, step). data-unit="GB" shows a suffix, data-precision="2" the number of decimals shown. The texts: data-stp-<name> on <html>
      data-picker="select|date|daterange|time|timerange|colour|tags|slot"
@@ -271,6 +277,458 @@
     var shown = $('[data-nav-panel]:not([hidden])', scope);
     if (shown) { shown.scrollTop = 0; }
     root.dispatchEvent(new CustomEvent('mat:navset', { detail: { set: id } }));
+  }
+
+  // ------------------------------------------------------------------------------------------------ lists of rows (LIST-15, matui.lists.css)
+  // A list of rows is <ul class="mat-itemlist" data-itemlist> of <li class="mat-item">. Without the script it is a list: rows that are links, buttons or labels, lines between them, and the
+  // actions of a row inline at its end. The script adds what the markup asks for, all of it optional:
+  //   sliding actions   a row (.mat-item--sliding) with .mat-item__options--start / --end of .mat-item__option buttons slides sideways to show them: by a swipe or a drag with the pointer,
+  //                     by the More button that the script adds to the row, or by ArrowLeft / ArrowRight on the row. The options are inert while they are hidden, so the Tab key never
+  //                     enters them; an option sends mat:item-action { item, action, list } (data-item-action names it) and closes the row; Escape closes it too.
+  //   reordering        data-reorder on the list and a .mat-item__handle in each row: drag the handle, or focus it, press Space to pick the row up, the arrow keys (Home, End) to move it,
+  //                     Space or Enter to drop it and Escape to put it back. A live region says what happens. mat:reorder { list, item, from, to, order } (data-item-key names a row)
+  //   filter            a search field with data-item-filter="id of the list" hides the rows that do not contain its text (and the dividers with no row left), shows .mat-itemlist__empty
+  //                     when none is left and sends mat:item-filter { list, text, shown, total }
+  //   selection         data-selectable (the one of tables) around the list, a data-select-row check in each row and a data-select-all in the header; the rows are marked is-selected
+  // The texts are English and German (IL_TEXT: both must have every key); data-il-<name> on <html> changes one. Sliding and reordering respect prefers-reduced-motion (the CSS drops the transitions).
+  // (The language keys of IL_TEXT are quoted on purpose: the test of the texts of the pickers takes the first table in the file whose English key is not quoted.)
+  var IL_TEXT = {
+    'en': { more: 'More actions for {0}', reorder: 'Reorder {0}', pickedUp: '{0} picked up, position {1} of {2}. Arrow keys move it, Space drops it, Escape cancels.', moved: '{0}, position {1} of {2}', dropped: '{0} dropped, position {1} of {2}', cancelled: 'Reordering cancelled, {0} is back at position {1}', empty: 'Nothing matches', shown: '{0} of {1} shown' },
+    'de': { more: 'Weitere Aktionen für {0}', reorder: '{0} verschieben', pickedUp: '{0} aufgenommen, Position {1} von {2}. Pfeiltasten verschieben, Leertaste legt ab, Escape bricht ab.', moved: '{0}, Position {1} von {2}', dropped: '{0} abgelegt, Position {1} von {2}', cancelled: 'Verschieben abgebrochen, {0} ist wieder an Position {1}', empty: 'Nichts passt', shown: '{0} von {1} werden gezeigt' }
+  };
+
+  function ilText(key, a, b, c) {
+    var table = IL_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || IL_TEXT.en;
+    var s = root.getAttribute('data-il-' + key.toLowerCase()) || table[key] || IL_TEXT.en[key] || key;
+    return s.replace('{0}', function () { return a === undefined ? '' : a; }).replace('{1}', function () { return b === undefined ? '' : b; }).replace('{2}', function () { return c === undefined ? '' : c; });
+  }
+
+  // the name of a row for a screen reader: its title without the hidden words ("Unread, ")
+  function ilTitle(item) {
+    var t = $('.mat-item__title', item) || $('.mat-item__main', item) || item;
+    var copy = t.cloneNode(true);
+    $$('.mat-sr-only', copy).forEach(function (n) { n.remove(); });
+    return copy.textContent.replace(/\s+/g, ' ').trim();
+  }
+  function ilKey(item) { return item.getAttribute('data-item-key') || item.id || ilTitle(item); }
+  function ilSay(list, text) { if (list._matLive) { list._matLive.textContent = text; } }
+  // the rows that take part when one is moved: the rows of the same parent (the list or its group) that are shown
+  function ilSiblings(item) { return Array.prototype.filter.call(item.parentNode.children, function (c) { return c.classList.contains('mat-item') && !c.hidden; }); }
+  function ilPlace(item, to) {
+    var others = ilSiblings(item).filter(function (r) { return r !== item; });
+    if (to >= others.length) { if (others.length) { others[others.length - 1].parentNode.insertBefore(item, others[others.length - 1].nextSibling); } }
+    else { others[to].parentNode.insertBefore(item, others[to]); }
+  }
+  // rows that have moved in the page slide from where they were to where they are (not with reduced motion)
+  function ilFlip(rows, before) {
+    if (reducedMotion()) { return; }
+    rows.forEach(function (r, i) {
+      var d = before[i] - r.getBoundingClientRect().top;
+      if (!d) { return; }
+      r.style.transition = 'none';
+      r.style.transform = 'translateY(' + d + 'px)';
+      void r.offsetHeight;
+      r.style.transition = 'transform var(--mat-dur) var(--mat-ease)';
+      r.style.transform = '';
+    });
+    window.setTimeout(function () { rows.forEach(function (r) { r.style.transition = ''; }); }, 260);
+  }
+
+  // ---- sliding actions
+  function ilWidth(item, side) { var o = $('.mat-item__options--' + side, item); return o ? o.offsetWidth : 0; }
+  function ilFirstOption(item, side) { return $('.mat-item__options--' + side + ' .mat-item__option', item); }
+
+  // side: "start", "end" or "" (closed). The row slides to the width of that side's options; the options of the other side stay inert.
+  function ilSettle(item, side) {
+    var w = side ? ilWidth(item, side) : 0;
+    item.classList.remove('is-swiping');
+    item.classList.toggle('is-open', !!side);
+    item.classList.toggle('is-open-start', side === 'start');
+    item.classList.toggle('is-open-end', side === 'end');
+    item.style.setProperty('--mat-item-x', (side === 'end' ? -w : w) + 'px');
+    item._matSide = side;
+    $$('.mat-item__options', item).forEach(function (o) { o.toggleAttribute('inert', !(side && o.classList.contains('mat-item__options--' + side))); });
+    var more = $('.mat-item__more', item);
+    if (more) { more.setAttribute('aria-expanded', side ? 'true' : 'false'); }
+  }
+  function ilCloseAll(except) {
+    $$('.mat-item.is-open').forEach(function (item) { if (item !== except) { ilSettle(item, ''); } });
+  }
+  // after a keyboard user has closed a row the focus goes back to where the row can be reached (the More button slides out of sight with a row that was open at the start)
+  function ilFocusBack(item, was) {
+    var target = (was !== 'start' && $('.mat-item__more', item)) || $('.mat-item__main', item);
+    if (target && target.focus) { target.focus({ preventScroll: true }); }
+  }
+  // open a side with the keyboard or the More button: the first option takes the focus
+  function ilOpen(item, side) {
+    if (!side || !ilFirstOption(item, side)) { return; }
+    ilCloseAll(item);
+    ilSettle(item, side);
+    ilFirstOption(item, side).focus({ preventScroll: true });
+  }
+  // the More button opens the end side (the start side when the row has no end side) and closes the row again; the start side of a row that has both is opened by the Right arrow
+  function ilToggle(item) {
+    if (item._matSide) { ilSettle(item, ''); return; }
+    ilOpen(item, ilFirstOption(item, 'end') ? 'end' : 'start');
+  }
+
+  function ilSlideInit(item) {
+    if (item._matSlide) { return; }
+    var row = $('.mat-item__row', item);
+    var groups = $$('.mat-item__options', item);
+    if (!row || groups.length === 0) { return; }
+    item._matSlide = true;
+    groups.forEach(function (g) { if (!g.id) { g.id = nextId('mat-opts'); } g.setAttribute('inert', ''); });
+    var aside = $('.mat-item__aside', row);
+    if (!aside) {
+      aside = doc.createElement('div');
+      aside.className = 'mat-item__aside';
+      row.insertBefore(aside, $('.mat-item__options--end', row));
+    }
+    var more = doc.createElement('button');
+    more.type = 'button';
+    more.className = 'mat-btn mat-btn--ghost mat-btn--icon mat-item__more';
+    more.setAttribute('aria-label', ilText('more', ilTitle(item)));
+    more.setAttribute('aria-expanded', 'false');
+    more.setAttribute('aria-controls', groups.map(function (g) { return g.id; }).join(' '));
+    more.innerHTML = icon('more-horizontal');
+    aside.insertBefore(more, aside.firstChild);
+  }
+
+  // what a swipe ends with: far enough, or fast enough toward a side that has options
+  function ilDecide(g) {
+    var x = g.x;
+    if (g.endW && (x < -g.endW * 0.4 || (g.vx < -0.4 && x < -12))) { return 'end'; }
+    if (g.startW && (x > g.startW * 0.4 || (g.vx > 0.4 && x > 12))) { return 'start'; }
+    return '';
+  }
+
+  // ---- reordering with the pointer: the row follows the pointer, the others make room; the DOM changes when it is dropped
+  var ilGesture = null;
+  var ilSuppress = 0;
+  var ilPicked = null;
+
+  function ilScrollTop(g) { return g.scroller ? g.scroller.scrollTop : window.pageYOffset; }
+
+  function ilDragUpdate(g) {
+    var dy = (g.y - g.y0) + (ilScrollTop(g) - g.s0);
+    var h = g.heights[g.index];
+    var center = g.tops[g.index] + dy + h / 2;
+    var to = 0;
+    g.rows.forEach(function (r, j) { if (j !== g.index && g.tops[j] + g.heights[j] / 2 < center) { to += 1; } });
+    g.to = to;
+    g.item.style.setProperty('--mat-item-dy', dy + 'px');
+    g.rows.forEach(function (r, j) {
+      if (j === g.index) { return; }
+      var shift = (g.index < to && j > g.index && j <= to) ? -h : (g.index > to && j >= to && j < g.index) ? h : 0;
+      r.style.setProperty('--mat-item-dy', shift + 'px');
+    });
+  }
+
+  // near the top or the bottom edge of what scrolls, the list scrolls with the held row
+  function ilAutoScroll(g) {
+    if (ilGesture !== g) { return; }
+    var box = g.scroller ? g.scroller.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+    var edge = 56, speed = 0;
+    if (g.y < box.top + edge) { speed = -Math.min(18, Math.ceil((box.top + edge - g.y) / 3)); }
+    else if (g.y > box.bottom - edge) { speed = Math.min(18, Math.ceil((g.y - (box.bottom - edge)) / 3)); }
+    if (speed) {
+      if (g.scroller) { g.scroller.scrollTop += speed; } else { window.scrollBy(0, speed); }
+      ilDragUpdate(g);
+    }
+    g.raf = window.requestAnimationFrame(function () { ilAutoScroll(g); });
+  }
+
+  function ilDragStart(e, handle) {
+    var item = handle.closest('.mat-item');
+    var list = handle.closest('[data-itemlist][data-reorder]');
+    if (!item || !list) { return; }
+    var rows = ilSiblings(item);
+    var rects = rows.map(function (r) { return r.getBoundingClientRect(); });
+    var g = { kind: 'drag', id: e.pointerId, item: item, list: list, rows: rows, index: rows.indexOf(item), y0: e.clientY, y: e.clientY, scroller: scrollContainer(item), raf: 0,
+              tops: rects.map(function (r) { return r.top; }), heights: rects.map(function (r) { return r.height; }) };
+    g.to = g.index;
+    g.s0 = ilScrollTop(g);
+    ilGesture = g;
+    try { handle.setPointerCapture(e.pointerId); } catch (x) { /* the pointer is gone */ }
+    list.classList.add('is-reordering');
+    item.classList.add('is-dragging');
+    ilDragUpdate(g);
+    g.raf = window.requestAnimationFrame(function () { ilAutoScroll(g); });
+  }
+
+  function ilReordered(list, item, from, to) {
+    item.dispatchEvent(new CustomEvent('mat:reorder', { bubbles: true, detail: { list: list, item: item, from: from, to: to, order: $$('.mat-item', list).map(ilKey) } }));
+  }
+
+  function ilDragEnd(g, commit) {
+    window.cancelAnimationFrame(g.raf);
+    var before = g.rows.map(function (r) { return r.getBoundingClientRect().top; });
+    var to = commit ? g.to : g.index;
+    g.rows.forEach(function (r) { r.style.removeProperty('--mat-item-dy'); });
+    g.list.classList.remove('is-reordering');
+    g.item.classList.remove('is-dragging');
+    if (to !== g.index) { ilPlace(g.item, to); }
+    ilFlip(g.rows, before);
+    if (to !== g.index) {
+      ilReordered(g.list, g.item, g.index, to);
+      ilSay(g.list, ilText('dropped', ilTitle(g.item), to + 1, g.rows.length));
+    }
+  }
+
+  // ---- reordering with the keyboard: Space picks the row up, the arrow keys move it, Space or Enter drops it, Escape puts it back
+  function ilStep(item, to) {
+    var rows = ilSiblings(item), from = rows.indexOf(item);
+    to = Math.max(0, Math.min(rows.length - 1, to));
+    if (to === from) { return from; }
+    var before = rows.map(function (r) { return r.getBoundingClientRect().top; });
+    var handle = $('.mat-item__handle', item);
+    ilPlace(item, to);
+    ilFlip(rows, before);
+    if (handle) { handle.focus(); }
+    return to;
+  }
+
+  function ilPick(handle) {
+    var item = handle.closest('.mat-item');
+    var list = handle.closest('[data-itemlist]');
+    var rows = ilSiblings(item);
+    ilCloseAll();
+    ilPicked = { item: item, handle: handle, list: list, from: rows.indexOf(item) };
+    item.classList.add('is-picked');
+    handle.setAttribute('aria-pressed', 'true');
+    ilSay(list, ilText('pickedUp', ilTitle(item), ilPicked.from + 1, rows.length));
+  }
+
+  function ilDrop(cancel) {
+    var p = ilPicked;
+    if (!p) { return; }
+    ilPicked = null;
+    p.item.classList.remove('is-picked');
+    p.handle.setAttribute('aria-pressed', 'false');
+    var rows = ilSiblings(p.item), at = rows.indexOf(p.item);
+    if (cancel) {
+      if (at !== p.from) { ilStep(p.item, p.from); }
+      ilSay(p.list, ilText('cancelled', ilTitle(p.item), p.from + 1));
+      return;
+    }
+    ilSay(p.list, ilText('dropped', ilTitle(p.item), at + 1, rows.length));
+    if (at !== p.from) { ilReordered(p.list, p.item, p.from, at); }
+  }
+
+  function ilHandleKey(e, handle) {
+    if (!handle.closest('[data-itemlist][data-reorder]')) { return false; }
+    var mine = ilPicked && ilPicked.handle === handle;
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      if (mine) { ilDrop(false); } else { ilPick(handle); }
+      return true;
+    }
+    if (!mine) { return false; }
+    if (e.key === 'Escape') { e.preventDefault(); ilDrop(true); return true; }
+    if (e.key === 'Tab') { ilDrop(false); return false; }
+    var item = ilPicked.item, rows = ilSiblings(item), at = rows.indexOf(item), to;
+    if (e.key === 'ArrowUp') { to = at - 1; } else if (e.key === 'ArrowDown') { to = at + 1; } else if (e.key === 'Home') { to = 0; } else if (e.key === 'End') { to = rows.length - 1; } else { return false; }
+    e.preventDefault();
+    to = ilStep(item, to);
+    ilSay(ilPicked.list, ilText('moved', ilTitle(item), to + 1, rows.length));
+    return true;
+  }
+
+  // ---- the events of the pointer: a press on a handle holds a row, a press on a sliding row may become a swipe
+  doc.addEventListener('pointerdown', function (e) {
+    var t = e.target;
+    if (!t.closest || (e.pointerType === 'mouse' && e.button !== 0)) { return; }
+    ilSuppress = 0;
+    var own = t.closest('.mat-item');
+    ilCloseAll(own);
+    if (ilPicked && !(own && own === ilPicked.item)) { ilDrop(false); }
+    var handle = t.closest('.mat-item__handle');
+    if (handle && handle.closest('[data-itemlist][data-reorder]')) {
+      e.preventDefault();
+      ilDragStart(e, handle);
+      return;
+    }
+    var row = t.closest('.mat-item__row');
+    var item = row && row.closest('.mat-item--sliding');
+    if (item && item._matSlide && !t.closest('input, textarea, select, .mat-item__options, .mat-item__more')) {
+      ilGesture = { kind: 'swipe', id: e.pointerId, item: item, row: row, x0: e.clientX, y0: e.clientY, lastX: e.clientX, lastT: e.timeStamp, vx: 0, x: 0, active: false,
+                    startW: ilWidth(item, 'start'), endW: ilWidth(item, 'end'),
+                    base: item._matSide === 'end' ? -ilWidth(item, 'end') : item._matSide === 'start' ? ilWidth(item, 'start') : 0 };
+      ilGesture.x = ilGesture.base;
+    }
+  });
+
+  doc.addEventListener('pointermove', function (e) {
+    var g = ilGesture;
+    if (!g || e.pointerId !== g.id) { return; }
+    if (g.kind === 'drag') { g.y = e.clientY; ilDragUpdate(g); return; }
+    var dx = e.clientX - g.x0, dy = e.clientY - g.y0;
+    if (!g.active) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) { return; }
+      // a move that is mostly vertical is the page scrolling, not a swipe
+      if (Math.abs(dx) < Math.abs(dy) * 1.2) { ilGesture = null; return; }
+      g.active = true;
+      g.item.classList.add('is-swiping');
+      try { g.row.setPointerCapture(e.pointerId); } catch (x) { /* the pointer is gone */ }
+    }
+    g.x = Math.max(-g.endW, Math.min(g.startW, g.base + dx));
+    g.vx = (e.clientX - g.lastX) / Math.max(1, e.timeStamp - g.lastT);
+    g.lastX = e.clientX;
+    g.lastT = e.timeStamp;
+    g.item.style.setProperty('--mat-item-x', g.x + 'px');
+  });
+
+  function ilRelease(e) {
+    var g = ilGesture;
+    if (!g || e.pointerId !== g.id) { return; }
+    ilGesture = null;
+    if (g.kind === 'drag') { ilDragEnd(g, e.type !== 'pointercancel'); return; }
+    if (!g.active) { return; }
+    // the click that ends a swipe is not a press on what lies under the pointer
+    ilSuppress = Date.now() + 400;
+    ilSettle(g.item, e.type === 'pointercancel' ? (g.item._matSide || '') : ilDecide(g));
+  }
+  doc.addEventListener('pointerup', ilRelease);
+  doc.addEventListener('pointercancel', ilRelease);
+  // a link or a picture that is dragged natively would take the pointer away from the swipe
+  doc.addEventListener('dragstart', function (e) { if (e.target.closest && e.target.closest('.mat-item--sliding, .mat-item__handle')) { e.preventDefault(); } });
+
+  // the click that ends a swipe is dropped; a press on a row that is slid open closes it instead of doing what the row does
+  doc.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t.closest) { return; }
+    if (ilSuppress > Date.now()) { ilSuppress = 0; e.preventDefault(); e.stopPropagation(); return; }
+    var open = t.closest('.mat-item.is-open');
+    if (open && t.closest('.mat-item__row') && !t.closest('.mat-item__options, .mat-item__more')) { e.preventDefault(); e.stopPropagation(); ilSettle(open, ''); }
+  }, true);
+
+  doc.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t.closest) { return; }
+    var opt = t.closest('.mat-item__option');
+    if (opt) {
+      // an option that asks first (data-confirm) is done when the question is answered: the handler of data-confirm clicks again
+      if (opt.hasAttribute('data-confirm') && !confirmed.has(opt)) { return; }
+      var item = opt.closest('.mat-item'), list = item.closest('[data-itemlist]');
+      var action = opt.getAttribute('data-item-action') || opt.textContent.trim().toLowerCase();
+      var inside = item.contains(doc.activeElement), was = item._matSide;
+      ilSettle(item, '');
+      if (inside) { ilFocusBack(item, was); }
+      item.dispatchEvent(new CustomEvent('mat:item-action', { bubbles: true, detail: { item: item, action: action, list: list } }));
+      return;
+    }
+    var more = t.closest('.mat-item__more');
+    if (more) { ilToggle(more.closest('.mat-item')); }
+  });
+
+  doc.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if (!t.closest) { return; }
+    if (ilGesture && ilGesture.kind === 'drag' && e.key === 'Escape') { var g = ilGesture; ilGesture = null; ilDragEnd(g, false); return; }
+    var handle = t.closest('.mat-item__handle');
+    if (handle && ilHandleKey(e, handle)) { return; }
+    var item = t.closest('.mat-item--sliding');
+    if (!item || !item._matSlide) { return; }
+    if (e.key === 'Escape' && item.classList.contains('is-open')) { var was = item._matSide; e.preventDefault(); ilSettle(item, ''); ilFocusBack(item, was); return; }
+    // among the options of an open side the arrow keys walk from one to the next
+    var option = t.closest('.mat-item__option');
+    if (option && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+      var options = $$('.mat-item__option', option.parentNode), to = options.indexOf(option) + (e.key === 'ArrowRight' ? 1 : -1);
+      e.preventDefault();
+      if (options[to]) { options[to].focus({ preventScroll: true }); }
+      return;
+    }
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && t.classList.contains('mat-item__main') && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+      var want = e.key === 'ArrowLeft' ? 'end' : 'start', side = item._matSide || '';
+      if (side && side !== want) { e.preventDefault(); ilSettle(item, ''); } else if (!side && ilFirstOption(item, want)) { e.preventDefault(); ilOpen(item, want); }
+    }
+  });
+
+  // a row that is slid open by the keyboard closes when the focus leaves it
+  doc.addEventListener('focusout', function (e) {
+    var open = e.target.closest && e.target.closest('.mat-item.is-open');
+    if (open && e.relatedTarget && !open.contains(e.relatedTarget)) { ilSettle(open, ''); }
+  });
+
+  // ---- filter: a field says which rows are shown
+  function ilFold(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').toLowerCase().trim(); }
+
+  function ilFilter(field) {
+    var list = doc.getElementById(field.getAttribute('data-item-filter'));
+    if (!list) { return; }
+    var text = ilFold(field.value);
+    var rows = $$('.mat-item', list);
+    var shown = 0;
+    rows.forEach(function (r) {
+      var main = $('.mat-item__main', r) || r;
+      var match = !text || ilFold(r.getAttribute('data-item-search') || main.textContent).indexOf(text) >= 0;
+      r.hidden = !match;
+      if (match) { shown += 1; }
+    });
+    // a group (or a flat divider) with no row left is hidden with its rows
+    $$('.mat-itemlist__group', list).forEach(function (g) { g.hidden = !$$('.mat-item', g).some(function (r) { return !r.hidden; }); });
+    $$('li.mat-itemlist__divider', list).forEach(function (d) {
+      var any = false;
+      for (var n = d.nextElementSibling; n && !n.classList.contains('mat-itemlist__divider'); n = n.nextElementSibling) { if (n.classList.contains('mat-item') && !n.hidden) { any = true; } }
+      d.hidden = !!text && !any;
+    });
+    var empty = $('.mat-itemlist__empty', list);
+    if (empty) {
+      if (!empty.textContent.trim()) { empty.textContent = ilText('empty'); }
+      empty.hidden = shown > 0;
+    }
+    ilSay(list, shown > 0 ? ilText('shown', shown, rows.length) : ilText('empty'));
+    list.dispatchEvent(new CustomEvent('mat:item-filter', { bubbles: true, detail: { list: list, text: field.value, shown: shown, total: rows.length } }));
+  }
+  doc.addEventListener('input', function (e) { if (e.target.matches && e.target.matches('[data-item-filter]')) { ilFilter(e.target); } });
+
+  // ---- selection: the checks of the rows are the ones of tables (data-select-row, data-select-all); the select-all check works on the rows that are shown
+  function ilHolds(box) { return box.classList.contains('mat-itemlist') || !!$('.mat-itemlist', box); }
+  function ilSelection(box) {
+    updateSelection(box);
+    var checks = $$('input[data-select-row]', box);
+    checks.forEach(function (c) { var r = c.closest('.mat-item'); if (r) { r.classList.toggle('is-selected', c.checked); } });
+    var shown = checks.filter(function (c) { var r = c.closest('.mat-item'); return !(r && r.hidden); });
+    var all = $('input[data-select-all]', box);
+    var n = shown.filter(function (c) { return c.checked; }).length;
+    if (all) { all.checked = shown.length > 0 && n === shown.length; all.indeterminate = n > 0 && n < shown.length; }
+  }
+  doc.addEventListener('change', function (e) {
+    var t = e.target;
+    var box = t.closest && t.closest('[data-selectable]');
+    if (!box || !t.matches || !ilHolds(box) || !t.matches('input[data-select-all], input[data-select-row]')) { return; }
+    // the handler of tables would count the rows that are hidden by a filter: this one is for lists
+    e.stopImmediatePropagation();
+    if (t.matches('input[data-select-all]')) {
+      $$('input[data-select-row]', box).forEach(function (c) { var r = c.closest('.mat-item'); if (!(r && r.hidden)) { c.checked = t.checked; } });
+    }
+    ilSelection(box);
+  });
+
+  function ilInit(list) {
+    list.classList.add('is-ready');
+    if (!list._matLive) {
+      list._matLive = doc.createElement('span');
+      list._matLive.className = 'mat-sr-only';
+      list._matLive.setAttribute('role', 'status');
+      list._matLive.setAttribute('aria-live', 'polite');
+      list.insertAdjacentElement('afterend', list._matLive);
+    }
+    $$('.mat-item--sliding', list).forEach(ilSlideInit);
+    if (list.hasAttribute('data-reorder')) {
+      $$('.mat-item__handle', list).forEach(function (h) {
+        if (!h.getAttribute('type')) { h.setAttribute('type', 'button'); }
+        if (!h.getAttribute('aria-label')) { h.setAttribute('aria-label', ilText('reorder', ilTitle(h.closest('.mat-item')))); }
+        if (!h.hasAttribute('aria-pressed')) { h.setAttribute('aria-pressed', 'false'); }
+      });
+    }
+  }
+
+  function initItemLists(scope) {
+    $$('[data-itemlist]', scope).forEach(ilInit);
+    $$('[data-selectable]', scope).forEach(function (box) { if (ilHolds(box)) { ilSelection(box); } });
+    $$('[data-item-filter]', scope).forEach(function (f) { if (f.value) { ilFilter(f); } });
   }
 
   // ------------------------------------------------------------------------------------------ on this page: scrollspy (SHELL-16)
@@ -5084,6 +5542,7 @@
     initCalendars();
     initCarousels();
     initSchedules();
+    initItemLists();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
     restoreBranches();
@@ -5124,6 +5583,7 @@
     calendar: CALENDAR_API,
     carousel: { init: initCarousels, go: function (el, page) { var c = el && el._matCarousel; if (c) { carGo(c, page, false); } } },
     schedule: schedule,
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); }
+    itemlist: { init: initItemLists, close: function () { ilCloseAll(); }, open: function (item, side) { if (item && item._matSlide) { ilOpen(item, side === 'start' ? 'start' : 'end'); } } },
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); }
   };
 })();

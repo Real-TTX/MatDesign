@@ -130,6 +130,20 @@ empty root and a JSON list of events (`data-events`), the script draws the rest,
 in the hours, a bar over columns and the number of columns are `--mat-sch-*` properties that the script sets with `style.setProperty`, so a strict content security policy holds. **Time is an input**: the calendar weeks are ISO 8601 (a formula that a
 test ports and checks against .NET for forty years), today comes from the browser unless `data-now` pins it, and the examples pin it, so that neither a test nor the documentation changes with the day. An app that loads events is told what is
 visible (`mat:schedule-range`) and answers with `MatUi.schedule.setEvents`; `data-lazy` shows a loading state in between.
+### Lists of rows
+
+The list that a phone app is full of (contacts, messages, settings, files, tasks) is a part of its own (`LIST-15`, in `matui.lists.css` and one section of `matui.js`; the catalogue is `ListComponents`). It is a
+`ul.mat-itemlist` of `li.mat-item`, and a row is **one target** with slots: `mat-item__main` (a link, a button, a label or a div) holds the lead, the body and the end, and what else has to be pressed stands beside it
+in `mat-item__aside`, because an interactive element inside a link is invalid and a bad target. The list decides the look (lines from the text or none, the grouped card, sticky dividers), the row the content. The names avoid
+`mat-list*`, which is the list block of a page (toolbar, table, pager). A flat look needs three decisions that are easy to get wrong: the focus ring is drawn **inside** the row (a row that clips, as the grouped card and a sliding
+row do, would cut an outer ring); a hover or press adds a little of the text colour over whatever is behind, so that a selected row keeps its tint; and the card **clips** (`overflow: clip`) instead of hiding, because `hidden` makes a
+scroll container of it and a sticky divider would stick to that.
+
+The script does only what CSS cannot, and only for a list with `data-itemlist`. **Sliding actions**: the options stand outside the box of the row (`right: 100%`, `left: 100%`) and the row slides by `--mat-item-x`, so they are never
+under a tint that is transparent; they are `inert` and `visibility: hidden` while closed, so the Tab key does not enter them, and a swipe is never the only way: the script adds a More button and the arrow keys open the sides.
+**Reordering** moves the other rows with transforms while the pointer holds one, and changes the DOM when it is dropped (moving the node that holds the pointer capture would lose the capture); the keyboard path (Space, arrows,
+Escape) moves the node at once and puts the focus back on its handle, and a live region says every step. Both paths end in `mat:reorder` with the keys of the rows in their new order. The checks of rows are the ones of tables
+(`data-selectable`), and a filter hides rows by their text, ignoring case and accents. All texts are English and German (`IL_TEXT`).
 
 ### Layout and utilities
 

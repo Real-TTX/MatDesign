@@ -1068,6 +1068,7 @@ public static class ComponentCatalog
         .. ContentComponents.All,
         .. LayoutComponents.All,
         .. ScheduleComponents.All,
+        .. ListComponents.All,
     ]);
 
     /// <summary>A component with the examples that other files add to it.</summary>

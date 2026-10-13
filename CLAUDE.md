@@ -62,7 +62,7 @@ src/MatDesign.Web          the site
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
   Pages/Studio/              Setup (the assistant of the first administrator), Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, IconLibrary (the optional icon library: sprite, catalogue, single icons, archive, served under /ui/iconlib/), Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
-                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, LayoutComponents, ScheduleComponents; CatalogSection = what a page shows),
+                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, ListComponents, LayoutComponents, ScheduleComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
                              PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
@@ -123,6 +123,11 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   a length or a column that is data is a `--mat-sch-*` property set by the script (`data-sch-*` in the markup it draws), never an inline style. A tone is a tint with a line all around plus an icon and a text (`COLOR-04`, `COLOR-08`).
   Events: `mat:schedule-select`, `mat:schedule-range` (lazy loading with `data-lazy`), `mat:schedule-day`; API `MatUi.schedule.setEvents|go|setLoading|get`. The calendar weeks are ISO 8601 (`isoWeek`; a test ports the formula and
   checks it against .NET for 40 years). The examples pin the clock (`data-now`) and write their dates, so that nothing depends on the day: do the same in a test. Texts in `SCH_TEXT` (English and German, a test checks).
+- Lists of rows (`LIST-15`, like ion-list): `ul.mat-itemlist` of `li.mat-item`; a row is `mat-item__main` (a link, a button, a label or a div: the whole row is the target) with `__lead`, `__body` (`__title`, `__text` lines) and
+  `__end`; what else is pressed (switch, button, handle) is `mat-item__aside` beside it, never inside a link. The look is the list's (`--lines-inset|none`, `--inset` card, `--sticky` dividers with `--scroll`, `--choices`, `--tasks`,
+  `--lead-lg`, `--compact`); do not call anything `mat-list*` (that is the list block of a page). `data-itemlist` adds, by what the markup has: sliding actions (`mat-item--sliding` > `__row` > `__main` + `__options--start|end` of
+  `__option` buttons; swipe, a More button the script adds, arrow keys; options are `inert` while hidden; `mat:item-action`), reordering (`data-reorder`, `__handle`; pointer and Space/arrows/Escape; `mat:reorder`; the DOM changes on drop),
+  `data-item-filter` (a field hides rows, `.mat-itemlist__empty` shows) and the `data-selectable` of tables around a list. Texts in `IL_TEXT` (English and German, quoted keys: the picker test takes the first unquoted `en:` table).
 - Layout and utilities: mobile first with `sm` 600, `md` 900, `lg` 1200 px; no `!important`; values from the tokens; the grid spans by `grid-column-end`. An example in the catalogue uses
   toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.
