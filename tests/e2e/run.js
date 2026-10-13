@@ -301,6 +301,47 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the texts the script writes, in two languages
+  console.log('\nTexts in two languages');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=settings');
+    const label = () => page.evaluate(() => document.querySelector('[data-theme-toggle]').getAttribute('aria-label'));
+    await check('the label of the theme button is English on an English page, and the tooltip says the same', async () => {
+      expect(await label(), 'Theme: System. Click for Light.', 'the label at the start');
+      await page.click('[data-theme-toggle]');
+      expect(await label(), 'Theme: Light. Click for Dark.', 'the label after one click');
+      expect(await page.getAttribute('[data-theme-toggle]', 'title'), 'Theme: Light. Click for Dark.', 'the tooltip');
+    });
+    await check('on a German page it is German, whatever the server rendered', async () => {
+      await page.evaluate(() => { document.documentElement.lang = 'de'; });
+      await page.click('[data-theme-toggle]');
+      expect(await label(), 'Design: Dunkel. Klicken für System.', 'the German label');
+      await page.evaluate(() => MatUi.theme.set('light'));
+      expect(await label(), 'Design: Hell. Klicken für Dunkel.', 'the German label of light');
+    });
+    await check('<html data-theme-label> replaces the whole text and data-theme-name-* the names, also with a "$" in them', async () => {
+      await page.evaluate(() => {
+        const r = document.documentElement;
+        r.setAttribute('data-theme-label', '{0} / {1}');
+        r.setAttribute('data-theme-name-light', 'Day');
+        r.setAttribute('data-theme-name-dark', 'Night $&');
+        MatUi.theme.set('light');
+      });
+      expect(await label(), 'Day / Night $&', 'the replaced label');
+      await page.evaluate(() => { document.documentElement.removeAttribute('data-theme-label'); MatUi.theme.set('dark'); });
+      expect(await label(), 'Design: Night $&. Klicken für System.', 'only the names replaced');
+    });
+    await check('the texts of the pickers follow the same rule: data-pk-<name> replaces AM, the placeholder of a typed time is a text too', async () => {
+      await page.goto(BASE + '/Components#time-picker', { waitUntil: 'networkidle' });
+      await page.evaluate(() => document.documentElement.setAttribute('data-pk-am', 'vorm.'));
+      await page.click('#pk-time12-trigger');
+      const column = '#pk-time12-trigger ~ .mat-picker__panel [data-time-col="ap"] .mat-timecol__item';
+      expect((await page.locator(column).allTextContents()).map(t => t.trim()), ['vorm.', 'PM'], 'the AM and PM column');
+      expect(await page.getAttribute('#pk-time12-trigger ~ .mat-picker__panel [data-time-entry]', 'placeholder'), 'hh:mm am', 'the placeholder of a typed time');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the builder
   console.log('\nBuilder');
   {

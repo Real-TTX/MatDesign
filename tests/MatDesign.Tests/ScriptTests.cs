@@ -16,6 +16,9 @@ public partial class ScriptTests
     [GeneratedRegex(@"data-[a-z]+(?:-[a-z]+)*")]
     private static partial Regex DataAttribute();
 
+    [GeneratedRegex(@"(?s)\ben: \{(.*?)\n    \},\n    de: \{(.*?)\n    \}\n  \};")]
+    private static partial Regex TextTables();
+
     private static string Code => LineComment().Replace(BlockComment().Replace(Js, string.Empty), string.Empty);
 
     [Fact]
@@ -73,6 +76,30 @@ public partial class ScriptTests
         // SHELL-04
         Assert.Contains("var THEMES = ['system', 'light', 'dark'];", Js);
         Assert.Contains("root.removeAttribute('data-theme')", Js);
+    }
+
+    [Fact]
+    public void The_texts_the_script_writes_are_in_the_tables_in_both_languages_and_an_app_can_change_them()
+    {
+        // The label of the theme button, the AM and PM of a time and the hint of a typed time are texts of PK_TEXT (English and German, kept complete by the picker
+        // test), never a string in the code that draws them. <html data-theme-label> and data-theme-name-* replace the label.
+        var tables = TextTables().Match(Js);
+        Assert.True(tables.Success, "the text tables were not found");
+        foreach (var language in new[] { tables.Groups[1].Value, tables.Groups[2].Value })
+        {
+            foreach (var key in new[] { "themeLabel", "themeSystem", "themeLight", "themeDark", "am", "pm", "phTimeEntry", "phTimeEntryAmPm" })
+            {
+                Assert.Matches($@"\b{key}: '", language);
+            }
+        }
+
+        Assert.Equal(1, Regex.Count(Code, "Click for"));
+        Assert.Equal(1, Regex.Count(Code, "Klicken für"));
+        Assert.DoesNotContain("'Theme: '", Code);
+        Assert.DoesNotContain("text: 'AM'", Code);
+        Assert.Equal(2, Regex.Count(Code, "'hh:mm am'"));
+        Assert.Contains("data-theme-label", Code);
+        Assert.Contains("data-theme-name-", Code);
     }
 
     [Fact]

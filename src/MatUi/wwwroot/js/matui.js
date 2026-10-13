@@ -3,6 +3,13 @@
    Dependency-free. Everything is wired by delegated listeners and data-attributes, so server-rendered and dynamically added
    markup behave the same. The public API is window.MatUi (dialog, confirm, alert, prompt, toast, theme, accent).
 
+   Texts: what the script writes itself is English or German (chosen by <html lang>); an app changes any text with an attribute on <html>
+     data-pk-<name>                         one text of the pickers and of the theme button (the names are the keys of PK_TEXT, in lower case)
+     data-theme-label="Theme: {0}. Click for {1}."   the label and the tooltip of the theme button ({0} is this theme, {1} the next one)
+     data-theme-name-<system|light|dark>    the name of a theme in that label
+     data-dlg-ok / data-dlg-cancel / data-dlg-close / data-dlg-confirm / data-dlg-notice / data-dlg-input   the dialogs, the toasts and their X
+     data-msg-required / data-msg-type / data-msg-pattern / data-msg-range   the messages of a form (also on a field); data-copied   the tip after Copy
+
    Data-attributes
      data-theme-toggle                      the 3-state button (system -> light -> dark); data-theme-save-url posts the choice
      data-theme-set="system|light|dark"     a button of a segmented control in the settings that chooses the theme (aria-pressed follows)
@@ -63,7 +70,15 @@
   // ---------------------------------------------------------------------------------------------------- theme
   // system -> light -> dark -> system. "system" means no data-theme attribute: the CSS follows the OS.
   var THEMES = ['system', 'light', 'dark'];
-  var THEME_NAMES = { system: 'System', light: 'Light', dark: 'Dark' };
+
+  // The label and the tooltip of the theme button are in the language of the page ("Theme: Light. Click for Dark." / "Design: Hell. Klicken für Dunkel."): the texts are
+  // PK_TEXT (below), <html data-theme-label="..."> is the whole text ({0} this theme, {1} the next one) and data-theme-name-system / -light / -dark the three names.
+  function themeName(t) { return root.getAttribute('data-theme-name-' + t) || pkText('theme' + t.charAt(0).toUpperCase() + t.slice(1)); }
+  function themeLabel(theme, next) {
+    var own = root.getAttribute('data-theme-label');
+    if (!own) { return pkText('themeLabel', themeName(theme), themeName(next)); }
+    return own.replace('{0}', function () { return themeName(theme); }).replace('{1}', function () { return themeName(next); });
+  }
 
   function currentTheme() {
     var t = root.getAttribute('data-theme');
@@ -76,7 +91,7 @@
     $$('[data-theme-toggle]').forEach(function (btn) {
       var next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
       btn.setAttribute('data-theme-state', theme);
-      var text = 'Theme: ' + THEME_NAMES[theme] + '. Click for ' + THEME_NAMES[next] + '.';
+      var text = themeLabel(theme, next);
       btn.setAttribute('aria-label', text);
       btn.setAttribute('title', text);
     });
@@ -829,6 +844,7 @@
       prevMonth: 'Previous month', nextMonth: 'Next month',
       phSelect: 'Choose', phDate: 'Choose a date', phPeriod: 'Choose a period', phTime: 'Choose a time', phTimeRange: 'Choose a time range', phColour: 'Choose a colour',
       search: 'Search', noResults: 'Nothing found', selectedCount: '{0} selected',
+      themeLabel: 'Theme: {0}. Click for {1}.', themeSystem: 'System', themeLight: 'Light', themeDark: 'Dark', am: 'AM', pm: 'PM', phTimeEntry: 'hh:mm', phTimeEntryAmPm: 'hh:mm am',
       startDate: 'Choose the start date', endDate: 'Choose the end date', daysCount: '{0} days', oneDay: '1 day',
       exactDates: 'Exact dates', flexible: 'Flexible dates', flexDays: '± {0} days', flexDay: '± 1 day',
       from: 'From', to: 'To', hour: 'Hour', minute: 'Minute', ampm: 'AM or PM', typeTime: 'Type a time', nextDay: 'next day', durHM: '{0} h {1} min', durH: '{0} h', durM: '{0} min',
@@ -840,6 +856,7 @@
       prevMonth: 'Vorheriger Monat', nextMonth: 'Nächster Monat',
       phSelect: 'Auswählen', phDate: 'Datum wählen', phPeriod: 'Zeitraum wählen', phTime: 'Uhrzeit wählen', phTimeRange: 'Zeitbereich wählen', phColour: 'Farbe wählen',
       search: 'Suchen', noResults: 'Nichts gefunden', selectedCount: '{0} gewählt',
+      themeLabel: 'Design: {0}. Klicken für {1}.', themeSystem: 'System', themeLight: 'Hell', themeDark: 'Dunkel', am: 'AM', pm: 'PM', phTimeEntry: 'hh:mm', phTimeEntryAmPm: 'hh:mm am',
       startDate: 'Startdatum wählen', endDate: 'Enddatum wählen', daysCount: '{0} Tage', oneDay: '1 Tag',
       exactDates: 'Genaue Daten', flexible: 'Flexible Daten', flexDays: '± {0} Tage', flexDay: '± 1 Tag',
       from: 'Von', to: 'Bis', hour: 'Stunde', minute: 'Minute', ampm: 'Vor- oder nachmittags', typeTime: 'Uhrzeit eintippen', nextDay: 'am nächsten Tag', durHM: '{0} Std. {1} Min.', durH: '{0} Std.', durM: '{0} Min.',
@@ -857,7 +874,8 @@
   function pkText(key, a, b) {
     var table = PK_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || PK_TEXT.en;
     var s = root.getAttribute('data-pk-' + key.toLowerCase()) || table[key] || PK_TEXT.en[key] || key;
-    return s.replace('{0}', a === undefined ? '' : a).replace('{1}', b === undefined ? '' : b);
+    // function replacers: what a person typed (a tag) may hold a "$&" that a plain replacement string would expand
+    return s.replace('{0}', function () { return a === undefined ? '' : a; }).replace('{1}', function () { return b === undefined ? '' : b; });
   }
   function pkLocale() {
     if (!pkLocaleName) {
@@ -1568,9 +1586,9 @@
       (range ? '<div class="mat-btn-group" role="group" aria-label="' + esc(pkText('phTimeRange')) + '">' +
         '<button type="button" class="mat-btn mat-btn--secondary is-active" data-time-part="from" aria-pressed="true">' + esc(pkText('from')) + '&nbsp;<strong></strong></button>' +
         '<button type="button" class="mat-btn mat-btn--secondary" data-time-part="to" aria-pressed="false">' + esc(pkText('to')) + '&nbsp;<strong></strong></button></div>' : '') +
-      '<input class="mat-input mat-time__entry" id="' + id + '" inputmode="numeric" autocomplete="off" data-time-entry aria-label="' + esc(pkText('typeTime')) + '" placeholder="' + (p.hour12 ? 'hh:mm am' : 'hh:mm') + '">' +
+      '<input class="mat-input mat-time__entry" id="' + id + '" inputmode="numeric" autocomplete="off" data-time-entry aria-label="' + esc(pkText('typeTime')) + '" placeholder="' + esc(pkText(p.hour12 ? 'phTimeEntryAmPm' : 'phTimeEntry')) + '">' +
       '<div class="mat-time__cols">' + timeColumn(p.hour12 ? 'hd' : 'h', pkText('hour'), hours) + timeColumn('m', pkText('minute'), minutes) +
-      (p.hour12 ? timeColumn('ap', pkText('ampm'), [{ v: 'am', text: 'AM' }, { v: 'pm', text: 'PM' }]) : '') + '</div>' +
+      (p.hour12 ? timeColumn('ap', pkText('ampm'), [{ v: 'am', text: pkText('am') }, { v: 'pm', text: pkText('pm') }]) : '') + '</div>' +
       (range ? '<p class="mat-picker__status" aria-live="polite"></p>' : '') +
       '<div class="mat-cal__tools"><button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-time-now>' + esc(pkText('now')) + '</button></div></div>';
     setFoot(p, 'apply');

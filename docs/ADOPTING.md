@@ -62,6 +62,24 @@ Replace the app's own frame with the shell:
 
 Saving the theme: `data-theme-save-url` on the theme button posts the choice (`theme=system|light|dark`) so it can be kept per user; without it the choice stays in the browser.
 
+## 3a. The language of the toolkit's own texts
+
+The few texts the script writes itself (the label of the theme button, the pickers, the dialogs, the messages of a form) are English or German, chosen by `lang` on `<html>`. An app in another language, or one
+that words them differently, changes any of them with an attribute on `<html>`; the markup of a page needs nothing for this. These are all of them:
+
+| Attribute | What it changes |
+|---|---|
+| `lang="de"` | The built-in language of the pickers and of the theme button: `en` (the default) or `de`. |
+| `data-theme-label="Design: {0}. Klicken für {1}."` | The label and tooltip of the theme button; `{0}` is the current theme, `{1}` the next one. The script writes it again whenever the theme changes, so the label in the markup of the button is only what is shown before the script has run. |
+| `data-theme-name-system`, `data-theme-name-light`, `data-theme-name-dark` | The three names in that label (built in: System, Light, Dark and System, Hell, Dunkel). |
+| `data-pk-<name>` | One text of the pickers, in lower case after `data-pk-`: `data-pk-apply="Speichern"`. The names are the keys of `PK_TEXT` in `matui.js`, which also holds the texts of the theme button and the AM and PM of a 12-hour time; a test keeps English and German complete. |
+| `data-dlg-ok`, `data-dlg-cancel`, `data-dlg-close`, `data-dlg-confirm`, `data-dlg-notice`, `data-dlg-input` | The buttons and titles of `MatUi.confirm`, `alert`, `prompt` and `data-confirm`, and the X of a dialog or a toast. English when absent: set them on a page that is not in English. |
+| `data-msg-required`, `data-msg-type`, `data-msg-pattern`, `data-msg-range` | The messages of a form (`FORM-05`); each can also be set on one field. |
+| `data-copied` | The tip after *Copy*. |
+| `data-locale`, `data-week-start` | The language of the dates in the pickers (default `lang`) and the first day of the week (0 Sunday to 6, default 1). |
+
+A text that goes into the markup of a page (a label, a hint, the words of a `data-confirm`) is the app's own and stays in the language of the app (`CODE-05`).
+
 ## 4. Lists and forms (`LIST-*`, `FORM-*`)
 
 - **CRUD is a list and a separate page** for create and edit (`LIST-01`). No inline editing, no modal for create or edit.

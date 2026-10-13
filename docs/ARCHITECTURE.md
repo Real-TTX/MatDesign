@@ -70,7 +70,7 @@ A picker is a field whose value is chosen in a panel: a select with pictures, de
 page (`Intl`) and the panel. The panel is `position: fixed` next to the button (below, above, or covering it when neither side has room) and full screen with an X on a phone, like every dialog.
 It lives inside the wrapper, so a picker in a dialog is not cut off by it, and Escape closes the picker first and the dialog second. The real input is invisible but lies over the button, so a
 browser message points at the right place, and whoever focuses it (a label, the validation) lands on the button. The texts are English and German (`data-pk-*` on `html` changes them; a test checks that
-both languages have every text).
+both languages have every text). The same table holds the label of the theme button (`data-theme-label` and `data-theme-name-*` replace it), so no text that the script writes is English only ([ADOPTING.md](ADOPTING.md), "The language of the toolkit's own texts").
 
 ### Layout and utilities
 
