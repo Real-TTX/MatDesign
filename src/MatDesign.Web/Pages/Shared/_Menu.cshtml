@@ -18,7 +18,7 @@
             <button type="button" class="mat-switcher" data-menu-toggle="nav-switch-menu" data-menu-place="@(shell.SwitcherAtEnd ? "top" : "bottom")" aria-haspopup="menu" aria-expanded="false">
                 <span class="mat-switcher__icon">@Ui.Icon(current.Icon)</span>
                 <span class="mat-switcher__text"><small>Menu</small><span class="mat-switcher__name">@current.Title</span></span>
-                @Ui.Icon("chevron-down", "mat-switcher__chev")
+                @Ui.Icon(shell.SwitcherAtEnd ? "chevron-up" : "chevron-down", "mat-switcher__chev")
                 <span class="mat-switcher__dot" hidden="@(!shell.Menus.Any(m => m != current && m.NeedsAttention))"></span>
             </button>
         </div>

@@ -338,7 +338,9 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         var at = html.IndexOf("class=\"mat-nav__switch mat-nav__switch--end\"", StringComparison.Ordinal);
         Assert.True(at > html.LastIndexOf("data-nav-panel=\"admin\"", StringComparison.Ordinal), "the switcher comes before the last panel");
         Assert.True(at < html.IndexOf("class=\"mat-nav__foot\"", StringComparison.Ordinal), "the switcher comes after the foot");
-        Assert.Contains("data-menu-place=\"top\"", html[at..html.IndexOf("</button>", at, StringComparison.Ordinal)]);
+        var switcher = html[at..html.IndexOf("</button>", at, StringComparison.Ordinal)];
+        Assert.Contains("data-menu-place=\"top\"", switcher);
+        Assert.Contains("mat-i-chevron-up", switcher);
 
         // without the options the sample is as it was
         var (_, plain) = await Get("/Preview?app=matmail&view=list");
