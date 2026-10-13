@@ -211,6 +211,8 @@ a.mat-card:hover, .mat-card--link:hover { border-color: var(--mat-text-faint); b
   white-space: pre; overflow-x: auto; tab-size: 2;
 }
 .mat-code[data-copy] { padding-right: 52px; cursor: pointer; }
+/* the code inside a block is not an inline code: its padding would only push the first line to the right */
+.mat-code code { padding: 0; background: none; border-radius: 0; }
 /* The parts of highlighted code. They use the colours of the status texts, which are readable on the grey of the block in both modes. */
 .mat-code__tag, .mat-code__kw { color: var(--mat-info-text); }
 .mat-code__attr, .mat-code__num { color: var(--mat-warning-text); }
