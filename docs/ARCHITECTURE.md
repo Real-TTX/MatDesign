@@ -82,6 +82,21 @@ It lives inside the wrapper, so a picker in a dialog is not cut off by it, and E
 browser message points at the right place, and whoever focuses it (a label, the validation) lands on the button. The texts are English and German (`data-pk-*` on `html` changes them; a test checks that
 both languages have every text).
 
+### Lists of rows
+
+The list that a phone app is full of (contacts, messages, settings, files, tasks) is a part of its own (`LIST-15`, in `matui.lists.css` and one section of `matui.js`; the catalogue is `ListComponents`). It is a
+`ul.mat-itemlist` of `li.mat-item`, and a row is **one target** with slots: `mat-item__main` (a link, a button, a label or a div) holds the lead, the body and the end, and what else has to be pressed stands beside it
+in `mat-item__aside`, because an interactive element inside a link is invalid and a bad target. The list decides the look (lines from the text or none, the grouped card, sticky dividers), the row the content. The names avoid
+`mat-list*`, which is the list block of a page (toolbar, table, pager). A flat look needs three decisions that are easy to get wrong: the focus ring is drawn **inside** the row (a row that clips, as the grouped card and a sliding
+row do, would cut an outer ring); a hover or press adds a little of the text colour over whatever is behind, so that a selected row keeps its tint; and the card **clips** (`overflow: clip`) instead of hiding, because `hidden` makes a
+scroll container of it and a sticky divider would stick to that.
+
+The script does only what CSS cannot, and only for a list with `data-itemlist`. **Sliding actions**: the options stand outside the box of the row (`right: 100%`, `left: 100%`) and the row slides by `--mat-item-x`, so they are never
+under a tint that is transparent; they are `inert` and `visibility: hidden` while closed, so the Tab key does not enter them, and a swipe is never the only way: the script adds a More button and the arrow keys open the sides.
+**Reordering** moves the other rows with transforms while the pointer holds one, and changes the DOM when it is dropped (moving the node that holds the pointer capture would lose the capture); the keyboard path (Space, arrows,
+Escape) moves the node at once and puts the focus back on its handle, and a live region says every step. Both paths end in `mat:reorder` with the keys of the rows in their new order. The checks of rows are the ones of tables
+(`data-selectable`), and a filter hides rows by their text, ignoring case and accents. All texts are English and German (`IL_TEXT`).
+
 ### Layout and utilities
 
 `matui.layout.css` is the last part before the apps: containers, a grid of twelve columns (`mat-cols`, `mat-col-N`, with `sm`, `md` and `lg` variants from 600, 900 and 1200 px, mobile first) and

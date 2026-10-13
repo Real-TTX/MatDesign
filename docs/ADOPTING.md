@@ -88,6 +88,9 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
     </div>
   </div>
   ```
+- Things that are looked at, opened or ticked off one by one (contacts, messages, settings, files, tasks) are a **list of rows** (`LIST-15`): `ul.mat-itemlist` of `li.mat-item`, a row is one target
+  (`mat-item__main`: a link, a button or a label) with a lead, a body and an end; a switch or a button beside it goes in `mat-item__aside`, never inside the link. Add `data-itemlist` for sliding actions
+  (`mat-item--sliding`, listen to `mat:item-action`), reordering (`data-reorder` and a `mat-item__handle`, listen to `mat:reorder`) and a filter field (`data-item-filter`). A table that is searched and sorted stays a table (`LIST-02`).
 
 ## 4a. Layout and utilities
 
