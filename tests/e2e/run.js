@@ -28,6 +28,18 @@ function expectTrue(value, what) {
   if (!value) { throw new Error(what); }
 }
 
+// What a click on the middle of the first element with this selector would hit: "seen" when it is the element or something inside it, else what covers it
+// (a modal dialog is in the top layer, so whatever is outside of it is under it, whatever its z-index).
+function seenAt(page, selector) {
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) { return 'no element ' + sel; }
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return hit && el.contains(hit) ? 'seen' : 'covered by ' + (hit ? hit.tagName.toLowerCase() + '.' + String(hit.className) : 'nothing');
+  }, selector);
+}
+
 (async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true }).catch(() => chromium.launch({ channel: 'chrome', headless: true }));
   const phoneOptions = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
@@ -165,6 +177,16 @@ function expectTrue(value, what) {
       expect([Math.round(dialog.width), Math.round(dialog.height)], [390, 844], 'size on a phone');
       await page.click('dialog[open] [data-dialog-close]');
     });
+    await check('on a phone a toast is seen above a full-screen dialog, and its X works', async () => {
+      await page.click('.mat-btn--danger[data-confirm]');
+      await page.waitForTimeout(350);
+      await page.evaluate(() => { MatUi.toast('Saved', { tone: 'success', timeout: 30000 }); });
+      await page.waitForTimeout(450);
+      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the sheet');
+      await page.click('.mat-toast .mat-alert__close', { timeout: 3000 });
+      expect(await page.locator('.mat-toast').count(), 0, 'toasts after its X');
+      await page.click('dialog[open] [data-dialog-close]');
+    });
     await ctx.close();
   }
 
@@ -262,6 +284,40 @@ function expectTrue(value, what) {
       await page.click('dialog[open] [data-dialog-close]');
       await page.waitForTimeout(250);
       expect(await page.locator('dialog[open]').count(), 0, 'open dialogs');
+    });
+    await check('a toast shown while a dialog is open is seen above it, and its X works', async () => {
+      await page.evaluate(() => { document.querySelectorAll('.mat-toast').forEach(t => t.remove()); document.getElementById('dialogs').scrollIntoView(); });
+      await page.click('[data-dialog-open="dlg-side"]');
+      await page.waitForFunction(() => document.getElementById('dlg-side').getAnimations().length === 0);
+      await page.evaluate(() => { MatUi.toast('Saved in the dialog', { tone: 'success', timeout: 30000 }); });
+      await page.waitForTimeout(450);
+      expect(await page.evaluate(() => !!document.querySelector('#dlg-side .mat-toasts .mat-toast')), true, 'the toast is inside the open dialog');
+      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the dialog');
+      await page.click('.mat-toast .mat-alert__close', { timeout: 3000 });
+      expect(await page.locator('.mat-toast').count(), 0, 'toasts after its X');
+      await page.click('#dlg-side .mat-dialog__close');
+    });
+    await check('the toasts follow the dialogs: into the topmost, back into the one below when it closes, onto the page after the last, and none is lost on the way', async () => {
+      const host = () => page.evaluate(() => { const h = document.querySelector('.mat-toasts'); return h ? (h.parentElement.id || h.parentElement.tagName.toLowerCase()) : 'no host'; });
+      await page.evaluate(() => { document.querySelectorAll('.mat-toast').forEach(t => t.remove()); document.getElementById('dialogs').scrollIntoView(); });
+      await page.click('[data-dialog-open="dlg-side"]');
+      await page.waitForFunction(() => document.getElementById('dlg-side').getAnimations().length === 0);
+      await page.evaluate(() => { MatUi.confirm('Sure?'); });
+      await page.waitForSelector('dialog.mat-dialog--sm[open]');
+      await page.evaluate(() => { MatUi.toast('Over both dialogs', { timeout: 30000 }); });
+      await page.waitForTimeout(450);
+      expectTrue((await host()).startsWith('mat-dlg-'), 'the toasts are not in the topmost dialog: ' + await host());
+      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the confirmation');
+      await page.click('dialog.mat-dialog--sm[open] [data-dialog-close]');
+      await page.waitForTimeout(300);
+      expect(await host(), 'dlg-side', 'where the toasts are after the confirmation closed (it removes itself)');
+      expect(await page.locator('.mat-toast').count(), 1, 'toasts after the confirmation closed');
+      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the panel');
+      await page.click('#dlg-side .mat-dialog__close');
+      await page.waitForTimeout(250);
+      expect(await host(), 'body', 'where the toasts are after the last dialog closed');
+      expect(await page.locator('.mat-toast').count(), 1, 'toasts after the last dialog closed');
+      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast on the page');
     });
     await ctx.close();
   }

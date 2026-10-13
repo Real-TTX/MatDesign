@@ -903,7 +903,10 @@ public static class ComponentCatalog
                     "A page that redirects after a save puts this element on the next page; the script shows the toast and removes the element.",
                     Live: false),
             ],
-            ["Toasts stack at the bottom, are announced politely (role=status) and stop after a few seconds; hovering keeps them."]),
+            [
+                "Toasts stack at the bottom, are announced politely (role=status) and stop after a few seconds; hovering keeps them.",
+                "While a dialog is open the toasts are shown inside the topmost one and go back to the page when it closes: a modal dialog is in the top layer of the browser, so a message outside of it would be hidden behind it whatever its `z-index`. Nothing to do for the app.",
+            ]),
 
         new("dialogs", "Dialogs", "Feedback", "message-square",
             "Confirmations, alerts and inputs are always dialogs. On a phone every dialog is full screen with the X at the top right.",

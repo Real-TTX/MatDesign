@@ -188,6 +188,8 @@ categories, an icon can be in several, with *General* and *Home automation* firs
   every `window.confirm`, `alert` and `prompt` (`DIALOG-01`).
 - **On a phone every dialog is full screen with the X at the top right** (`DIALOG-03`): the toolkit does this for `<dialog class="mat-dialog">`. If the app has its own modal, replace it.
 - Destructive confirmations: *Cancel* first, a space, the red button last (`DIALOG-06`).
+- **A toast is seen above an open dialog** (`SHELL-12`): `MatUi.toast(message, { tone })` keeps the toasts inside the topmost dialog the toolkit has opened and puts them back on the page when it closes. A modal dialog
+  is in the top layer of the browser, so nothing outside of it is seen above it, whatever its `z-index`: an app does not need a toast layer of its own for its dialogs (and one outside the dialog would be hidden).
 
 ## 6. Delete your own design code
 

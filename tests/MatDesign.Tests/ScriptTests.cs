@@ -173,4 +173,29 @@ public partial class ScriptTests
         Assert.Contains("formnovalidate", File.ReadAllText(Path.Combine(TestPaths.RepoRoot, "docs", "ADOPTING.md")));
         Assert.Contains(ComponentCatalog.All.Single(c => c.Id == "validation").Examples, e => e.Html.Contains("formnovalidate", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void The_toasts_live_in_the_topmost_open_dialog_and_go_back_to_the_page_when_it_closes_and_it_is_documented()
+    {
+        // SHELL-12: a modal dialog is in the top layer, so a toast outside of it is hidden behind it, whatever its z-index. The host is placed when a toast is shown, when a dialog
+        // opens and in the close handler (which runs before a dialog that the script built removes itself: with the host inside it the toasts would go with it).
+        Assert.Contains("var dialogStack = [];", Js);
+        Assert.DoesNotContain("openDialogs", Js);
+
+        var open = Js[Js.IndexOf("function openDialog(", StringComparison.Ordinal)..];
+        Assert.Contains("dialogStack.push(d);", open[..open.IndexOf("function closeDialog(", StringComparison.Ordinal)]);
+        Assert.Contains("placeToasts();", open[..open.IndexOf("function closeDialog(", StringComparison.Ordinal)]);
+
+        var closed = Js[Js.IndexOf("doc.addEventListener('close'", StringComparison.Ordinal)..];
+        closed = closed[..closed.IndexOf("}, true);", StringComparison.Ordinal)];
+        Assert.Contains("dialogStack.splice(at, 1);", closed);
+        Assert.Contains("placeToasts();", closed);
+
+        var toast = Js[Js.IndexOf("function toast(", StringComparison.Ordinal)..];
+        Assert.Contains("toastHost()", toast[..toast.IndexOf("host.appendChild(t);", StringComparison.Ordinal)]);
+        Assert.DoesNotContain("doc.body.appendChild(host)", Js);
+
+        Assert.Contains("top layer", File.ReadAllText(Path.Combine(TestPaths.RepoRoot, "docs", "ADOPTING.md")));
+        Assert.Contains(ComponentCatalog.All.Single(c => c.Id == "toasts").Behaviour, b => b.Contains("topmost", StringComparison.Ordinal));
+    }
 }

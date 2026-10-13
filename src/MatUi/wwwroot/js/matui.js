@@ -387,19 +387,22 @@
   }
 
   // ---------------------------------------------------------------------------------------------------- dialogs
-  var openDialogs = 0;
+  // The dialogs opened by openDialog, in the order they were opened: the last one is the topmost. A modal dialog is in the top layer of the browser, above everything
+  // that is not inside of it (whatever its z-index), so the toasts live in the topmost one while a dialog is open (see toasts).
+  var dialogStack = [];
 
   function dialogEl(ref) { return typeof ref === 'string' ? doc.getElementById(ref) : ref; }
 
-  function syncLock() { root.classList.toggle('mat-lock', openDialogs > 0 || !!(app() && app().classList.contains('is-nav-open')) || !!(pickerOpen && pickerOpen.full)); }
+  function syncLock() { root.classList.toggle('mat-lock', dialogStack.length > 0 || !!(app() && app().classList.contains('is-nav-open')) || !!(pickerOpen && pickerOpen.full)); }
 
   function openDialog(ref, opener) {
     var d = dialogEl(ref);
     if (!d || d.open) { return d; }
     d._matOpener = opener || doc.activeElement;
     if (typeof d.showModal === 'function') { d.showModal(); } else { d.setAttribute('open', ''); }
-    openDialogs += 1;
+    dialogStack.push(d);
     syncLock();
+    placeToasts();
     var target = $('[autofocus]', d) || $('input:not([type=hidden]):not([disabled]), select, textarea', d);
     if (target) { target.focus({ preventScroll: true }); if (target.select && target.type === 'search') { target.select(); } }
     d.dispatchEvent(new CustomEvent('mat:dialog-open', { bubbles: true }));
@@ -417,8 +420,10 @@
   doc.addEventListener('close', function (e) {
     var d = e.target;
     if (!d || !d.classList || !d.classList.contains('mat-dialog')) { return; }
-    openDialogs = Math.max(0, openDialogs - 1);
+    var at = dialogStack.indexOf(d);
+    if (at >= 0) { dialogStack.splice(at, 1); }
     syncLock();
+    placeToasts();
     var op = d._matOpener;
     d._matOpener = null;
     if (op && op.focus && doc.contains(op)) { op.focus({ preventScroll: true }); }
@@ -528,10 +533,24 @@
   }
 
   // ----------------------------------------------------------------------------------------------------- toasts
+  // One host holds them all. It is at the end of <body>, except while a dialog is open: then it is inside the topmost one and goes back when that closes, so that a
+  // toast is never hidden behind a dialog and its X can still be pressed. The toasts that are shown move with the host.
+  function topDialog() {
+    for (var i = dialogStack.length - 1; i >= 0; i--) { if (dialogStack[i].open && doc.contains(dialogStack[i])) { return dialogStack[i]; } }
+    return null;
+  }
+  function toastHost() {
+    var host = $('.mat-toasts');
+    if (!host) { host = doc.createElement('div'); host.className = 'mat-toasts'; host.setAttribute('role', 'status'); host.setAttribute('aria-live', 'polite'); }
+    var home = topDialog() || doc.body;
+    if (host.parentNode !== home) { home.appendChild(host); }
+    return host;
+  }
+  function placeToasts() { if ($('.mat-toasts')) { toastHost(); } }
+
   function toast(message, options) {
     var o = options || {};
-    var host = $('.mat-toasts');
-    if (!host) { host = doc.createElement('div'); host.className = 'mat-toasts'; host.setAttribute('role', 'status'); host.setAttribute('aria-live', 'polite'); doc.body.appendChild(host); }
+    var host = toastHost();
     var t = doc.createElement('div');
     t.className = 'mat-toast' + (o.tone ? ' mat-toast--' + o.tone : '');
     t.innerHTML = icon(o.tone === 'danger' ? 'x-circle' : o.tone === 'success' ? 'check-circle' : o.tone === 'warning' ? 'alert' : 'info') +
