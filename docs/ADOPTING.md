@@ -132,8 +132,8 @@ A text that goes into the markup of a page (a label, a hint, the words of a `dat
   component: one GET form, every dialog sends the whole state, tools in effect are shown as chips (`LIST-04`).
 - Pagination directly under the table (`LIST-06`), the list actions below it, left-aligned (`LIST-07`); *Delete* lives on the edit page (`LIST-08`).
 - **Buttons are always under the content** of a create or edit page, positive to negative: *Save*, *Back*, a space, *Delete* (`FORM-01`). Put them in `mat-btn-row`; the order is enforced.
-- Labels above, hints below, errors at the field; `novalidate` on the form and the messages from `data-msg-*` (`FORM-03`, `FORM-05`). A dependent field appears only when it is needed
-  (`data-show-if`, `FORM-04`).
+- Labels above, hints below, errors at the field; `novalidate` on the form and the messages from `data-msg-*` (`FORM-03`, `FORM-05`). A submit button with `formnovalidate` (*Delete*, *Save as draft*, a button that only
+  asks the server for something) sends the form without the check, as in the browser. A dependent field appears only when it is needed (`data-show-if`, `FORM-04`).
 - The right control for the value (`FORM-12`): the type of the value (`email`, `tel`, `number`, `date`) with `autocomplete` and `inputmode`; radios up to five choices, a select above; a switch applies at once, a check is saved.
   A form with errors shows a **summary** at the top with a link to every field (`data-validation-summary`, `FORM-03`). Layouts: columns, label beside the field on a wide screen, one line, sections (`FORM-14`).
 - Every table cell has `data-label`: on a phone the rows become cards (`TABLE-02`).

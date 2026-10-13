@@ -94,6 +94,8 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   accent preset to AA; the standard look is unchanged and the pairings it was never held to are shown as advice. `MatUi.scheme`, `data-scheme-set`, `data-scheme-save-url`, `mat-scheme` in localStorage, `matui.boot.js`.
 - Order inside a button row, a list block and the toolbar is enforced by CSS (`order`), not by the author. A selector in a later part must be more specific than a base class it
   overrides (the bundle puts `controls` after `shell`).
+- Validation (`FORM-05`): the script checks `form.mat-form` and `form[data-validate]` on submit and writes the messages itself. A submit button with `formnovalidate` skips the check (`e.submitter`), also after a
+  `data-confirm` on the form, which submits again with the same button.
 - Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour"]` around the real input `mat-picker__input`, which posts one value in a fixed
   format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone). Texts in English and German
   (`PK_TEXT`: both languages must have every key, a test checks; it also holds the label of the theme button and the AM and PM, so the script writes no text an app cannot change: `data-pk-*`,

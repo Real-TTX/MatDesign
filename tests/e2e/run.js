@@ -757,6 +757,27 @@ function expectTrue(value, what) {
       await Promise.all([page.waitForNavigation(), page.click('#validation button[type=submit]')]);
       expectTrue(page.url().includes('name=Alex') && page.url().includes('mail=alex%40example.com'), 'the form was not sent: ' + page.url());
     });
+    await check('a submit button with formnovalidate sends the form as it is, also where the check would fail, and writes no message', async () => {
+      await page.evaluate(() => document.getElementById('validation').scrollIntoView());
+      expect(await page.locator('#validation form .mat-field.is-invalid').count(), 0, 'fields with a message on the fresh page');
+      await page.click('#validation button[type=submit]:not([formnovalidate])');
+      await page.waitForTimeout(250);
+      expect(await page.locator('#validation form .mat-field.is-invalid').count(), 3, 'fields with a message after Send with empty fields');
+      await Promise.all([page.waitForNavigation(), page.click('#validation button[formnovalidate]')]);
+      expectTrue(page.url().includes('draft=1'), 'the form was not sent by the button with formnovalidate: ' + page.url());
+      expectTrue(!page.url().includes('name=Alex'), 'the page was not loaded again with the empty form: ' + page.url());
+      expect(await page.locator('#validation form .mat-field.is-invalid').count(), 0, 'fields with a message after the draft was sent');
+    });
+    await check('a form with data-confirm sends the button that was pressed (name, value, formnovalidate) once the question is answered', async () => {
+      await page.evaluate(() => {
+        document.body.insertAdjacentHTML('beforeend', '<form class="mat-form" id="e2e-confirm-form" method="get" action="/Components" data-confirm="Really?" novalidate>' +
+          '<input class="mat-input" name="q" required aria-label="q" /><button type="submit" class="mat-btn" name="act" value="del" formnovalidate>Delete</button></form>');
+      });
+      await page.click('#e2e-confirm-form button');
+      await page.waitForSelector('dialog[open] button[value="ok"]');
+      await Promise.all([page.waitForNavigation(), page.click('dialog[open] button[value="ok"]')]);
+      expectTrue(page.url().includes('act=del'), 'the button that was pressed did not go along: ' + page.url());
+    });
     await ctx.close();
   }
   {

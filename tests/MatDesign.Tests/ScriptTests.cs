@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using MatDesign.Core;
+using MatDesign.Web.Services;
 
 namespace MatDesign.Tests;
 
@@ -153,5 +154,23 @@ public partial class ScriptTests
         // DIALOG-05
         Assert.Contains("showModal", Js);
         Assert.Contains("opener", Js);
+    }
+
+    [Fact]
+    public void A_submit_button_with_formnovalidate_skips_the_check_of_the_form_before_anything_is_checked_and_it_is_documented()
+    {
+        // FORM-05: the check of the toolkit replaces the one of the browser, so it leaves alone what the browser leaves alone. The browser checks e.submitter as well, and a form with data-confirm
+        // submits again after the question, so the button that was pressed has to go along.
+        var start = Js.IndexOf("form.matches('form.mat-form, form[data-validate]')", StringComparison.Ordinal);
+        Assert.True(start > 0, "the submit check of the forms was not found");
+        var handler = Js[start..Js.IndexOf("}, true);", start, StringComparison.Ordinal)];
+        Assert.Contains("e.submitter && e.submitter.hasAttribute('formnovalidate')", handler);
+        Assert.True(handler.IndexOf("formnovalidate", StringComparison.Ordinal) < handler.IndexOf("checkValidity", StringComparison.Ordinal), "formnovalidate is looked at after the fields were checked");
+        Assert.Contains("form.requestSubmit(e.submitter || undefined)", Js);
+
+        Assert.Contains("formnovalidate", BlockComment().Match(Js).Value);
+        Assert.Contains("formnovalidate", RuleBook.All.Single(r => r.Id == "FORM-05").Statement);
+        Assert.Contains("formnovalidate", File.ReadAllText(Path.Combine(TestPaths.RepoRoot, "docs", "ADOPTING.md")));
+        Assert.Contains(ComponentCatalog.All.Single(c => c.Id == "validation").Examples, e => e.Html.Contains("formnovalidate", StringComparison.Ordinal));
     }
 }

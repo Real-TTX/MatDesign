@@ -21,6 +21,7 @@
                                             the menu names the element with the switcher and the panels: data-nav-scope="id"
      data-scrollspy                         an index of #links to sections of the page ("On this page"): the link of the section in view is marked
      data-validation-summary                an alert in a form that lists the fields with an error, each a link to its field (hidden while there are none)
+     formnovalidate                         on a submit button: the form is sent without the check (Delete, Save as draft), as in the browser
      data-output="id"                       a range input writes its value into the element with this id (the filled part of the track is drawn for every .mat-range)
      data-counter="id"                      a text field writes "length / maxlength" into the element with this id
      data-indeterminate                     a checkbox that starts in the indeterminate state
@@ -621,6 +622,8 @@
   doc.addEventListener('submit', function (e) {
     var form = e.target;
     if (!form.matches || !form.matches('form.mat-form, form[data-validate]') || e.defaultPrevented) { return; }
+    // A submit button with formnovalidate (Delete, Save as draft) sends the form as it is, like the browser does: nothing is checked and no message is written.
+    if (e.submitter && e.submitter.hasAttribute('formnovalidate')) { return; }
     var bad = $$('input, select, textarea', form).filter(function (i) { return !i.disabled && !i.checkValidity(); });
     $$('input, select, textarea', form).forEach(function (i) { if (!bad.includes(i)) { showError(i, ''); } });
     // a group of radio buttons has one message
@@ -830,7 +833,8 @@
 
   doc.addEventListener('submit', function (e) {
     var form = e.target;
-    if (form.matches && form.matches('form[data-confirm]')) { guardConfirm(e, form, function () { form.requestSubmit(); }); }
+    // the button that was pressed goes along (its name and value, its formnovalidate), as it does for a button with data-confirm
+    if (form.matches && form.matches('form[data-confirm]')) { guardConfirm(e, form, function () { form.requestSubmit(e.submitter || undefined); }); }
   }, true);
 
   doc.addEventListener('change', function (e) {

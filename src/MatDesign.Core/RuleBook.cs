@@ -207,7 +207,7 @@ public static class RuleBook
             "A field that only matters for a certain answer is hidden until then (`data-show-if`, `data-show-value`). A hidden field is disabled: it posts nothing and cannot block the form.",
             RuleLevel.Must, Owner, Check: "Test (script)"),
         new("FORM-05", "FORM", "Validation in the UI, not in the browser",
-            "Forms are `novalidate`; the browser's bubbles are not used. Messages are written in the language of the app and come from the model (`ErrorMessage`). Checkboxes are never \"required\".",
+            "Forms are `novalidate`; the browser's bubbles are not used. Messages are written in the language of the app and come from the model (`ErrorMessage`). Checkboxes are never \"required\". A submit button with `formnovalidate` (Delete, Save as draft) sends the form without the check.",
             RuleLevel.Must, MatSplit),
         new("FORM-06", "FORM", "Required fields",
             "Required fields are marked with an asterisk in the label; optional fields are not marked. A field is either required or says why it is optional in its hint.",
