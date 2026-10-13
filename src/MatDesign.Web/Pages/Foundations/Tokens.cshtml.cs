@@ -33,7 +33,8 @@ public class TokensModel : PageModel
         var sort = ListQuery.Text(Request, "sort") ?? "file";
         var descending = ListQuery.Descending(Request);
 
-        var all = _toolkit.Tokens;
+        // the base tokens, then what each colour scheme sets over them (the group "Schemes": the same token can appear once per scheme)
+        IReadOnlyList<DesignToken> all = [.. _toolkit.Tokens, .. SchemeDocs.TokenRows(_toolkit)];
         IEnumerable<DesignToken> tokens = all;
         if (q is not null)
         {

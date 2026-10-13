@@ -62,6 +62,59 @@ public class CssTokensTests
         Assert.Equal("Accent", tokens.Single(t => t.Name == "--mat-accent").Group);
     }
 
+    [Fact]
+    public void A_scheme_is_read_from_its_blocks_and_is_not_taken_for_a_base_token_or_the_dark_set()
+    {
+        const string css = """
+            :root {
+              /* ---- Surfaces ---- */
+              --mat-bg: #ffffff; /* The page. */
+            }
+            :root,
+            [data-app] {
+              --mat-accent: var(--mat-app-accent); /* Fill. */
+            }
+            :root[data-theme="dark"] {
+              --mat-bg: #000000;
+            }
+            :root[data-scheme="warm"] {
+              --mat-bg: #f3eee3;
+              --mat-text: #2b2620;
+            }
+            :root[data-scheme="warm"][data-theme="dark"] {
+              --mat-bg: #1b1814;
+            }
+            @media (prefers-color-scheme: dark) {
+              :root[data-scheme="warm"]:not([data-theme="light"]):not([data-theme="dark"]) {
+                --mat-bg: #1b1814;
+              }
+              :root[data-scheme="night"]:not([data-theme="light"]):not([data-theme="dark"]) {
+                --mat-bg: #010101;
+              }
+            }
+            :root[data-scheme="night"][data-theme="dark"] {
+              --mat-bg: #010101;
+            }
+            """;
+
+        var tokens = CssTokens.Tokens(css);
+        Assert.Equal(["--mat-bg", "--mat-accent"], tokens.Select(t => t.Name));
+        Assert.Equal("#ffffff", tokens[0].Light);
+        Assert.Equal("#000000", tokens[0].Dark);
+
+        var schemes = CssTokens.Schemes(css);
+        Assert.Equal(["warm", "night"], schemes.Select(s => s.Id));
+        var warm = schemes[0];
+        Assert.Equal("#f3eee3", warm.Light!["--mat-bg"]);
+        Assert.Equal("#2b2620", warm.Light["--mat-text"]);
+        Assert.Equal("#1b1814", warm.Dark!["--mat-bg"]);
+        Assert.Equal("#1b1814", warm.SystemDark!["--mat-bg"]);
+        var night = schemes[1];
+        Assert.Null(night.Light);
+        Assert.Equal("#010101", night.Dark!["--mat-bg"]);
+        Assert.Equal("#010101", night.SystemDark!["--mat-bg"]);
+    }
+
     [Theory]
     [InlineData("#abc", true)]
     [InlineData("rgba(1, 2, 3, .5)", true)]

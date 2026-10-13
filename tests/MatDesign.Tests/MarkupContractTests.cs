@@ -241,6 +241,15 @@ public partial class MarkupContractTests
         => NoProblems("Tags that are not closed:", MarkupChecks.Balanced);
 
     [Fact]
+    public void Every_data_colour_of_an_example_is_a_hex_colour_that_the_script_reads()
+    {
+        // COLOR-10: the script ignores anything but #rgb and #rrggbb, so a typo would show nothing at all.
+        NoProblems("COLOR-10:", MarkupChecks.Colour);
+        var looked = ComponentCatalog.All.Sum(c => c.Examples.Sum(e => System.Text.RegularExpressions.Regex.Matches(e.Html, "data-colour=").Count));
+        Assert.True(looked >= 10, $"only {looked} data-colour attributes in the examples: the test no longer looks at anything");
+    }
+
+    [Fact]
     public void An_example_that_is_a_script_names_the_demo_that_runs_it()
     {
         foreach (var example in ComponentCatalog.All.SelectMany(c => c.Examples).Where(e => e.Js is not null))

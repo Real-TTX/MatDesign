@@ -42,6 +42,51 @@ The app sets one colour and nothing else:
 - Check it in the **Builder** (derived colours, contrast in light and dark, the nearest app) and on **Identity → Palette** (is it too close to another app, `IDENT-04`).
 - If the app already has a colour users know, keep it where AA allows and say so in the registry (`FoundAccent`); the site then shows what changed and why.
 
+## 2a. Colour schemes (optional, `COLOR-09`)
+
+An app can let its users choose the surfaces besides the standard look: **`paper`** (warm, slightly yellowed), **`contrast`** (pure white or pure black, strong lines instead of shadows, the borders of controls at 3:1 or
+more) and **`oled`** (a black page and menu, near-black surfaces; dark mode only, in light mode it is the standard look). It is one more attribute on `<html>`, next to `data-theme`, `data-app` and `data-accent`:
+
+```html
+<html lang="en" data-app="yourapp" data-theme="dark" data-scheme="oled">
+```
+
+- **Opt-in.** Without `data-scheme`, with `standard` or with any other value the app looks as it always did. A scheme changes surfaces (backgrounds, lines, text, the status texts, shadows, the dim layer, the scrollbar) and
+  never the accent, so it works with every accent, every preset and both modes. Every combination of scheme, mode and accent is checked for AA: **Foundations → Colour** shows the numbers, the **Builder** takes a scheme next to your accent.
+- **From the account.** Write `data-scheme` on every page from the user's setting on the server, `standard` too: an attribute that is there is the account's, and what the browser saved does not override it. Without an account
+  the browser keeps the choice (`localStorage` `mat-scheme`) and `matui.boot.js` applies it before the first paint, so the page does not flash.
+- **The control.** A segmented control in the settings. Each button is `data-scheme-set="standard|paper|contrast|oled"` (`aria-pressed` follows the choice); where the choice is kept per user, `data-scheme-save-url` on a button or on the
+  group around them posts `scheme=<name>` (`standard` for none) with the anti-forgery token of the page, exactly like `data-theme-save-url`. `MatUi.scheme.get()` and `.set(name)` do the same from code, and `mat:scheme` is fired on
+  `<html>` when it changes.
+
+```html
+<div class="mat-seg" role="group" aria-label="Colour scheme" data-scheme-save-url="/Account/Scheme">
+  <button type="button" class="mat-seg__btn" data-scheme-set="standard" aria-pressed="true">Standard</button>
+  <button type="button" class="mat-seg__btn" data-scheme-set="paper" aria-pressed="false">Paper</button>
+  <button type="button" class="mat-seg__btn" data-scheme-set="contrast" aria-pressed="false">High contrast</button>
+  <button type="button" class="mat-seg__btn" data-scheme-set="oled" aria-pressed="false">Black (OLED)</button>
+</div>
+```
+
+- A scheme is a set of surfaces only. An app that has a second dark mode or its own greys deletes them (`COLOR-02`) and offers a scheme instead.
+
+## 2b. Colours a user chooses (`COLOR-10`)
+
+A tag, a project or a folder can have a colour that the user picked. That colour is **data**, shown as a mark next to the name and set with one attribute, `data-colour="#rrggbb"` (`#rgb` works, in any case), never with an
+inline style:
+
+```html
+<span class="mat-tag" data-colour="#d6336c">Invoices</span>                                    <!-- a tag with a dot before its text -->
+<span class="mat-dot" data-colour="#0d9488" aria-hidden="true"></span> Receipts                <!-- a dot of its own, 10 px -->
+<svg class="mat-icon" data-colour="#7c3aed" aria-hidden="true" focusable="false"><use href="#mat-i-folder"></use></svg> Project Alpha  <!-- the icon in that colour -->
+<button type="button" class="mat-picker__option" data-value="7" data-colour="#2563eb">…</button>  <!-- a dot before the name of an option, also in the closed field -->
+```
+
+- The script writes the colour into `--mat-swatch` when the page loads and in `MatUi.refresh(scope)`, so markup that is added later (a row from a request) needs one call. Anything that is not a hex colour is ignored: no dot,
+  nothing inherited. `MatUi.picker.addOption(wrapper, { value, name, colour })` and the answer of a create endpoint (`{ value, name, colour }`) take a colour too.
+- The colour is a mark, never the text: the text of a tag stays muted and reaches AA whatever the colour, a thin ring in the colour of the text keeps a white dot visible in light mode and a black one in dark mode, and the name
+  is always beside it (`COLOR-04`). So any colour a user can choose is safe, and the toolkit never works out a text colour from it.
+
 ## 3. The shell (`SHELL-*`)
 
 Replace the app's own frame with the shell:
@@ -56,12 +101,32 @@ Replace the app's own frame with the shell:
 | Page head: icon, title (`h1`), one line | `SHELL-09` |
 | Badges at the right end of an item: a count (`99+` above 99) or a dot, in the tone of the meaning, with a text for screen readers | `SHELL-14` |
 | Submenus: a parent is a button that opens its children, one level deep; the branch with the current page is open | `SHELL-13` |
-| More than one menu (for example Administration): one panel of items per menu and the switcher, under the logo, directly above the user at the foot, or both | `SHELL-15`, `SHELL-03` |
+| More than one menu (for example Administration): one panel of items per menu and the switcher, under the logo, directly above the user at the foot (`mat-nav__switch--foot`), both, or at the end of the menu directly above the foot (`mat-nav__switch--end`, after the panels in the markup); the popup of the two lower places opens upwards (`data-menu-place="top"`) | `SHELL-15`, `SHELL-03` |
 | Many menus: group them below a parent in the switcher's popup (a button with `data-nav-group`; the menus carry `data-nav-parent`), one level deep | `SHELL-15` |
+| A main action first in the menu, filled with the accent: `<a class="mat-nav__item mat-nav__item--primary">` with an icon and a label, one per app, no badge | `SHELL-19` |
 | A long page has an index beside it ("On this page"), an icon in the header bar that opens it in a dialog on small screens | `SHELL-16` |
+| Icons at the right end of the header bar (`mat-topbar__actions`), at most four; the one or two main actions (scan, add) filled with the accent: `mat-btn--primary mat-btn--icon` instead of `mat-btn--ghost` | `SHELL-17` |
 | Sign-in, setup and error pages without a menu: a centred card (`mat-auth`) | `SHELL-11` |
 
 Saving the theme: `data-theme-save-url` on the theme button posts the choice (`theme=system|light|dark`) so it can be kept per user; without it the choice stays in the browser.
+
+## 3a. The language of the toolkit's own texts
+
+The few texts the script writes itself (the label of the theme button, the pickers, the dialogs, the messages of a form) are English or German, chosen by `lang` on `<html>`. An app in another language, or one
+that words them differently, changes any of them with an attribute on `<html>`; the markup of a page needs nothing for this. These are all of them:
+
+| Attribute | What it changes |
+|---|---|
+| `lang="de"` | The built-in language of the pickers and of the theme button: `en` (the default) or `de`. |
+| `data-theme-label="Design: {0}. Klicken für {1}."` | The label and tooltip of the theme button; `{0}` is the current theme, `{1}` the next one. The script writes it again whenever the theme changes, so the label in the markup of the button is only what is shown before the script has run. |
+| `data-theme-name-system`, `data-theme-name-light`, `data-theme-name-dark` | The three names in that label (built in: System, Light, Dark and System, Hell, Dunkel). |
+| `data-pk-<name>` | One text of the pickers, in lower case after `data-pk-`: `data-pk-apply="Speichern"`. The names are the keys of `PK_TEXT` in `matui.js`, which also holds the texts of the theme button and the AM and PM of a 12-hour time; a test keeps English and German complete. |
+| `data-dlg-ok`, `data-dlg-cancel`, `data-dlg-close`, `data-dlg-confirm`, `data-dlg-notice`, `data-dlg-input` | The buttons and titles of `MatUi.confirm`, `alert`, `prompt` and `data-confirm`, and the X of a dialog or a toast. English when absent: set them on a page that is not in English. |
+| `data-msg-required`, `data-msg-type`, `data-msg-pattern`, `data-msg-range` | The messages of a form (`FORM-05`); each can also be set on one field. |
+| `data-copied` | The tip after *Copy*. |
+| `data-locale`, `data-week-start` | The language of the dates in the pickers (default `lang`) and the first day of the week (0 Sunday to 6, default 1). |
+
+A text that goes into the markup of a page (a label, a hint, the words of a `data-confirm`) is the app's own and stays in the language of the app (`CODE-05`).
 
 ## 4. Lists and forms (`LIST-*`, `FORM-*`)
 
@@ -70,8 +135,8 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
   component: one GET form, every dialog sends the whole state, tools in effect are shown as chips (`LIST-04`).
 - Pagination directly under the table (`LIST-06`), the list actions below it, left-aligned (`LIST-07`); *Delete* lives on the edit page (`LIST-08`).
 - **Buttons are always under the content** of a create or edit page, positive to negative: *Save*, *Back*, a space, *Delete* (`FORM-01`). Put them in `mat-btn-row`; the order is enforced.
-- Labels above, hints below, errors at the field; `novalidate` on the form and the messages from `data-msg-*` (`FORM-03`, `FORM-05`). A dependent field appears only when it is needed
-  (`data-show-if`, `FORM-04`).
+- Labels above, hints below, errors at the field; `novalidate` on the form and the messages from `data-msg-*` (`FORM-03`, `FORM-05`). A submit button with `formnovalidate` (*Delete*, *Save as draft*, a button that only
+  asks the server for something) sends the form without the check, as in the browser. A dependent field appears only when it is needed (`data-show-if`, `FORM-04`).
 - The right control for the value (`FORM-12`): the type of the value (`email`, `tel`, `number`, `date`) with `autocomplete` and `inputmode`; radios up to five choices, a select above; a switch applies at once, a check is saved.
   A form with errors shows a **summary** at the top with a link to every field (`data-validation-summary`, `FORM-03`). Layouts: columns, label beside the field on a wide screen, one line, sections (`FORM-14`).
 - Every table cell has `data-label`: on a phone the rows become cards (`TABLE-02`).
@@ -88,6 +153,9 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
     </div>
   </div>
   ```
+- A list that acts on several items at once is a `data-selectable` element: a check per item (`data-select-row`, with an `aria-label` that says which item), maybe one that selects all of them (`data-select-all`) and a
+  `data-bulk-bar` with a `data-bulk-count` that shows while something is selected. **The item of a ticked check is marked `is-selected`**, a tint behind the whole item (`COLOR-08`): its table row, its `.mat-tile`, or the
+  nearest element with `data-select-item`, so a list of cards, or of rows of your own, needs no script of its own to show what is selected.
 - A value that a native control cannot show well is chosen in a **picker** (`FORM-15`): an option with a picture, a description and tags, a date or a period, a time or a time range, a colour.
   The markup is a wrapper around the real input, which posts one value in a fixed format (`2026-10-10`, `2026-10-10..2026-10-14`, `09:30`, `09:00..17:30`, `#b4235f`, the key of an option);
   the script draws the button and the panel, which is full screen with an X on a phone. The MatCMS `richselect` and date pickers map onto `data-picker="select"` (with `data-multiple` for
@@ -118,7 +186,7 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
     <span class="mat-error" aria-live="polite"></span>
   A dropdown that holds a **list of checkboxes** is the same select with plain options (a button with `data-value` and a label) and `data-multiple`; `data-select-all` adds a first row Select all
   whose box is empty, ticked or in between and acts on the options that are shown, so `data-search` narrows it.
-- A number that people change by a step or two (a quantity, a timeout) is a **number stepper** (`FORM-16`): a native number field in `<div class="mat-stepper" data-stepper>` gets a button for less and one
+- A number that people change by a step or two (a quantity, a timeout) is a **number stepper** (`FORM-20`): a native number field in `<div class="mat-stepper" data-stepper>` gets a button for less and one
   for more from the script (`data-unit="GB"` for a suffix, `mat-stepper--stacked` for two small arrows, `mat-input--sm` / `--lg` for the size); without the script it stays the native field:
 
   ```html
@@ -157,6 +225,19 @@ Saving the theme: `data-theme-save-url` on the theme button posts the choice (`t
   </script>
   ```
 
+- A select can **create what is missing** and **suggest** (`FORM-16`), both opt-in and both attributes of the wrapper; the markup of the options stays as it is.
+  - `data-create-url="/QuickCreate?kind=tag"` gives the panel the search field and, for a text that is not the name of an option (any case), a first row *Create "text"*. Choosing it (also with the arrow keys and Enter, and Enter in
+    the search where nothing matches) POSTs `application/x-www-form-urlencoded` `name=<text>`, with the anti-forgery token of the page (`__RequestVerificationToken`) when it has one, to that address. The answer is
+    **2xx with JSON** `{ "value": "<key>", "name": "<label>", "description": "…" }` (`description` is optional): the option is added and chosen (a select with several choices adds it, keeps the panel open and starts the
+    search again), the change event fires on the real input and a live region says what was created. **Anything else** (another status, no answer) keeps the panel open and shows `{ "error": "…" }` of the answer, or a default
+    text, under the search field. Only where creating is cheap, reversible and needs nothing but a name.
+  - `data-suggest-url="/Suggest?doc=5"` is fetched with GET when the panel opens first and nothing is chosen, and answers `[ { "value": "7" }, { "name": "New Corp" } ]` or `{ "items": [ … ] }`: a `value` is an option that is
+    there, a `name` that is not an option is a suggestion that creates it (only with `data-create-url`; a name that equals an option is that option). They stand under *Suggestions* above *All* while nothing is chosen
+    and nothing is searched, and the closed field says "3 suggestions" in the colour of a link. A page that gets the suggestions of many pickers in one request calls `MatUi.picker.suggest(wrapper, items)` itself.
+  - From code: `MatUi.picker.set(wrapper, value)` chooses a value and fires change (for several choices the whole value: a string joined by `data-sep`, or an array), `MatUi.picker.addOption(wrapper, { value, name, description, tags })` adds
+    an option (made with `textContent`, never markup). Texts: `data-create-label='Create tag "{0}"'` on the wrapper, and `data-pk-create`, `-creating`, `-created`, `-createfailed`, `-createhint`, `-suggestions`, `-all`,
+    `-suggestioncount`, `-suggestionone` on the wrapper or on `<html>` (section 3a).
+
 ## 4a. Layout and utilities
 
 - **Containers and the grid:** a page inside the shell is `mat-page`; one without it (sign-in, a shared link) is `mat-container`. For a layout you have decided use the twelve columns
@@ -181,6 +262,8 @@ categories, an icon can be in several, with *General* and *Home automation* firs
   every `window.confirm`, `alert` and `prompt` (`DIALOG-01`).
 - **On a phone every dialog is full screen with the X at the top right** (`DIALOG-03`): the toolkit does this for `<dialog class="mat-dialog">`. If the app has its own modal, replace it.
 - Destructive confirmations: *Cancel* first, a space, the red button last (`DIALOG-06`).
+- **A toast is seen above an open dialog** (`SHELL-12`): `MatUi.toast(message, { tone })` keeps the toasts inside the topmost dialog the toolkit has opened and puts them back on the page when it closes. A modal dialog
+  is in the top layer of the browser, so nothing outside of it is seen above it, whatever its `z-index`: an app does not need a toast layer of its own for its dialogs (and one outside the dialog would be hidden).
 
 ## 6. Delete your own design code
 

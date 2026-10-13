@@ -16,7 +16,11 @@ A change that an app can see is written down under **Unreleased** in the pull re
 ### Added
 
 - The toolkit has a version of its own (`MatUi.version`, the first line of `matui.css` and the header of `matui.js`, `/ui/manifest.json`, `/api/version`), this changelog (also at `/ui/CHANGELOG.md`, `/api/changelog` and on the Changelog page) and a guide for updating an app (docs/VERSIONING.md), with `tools/bump.js` that makes a version and `tools/matui-check.js` that compares an app's copy with the toolkit. The archive an app copies holds the changelog and `matui.manifest.json` with the SHA-256 of every file.
-- Menu switcher (`SHELL-15`): it can sit under the logo, at the foot of the menu directly above the user, or at both places (`mat-nav__switch--foot`, `data-menu-place="top"`), and menus can be grouped below a parent in its popup (`data-nav-group`, `data-nav-parent`, `mat-menu__parent`, `mat-menu__sub`).
+- Menu switcher (`SHELL-15`): it can sit under the logo, at the foot of the menu directly above the user, at both places (`mat-nav__switch--foot`, `data-menu-place="top"`) or at the end of the menu, after the panels (`mat-nav__switch--end`), and menus can be grouped below a parent in its popup (`data-nav-group`, `data-nav-parent`, `mat-menu__parent`, `mat-menu__sub`).
+- A main action in the menu: `mat-nav__item--primary`, the first item, filled with the accent, one per app (`SHELL-19`); highlighted actions in the header bar, `mat-btn--primary mat-btn--icon` in `mat-topbar__actions`, at most two (`SHELL-17`).
+- Colour schemes (`COLOR-09`): `data-scheme="paper|contrast|oled"` on `<html>` next to `data-theme`, an opt-in change of the surfaces only (the accent never changes); `MatUi.scheme.get/set`, `data-scheme-set`, `data-scheme-save-url`, the event `mat:scheme`, and `matui.boot.js` applies the saved scheme before the first paint. The standard look is unchanged.
+- A select can create what is missing and suggest (`FORM-16`): `data-create-url` (a first row Create "text") and `data-suggest-url` (Suggestions above All), both opt-in, with `MatUi.picker.set`, `MatUi.picker.addOption` and `MatUi.picker.suggest`.
+- Colours a user chose (`COLOR-10`): `data-colour="#rrggbb"` on `mat-tag` (a dot before the text), the new `mat-dot`, `mat-icon` and an option of a select picker; `MatUi.refresh(scope)` for markup added later.
 - Tag input: `data-picker="tags"`, a field of chips with suggestions (`FORM-15`).
 - Dropdown with a list of checkboxes: `data-picker="select" data-multiple` with `data-select-all` (`FORM-15`).
 - Appointment picker: `data-picker="slot"` shows the days that have a free time and then the times of the chosen day; what is taken is marked or hidden (`data-unavailable`), `data-min`, `data-max` and `data-min-notice` keep out the past, Next free appointment, and availability that is loaded per month (`mat:slots-needed`, `MatUi.picker.setSlots`). It posts `2026-10-14T09:30` (`FORM-18`).
@@ -26,7 +30,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 - Lists of rows: `mat-itemlist` and `mat-item` for contacts, messages, settings, files, tasks and the like, with sliding actions, reordering, a filter and select all (`LIST-15`).
 - Carousel: `mat-carousel` with `data-carousel`, `data-loop` and `data-autoplay` (`LIST-13`).
 - Groups in a table: `tbody.mat-group` with a heading row that opens and closes the group (`data-groups`, `data-group`, `data-group-toggle`, `data-group-fixed`, `data-groups-set`), the rows hanging on a line and the add row (`mat-group__add`) as the last row of the group; the choice is remembered (`LIST-16`).
-- Number stepper: `mat-stepper` with `data-stepper` (`FORM-16`).
+- Number stepper: `mat-stepper` with `data-stepper` (`FORM-20`).
 - Slider and range slider with two thumbs: `mat-slider` with `data-slider` (`FORM-17`).
 - Code input: `mat-otp` with `data-otp`, for one-time codes and PINs (`FORM-19`).
 
@@ -36,11 +40,16 @@ A change that an app can see is written down under **Unreleased** in the pull re
 - The first line of `matui.css` is `/* MatUi <version> (<hash>) - build <build> - ... */`; the build that it used to name first is now second.
 - The panels of the pickers only fade in: they no longer start lower and smaller and grow into place (`mat-picker-in` replaces `mat-menu-in` for them).
 - The date pickers and the calendar draw their months with the same code; nothing that an app writes has changed.
+- The label of the theme button, AM and PM of a 12-hour time and the hint of a typed time are texts of `PK_TEXT` in English and German, chosen by `<html lang>`, and can be changed with `data-theme-label`, `data-theme-name-system|light|dark` and `data-pk-<name>` on `<html>`; they were English only.
+- `data-selectable` also marks cards and tiles: the item of a ticked check is `is-selected` (its table row, its `mat-tile`, or the nearest element with `data-select-item`), a tint behind the whole item.
+- `--mat-accent-text` is mixed with `--mat-text` by `--mat-accent-text-keep` (100 % in the standard look, so nothing changes there; a colour scheme sets that one share).
+- A toast is shown above an open dialog, inside the topmost one, instead of behind it.
 
 ### Fixed
 
 - The index of a long page ("On this page") can be scrolled by the user again: it followed the page on every scroll event and pulled itself back.
 - The `code` inside a `.mat-code` block has no padding of its own: the padding of an inline code moved the first line of a block to the right.
+- A submit button with `formnovalidate` sends the form without the check of the toolkit, as in the browser (`FORM-05`), also after a `data-confirm` on the form, which now submits again with the button that was pressed.
 
 ## [0.1.0]
 

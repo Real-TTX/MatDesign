@@ -19,7 +19,8 @@ public partial class CalendarTests
     [GeneratedRegex(@"(?s)\ben: \{(.*?)\n    \},\n    de: \{")]
     private static partial Regex PickerTextsEnglish();
 
-    [GeneratedRegex(@"pkText\('([A-Za-z]+)'")]
+    // (a key that is put together, pkText('theme' + name), is not a literal: its parts are checked where the table is)
+    [GeneratedRegex(@"pkText\('([A-Za-z]+)'\s*[,)]")]
     private static partial Regex TextCall();
 
     [GeneratedRegex(@"<div class=""mat-calendar""([^>]*)>\s*<input class=""mat-calendar__input"" id=""([^""]+)""([^>]*)>", RegexOptions.Singleline)]

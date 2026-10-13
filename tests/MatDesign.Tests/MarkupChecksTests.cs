@@ -6,7 +6,7 @@ namespace MatDesign.Tests;
 public class MarkupChecksTests
 {
     private static readonly MarkupFacts Facts = new(
-        new HashSet<string> { "mat-btn", "mat-btn--primary", "mat-field", "mat-label", "mat-input", "mat-table", "mat-table__cell-actions", "mat-dialog", "mat-dialog__title", "mat-dialog__close", "mat-icon" },
+        new HashSet<string> { "mat-btn", "mat-btn--primary", "mat-field", "mat-label", "mat-input", "mat-table", "mat-table__cell-actions", "mat-dialog", "mat-dialog__title", "mat-dialog__close", "mat-icon", "mat-tag", "mat-dot" },
         new HashSet<string> { "check", "x" });
 
     private static IReadOnlyList<MarkupProblem> Check(params string[] examples) => MarkupChecks.Check(examples, Facts);
@@ -107,6 +107,26 @@ public class MarkupChecksTests
         Flags(MarkupChecks.IconButton, """<button type="button" class="mat-btn"><svg class="mat-icon"><use href="#mat-i-x"></use></svg></button>""");
         Assert.Equal(1, MarkupChecks.IconOnlyButtons("""<button type="button"><svg><use href="#mat-i-x"></use></svg></button>"""));
     }
+
+    [Fact]
+    public void The_colour_of_a_mark_is_a_data_attribute_and_an_inline_style_for_it_is_still_refused()
+    {
+        // COLOR-10
+        Clean("""<span class="mat-tag" data-colour="#d6336c">Invoices</span><span class="mat-tag" data-colour="#ABC">x</span><span class="mat-dot" data-colour="#0d9488" aria-hidden="true"></span>""");
+        Clean("""<svg class="mat-icon" data-colour="#7c3aed"><use href="#mat-i-check"></use></svg>""");
+        Flags(MarkupChecks.Inline, """<span class="mat-dot" style="background: #d6336c" aria-hidden="true"></span>""");
+        Flags(MarkupChecks.Inline, """<span class="mat-tag" data-colour="#d6336c" style="--mat-swatch: #d6336c">x</span>""");
+    }
+
+    [Theory]
+    [InlineData("red")]
+    [InlineData("#abcd")]
+    [InlineData("abc")]
+    [InlineData("#ggg")]
+    [InlineData("rgb(1, 2, 3)")]
+    [InlineData("")]
+    public void A_data_colour_that_is_not_a_hex_colour_is_flagged_because_the_script_ignores_it(string value)
+        => Flags(MarkupChecks.Colour, $"""<span class="mat-tag" data-colour="{value}">x</span>""");
 
     [Fact]
     public void A_tag_that_is_not_closed_is_flagged()

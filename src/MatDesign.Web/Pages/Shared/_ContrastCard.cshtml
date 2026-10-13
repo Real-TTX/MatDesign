@@ -13,16 +13,7 @@
                 <caption class="mat-sr-only">Contrast checks of the colours of @r.App.Name</caption>
                 <thead><tr><th scope="col">Pairing</th><th scope="col">Colours</th><th scope="col" class="mat-num">Ratio</th><th scope="col" class="mat-num">Needed</th><th scope="col">Result</th></tr></thead>
                 <tbody>
-                    @foreach (var c in r.Checks())
-                    {
-                        <tr>
-                            <td data-label="Pairing">@c.Name@if (c.Advisory) { <small class="mat-muted"> (advice only)</small> }</td>
-                            <td data-label="Colours"><span class="mat-row mat-row--nowrap">@Ui.Swatch(c.Foreground)<code>@c.Foreground.ToHex()</code> on @Ui.Swatch(c.Background)<code>@c.Background.ToHex()</code></span></td>
-                            <td data-label="Ratio" class="mat-num mat-mono">@c.Ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture):1</td>
-                            <td data-label="Needed" class="mat-num mat-mono">@c.Required.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture):1</td>
-                            <td data-label="Result"><span class="mat-pill @(c.Passes ? "mat-pill--ok" : c.Advisory ? "mat-pill--warn" : "mat-pill--error")">@(c.Passes ? "Passes" : c.Advisory ? "Below advice" : "Fails")</span></td>
-                        </tr>
-                    }
+                    <partial name="_ContrastRows" model="r.Checks()" />
                 </tbody>
             </table>
         </div>

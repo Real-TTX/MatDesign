@@ -1,8 +1,9 @@
 @using Microsoft.AspNetCore.Html
 @model (ShellModel Shell, string? Active)
 @*
-    The menu of the shell: the switcher under the logo (only with more than one menu, SHELL-15, and unless the app puts it at the foot, where _Layout draws it)
-    and a panel of items per menu; only the menu that has the current page is shown. Items: an icon and a label, the current one marked (SHELL-02); a badge at the right end (SHELL-14); a parent opens its children (SHELL-13).
+    The menu of the shell: the switcher under the logo, or at the end of the menu with ShellModel.SwitcherAtEnd (only with more than one menu, SHELL-15; at the foot,
+    _Layout draws it) and a panel of items per menu; only the menu that has the current page is shown. Items: an icon and a label, the current one marked (SHELL-02);
+    a badge at the right end (SHELL-14); a parent opens its children (SHELL-13); the main action is filled with the accent (NavItem.Primary, SHELL-19).
     The popup of the switcher is drawn at the end of the page (_MenuSwitchPopup): the menu has a backdrop filter, which would make it the frame of a fixed popup.
 *@
 @{
@@ -20,7 +21,7 @@
 
 @if (shell.SwitcherAtTop)
 {
-    <partial name="_MenuSwitcher" model="(shell, active, false)" />
+    <partial name="_MenuSwitcher" model="(shell, active, SwitcherPlace.Top)" />
 }
 
 @foreach (var menu in shell.Menus)
@@ -67,8 +68,9 @@
                     else
                     {
                         var isActive = item.Href == active;
+                        var itemClass = "mat-nav__item " + (item.Primary ? "mat-nav__item--primary " : string.Empty) + (isActive ? "is-active" : string.Empty);
                         <li>
-                            <a class="mat-nav__item @(isActive ? "is-active" : "")" href="@item.Href" aria-current="@(isActive ? "page" : null)">
+                            <a class="@itemClass" href="@item.Href" aria-current="@(isActive ? "page" : null)">
                                 @if (item.Icon is not null) { @Ui.Icon(item.Icon) }<span>@item.Title</span>
                                 @if (item.Badge is not null) { @Badge(item.Badge) }
                             </a>
@@ -78,4 +80,9 @@
             }
         </ul>
     </nav>
+}
+
+@if (shell.SwitcherAtEnd)
+{
+    <partial name="_MenuSwitcher" model="(shell, active, SwitcherPlace.End)" />
 }

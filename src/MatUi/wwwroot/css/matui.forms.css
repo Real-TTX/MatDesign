@@ -48,7 +48,7 @@ input[type="file"].mat-input { padding: 6px; }
 .mat-input-group > * + * { margin-left: -1px; }
 .mat-input-addon { display: inline-flex; align-items: center; padding: 0 var(--mat-space-3); background: var(--mat-surface-3); border: 1px solid var(--mat-border-strong); color: var(--mat-text-muted); font-size: var(--mat-fs-sm); white-space: nowrap; }
 
-/* ---- Number stepper (FORM-16): a number field with a button for less and one for more ----
+/* ---- Number stepper (FORM-20): a number field with a button for less and one for more ----
    Without the script it is the native number field. The script adds the buttons and marks the wrapper .is-ready, which is what hides the spinners of the browser and
    squares the corners of the field. The size is the one of the input inside it (mat-input--sm, mat-input--lg). mat-stepper--stacked: two small arrows at the right
    of the field (a mouse); on a touch screen they would be too small to hit (MOBILE-04), so it is drawn like the default there. */

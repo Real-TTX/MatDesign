@@ -28,6 +28,7 @@ public static partial class MarkupChecks
     public const string Balanced = "balanced";
     public const string Ids = "ids";
     public const string References = "references";
+    public const string Colour = "colour";
 
     /// <summary>The checks that keep a page safe: what must never be rendered, whatever else is wrong.</summary>
     public static readonly IReadOnlySet<string> Dangerous = new HashSet<string> { Inline, Elements, Outside };
@@ -50,6 +51,13 @@ public static partial class MarkupChecks
 
     [GeneratedRegex(@"\sstyle\s*=", RegexOptions.IgnoreCase)]
     private static partial Regex InlineStyle();
+
+    // the colour of a mark (COLOR-10): #rgb or #rrggbb, as the script reads it (it ignores anything else, so a typo would show nothing)
+    [GeneratedRegex(@"\sdata-colour\s*=\s*""([^""]*)""", RegexOptions.IgnoreCase)]
+    private static partial Regex DataColour();
+
+    [GeneratedRegex(@"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")]
+    private static partial Regex HexColour();
 
     // any attribute that starts with "on" is a handler (onclick, onerror, onpointerdown ...): none is allowed
     [GeneratedRegex(@"\son[a-z]+\s*=", RegexOptions.IgnoreCase)]
@@ -210,6 +218,14 @@ public static partial class MarkupChecks
             if (!button.Groups[1].Value.Contains("aria-label=", StringComparison.Ordinal))
             {
                 yield return new(IconButton, index, "a button that is only an icon needs an aria-label (ICON-03)");
+            }
+        }
+
+        foreach (Match colour in DataColour().Matches(html))
+        {
+            if (!HexColour().IsMatch(colour.Groups[1].Value))
+            {
+                yield return new(Colour, index, $"data-colour=\"{colour.Groups[1].Value}\" is not #rgb or #rrggbb: the script ignores it (COLOR-10)");
             }
         }
 

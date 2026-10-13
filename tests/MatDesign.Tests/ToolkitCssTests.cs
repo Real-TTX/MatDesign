@@ -56,6 +56,16 @@ public partial class ToolkitCssTests
         Assert.NotEmpty(explicitDark);
         Assert.Empty(explicitDark.Except(systemDark));
         Assert.Empty(systemDark.Except(explicitDark));
+
+        // the same for the colour schemes (COLOR-09): each writes its dark values for data-theme="dark" and for the system, and the two are identical
+        var schemes = CssTokens.Schemes(Css("tokens"));
+        Assert.NotEmpty(schemes);
+        foreach (var scheme in schemes)
+        {
+            Assert.NotNull(scheme.Dark);
+            Assert.NotNull(scheme.SystemDark);
+            Assert.Equal(scheme.Dark!.OrderBy(d => d.Key).ToList(), scheme.SystemDark!.OrderBy(d => d.Key).ToList());
+        }
     }
 
     [Fact]

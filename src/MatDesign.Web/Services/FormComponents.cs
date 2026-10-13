@@ -305,7 +305,7 @@ internal static class FormComponents
 
         new("number-stepper", "Number stepper", "Forms", "plus",
             "A number field with a button for less and one for more, for a value that people change by a step or two: a quantity, a number of seats, a timeout. The native number field only has tiny spinners.",
-            ["FORM-16", "FORM-12", "FORM-03", "A11Y-02", "BUTTON-05", "MOBILE-04"],
+            ["FORM-20", "FORM-12", "FORM-03", "A11Y-02", "BUTTON-05", "MOBILE-04"],
             [
                 new("A number with a button for less and one for more", """
                     <div class="mat-form__grid">
@@ -588,12 +588,13 @@ internal static class FormComponents
                         </div>
                         <span class="mat-error" aria-live="polite"></span>
                       </fieldset>
-                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Send</span></button></div>
+                      <div class="mat-btn-row"><button type="submit" class="mat-btn mat-btn--primary">{I("check")}<span>Send</span></button><button type="submit" class="mat-btn mat-btn--secondary" name="draft" value="1" formnovalidate><span>Save as draft</span></button></div>
                     </form>
-                    """, "Press Send with the fields empty: every field with an error shows its message, the summary above lists them as links, and the focus goes to the first one. Typing a valid value removes its message."),
+                    """, "Press Send with the fields empty: every field with an error shows its message, the summary above lists them as links, and the focus goes to the first one. Typing a valid value removes its message. Save as draft has formnovalidate: it sends the form as it is."),
             ],
             [
                 "`novalidate` on the form switches the bubbles of the browser off; the attributes `required`, `type`, `pattern`, `min` and `max` still decide what is valid, and `data-msg-*` carries the translated text.",
+                "A submit button with `formnovalidate` (Delete, Save as draft, a button that only asks the server for something) sends the form without the check and writes no message, as in the browser. The server still validates what it saves.",
                 "The space for the message is reserved, so the form does not jump when it appears. A server that finds an error draws the same markup (an `is-invalid` field with its `mat-error`, and the summary alert with its list).",
                 "A required field has the star in its label (`mat-req`); an optional one in a form with mostly required fields says `(optional)`.",
             ]),

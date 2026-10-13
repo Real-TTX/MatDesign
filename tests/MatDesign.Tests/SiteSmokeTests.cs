@@ -59,6 +59,9 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         yield return "/Patterns";
         yield return "/Builder";
         yield return "/Builder?app=matmail&accent=%23ff6600";
+        yield return "/Builder?app=matmail&scheme=paper";
+        yield return "/Builder?app=matarchive&accent=%23ff6600&scheme=oled";
+        yield return "/Foundations/Tokens?group=Schemes";
         yield return "/Download";
     }
 
@@ -112,6 +115,59 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Contains("data-theme=\"dark\"", preview);
         Assert.Contains("data-preview", preview);
         Assert.DoesNotContain("data-accent=", preview);
+        Assert.DoesNotContain("data-scheme=\"", html);
+        Assert.DoesNotContain("data-scheme=\"", preview);
+    }
+
+    [Theory]
+    [InlineData("paper", "data-scheme=\"paper\"")]
+    [InlineData("contrast", "data-scheme=\"contrast\"")]
+    [InlineData("oled", "data-scheme=\"oled\"")]
+    [InlineData("standard", null)]
+    [InlineData("PAPER", null)]
+    [InlineData("%22%3E%3Cscript%3E", null)]
+    [InlineData("", null)]
+    public async Task The_sample_app_and_the_builder_take_a_colour_scheme_of_the_registry_and_ignore_everything_else(string scheme, string? attribute)
+    {
+        // COLOR-09: data-scheme on <html>, a known id only, like theme and accent; a frame of the builder carries it on.
+        var (_, preview) = await Get($"/Preview?app=matmail&view=list&theme=dark&scheme={scheme}");
+        var (_, builder) = await Get($"/Builder?app=matmail&scheme={scheme}");
+        if (attribute is null)
+        {
+            Assert.DoesNotContain("data-scheme=\"", preview);
+            Assert.DoesNotContain("scheme=", Regex.Match(builder, @"<iframe[^>]*src=""[^""]*""").Value);
+            Assert.DoesNotContain("<script>", preview);
+            return;
+        }
+
+        Assert.Contains(attribute, preview);
+        Assert.Contains("scheme=" + scheme, Regex.Match(builder, @"<iframe[^>]*src=""[^""]*""").Value);
+        Assert.Contains("Contrast on the scheme", builder);
+        Assert.Matches(@"<option value=""" + scheme + @""" selected", builder);
+    }
+
+    [Fact]
+    public async Task The_colour_page_shows_every_scheme_with_its_tokens_and_its_contrast_and_the_page_of_the_tokens_has_a_group_for_them()
+    {
+        var (_, colour) = await Get("/Foundations");
+        foreach (var scheme in ColorSchemes.All.Select(s => s.Id).Prepend("standard"))
+        {
+            Assert.Contains($"id=\"scheme-{scheme}\"", colour);
+            Assert.Contains($"data-scheme-set=\"{scheme}\"", colour);
+        }
+
+        Assert.Contains("--mat-accent-text-keep", colour);
+        Assert.Contains("the weakest of the", colour);
+        Assert.DoesNotContain(">Fails<", colour);
+
+        var (_, tokens) = await Get("/Foundations/Tokens?group=Schemes");
+        Assert.Contains("Paper: ", tokens);
+        Assert.Contains("High contrast: ", tokens);
+        Assert.DoesNotContain("No token matches", tokens);
+
+        // 25 to a page: the last scheme is on the second one
+        var (_, more) = await Get("/Foundations/Tokens?group=Schemes&page=2");
+        Assert.Contains("Black (OLED): ", more);
     }
 
     [Fact]
@@ -268,6 +324,30 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
                 Assert.Contains("mat-sr-only", badge.Value);
             }
         }
+    }
+
+    [Fact]
+    public async Task The_sample_app_can_show_a_main_action_first_in_the_menu_and_the_switcher_at_its_end()
+    {
+        // SHELL-19 and SHELL-15: ?action=1 puts the filled item first, ?switcher=end puts the switcher after the panels, above the foot, with a popup that opens upwards
+        var (_, html) = await Get("/Preview?app=matmail&view=list&action=1&switcher=end");
+        var panel = Regex.Match(html, "<nav[^>]*data-nav-panel=\"work\"[^>]*>(.*?)</nav>", RegexOptions.Singleline).Groups[1].Value;
+        Assert.Matches(@"^\s*<ul class=""mat-nav__list"">\s*<li>\s*<a class=""mat-nav__item mat-nav__item--primary\s*"" href=""[^""]+"">\s*<svg", panel);
+        Assert.Equal(1, Regex.Count(html, "mat-nav__item--primary"));
+
+        var at = html.IndexOf("class=\"mat-nav__switch mat-nav__switch--end\"", StringComparison.Ordinal);
+        Assert.True(at > html.LastIndexOf("data-nav-panel=\"admin\"", StringComparison.Ordinal), "the switcher comes before the last panel");
+        Assert.True(at < html.IndexOf("class=\"mat-nav__foot\"", StringComparison.Ordinal), "the switcher comes after the foot");
+        var switcher = html[at..html.IndexOf("</button>", at, StringComparison.Ordinal)];
+        Assert.Contains("data-menu-place=\"top\"", switcher);
+        Assert.Contains("mat-i-chevron-up", switcher);
+
+        // without the options the sample is as it was
+        var (_, plain) = await Get("/Preview?app=matmail&view=list");
+        Assert.DoesNotContain("mat-nav__item--primary", plain);
+        Assert.DoesNotContain("mat-nav__switch--end", plain);
+        Assert.Contains("data-menu-place=\"bottom\"", plain);
+        Assert.True(plain.IndexOf("class=\"mat-nav__switch\"", StringComparison.Ordinal) < plain.IndexOf("data-nav-panel=\"work\"", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -507,6 +587,64 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
+    public async Task The_demo_endpoints_of_the_pickers_keep_nothing_and_answer_what_the_examples_expect()
+    {
+        // FORM-16: POST name=<text> answers { value, name, description }; a refusal is a status that is not 2xx with { error }; GET suggest answers { items }. No token, no Studio, no state.
+        async Task<(HttpStatusCode Status, JsonElement Body)> Create(string name)
+        {
+            var response = await _client.PostAsync("/api/demo/create", new FormUrlEncodedContent(new Dictionary<string, string> { ["name"] = name, ["__RequestVerificationToken"] = "not checked" }));
+            return (response.StatusCode, JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement);
+        }
+
+        var (ok, created) = await Create("  New Corp ");
+        Assert.Equal(HttpStatusCode.OK, ok);
+        Assert.Equal("New Corp", created.GetProperty("name").GetString());
+        Assert.Matches("^n-[0-9a-f]{8}$", created.GetProperty("value").GetString()!);
+        Assert.False(string.IsNullOrEmpty(created.GetProperty("description").GetString()));
+        Assert.Equal(created.GetProperty("value").GetString(), (await Create("new corp")).Body.GetProperty("value").GetString());
+
+        var (empty, emptyBody) = await Create("   ");
+        Assert.Equal(HttpStatusCode.BadRequest, empty);
+        Assert.False(string.IsNullOrEmpty(emptyBody.GetProperty("error").GetString()));
+        var (refused, refusedBody) = await Create("ERROR");
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, refused);
+        Assert.Contains("on purpose", refusedBody.GetProperty("error").GetString(), StringComparison.Ordinal);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, (await Create(new string('x', 41))).Status);
+        Assert.Equal(HttpStatusCode.OK, (await Create(new string('x', 40))).Status);
+
+        // nothing but a form is a request: no body is an empty name
+        Assert.Equal(HttpStatusCode.BadRequest, (await _client.PostAsync("/api/demo/create", new StringContent("{}", System.Text.Encoding.UTF8, "application/json"))).StatusCode);
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, (await _client.GetAsync("/api/demo/create")).StatusCode);
+
+        var tags = JsonDocument.Parse(await _client.GetStringAsync("/api/demo/suggest?set=tags")).RootElement.GetProperty("items");
+        Assert.Equal(3, tags.GetArrayLength());
+        Assert.Equal(2, tags.EnumerateArray().Count(i => i.TryGetProperty("value", out _)));
+        Assert.Equal("Invoices 2026", tags.EnumerateArray().Single(i => i.TryGetProperty("name", out _)).GetProperty("name").GetString());
+        Assert.Equal(2, JsonDocument.Parse(await _client.GetStringAsync("/api/demo/suggest?set=folders")).RootElement.GetProperty("items").GetArrayLength());
+        Assert.Equal(0, JsonDocument.Parse(await _client.GetStringAsync("/api/demo/suggest?set=nothing")).RootElement.GetProperty("items").GetArrayLength());
+        Assert.Equal(0, JsonDocument.Parse(await _client.GetStringAsync("/api/demo/suggest")).RootElement.GetProperty("items").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Every_address_that_an_example_of_a_picker_calls_leads_to_an_endpoint_that_answers()
+    {
+        var calls = ComponentCatalog.All.SelectMany(c => c.Examples)
+            .SelectMany(e => Regex.Matches(e.Html, @"data-(create|suggest)-url=""([^""]+)""").Select(m => (Kind: m.Groups[1].Value, Url: WebUtility.HtmlDecode(m.Groups[2].Value))))
+            .Distinct()
+            .ToList();
+        Assert.Contains(calls, c => c.Kind == "create");
+        Assert.Contains(calls, c => c.Kind == "suggest");
+        foreach (var (kind, url) in calls)
+        {
+            var response = kind == "create"
+                ? await _client.PostAsync(url, new FormUrlEncodedContent(new Dictionary<string, string> { ["name"] = "Test" }))
+                : await _client.GetAsync(url);
+            Assert.True(response.IsSuccessStatusCode, $"{kind} {url}: {(int)response.StatusCode}");
+            Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        }
+    }
+
+    [Fact]
     public async Task The_design_system_is_available_as_data()
     {
         async Task<JsonElement> Json(string url) => JsonDocument.Parse(await _client.GetStringAsync(url)).RootElement;
@@ -514,6 +652,10 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(AppRegistry.All.Count, (await Json("/api/apps")).GetArrayLength());
         Assert.Equal(RuleBook.All.Count, (await Json("/api/rules")).GetArrayLength());
         Assert.Equal(AccentPresets.All.Count, (await Json("/api/accents")).GetArrayLength());
+        var schemes = await Json("/api/schemes");
+        Assert.Equal(ColorSchemes.All.Select(s => s.Id), schemes.EnumerateArray().Select(s => s.GetProperty("id").GetString()));
+        Assert.Equal("#f3eee3", schemes[0].GetProperty("light").GetProperty("--mat-bg").GetString());
+        Assert.Equal(JsonValueKind.Null, schemes[2].GetProperty("light").ValueKind);
         Assert.True((await Json("/api/tokens")).GetArrayLength() > 80);
         Assert.True((await Json("/api/icons")).GetArrayLength() > 100);
         Assert.Equal(AppVersion.Current, (await Json("/api/version")).GetProperty("toolkit").GetString());

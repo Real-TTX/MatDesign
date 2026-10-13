@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using MatDesign.Core;
 using MatDesign.Web.Services;
 
 namespace MatDesign.Tests;
@@ -113,6 +114,10 @@ public partial class PickerTests
     [InlineData(".mat-picker__clear[hidden]")]
     [InlineData(".mat-picker__status[hidden]")]
     [InlineData(".mat-picker__chips[hidden]")]
+    [InlineData(".mat-picker__create[hidden]")]
+    [InlineData(".mat-picker__create-msg[hidden]")]
+    [InlineData(".mat-picker__group[hidden]")]
+    [InlineData(".mat-picker__group-head[hidden]")]
     public void What_the_script_hides_stays_hidden_where_a_rule_sets_display(string selector)
         => Assert.Contains(selector, TestPaths.ReadToolkit("css/matui.pickers.css"));
 
@@ -174,14 +179,46 @@ public partial class PickerTests
     }
 
     [Fact]
+    public void A_select_that_creates_and_suggests_is_documented_with_its_rule_and_is_in_the_header_and_the_api_of_the_script()
+    {
+        // FORM-16: create what is missing, suggestions
+        var select = ComponentCatalog.All.Single(c => c.Id == "rich-select");
+        Assert.Contains("FORM-16", select.Rules);
+        Assert.NotNull(RuleBook.Get("FORM-16"));
+        Assert.Contains(select.Examples, e => e.Html.Contains("data-create-url=", StringComparison.Ordinal) && !e.Html.Contains("data-suggest-url=", StringComparison.Ordinal));
+        Assert.Contains(select.Examples, e => e.Html.Contains("data-create-url=", StringComparison.Ordinal) && e.Html.Contains("data-suggest-url=", StringComparison.Ordinal) && e.Html.Contains("data-multiple", StringComparison.Ordinal));
+        Assert.Contains(select.Examples, e => e.Html.Contains("data-suggest-url=", StringComparison.Ordinal) && !e.Html.Contains("data-create-url=", StringComparison.Ordinal));
+        Assert.Contains(select.Examples, e => e.Html.Contains("required", StringComparison.Ordinal) && e.Html.Contains("data-create-url=", StringComparison.Ordinal) && e.Html.Contains("data-create-label=", StringComparison.Ordinal));
+
+        var header = Js[..Js.IndexOf("*/", StringComparison.Ordinal)];
+        foreach (var documented in new[] { "data-create-url", "data-create-label", "data-suggest-url", "MatUi.picker.set(", ".addOption(", ".suggest(" })
+        {
+            Assert.Contains(documented, header);
+        }
+
+        Assert.Contains("picker: { init: initPickers, close: closePicker, setSlots: setSlots, slotsFailed: slotsFailed, set: pickerSet, addOption: pickerAddOption, suggest: pickerSuggest }", Js);
+
+        var texts = Texts().Match(Js);
+        foreach (var language in new[] { texts.Groups[1].Value, texts.Groups[2].Value })
+        {
+            foreach (var key in new[] { "create", "creating", "created", "createFailed", "createHint", "suggestions", "all", "suggestionCount", "suggestionOne" })
+            {
+                Assert.Matches($@"\b{key}: '", language);
+            }
+        }
+    }
+
+    [Fact]
     public void Select_all_is_a_checkbox_in_three_states_that_acts_on_what_is_shown()
     {
         // a button with role=checkbox (a role=option has no state in between), aria-checked true, false or mixed, the options that are shown and can be chosen
         Assert.Contains("data-select-all", Js);
         Assert.Contains("p.all.setAttribute('role', 'checkbox')", Js);
         Assert.Contains("'mixed'", Js);
-        Assert.Contains("function visibleOptions(p) { return $$('.mat-picker__option:not([hidden]):not(:disabled)', p.list); }", Js);
-        Assert.Contains("var keys = visibleOptions(p).map", Js);
+        Assert.Contains("function visibleOptions(p) { return $$('.mat-picker__option:not([hidden]):not(:disabled)', p.list)", Js);
+        // what is chosen by Select all are the options of the list itself, never the row that creates or a suggested copy
+        Assert.Contains("function shownReal(p) { return visibleOptions(p).filter(isReal); }", Js);
+        Assert.Contains("var keys = shownReal(p).map", Js);
 
         var css = TestPaths.ReadToolkit("css/matui.pickers.css");
         Assert.Contains(".mat-picker__all[aria-checked=\"mixed\"] .mat-picker__check::after", css);
@@ -220,6 +257,19 @@ public partial class PickerTests
             Assert.Contains($"{key}: '", match.Groups[1].Value);
             Assert.Contains($"{key}: '", match.Groups[2].Value);
         }
+    }
+
+    [Fact]
+    public void An_option_that_is_created_is_made_with_textContent_because_what_a_person_typed_is_never_markup()
+    {
+        var body = Js[Js.IndexOf("function pickerAddOption", StringComparison.Ordinal)..];
+        body = body[..body.IndexOf("// A new option is chosen", StringComparison.Ordinal)];
+        Assert.DoesNotContain("innerHTML", body);
+        Assert.True(Regex.Count(body, @"\.textContent = ") >= 3, "name, description and tags are set with textContent");
+        // and so is the name of a suggestion and the text of the create row
+        var rows = Js[Js.IndexOf("function suggestionRow", StringComparison.Ordinal)..];
+        Assert.Contains("$('.mat-picker__name', row).textContent = s.name;", rows[..rows.IndexOf("function renderSuggestions", StringComparison.Ordinal)]);
+        Assert.Contains("$('.mat-picker__name', p.createRow).textContent = pkTextOf(p, 'create', q);", Js);
     }
 
     [Fact]

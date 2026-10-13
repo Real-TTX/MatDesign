@@ -132,6 +132,15 @@ ui.MapGet("/iconlib/svg/{name}.svg", (string name, IconLibrary library, HttpCont
 var api = app.MapGroup("/api");
 api.MapGet("/apps", (DesignData design) => design.Apps.Select(a => new { a.Id, a.Name, a.Tagline, a.Category, a.Accent, onAccent = a.OnAccent ?? "#ffffff", a.AccentText, a.Glyph, a.Port }));
 api.MapGet("/accents", () => AccentPresets.All);
+api.MapGet("/schemes", (ToolkitFiles files) => ColorSchemes.All.Select(s => new
+{
+    s.Id,
+    s.Name,
+    s.Description,
+    s.DarkOnly,
+    light = files.Schemes.FirstOrDefault(b => b.Id == s.Id)?.Light,
+    dark = files.Schemes.FirstOrDefault(b => b.Id == s.Id)?.Dark,
+}));
 api.MapGet("/rules", (DesignData design) => design.Rules.Select(r => new { r.Id, r.Area, r.Title, r.Statement, level = r.Level.ToString(), r.Source, r.Check }));
 api.MapGet("/tokens", (ToolkitFiles files) => files.Tokens.Select(t => new { t.Name, t.Light, t.Dark, t.Description, t.Group }));
 api.MapGet("/icons", (ToolkitFiles files) => files.IconNames);
@@ -168,6 +177,42 @@ api.MapGet("/changelog", (string? since) =>
         releases = releases.Select(Shape),
     });
 });
+
+// ---- Demo endpoints of the documentation: what the examples of the select picker call (create what is missing, suggestions, FORM-16). They keep nothing, need no
+// Studio and no token (nothing is changed, so there is nothing to forge: the script sends the anti-forgery token when the page has one, an app's own handler checks it). ----
+api.MapPost("/demo/create", async (HttpContext http) =>
+{
+    var form = http.Request.HasFormContentType ? await http.Request.ReadFormAsync() : null;
+    var name = (form?["name"].ToString() ?? string.Empty).Trim();
+    if (name.Length == 0)
+    {
+        return Results.Json(new { error = "Type a name first." }, statusCode: StatusCodes.Status400BadRequest);
+    }
+
+    if (name.Length > 40)
+    {
+        return Results.Json(new { error = "A name has 40 characters at most." }, statusCode: StatusCodes.Status422UnprocessableEntity);
+    }
+
+    if (name.Equals("error", StringComparison.OrdinalIgnoreCase))
+    {
+        // so that the example can show what a refusal looks like
+        return Results.Json(new { error = "This demo refuses the name \"error\" on purpose, to show what a failure looks like." }, statusCode: StatusCodes.Status422UnprocessableEntity);
+    }
+
+    var key = "n-" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(name.ToLowerInvariant())))[..8].ToLowerInvariant();
+    return Results.Json(new { value = key, name, description = "Created just now" });
+});
+api.MapGet("/demo/suggest", (string? set) => Results.Json(new
+{
+    items = set switch
+    {
+        // an option of the example (a value), or a name that is not an option yet
+        "tags" => new object[] { new { value = "finance" }, new { value = "contracts" }, new { name = "Invoices 2026" } },
+        "folders" => new object[] { new { value = "documents" }, new { value = "photos" } },
+        _ => [],
+    },
+}));
 
 // ---- The releases of the design system (the Studio makes them): what an app copies from, and how it learns that there is a newer one. Public and read-only, like /ui. ----
 api.MapGet("/releases", (ReleaseService service) => service.Releases().Select(m => new { m.Version, m.At, m.Hash, m.Note, files = m.Files.Count, url = $"/releases/{m.Version}/" }));

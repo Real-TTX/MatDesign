@@ -4,7 +4,7 @@ using MatDesign.Web.Services;
 
 namespace MatDesign.Tests;
 
-/// <summary>FORM-16: the number stepper, its documentation, its texts, its script and its CSS contract.</summary>
+/// <summary>FORM-20: the number stepper, its documentation, its texts, its script and its CSS contract.</summary>
 public partial class NumberStepperTests
 {
     private static readonly string Js = TestPaths.ReadToolkit("js/matui.js");
@@ -40,7 +40,7 @@ public partial class NumberStepperTests
     public void The_stepper_is_documented_among_the_forms_next_to_the_range_and_follows_its_rule()
     {
         Assert.Equal("Forms", Component.Group);
-        Assert.Contains("FORM-16", Component.Rules);
+        Assert.Contains("FORM-20", Component.Rules);
         Assert.True(Component.Examples.Count >= 4, "a stepper needs several examples");
         Assert.True(Component.Behaviour.Count >= 4);
 
@@ -49,7 +49,7 @@ public partial class NumberStepperTests
         Assert.True(forms.IndexOf("number-stepper") > forms.IndexOf("range"), "the stepper is before the range");
         Assert.True(forms.IndexOf("number-stepper") - forms.IndexOf("range") <= 2, "the stepper is far from the range");
 
-        var rule = RuleBook.Get("FORM-16");
+        var rule = RuleBook.Get("FORM-20");
         Assert.NotNull(rule);
         Assert.Equal(RuleLevel.Should, rule.Level);
         Assert.Equal(RuleBook.Design, rule.Source);
@@ -205,7 +205,7 @@ public partial class NumberStepperTests
     [Fact]
     public void Without_the_script_it_is_the_native_number_field_the_spinners_go_only_when_the_buttons_are_there()
     {
-        // FORM-16: the class that the script sets is what hides the spinners and squares the corners
+        // FORM-20: the class that the script sets is what hides the spinners and squares the corners
         Assert.Contains(".mat-stepper.is-ready > .mat-input::-webkit-inner-spin-button", Css);
         Assert.Contains(".mat-stepper.is-ready > .mat-input::-webkit-outer-spin-button", Css);
         Assert.Contains("appearance: textfield;", Css);

@@ -473,6 +473,7 @@ internal static class ContentComponents
             [
                 "A bulk action works on the rows that are selected on this page; it says so when there are more pages (\"7 selected on this page\").",
                 "Every check in a row has an accessible name that says which row (`aria-label=\"Select Documents\"`).",
+                "Items that are not rows are selected the same way: a `.mat-tile` (Gallery) and any element with `data-select-item` (Cards) are marked `is-selected` when their check is ticked.",
             ]),
 
         new("cards", [
@@ -482,8 +483,31 @@ internal static class ContentComponents
                       <div class="mat-card mat-card--horizontal"><img class="mat-card__media" src="/favicon.svg" alt="" /><div class="mat-card__body mat-stack mat-stack--sm"><strong>Beside the text</strong><p class="mat-muted">Below 600 px the picture goes above.</p></div></div>
                     </div>
                     """),
+                new("Selectable cards with a bulk bar", """
+                    <div class="mat-stack" data-selectable>
+                      <div class="mat-bulk" data-bulk-bar hidden role="status">
+                        <span class="mat-bulk__count"><strong data-bulk-count>0</strong> selected</span>
+                        <button type="button" class="mat-btn mat-btn--secondary mat-btn--sm">Archive</button>
+                      </div>
+                      <div class="mat-card" data-select-item>
+                        <div class="mat-card__head"><label class="mat-check"><input type="checkbox" id="csel-1" data-select-row aria-label="Select Rent agreement" /></label><h3 class="mat-card__title">Rent agreement</h3><span class="mat-pill">Contract</span></div>
+                        <div class="mat-card__body"><p class="mat-muted">Signed on 2026-03-01 and valid until 2029-02-28.</p></div>
+                      </div>
+                      <div class="mat-card" data-select-item>
+                        <div class="mat-card__head"><label class="mat-check"><input type="checkbox" id="csel-2" data-select-row aria-label="Select Insurance policy" /></label><h3 class="mat-card__title">Insurance policy</h3><span class="mat-pill">Contract</span></div>
+                        <div class="mat-card__body"><p class="mat-muted">Renews on 2027-01-01.</p></div>
+                      </div>
+                      <div class="mat-card" data-select-item>
+                        <div class="mat-card__head"><label class="mat-check"><input type="checkbox" id="csel-3" data-select-row aria-label="Select Electricity bill" /></label><h3 class="mat-card__title">Electricity bill</h3><span class="mat-pill mat-pill--ok">Paid</span></div>
+                        <div class="mat-card__body"><p class="mat-muted">September 2026, 86.40.</p></div>
+                      </div>
+                    </div>
+                    """, "Cards, tiles and the rows of a list of your own are selected like the rows of a table (see Table): the check has data-select-row, and the item around it is marked is-selected, a tint behind the whole item and a line in the accent colour. A table row and a mat-tile are items by themselves; for anything else put data-select-item on the element that is the item."),
             ],
-            []),
+            [
+                "The check of a card has an accessible name that says which card (`aria-label=\"Select Rent agreement\"`); a bulk action works on the cards that are selected on this page.",
+                "Without `data-select-item` (and not a `tr` or a `.mat-tile`) nothing is marked, but the check still counts and shows the bar.",
+            ]),
 
         new("tabs", [
                 new("Pills, filling and vertical", """
@@ -548,5 +572,48 @@ internal static class ContentComponents
                     """, "A title says it in a line; the text and the link say what to do; the actions are small buttons with the usual order (positive first)."),
             ],
             []),
+
+        new("pills", [
+                new("A colour a user chose, next to the name", """
+                    <div class="mat-stack">
+                      <div class="mat-row">
+                        <span class="mat-tag" data-colour="#dc2626">Urgent</span>
+                        <span class="mat-tag" data-colour="#2563eb">Finance</span>
+                        <span class="mat-tag" data-colour="#16a34a">Done</span>
+                        <span class="mat-tag" data-colour="#fff">White</span>
+                        <span class="mat-tag" data-colour="#000000">Black</span>
+                        <span class="mat-tag">No colour</span>
+                      </div>
+                      <div class="mat-row">
+                        <span class="mat-row mat-row--nowrap mat-gap-2"><span class="mat-dot" data-colour="#d97706" aria-hidden="true"></span>Inbox</span>
+                        <span class="mat-row mat-row--nowrap mat-gap-2"><span class="mat-dot" data-colour="#0d9488" aria-hidden="true"></span>Receipts</span>
+                        <span class="mat-row mat-row--nowrap mat-gap-2"><span class="mat-dot" aria-hidden="true"></span>No colour: a grey dot</span>
+                      </div>
+                      <div class="mat-row">
+                        <span class="mat-row mat-row--nowrap mat-gap-2"><svg class="mat-icon" data-colour="#7c3aed" aria-hidden="true" focusable="false"><use href="#mat-i-folder"></use></svg><strong>Project Alpha</strong></span>
+                        <span class="mat-row mat-row--nowrap mat-gap-2"><svg class="mat-icon" data-colour="#db2777" aria-hidden="true" focusable="false"><use href="#mat-i-tag"></use></svg><strong>Invoices</strong></span>
+                      </div>
+                    </div>
+                    """, "`data-colour=\"#rrggbb\"` (`#rgb` too, any case) is written into `--mat-swatch` by the script: no inline style. The text of a tag stays muted whatever the colour, and a ring keeps a white or a black dot visible. Anything that is not a hex colour is ignored: the neutral look."),
+                new("Tags on the rows of a list", """
+                    <div class="mat-table-wrap">
+                      <table class="mat-table">
+                        <caption class="mat-sr-only">Documents with their tags</caption>
+                        <thead><tr><th scope="col">Name</th><th scope="col">Tags</th></tr></thead>
+                        <tbody>
+                          <tr><td data-label="Name">Invoice 2026-04</td><td data-label="Tags"><span class="mat-chips"><span class="mat-tag" data-colour="#2563eb">Finance</span><span class="mat-tag" data-colour="#dc2626">Urgent</span></span></td></tr>
+                          <tr><td data-label="Name">Lease agreement</td><td data-label="Tags"><span class="mat-chips"><span class="mat-tag" data-colour="#0d9488">Contracts</span></span></td></tr>
+                          <tr><td data-label="Name">Holiday photos</td><td data-label="Tags"><span class="mat-chips"><span class="mat-tag" data-colour="#f5f5f5">Family</span><span class="mat-tag">Archive</span></span></td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    """, "The colour is a mark next to the name, never the only information (COLOR-04): even a colour that is hard to see, like the nearly white one, has its name beside it."),
+            ],
+            [
+                "A colour a user chose is data (COLOR-10): `data-colour=\"#rrggbb\"` on `mat-tag` (a dot before the text), `mat-dot`, `mat-icon` (the icon in that colour) or an option of a select picker (a dot before the name). Never an inline style.",
+                "The colour is a mark, never the colour of the text: the text of a tag stays muted and reaches AA, so any colour a user can pick is safe. A thin ring in the colour of the text keeps a white dot visible in light mode and a black one in dark mode.",
+                "Markup that is added later (a row from a request) needs `MatUi.refresh(scope)`. A picker takes `colour` in `MatUi.picker.addOption(wrapper, { value, name, colour })`.",
+            ],
+            Rules: ["COLOR-10"]),
     ];
 }

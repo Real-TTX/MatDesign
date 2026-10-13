@@ -45,6 +45,7 @@ public class IndexModel : PageModel
     [
         ("/api/apps", "The apps: id, name, category, accent, text colour on it, glyph, port."),
         ("/api/accents", "The accents a user can choose in the settings."),
+        ("/api/schemes", "The colour schemes: id, name, and the tokens each sets in light and in dark."),
         ("/api/rules", "The whole rulebook: id, area, title, statement, level, source."),
         ("/api/tokens", "Every design token with its light and dark value."),
         ("/api/icons", "The names of the icons in the sprite."),

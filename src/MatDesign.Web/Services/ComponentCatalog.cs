@@ -464,7 +464,8 @@ public static class ComponentCatalog
             ],
             [
                 "To offer both views, wrap the list in an element with data-view-scope and give the table and the gallery data-view=\"list\" and data-view=\"gallery\"; the toolbar's view switch does the rest.",
-                "A tile that is selected carries is-selected.",
+                "A tile that is selected carries `is-selected`; in a `data-selectable` list the script sets it when the `data-select-row` check inside the tile is ticked, like for a table row (see Table and Cards).",
+                "A check inside a link is not valid HTML, so a selectable tile is a `div` with the link inside it.",
             ]),
 
         new("cards", "Cards", "Content", "box",
@@ -651,7 +652,7 @@ public static class ComponentCatalog
             ["Every page of every app has one (SHELL-08), including the start page, where it is only the app name."]),
 
         new("topbar", "Header bar", "Navigation", "template",
-            "The bar above every page: the breadcrumb on the left and, on the right, icons for the things of the whole app.",
+            "The bar above every page: the breadcrumb on the left and, on the right, icons for the things of the whole app; the main actions may be highlighted.",
             ["SHELL-17", "SHELL-08", "ICON-03", "MOBILE-02"],
             [
                 new("Breadcrumb and icons", $"""
@@ -677,8 +678,20 @@ public static class ComponentCatalog
                       </div>
                     </header>
                     """, "A count or a dot goes in a badge on the icon; the name of the button says what the badge says, because the badge itself is hidden from screen readers. Tones: accent (default), warn, error.", Frame: "bar"),
+                new("Highlighted actions", $"""
+                    <header class="mat-topbar">
+                      <nav class="mat-crumbs" aria-label="Breadcrumb">
+                        <ol><li><a href="#">MatPaper</a></li><li aria-current="page">Documents</li></ol>
+                      </nav>
+                      <div class="mat-topbar__actions">
+                        <button type="button" class="mat-btn mat-btn--primary mat-btn--icon" aria-label="Upload a file" data-tip="Upload a file">{I("upload")}</button>
+                        <button type="button" class="mat-btn mat-btn--primary mat-btn--icon" aria-label="Add a document" data-tip="Add a document">{I("plus")}</button>
+                      </div>
+                    </header>
+                    """, "The one or two main actions of the app (scan a document, add something) are filled with the accent, so that they are found at once; the other icons stay ghost. They keep a name and a tooltip like every icon here.", Frame: "bar"),
             ],
             ["At most four icons; more go behind one icon that opens a context menu (the `menu` component).",
+             "A main action is highlighted with `mat-btn--primary` instead of `mat-btn--ghost`: at most two; with more filled icons nothing stands out any more.",
              "Only things of the whole app belong here. Page actions stay with their content (FORM-01, LIST-07); the theme button and the user stay at the foot of the menu (SHELL-03).",
              "On a phone the icons stay and the breadcrumb shows only its last two items (MOBILE-02)."]),
 
@@ -727,8 +740,8 @@ public static class ComponentCatalog
             ["Put the title of the current step and \"Step 3 of 5\" next to the bar."]),
 
         new("navmenu", "Menu items, badges and submenus", "Navigation", "sidebar",
-            "What the menu on the left is made of: items with an icon, badges at the right end, and parents that open their children.",
-            ["SHELL-02", "SHELL-13", "SHELL-14", "COLOR-03", "COLOR-04", "A11Y-02"],
+            "What the menu on the left is made of: items with an icon, badges at the right end, parents that open their children, and a main action filled with the accent.",
+            ["SHELL-02", "SHELL-13", "SHELL-14", "SHELL-19", "COLOR-03", "COLOR-04", "A11Y-02"],
             [
                 new("Items and badges", $"""
                     <nav class="mat-nav__scroll" aria-label="Demo menu">
@@ -743,6 +756,16 @@ public static class ComponentCatalog
                       </ul>
                     </nav>
                     """, "A count at the right end; above 99 it reads 99+. Tones: accent (default), ok, warn, error, info, plain; a dot says that something is new. Every badge has a text for screen readers.", Frame: "menu"),
+                new("A main action", $"""
+                    <nav class="mat-nav__scroll" aria-label="Demo menu with a main action">
+                      <ul class="mat-nav__list">
+                        <li><a class="mat-nav__item mat-nav__item--primary" href="#">{I("plus")}<span>Add document</span></a></li>
+                        <li><a class="mat-nav__item is-active" href="#" aria-current="page">{I("home")}<span>Overview</span></a></li>
+                        <li><a class="mat-nav__item" href="#">{I("mail")}<span>Inbox</span><span class="mat-nav__badge">2<span class="mat-sr-only"> to review</span></span></a></li>
+                        <li><a class="mat-nav__item" href="#">{I("file-text")}<span>Documents</span></a></li>
+                      </ul>
+                    </nav>
+                    """, "The one thing the app is mostly used for, first in the menu and filled with the accent (SHELL-19): an icon and a label, no badge. On its own page it stays filled, a step darker.", Frame: "menu"),
                 new("A submenu", $"""
                     <nav class="mat-nav__scroll" aria-label="Demo submenu">
                       <ul class="mat-nav__list">
@@ -781,8 +804,8 @@ public static class ComponentCatalog
             ]),
 
         new("switcher", "Menu switcher", "Navigation", "toggle",
-            "More than one menu in an app, for example the everyday work and the administration: a switcher under the logo, or at the foot above the user, swaps the items. Menus can be grouped below a parent.",
-            ["SHELL-15", "SHELL-01", "SHELL-03", "SHELL-13", "SHELL-14", "DIALOG-07"],
+            "More than one menu in an app, for example the everyday work and the administration: a switcher under the logo, at the foot above the user, or at the end of the menu, swaps the items. Menus can be grouped below a parent.",
+            ["SHELL-15", "SHELL-01", "SHELL-03", "SHELL-13", "SHELL-14", "SHELL-19", "DIALOG-07"],
             [
                 new("Work and Administration", $"""
                     <div id="switch-demo">
@@ -893,12 +916,42 @@ public static class ComponentCatalog
                       </div>
                     </div>
                     """, "Open the switcher, open Administration and choose People: the switcher then names the group above the menu. The parent is a button that only opens its menus; a closed parent carries the dot of the menus inside it that need attention.", Frame: "menu"),
+                new("At the end of the menu", $"""
+                    <div id="switch-end-demo">
+                      <nav class="mat-nav__scroll" aria-label="Work" data-nav-panel="work">
+                        <ul class="mat-nav__list">
+                          <li><a class="mat-nav__item mat-nav__item--primary" href="#">{I("plus")}<span>Add item</span></a></li>
+                          <li><a class="mat-nav__item is-active" href="#" aria-current="page">{I("dashboard")}<span>Dashboard</span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("list")}<span>Items</span><span class="mat-nav__badge mat-nav__badge--plain">12<span class="mat-sr-only"> items</span></span></a></li>
+                        </ul>
+                      </nav>
+                      <nav class="mat-nav__scroll" aria-label="Administration" data-nav-panel="admin" hidden>
+                        <ul class="mat-nav__list">
+                          <li><a class="mat-nav__item" href="#">{I("users")}<span>Users</span></a></li>
+                          <li><a class="mat-nav__item" href="#">{I("shield")}<span>Roles</span></a></li>
+                        </ul>
+                      </nav>
+                      <div class="mat-nav__switch mat-nav__switch--end">
+                        <button type="button" class="mat-switcher" data-menu-toggle="switch-end-menu" data-menu-place="top" aria-haspopup="menu" aria-expanded="false">
+                          <span class="mat-switcher__icon">{I("briefcase")}</span>
+                          <span class="mat-switcher__text"><small data-nav-label="Menu">Menu</small><span class="mat-switcher__name">Work</span></span>
+                          {I("chevron-up", "mat-switcher__chev")}
+                          <span class="mat-switcher__dot" hidden></span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mat-menu" id="switch-end-menu" role="menu" aria-label="Menus" data-nav-scope="switch-end-demo" hidden>
+                      <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="true" data-nav-set="work" data-nav-title="Work">{I("briefcase")}<span>Work</span>{I("check", "mat-menu__check")}</button>
+                      <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="false" data-nav-set="admin" data-nav-title="Administration">{I("shield")}<span>Administration</span>{I("check", "mat-menu__check")}</button>
+                    </div>
+                    """, "For an app whose menu starts with a main action (SHELL-19): the switcher sits at the end of the menu, directly above the foot, and its popup opens upwards (data-menu-place=\"top\"). It comes after the panels in the markup.", Frame: "menu"),
             ],
             [
                 "The switcher appears only when an app has at least two menus; a menu the user may not use is not offered.",
                 "When a page loads, the menu that has the current page is shown. Choosing a menu only swaps the items: nothing is loaded.",
                 "The popup is a context menu drawn at the end of the page and names the element that holds the switcher and the panels (`data-nav-scope`).",
                 "Under the logo, above the items, at the foot of the menu directly above the user, or both: the logo and the foot (user, theme button, version) stay where they are, and the switchers show the same menu.",
+                "Or at the end of the menu, above the foot (`mat-nav__switch--end`, after the panels in the markup, the popup opens upwards): for a menu that starts with a main action.",
                 "Menus can be grouped, one level deep: the parent entry is a button (`data-nav-group`, `aria-expanded`, `aria-controls`), not a menu; the menus below it carry `data-nav-parent`.",
                 "The group with the current menu is open when the page loads, and choosing a menu opens its group.",
                 "Arrow keys in the popup: up and down walk the visible entries, right opens a parent or goes to its first menu, left closes it or goes back to the parent.",
@@ -988,7 +1041,10 @@ public static class ComponentCatalog
                     "A page that redirects after a save puts this element on the next page; the script shows the toast and removes the element.",
                     Live: false),
             ],
-            ["Toasts stack at the bottom, are announced politely (role=status) and stop after a few seconds; hovering keeps them."]),
+            [
+                "Toasts stack at the bottom, are announced politely (role=status) and stop after a few seconds; hovering keeps them.",
+                "While a dialog is open the toasts are shown inside the topmost one and go back to the page when it closes: a modal dialog is in the top layer of the browser, so a message outside of it would be hidden behind it whatever its `z-index`. Nothing to do for the app.",
+            ]),
 
         new("dialogs", "Dialogs", "Feedback", "message-square",
             "Confirmations, alerts and inputs are always dialogs. On a phone every dialog is full screen with the X at the top right.",

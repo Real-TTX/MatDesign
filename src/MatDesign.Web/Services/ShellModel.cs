@@ -10,12 +10,16 @@ namespace MatDesign.Web.Services;
 /// </summary>
 public sealed record UserMenuItem(string Title, string Href, string Icon, bool Danger = false, bool SeparatorBefore = false, bool Post = false);
 
-/// <summary>Where the menu switcher is drawn (SHELL-15): under the logo, at the foot of the menu directly above the user, or at both places.</summary>
+/// <summary>
+/// Where the menu switcher is drawn (SHELL-15): under the logo, at the foot of the menu directly above the user, at both places, or at the end of the menu
+/// (after the panels, above the foot) for an app whose menu starts with a main action (SHELL-19).
+/// </summary>
 public enum SwitcherPlace
 {
     Top,
     Bottom,
     Both,
+    End,
 }
 
 /// <summary>
@@ -42,12 +46,15 @@ public sealed class ShellModel
 
     public bool HasSwitcher => Menus.Count > 1;
 
-    /// <summary>Where the switcher is drawn: under the logo (the default), at the foot above the user, or both.</summary>
+    /// <summary>Where the switcher is drawn: under the logo (the default), at the foot above the user, both, or at the end of the menu.</summary>
     public SwitcherPlace SwitcherPlace { get; init; } = SwitcherPlace.Top;
 
     public bool SwitcherAtTop => HasSwitcher && SwitcherPlace is SwitcherPlace.Top or SwitcherPlace.Both;
 
     public bool SwitcherAtBottom => HasSwitcher && SwitcherPlace is SwitcherPlace.Bottom or SwitcherPlace.Both;
+
+    /// <summary>The switcher sits at the end of the menu, directly above the foot, instead of under the logo (SHELL-15): for an app whose menu starts with a main action (SHELL-19).</summary>
+    public bool SwitcherAtEnd => HasSwitcher && SwitcherPlace == SwitcherPlace.End;
 
     /// <summary>
     /// What the popup of the switcher lists, in the order of <see cref="Menus"/>: a menu without a parent is an entry of its own, the menus of one parent are
@@ -93,6 +100,9 @@ public sealed class ShellModel
     /// <summary>Forces light or dark (a preview); null follows the user's choice and the system.</summary>
     public string? Theme { get; init; }
 
+    /// <summary>A colour scheme (a preview or the builder, a known id of <see cref="ColorSchemes"/>); null is the standard look, or the user's own choice.</summary>
+    public string? Scheme { get; init; }
+
     /// <summary>A custom accent (a preview or the builder); null uses the app's own colour.</summary>
     public string? CustomAccent { get; init; }
 
@@ -113,6 +123,11 @@ public sealed class ShellModel
             if (Theme is "light" or "dark")
             {
                 sb.Append(" data-theme=\"").Append(Theme).Append('"');
+            }
+
+            if (ColorSchemes.Normalize(Scheme) is { } scheme)
+            {
+                sb.Append(" data-scheme=\"").Append(scheme).Append('"');
             }
 
             if (CustomAccent is not null)

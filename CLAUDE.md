@@ -46,9 +46,10 @@ src/MatDesign.Core         no web types
   AppRegistry.cs             the apps and their accent, AccentPresets
   AppVersion.cs              the build of the site (Current) and the version of the toolkit (MatUi, from MatUiVersion in Directory.Build.props)
   Changelog.cs               the changelog of the toolkit (CHANGELOG.md, embedded in this project): parse, the versions since a version, the problems of the file
-  AccentReport.cs            what the toolkit derives from an accent + the contrast checks
+  AccentReport.cs            what the toolkit derives from an accent + the contrast checks (also on the surfaces of a colour scheme)
+  ColorSchemes.cs            the colour schemes (paper, contrast, oled), SchemeSurfaces (a scheme in one mode, read from the CSS) and the checks per scheme, mode and accent
   PaletteAdvisor.cs          accents that are too close, proposals
-  CssTokens.cs               parser for matui.tokens.css (tokens, description from the comment, group from the heading)
+  CssTokens.cs               parser for matui.tokens.css (tokens, description from the comment, group from the heading; Schemes = what each colour scheme sets)
   RuleBook.cs                the rules (id, area, level, source, text)
   Studio/StudioStore.cs      what the Studio saves: an append-only log per item (studio/<kind>/<id>/<revision>.json), history, restore, activity
   Studio/AdminAccount.cs     the administrator: a name and a salted PBKDF2 hash in admin.json (created once, never overwritten), what the setup assistant accepts, Verify
@@ -68,11 +69,11 @@ src/MatDesign.Web          the site
   Services/                  ToolkitFiles, IconLibrary (the optional icon library: sprite, catalogue, single icons, archive, served under /ui/iconlib/), Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
                              ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, ListComponents, LayoutComponents, ScheduleComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
-                             PatternCatalog, ShellSkeleton, AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
+                             PatternCatalog, ShellSkeleton, SchemeDocs (the numbers and tokens of the colour schemes for the pages), AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
-  Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (items, badges, submenus; the switcher under the logo), _MenuSwitcher (the switcher button, under the logo or in the foot:
-                             `ShellModel.SwitcherPlace`), _MenuSwitchPopup (its popup; menus grouped below a `NavSetParent`), _Head, _Toolbar, _Pager,
-                             _DocSection + _Toc + _Component + _ContextPage (the components, layout and utilities pages), _AccentSwatches, _ContrastCard, _FoundationsTabs
+  Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (items, badges, submenus; the switcher under the logo or at the end of the menu), _MenuSwitcher (the switcher button, under the logo,
+                             in the foot or at the end of the menu: `ShellModel.SwitcherPlace`), _MenuSwitchPopup (its popup; menus grouped below a `NavSetParent`), _Head, _Toolbar, _Pager,
+                             _DocSection + _Toc + _Component + _ContextPage (the components, layout and utilities pages), _AccentSwatches, _ContrastCard (+ _ContrastRows, _SchemeChecks), _FoundationsTabs
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
 tests/e2e                  run.js: the behaviour in a real browser against a running site
@@ -92,12 +93,30 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - Names: classes `mat-*` (block, element, modifier: `mat-card__head`, `mat-btn--primary`), state classes `is-*`, properties `--mat-*`, behaviour by `data-*` attributes.
   Site-only classes are `doc-*` and live in `site.css`.
 - The dark set is written twice (`:root[data-theme="dark"]` and the system media query) and the two must stay identical. `data-app` and `data-theme` belong on `<html>`.
+- Colour schemes (`COLOR-09`): `data-scheme="paper|contrast|oled"` on `<html>`, opt-in, at the END of `matui.tokens.css` (not a part of its own). A scheme sets surfaces, lines, text, status texts, shadows, the dim layer and
+  the scrollbar, **never an accent token**; its selectors start with `:root[data-scheme=...]` (so `CssTokens.Tokens` never reads them as base tokens or as the dark set; `CssTokens.Schemes` does), its dark values are written
+  twice and identical, it sets in dark every token it sets in light, and `oled` has no light values (light = standard). Links follow the surfaces through `--mat-accent-text-keep`. `SchemeTests` holds every scheme, mode, app and
+  accent preset to AA; the standard look is unchanged and the pairings it was never held to are shown as advice. `MatUi.scheme`, `data-scheme-set`, `data-scheme-save-url`, `mat-scheme` in localStorage, `matui.boot.js`.
 - Order inside a button row, a list block and the toolbar is enforced by CSS (`order`), not by the author. A selector in a later part must be more specific than a base class it
   overrides (the bundle puts `controls` after `shell`).
+- Validation (`FORM-05`): the script checks `form.mat-form` and `form[data-validate]` on submit and writes the messages itself. A submit button with `formnovalidate` skips the check (`e.submitter`), also after a
+  `data-confirm` on the form, which submits again with the same button.
+- Toasts (`SHELL-12`): one host `.mat-toasts`, at the end of `<body>` or, while a dialog is open, inside the topmost one of `dialogStack` (the dialogs `openDialog` opened): a modal dialog is in the top layer, so nothing
+  outside of it is seen above it. The host moves in `openDialog` and in the `close` handler, which runs before a dialog the script built removes itself, so no toast is lost with it.
+- Selection (`data-selectable`): a check per item (`data-select-row`), maybe `data-select-all` and a `[data-bulk-bar]` with `[data-bulk-count]`. The script marks the item of a ticked check `is-selected`: the nearest `tr`,
+  `.mat-tile` or `[data-select-item]` inside the box. A selected row is `--mat-accent-soft-strong`, a selected `[data-select-item]` is `--mat-accent-soft` with the accent as its line (like a ticked `.mat-choice`): a tint, no bar (`COLOR-08`).
+- The menu: a main action (`SHELL-19`) is the first item and filled with the accent (`mat-nav__item--primary`, `NavItem.Primary`; the current page keeps the fill, a step darker). The switcher (`SHELL-15`, `ShellModel.SwitcherPlace`) is under the logo (`Top`),
+  in the foot directly above the user (`Bottom`, `mat-nav__switch--foot`; `Both` draws it in both places), or, with `mat-nav__switch--end` (`End`, `ShellModel.SwitcherAtEnd`), after the panels and above the foot; from the foot and the end its popup opens upwards (`data-menu-place="top"`). In the header bar a main action is a `mat-btn--primary mat-btn--icon` in
+  `mat-topbar__actions` (`SHELL-17`, at most two). The sample app shows them with `/Preview?...&action=1&switcher=end`.
 - Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour|tags|slot"]` around the real input `mat-picker__input`, which posts one value in a fixed
   format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`, `2026-10-14T09:30`, the tags joined by a comma); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone; `tags` is
   `inline`: a field of chips, no button, its suggestions a dropdown under it). Texts in English and German
-  (`PK_TEXT`: both languages must have every key, a test checks). A hidden element that has a `display` in the CSS needs its own `[hidden]` rule (tests list them).
+  (`PK_TEXT`: both languages must have every key, a test checks; it also holds the label of the theme button and the AM and PM, so the script writes no text an app cannot change: `data-pk-*`,
+  `data-theme-label`, `data-dlg-*`, `data-msg-*`, `data-copied` on `<html>`, see ADOPTING.md 3a). A hidden element that has a `display` in the CSS needs its own `[hidden]` rule (tests list them).
+  A select can create what is missing and suggest (`FORM-16`): `data-create-url` (POST `name=`, answer `{ value, name, description? }`) and `data-suggest-url` (GET, `[ { value } | { name } ]`) on the wrapper, `MatUi.picker.set`,
+  `.addOption`, `.suggest`; the create row and the suggested rows are never options (`isReal`), what comes back is made with `textContent`, the demo endpoints are `/api/demo/create` and `/api/demo/suggest` (stateless).
+- Colours a user chose (`COLOR-10`): `data-colour="#rrggbb"` (or `#rgb`) on `mat-tag`, `mat-dot`, `mat-icon` or a picker option; the script writes `--mat-swatch` and `is-coloured` (at the start and in `MatUi.refresh`), the CSS draws a
+  dot or colours the icon. It is never the colour of the text and never the only signal; `MarkupChecks.Colour` flags a value the script would ignore. No inline style, no literal colour.
 - Code input (`FORM-19`): `.mat-otp[data-otp data-length data-chars data-case data-mask data-group data-submit]` around the real input `.mat-otp__input` (a text field without the script; it is what is validated, posted and reset). The script hides it
   and draws one `.mat-otp__box` per character in a `role="group"` named by the label (`Digit 3 of 6`), **one tab stop** (roving tabindex, the arrow keys walk inside), no `maxlength` (an SMS code arrives whole on the first box, which has the
   `autocomplete` of the real input) and no `name` on a box. An incomplete code is not valid (`setCustomValidity`), so `required`, `pattern` and `data-msg-*` work; the boxes follow `disabled`, `readonly` and `aria-invalid` of the real input
@@ -105,7 +124,7 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   Texts in `OTP_TEXT` (English and German, a test checks).
   A dropdown with a list of checkboxes is `data-picker="select"` with `data-multiple` and plain options; `data-select-all` adds a first row, a `role="checkbox"` button with `aria-checked` true, false or
   mixed that acts on the options that are shown (the search narrows it). Texts `selectAll`, `selectFound`, `allSelected` in `PK_TEXT`.
-- Number stepper (`FORM-16`): `.mat-stepper[data-stepper]` around a native `input type="number"`; the script adds the two buttons, `is-ready` (which hides the browser's spinners: without the script it is the
+- Number stepper (`FORM-20`): `.mat-stepper[data-stepper]` around a native `input type="number"`; the script adds the two buttons, `is-ready` (which hides the browser's spinners: without the script it is the
   native field), `data-unit` and `data-precision`. Whole-number arithmetic with the step base of the browser, a press on `pointerdown` (hold repeats and accelerates), a click with `detail` 0 steps once, the keys
   of the field (arrows, Page up and down, Shift = ten steps). A button at a limit is `aria-disabled`, never `disabled`; the buttons are not in the Tab order. `mat-stepper--stacked` only with `(pointer: fine)`.
   Texts in `STEP_TEXT` (English and German, a test checks). Size comes from the input (`mat-input--sm` / `--lg`).

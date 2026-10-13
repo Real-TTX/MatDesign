@@ -219,14 +219,19 @@ public class SiteHelpersTests
         => new(id, id.ToUpperInvariant(), "list", [new(null, [new("Page " + id, "/" + id, "list", attention ? NavBadge.Count(1, "warn", "to look at") : null)])], parent);
 
     [Theory]
-    [InlineData(SwitcherPlace.Top, true, false)]
-    [InlineData(SwitcherPlace.Bottom, false, true)]
-    [InlineData(SwitcherPlace.Both, true, true)]
-    public void The_switcher_is_under_the_logo_at_the_foot_or_both(SwitcherPlace place, bool top, bool bottom)
+    [InlineData(SwitcherPlace.Top, true, false, false)]
+    [InlineData(SwitcherPlace.Bottom, false, true, false)]
+    [InlineData(SwitcherPlace.Both, true, true, false)]
+    [InlineData(SwitcherPlace.End, false, false, true)]
+    public void The_switcher_is_under_the_logo_at_the_foot_at_both_or_at_the_end_of_the_menu(SwitcherPlace place, bool top, bool bottom, bool end)
     {
         var shell = Shell(place, Menu("a"), Menu("b"));
         Assert.Equal(top, shell.SwitcherAtTop);
         Assert.Equal(bottom, shell.SwitcherAtBottom);
+        Assert.Equal(end, shell.SwitcherAtEnd);
+        // with one menu there is nothing to switch, wherever it would sit
+        var single = Shell(place, Menu("a"));
+        Assert.False(single.SwitcherAtTop || single.SwitcherAtBottom || single.SwitcherAtEnd);
     }
 
     [Fact]

@@ -1,0 +1,14 @@
+@model IEnumerable<ContrastCheck>
+@*
+    The rows of a contrast table: the pairing, the two colours, the ratio, what is needed and the verdict. Used by the contrast card of an accent and by the card of an accent on a scheme.
+*@
+@foreach (var c in Model)
+{
+    <tr>
+        <td data-label="Pairing">@c.Name@if (c.Advisory) { <small class="mat-muted"> (advice only)</small> }</td>
+        <td data-label="Colours"><span class="mat-row mat-row--nowrap">@Ui.Swatch(c.Foreground)<code>@c.Foreground.ToHex()</code> on @Ui.Swatch(c.Background)<code>@c.Background.ToHex()</code></span></td>
+        <td data-label="Ratio" class="mat-num mat-mono">@c.Ratio.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture):1</td>
+        <td data-label="Needed" class="mat-num mat-mono">@c.Required.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture):1</td>
+        <td data-label="Result"><span class="mat-pill @(c.Passes ? "mat-pill--ok" : c.Advisory ? "mat-pill--warn" : "mat-pill--error")">@(c.Passes ? "Passes" : c.Advisory ? "Below advice" : "Fails")</span></td>
+    </tr>
+}

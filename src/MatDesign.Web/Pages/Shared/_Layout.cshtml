@@ -40,7 +40,7 @@
             <div class="mat-nav__foot">
                 @if (shell.SwitcherAtBottom)
                 {
-                    <partial name="_MenuSwitcher" model="(shell, active, true)" />
+                    <partial name="_MenuSwitcher" model="(shell, active, SwitcherPlace.Bottom)" />
                 }
                 <div class="mat-nav__account">
                     <button type="button" class="mat-user" data-menu-toggle="user-menu" aria-haspopup="menu" aria-expanded="false">

@@ -28,6 +28,37 @@ function expectTrue(value, what) {
   if (!value) { throw new Error(what); }
 }
 
+// A computed colour ("rgb(1, 2, 3)", "rgba(...)" or "color(srgb 0.1 0.2 0.3)") as [r, g, b] in 0..255, and the WCAG contrast ratio of two of them.
+function parseColour(text) {
+  const n = (text.match(/-?\d*\.?\d+/g) || []).map(Number);
+  return text.startsWith('color(') ? n.slice(0, 3).map(v => v * 255) : n.slice(0, 3);
+}
+function contrastOf(a, b) {
+  const lum = ([r, g, bl]) => [r, g, bl].map(v => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const [hi, lo] = [lum(parseColour(a)), lum(parseColour(b))].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+// The accent of the page as the browser computes it (a variable cannot be compared with a computed colour): the fill, the text on it and the pressed fill.
+function accentOf(page) {
+  return page.evaluate(() => {
+    const probe = (prop, value) => { const t = document.createElement('i'); t.style.setProperty(prop, value); document.body.appendChild(t); const c = getComputedStyle(t).getPropertyValue(prop); t.remove(); return c; };
+    return { accent: probe('background-color', 'var(--mat-accent)'), onAccent: probe('color', 'var(--mat-on-accent)'), active: probe('background-color', 'var(--mat-accent-active)') };
+  });
+}
+
+// What a click on the middle of the first element with this selector would hit: "seen" when it is the element or something inside it, else what covers it
+// (a modal dialog is in the top layer, so whatever is outside of it is under it, whatever its z-index).
+function seenAt(page, selector) {
+  return page.evaluate((sel) => {
+    const el = document.querySelector(sel);
+    if (!el) { return 'no element ' + sel; }
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    return hit && el.contains(hit) ? 'seen' : 'covered by ' + (hit ? hit.tagName.toLowerCase() + '.' + String(hit.className) : 'nothing');
+  }, selector);
+}
+
 (async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true }).catch(() => chromium.launch({ channel: 'chrome', headless: true }));
   const phoneOptions = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
@@ -167,6 +198,16 @@ function expectTrue(value, what) {
       expect([Math.round(dialog.width), Math.round(dialog.height)], [390, 844], 'size on a phone');
       await page.click('dialog[open] [data-dialog-close]');
     });
+    await check('on a phone a toast is seen above a full-screen dialog, and its X works', async () => {
+      await page.click('.mat-btn--danger[data-confirm]');
+      await page.waitForTimeout(350);
+      await page.evaluate(() => { MatUi.toast('Saved', { tone: 'success', timeout: 30000 }); });
+      await page.waitForTimeout(450);
+      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the sheet');
+      await page.click('.mat-toast .mat-alert__close', { timeout: 3000 });
+      expect(await page.locator('.mat-toast').count(), 0, 'toasts after its X');
+      await page.click('dialog[open] [data-dialog-close]');
+    });
     await ctx.close();
   }
 
@@ -265,6 +306,40 @@ function expectTrue(value, what) {
       await page.waitForTimeout(250);
       expect(await page.locator('dialog[open]').count(), 0, 'open dialogs');
     });
+    await check('a toast shown while a dialog is open is seen above it, and its X works', async () => {
+      await page.evaluate(() => { document.querySelectorAll('.mat-toast').forEach(t => t.remove()); document.getElementById('dialogs').scrollIntoView(); });
+      await page.click('[data-dialog-open="dlg-side"]');
+      await page.waitForFunction(() => document.getElementById('dlg-side').getAnimations().length === 0);
+      await page.evaluate(() => { MatUi.toast('Saved in the dialog', { tone: 'success', timeout: 30000 }); });
+      await page.waitForTimeout(450);
+      expect(await page.evaluate(() => !!document.querySelector('#dlg-side .mat-toasts .mat-toast')), true, 'the toast is inside the open dialog');
+      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the dialog');
+      await page.click('.mat-toast .mat-alert__close', { timeout: 3000 });
+      expect(await page.locator('.mat-toast').count(), 0, 'toasts after its X');
+      await page.click('#dlg-side .mat-dialog__close');
+    });
+    await check('the toasts follow the dialogs: into the topmost, back into the one below when it closes, onto the page after the last, and none is lost on the way', async () => {
+      const host = () => page.evaluate(() => { const h = document.querySelector('.mat-toasts'); return h ? (h.parentElement.id || h.parentElement.tagName.toLowerCase()) : 'no host'; });
+      await page.evaluate(() => { document.querySelectorAll('.mat-toast').forEach(t => t.remove()); document.getElementById('dialogs').scrollIntoView(); });
+      await page.click('[data-dialog-open="dlg-side"]');
+      await page.waitForFunction(() => document.getElementById('dlg-side').getAnimations().length === 0);
+      await page.evaluate(() => { MatUi.confirm('Sure?'); });
+      await page.waitForSelector('dialog.mat-dialog--sm[open]');
+      await page.evaluate(() => { MatUi.toast('Over both dialogs', { timeout: 30000 }); });
+      await page.waitForTimeout(450);
+      expectTrue((await host()).startsWith('mat-dlg-'), 'the toasts are not in the topmost dialog: ' + await host());
+      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the confirmation');
+      await page.click('dialog.mat-dialog--sm[open] [data-dialog-close]');
+      await page.waitForTimeout(300);
+      expect(await host(), 'dlg-side', 'where the toasts are after the confirmation closed (it removes itself)');
+      expect(await page.locator('.mat-toast').count(), 1, 'toasts after the confirmation closed');
+      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the panel');
+      await page.click('#dlg-side .mat-dialog__close');
+      await page.waitForTimeout(250);
+      expect(await host(), 'body', 'where the toasts are after the last dialog closed');
+      expect(await page.locator('.mat-toast').count(), 1, 'toasts after the last dialog closed');
+      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast on the page');
+    });
     await ctx.close();
   }
 
@@ -301,6 +376,207 @@ function expectTrue(value, what) {
       expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme')), 'dark', 'after a reload');
     });
     await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- the texts the script writes, in two languages
+  console.log('\nTexts in two languages');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=settings');
+    const label = () => page.evaluate(() => document.querySelector('[data-theme-toggle]').getAttribute('aria-label'));
+    await check('the label of the theme button is English on an English page, and the tooltip says the same', async () => {
+      expect(await label(), 'Theme: System. Click for Light.', 'the label at the start');
+      await page.click('[data-theme-toggle]');
+      expect(await label(), 'Theme: Light. Click for Dark.', 'the label after one click');
+      expect(await page.getAttribute('[data-theme-toggle]', 'title'), 'Theme: Light. Click for Dark.', 'the tooltip');
+    });
+    await check('on a German page it is German, whatever the server rendered', async () => {
+      await page.evaluate(() => { document.documentElement.lang = 'de'; });
+      await page.click('[data-theme-toggle]');
+      expect(await label(), 'Design: Dunkel. Klicken für System.', 'the German label');
+      await page.evaluate(() => MatUi.theme.set('light'));
+      expect(await label(), 'Design: Hell. Klicken für Dunkel.', 'the German label of light');
+    });
+    await check('<html data-theme-label> replaces the whole text and data-theme-name-* the names, also with a "$" in them', async () => {
+      await page.evaluate(() => {
+        const r = document.documentElement;
+        r.setAttribute('data-theme-label', '{0} / {1}');
+        r.setAttribute('data-theme-name-light', 'Day');
+        r.setAttribute('data-theme-name-dark', 'Night $&');
+        MatUi.theme.set('light');
+      });
+      expect(await label(), 'Day / Night $&', 'the replaced label');
+      await page.evaluate(() => { document.documentElement.removeAttribute('data-theme-label'); MatUi.theme.set('dark'); });
+      expect(await label(), 'Design: Night $&. Klicken für System.', 'only the names replaced');
+    });
+    await check('the texts of the pickers follow the same rule: data-pk-<name> replaces AM, the placeholder of a typed time is a text too', async () => {
+      await page.goto(BASE + '/Components#time-picker', { waitUntil: 'networkidle' });
+      await page.evaluate(() => document.documentElement.setAttribute('data-pk-am', 'vorm.'));
+      await page.click('#pk-time12-trigger');
+      const column = '#pk-time12-trigger ~ .mat-picker__panel [data-time-col="ap"] .mat-timecol__item';
+      expect((await page.locator(column).allTextContents()).map(t => t.trim()), ['vorm.', 'PM'], 'the AM and PM column');
+      expect(await page.getAttribute('#pk-time12-trigger ~ .mat-picker__panel [data-time-entry]', 'placeholder'), 'hh:mm am', 'the placeholder of a typed time');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- colour schemes (COLOR-09)
+  console.log('\nColour schemes');
+  {
+    // What a scheme may change; and what it never does.
+    const SURFACES = ['--mat-bg', '--mat-bg-2', '--mat-surface', '--mat-surface-2', '--mat-surface-3', '--mat-glass', '--mat-nav-bg', '--mat-overlay', '--mat-border', '--mat-border-strong',
+      '--mat-text', '--mat-text-muted', '--mat-text-faint', '--mat-danger-text', '--mat-success-text', '--mat-warning-text', '--mat-info-text', '--mat-shadow-1', '--mat-shadow-2', '--mat-shadow-3',
+      '--mat-scroll-thumb', '--mat-accent-text-keep'];
+    const ACCENTS = ['--mat-accent', '--mat-accent-hover', '--mat-accent-active', '--mat-accent-soft', '--mat-accent-soft-strong', '--mat-on-accent', '--mat-selection'];
+    const BACKGROUND = {
+      standard: { light: 'rgb(245, 244, 241)', dark: 'rgb(21, 21, 20)' },
+      paper: { light: 'rgb(243, 238, 227)', dark: 'rgb(27, 24, 20)' },
+      contrast: { light: 'rgb(255, 255, 255)', dark: 'rgb(0, 0, 0)' },
+      oled: { light: 'rgb(245, 244, 241)', dark: 'rgb(0, 0, 0)' },
+    };
+    const sample = (scheme, theme) => `/Preview?app=matpaper&view=list${theme ? '&theme=' + theme : ''}${scheme ? '&scheme=' + scheme : ''}`;
+    const look = page => page.evaluate(([surfaces, accents]) => {
+      const root = getComputedStyle(document.documentElement);
+      const resolve = name => { const probe = document.createElement('i'); probe.style.color = `var(${name})`; document.body.appendChild(probe); const c = getComputedStyle(probe).color; probe.remove(); return c; };
+      return { bg: getComputedStyle(document.body).backgroundColor, tokens: surfaces.map(n => root.getPropertyValue(n).trim()), accents: [...accents.map(resolve), root.getPropertyValue('--mat-focus-ring').trim()] };
+    }, [SURFACES, ACCENTS]);
+    // the colour that is painted for a CSS colour (a computed colour can be written as oklab() or color()), as three numbers
+    const painted = (page, colour) => page.evaluate(c => { const cv = document.createElement('canvas'); cv.width = 1; cv.height = 1; const g = cv.getContext('2d', { willReadFrequently: true }); g.fillStyle = c; g.fillRect(0, 0, 1, 1); return Array.from(g.getImageData(0, 0, 1, 1).data).slice(0, 3); }, colour);
+
+    await check('every scheme changes the page background, in light and in dark (the standard look is the first row of each)', async () => {
+      for (const scheme of ['standard', 'paper', 'contrast', 'oled']) {
+        for (const theme of ['light', 'dark']) {
+          const { ctx, page } = await open(desktopOptions, sample(scheme === 'standard' ? null : scheme, theme));
+          expect((await look(page)).bg, BACKGROUND[scheme][theme], `${scheme} in ${theme}`);
+          await ctx.close();
+        }
+      }
+    });
+    await check('oled in light mode is the standard look: every token that a scheme can set has the standard value', async () => {
+      const standard = await open(desktopOptions, sample(null, 'light'));
+      const oled = await open(desktopOptions, sample('oled', 'light'));
+      expect((await look(oled.page)).tokens, (await look(standard.page)).tokens, 'the tokens of oled in light');
+      await standard.ctx.close();
+      await oled.ctx.close();
+    });
+    await check('a scheme never changes an accent token: the accent, its hover, its tints, the text on it and the focus ring are the same in every scheme and mode', async () => {
+      for (const theme of ['light', 'dark']) {
+        const base = await open(desktopOptions, sample(null, theme));
+        const expected = (await look(base.page)).accents;
+        await base.ctx.close();
+        for (const scheme of ['paper', 'contrast', 'oled']) {
+          const { ctx, page } = await open(desktopOptions, sample(scheme, theme));
+          expect((await look(page)).accents, expected, `${scheme} in ${theme}`);
+          await ctx.close();
+        }
+      }
+    });
+    await check('"system" follows the operating system: a scheme is its dark values while the system is dark (and oled is the standard look while it is light)', async () => {
+      const dark = await open({ ...desktopOptions, colorScheme: 'dark' }, sample('paper', null));
+      expect((await look(dark.page)).bg, BACKGROUND.paper.dark, 'paper, system dark');
+      await dark.ctx.close();
+      const oledDark = await open({ ...desktopOptions, colorScheme: 'dark' }, sample('oled', null));
+      expect((await look(oledDark.page)).bg, BACKGROUND.oled.dark, 'oled, system dark');
+      await oledDark.ctx.close();
+      const light = await open({ ...desktopOptions, colorScheme: 'light' }, sample('oled', null));
+      expect((await look(light.page)).bg, BACKGROUND.standard.light, 'oled, system light');
+      await light.ctx.close();
+      const paperLight = await open({ ...desktopOptions, colorScheme: 'light' }, sample('paper', null));
+      expect((await look(paperLight.page)).bg, BACKGROUND.paper.light, 'paper, system light');
+      await paperLight.ctx.close();
+    });
+    await check('the contrast scheme draws lines instead of shadows: a card has no shadow and a dark border, a menu has a line', async () => {
+      const { ctx, page } = await open(desktopOptions, sample('contrast', 'light'));
+      const card = await page.evaluate(() => { const s = getComputedStyle(document.querySelector('.mat-toolbar')); return { shadow: s.boxShadow, border: s.borderTopColor }; });
+      expect(card, { shadow: 'none', border: 'rgb(92, 92, 92)' }, 'a card');
+      const control = await page.evaluate(() => { const probe = document.createElement('input'); probe.className = 'mat-input'; document.body.appendChild(probe); const s = getComputedStyle(probe); const v = { border: s.borderTopColor }; probe.remove(); return v; });
+      expect(control, { border: 'rgb(31, 31, 31)' }, 'the border of a control');
+      expect(await page.evaluate(() => getComputedStyle(document.getElementById('user-menu')).boxShadow), 'rgb(31, 31, 31) 0px 0px 0px 1px', 'a menu has a line, not a shadow');
+      await ctx.close();
+    });
+    await check('the numbers on the Builder page are what the browser draws: the link on a surface in paper is the colour of a link on paper', async () => {
+      const numbers = await open(desktopOptions, '/Builder?app=matpaper&scheme=paper');
+      const rows = await numbers.page.evaluate(() => [...document.querySelectorAll('section[aria-labelledby="scheme-contrast-title"] tbody tr')].map(r => ({ name: r.querySelector('td')?.textContent.trim(), hex: r.querySelector('code')?.textContent.trim() })).filter(r => r.name));
+      await numbers.ctx.close();
+      for (const [theme, label] of [['light', 'Link on a surface (light)'], ['dark', 'Link on a surface (dark)']]) {
+        const wanted = rows.find(r => r.name.startsWith(label));
+        expectTrue(wanted && /^#[0-9a-f]{6}$/.test(wanted.hex), `no row "${label}" in the report: ${JSON.stringify(rows.map(r => r.name))}`);
+        const { ctx, page } = await open(desktopOptions, sample('paper', theme));
+        const drawn = await page.evaluate(() => { const a = document.createElement('a'); a.href = '#'; a.textContent = 'x'; document.querySelector('.mat-page').appendChild(a); const c = getComputedStyle(a).color; a.remove(); return c; });
+        const [r, g, b] = await painted(page, drawn);
+        const [wr, wg, wb] = [1, 3, 5].map(i => parseInt(wanted.hex.slice(i, i + 2), 16));
+        expectTrue(Math.abs(r - wr) <= 2 && Math.abs(g - wg) <= 2 && Math.abs(b - wb) <= 2, `${label}: the report says ${wanted.hex}, the browser draws ${drawn}`);
+        await ctx.close();
+      }
+    });
+    {
+      const { ctx, page } = await open(desktopOptions, '/Foundations');
+      await ctx.addInitScript(() => {
+        // when the attribute is set: before the page has been parsed and before matui.js exists, so the boot script did it and nothing flashes
+        // (an init script runs before the page has an <html>: the observer watches the document and the attribute of whatever element appears)
+        new MutationObserver(() => {
+          if (document.documentElement && document.documentElement.hasAttribute('data-scheme') && !window.__scheme) { window.__scheme = { ready: document.readyState, script: !!window.MatUi }; }
+        }).observe(document, { attributes: true, subtree: true, attributeFilter: ['data-scheme'] });
+      });
+      await check('the choice of the colour page (data-scheme-set) is applied to the whole site at once, the pressed button follows and the choice is saved in the browser', async () => {
+        expect(await page.getAttribute('[data-scheme-set="standard"]', 'aria-pressed'), 'true', 'standard is pressed at the start');
+        await page.evaluate(() => { window.__events = []; document.documentElement.addEventListener('mat:scheme', e => window.__events.push(e.detail.scheme)); });
+        await page.click('#schemes [data-scheme-set="paper"]');
+        expect(await page.evaluate(() => document.documentElement.getAttribute('data-scheme')), 'paper', 'data-scheme');
+        expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), BACKGROUND.paper.light, 'the page background');
+        expect(await page.getAttribute('#schemes [data-scheme-set="paper"]', 'aria-pressed'), 'true', 'paper is pressed');
+        expect(await page.getAttribute('#schemes [data-scheme-set="standard"]', 'aria-pressed'), 'false', 'standard is not pressed');
+        expect(await page.evaluate(() => localStorage.getItem('mat-scheme')), 'paper', 'saved');
+        expect(await page.evaluate(() => window.__events), ['paper'], 'the event mat:scheme');
+      });
+      await check('after a reload the boot script has applied the saved scheme before the page is parsed, and the page starts in it', async () => {
+        const fresh = await ctx.newPage();
+        await fresh.goto(BASE + '/Foundations', { waitUntil: 'networkidle' });
+        expect(await fresh.evaluate(() => window.__scheme), { ready: 'loading', script: false }, 'when data-scheme was first there');
+        expect(await fresh.evaluate(() => getComputedStyle(document.body).backgroundColor), BACKGROUND.paper.light, 'the page background after a reload');
+        expect(await fresh.getAttribute('[data-scheme-set="paper"]', 'aria-pressed'), 'true', 'the pressed button after a reload');
+        await fresh.close();
+      });
+      await check('MatUi.scheme.get and set work, "standard" and null take the attribute away and forget the choice, anything else is the standard look', async () => {
+        expect(await page.evaluate(() => MatUi.scheme.get()), 'paper', 'get');
+        await page.evaluate(() => MatUi.scheme.set('oled'));
+        expect(await page.evaluate(() => [MatUi.scheme.get(), document.documentElement.getAttribute('data-scheme'), localStorage.getItem('mat-scheme')]), ['oled', 'oled', 'oled'], 'oled');
+        await page.evaluate(() => MatUi.scheme.set('standard'));
+        expect(await page.evaluate(() => [MatUi.scheme.get(), document.documentElement.getAttribute('data-scheme'), localStorage.getItem('mat-scheme')]), ['standard', null, null], 'standard');
+        await page.click('#schemes [data-scheme-set="contrast"]');
+        await page.evaluate(() => MatUi.scheme.set(null));
+        expect(await page.evaluate(() => [MatUi.scheme.get(), document.documentElement.getAttribute('data-scheme'), localStorage.getItem('mat-scheme')]), ['standard', null, null], 'null');
+        await page.evaluate(() => document.documentElement.setAttribute('data-scheme', 'nonsense'));
+        expect(await page.evaluate(() => MatUi.scheme.get()), 'standard', 'an unknown value is the standard look');
+        expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor), BACKGROUND.standard.light, 'and looks like it');
+        await page.evaluate(() => document.documentElement.removeAttribute('data-scheme'));
+      });
+      await check('data-scheme-save-url posts scheme=<name> with the anti-forgery token of the page, from the button or from the group around it', async () => {
+        await page.evaluate(() => {
+          document.body.insertAdjacentHTML('beforeend',
+            '<form id="tok"><input type="hidden" name="__RequestVerificationToken" value="tok-123" /></form>' +
+            '<div id="seg" data-scheme-save-url="/save-scheme-test"><button type="button" id="seg-contrast" data-scheme-set="contrast">High contrast</button><button type="button" id="seg-standard" data-scheme-set="standard">Standard</button></div>');
+        });
+        const posted = [];
+        await page.route('**/save-scheme-test', route => { posted.push({ method: route.request().method(), body: route.request().postData() }); route.fulfill({ status: 200, body: 'ok' }); });
+        await page.dispatchEvent('#seg-contrast', 'click');
+        await page.dispatchEvent('#seg-standard', 'click');
+        await page.waitForTimeout(300);
+        expect(posted, [{ method: 'POST', body: 'scheme=contrast&__RequestVerificationToken=tok-123' }, { method: 'POST', body: 'scheme=standard&__RequestVerificationToken=tok-123' }], 'what was posted');
+      });
+      await ctx.close();
+    }
+    {
+      const { ctx, page } = await open(desktopOptions, '/Preview?app=matpaper&view=settings');
+      await check('a preview frame shows the chosen scheme but does not keep it for the whole site; the settings of the sample app have the control', async () => {
+        await page.click('#tab-look');
+        expect(await page.locator('[data-scheme-set]').count(), 4, 'the buttons of the control');
+        await page.click('[data-scheme-set="contrast"]');
+        expect(await page.evaluate(() => document.documentElement.getAttribute('data-scheme')), 'contrast', 'data-scheme');
+        expect(await page.getAttribute('[data-scheme-set="contrast"]', 'aria-pressed'), 'true', 'pressed');
+        expect(await page.evaluate(() => localStorage.getItem('mat-scheme')), null, 'localStorage');
+      });
+      await ctx.close();
+    }
   }
 
   // ---------------------------------------------------------------------------------------------------- the builder
@@ -544,6 +820,64 @@ function expectTrue(value, what) {
     });
     await ctx.close();
   }
+
+  // ---------------------------------------------------------------------------------------------------- a main action, the switcher at the end, highlighted actions in the bar
+  console.log('\nMain action, switcher at the end, highlighted actions');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=list&action=1&switcher=end');
+    await check('the main action is the first item of the menu, filled with the accent and readable on it', async () => {
+      const state = await page.evaluate(() => {
+        const items = Array.from(document.querySelectorAll('.mat-nav__scroll:not([hidden]) .mat-nav__item'));
+        const a = items[0];
+        const s = getComputedStyle(a);
+        return { first: a.classList.contains('mat-nav__item--primary'), text: a.textContent.trim(), bg: s.backgroundColor, colour: s.color, iconColour: getComputedStyle(a.querySelector('.mat-icon')).color, filled: document.querySelectorAll('.mat-nav__item--primary').length, current: a.getAttribute('aria-current') };
+      });
+      const probes = await accentOf(page);
+      expect([state.first, state.text, state.filled], [true, 'Add item', 1], 'the first item');
+      expect(state.bg, probes.accent, 'background of the main action');
+      expect(state.colour, probes.onAccent, 'text of the main action');
+      expect(state.iconColour, probes.onAccent, 'icon of the main action');
+      expectTrue(contrastOf(state.bg, state.colour) >= 4.5, 'the text of the main action is not readable on the accent: ' + contrastOf(state.bg, state.colour).toFixed(2));
+      expect(state.current, null, 'the main action is not the current page on the list page (it leads to the form)');
+    });
+    await check('the switcher sits at the end of the menu, above the foot, and its popup opens upwards', async () => {
+      const box = () => page.evaluate(() => {
+        const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { top: Math.round(b.top), bottom: Math.round(b.bottom) }; };
+        const kids = Array.from(document.querySelector('.mat-nav').children).map(c => c.className.split(' ')[0]);
+        return { brand: r('.mat-nav__brand'), panel: r('.mat-nav__scroll:not([hidden])'), sw: r('.mat-nav__switch'), foot: r('.mat-nav__foot'), kids };
+      });
+      const b = await box();
+      expect(b.kids, ['mat-nav__brand', 'mat-nav__scroll', 'mat-nav__scroll', 'mat-nav__switch', 'mat-nav__foot'], 'order of the blocks of the menu in the markup');
+      expectTrue(b.brand.bottom <= b.panel.top + 1 && b.panel.bottom <= b.sw.top + 1 && b.sw.bottom <= b.foot.top + 1, 'the blocks are not stacked brand, items, switcher, foot: ' + JSON.stringify(b));
+      await page.click('.mat-switcher');
+      await page.waitForTimeout(250);
+      const popup = await page.evaluate(() => { const m = document.getElementById('nav-switch-menu').getBoundingClientRect(); const s = document.querySelector('.mat-switcher').getBoundingClientRect(); return { popupBottom: Math.round(m.bottom), switcherTop: Math.round(s.top), popupTop: Math.round(m.top) }; });
+      expectTrue(popup.popupBottom <= popup.switcherTop && popup.popupTop >= 0, 'the popup does not open upwards and inside the window: ' + JSON.stringify(popup));
+      await page.click('[data-nav-set="admin"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'Administration', 'name');
+      expectTrue(await page.locator('[data-nav-panel="admin"]').isVisible() && !(await page.locator('[data-nav-panel="work"]').isVisible()), 'panels after choosing Administration');
+      const after = await box();
+      expectTrue(after.panel.bottom <= after.sw.top + 1 && after.sw.bottom <= after.foot.top + 1, 'the switcher moved when the menu was swapped: ' + JSON.stringify(after));
+    });
+    await check('on the page of the main action it stays filled, a step darker, and stays readable', async () => {
+      await page.goto(BASE + '/Preview?app=matmail&view=form&action=1&switcher=end', { waitUntil: 'networkidle' });
+      const probes = await accentOf(page);
+      const state = await page.evaluate(() => { const a = document.querySelector('.mat-nav__item--primary'); const s = getComputedStyle(a); return { current: a.getAttribute('aria-current'), bg: s.backgroundColor, colour: s.color }; });
+      expect(state.current, 'page', 'aria-current');
+      expect(state.bg, probes.active, 'background of the main action on its own page');
+      expectTrue(state.bg !== probes.accent, 'it looks the same on its own page');
+      expectTrue(contrastOf(state.bg, state.colour) >= 4.5, 'the text is not readable on the darker fill: ' + contrastOf(state.bg, state.colour).toFixed(2));
+    });
+    await check('without the options the sample menu is as it was: the switcher under the logo, no filled item', async () => {
+      await page.goto(BASE + '/Preview?app=matmail&view=list', { waitUntil: 'networkidle' });
+      const kids = await page.evaluate(() => Array.from(document.querySelector('.mat-nav').children).map(c => c.className.split(' ')[0]));
+      expect(kids, ['mat-nav__brand', 'mat-nav__switch', 'mat-nav__scroll', 'mat-nav__scroll', 'mat-nav__foot'], 'blocks');
+      expect(await page.locator('.mat-nav__item--primary').count(), 0, 'filled items');
+      expect(await page.getAttribute('.mat-switcher', 'data-menu-place'), 'bottom', 'the popup opens downwards under the logo');
+    });
+    await ctx.close();
+  }
   {
     const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list&switcher=bottom&menus=tree');
     await check('on a phone the switcher at the foot of the drawer opens its popup above the drawer, inside the screen', async () => {
@@ -561,6 +895,24 @@ function expectTrue(value, what) {
       await page.click('[data-nav-set="people"]');
       await page.waitForTimeout(250);
       expect((await page.textContent('.mat-switcher__name')).trim(), 'People', 'name');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list&action=1&switcher=end');
+    await check('on a phone the drawer has the main action first and the switcher above the foot, and the popup stays on the screen', async () => {
+      await page.click('[data-nav-toggle]');
+      await page.waitForTimeout(450);
+      const b = await page.evaluate(() => {
+        const r = (s) => { const x = document.querySelector(s).getBoundingClientRect(); return { top: Math.round(x.top), bottom: Math.round(x.bottom), left: Math.round(x.left), right: Math.round(x.right) }; };
+        return { first: document.querySelector('.mat-nav__scroll:not([hidden]) .mat-nav__item').classList.contains('mat-nav__item--primary'), panel: r('.mat-nav__scroll:not([hidden])'), sw: r('.mat-nav__switch'), foot: r('.mat-nav__foot'), vh: innerHeight };
+      });
+      expect(b.first, true, 'the main action is the first item');
+      expectTrue(b.panel.bottom <= b.sw.top + 1 && b.sw.bottom <= b.foot.top + 1 && b.foot.bottom <= b.vh + 1, 'the blocks of the drawer: ' + JSON.stringify(b));
+      await page.click('.mat-switcher');
+      await page.waitForTimeout(250);
+      const popup = await page.evaluate(() => { const m = document.getElementById('nav-switch-menu').getBoundingClientRect(); const s = document.querySelector('.mat-switcher').getBoundingClientRect(); const hit = document.elementFromPoint(m.x + m.width / 2, m.y + 12); return { above: Math.round(m.bottom) <= Math.round(s.top), inside: m.top >= 0 && m.right <= innerWidth, seen: !!(hit && hit.closest('#nav-switch-menu')) }; });
+      expect(popup, { above: true, inside: true, seen: true }, 'the popup on a phone');
     });
     await ctx.close();
   }
@@ -1018,6 +1370,26 @@ function expectTrue(value, what) {
       await page.click('#sched-practice .mat-schedule__next');
       await page.waitForFunction(() => document.querySelector('#sched-practice .mat-schedule__body').classList.contains('is-from-next'), null, { timeout: 500 });
       await page.waitForFunction(() => !document.querySelector('#sched-practice .mat-schedule__body').classList.contains('is-from-next'), null, { timeout: 1500 });
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#topbar');
+    await check('a highlighted action of the header bar is filled with the accent, readable, with room around it and in line with the content edge', async () => {
+      const state = await page.evaluate(() => {
+        const bar = Array.from(document.querySelectorAll('.mat-topbar')).find(b => b.querySelector('.mat-topbar__actions .mat-btn--primary'));
+        const buttons = Array.from(bar.querySelectorAll('.mat-topbar__actions .mat-btn--primary'));
+        const s = getComputedStyle(buttons[0]);
+        const rects = buttons.map(b => b.getBoundingClientRect());
+        const edge = bar.getBoundingClientRect().right - parseFloat(getComputedStyle(bar).paddingRight);
+        return { count: buttons.length, bg: s.backgroundColor, colour: s.color, gap: Math.round(rects[1].left - rects[0].right), lastToEdge: Math.round(edge - rects[rects.length - 1].right), side: Math.round(rects[0].width) };
+      });
+      const probes = await accentOf(page);
+      expect(state.count, 2, 'highlighted actions');
+      expect(state.bg, probes.accent, 'background');
+      expectTrue(contrastOf(state.bg, state.colour) >= 4.5, 'the icon is not readable on the accent');
+      expectTrue(state.gap >= 8, 'the highlighted buttons touch: gap ' + state.gap + ' px');
+      expectTrue(Math.abs(state.lastToEdge) <= 1, 'the last filled button is not in line with the edge of the content: ' + state.lastToEdge + ' px');
     });
     await ctx.close();
   }
@@ -1525,6 +1897,27 @@ function expectTrue(value, what) {
       await Promise.all([page.waitForNavigation(), page.click('#validation button[type=submit]')]);
       expectTrue(page.url().includes('name=Alex') && page.url().includes('mail=alex%40example.com'), 'the form was not sent: ' + page.url());
     });
+    await check('a submit button with formnovalidate sends the form as it is, also where the check would fail, and writes no message', async () => {
+      await page.evaluate(() => document.getElementById('validation').scrollIntoView());
+      expect(await page.locator('#validation form .mat-field.is-invalid').count(), 0, 'fields with a message on the fresh page');
+      await page.click('#validation button[type=submit]:not([formnovalidate])');
+      await page.waitForTimeout(250);
+      expect(await page.locator('#validation form .mat-field.is-invalid').count(), 3, 'fields with a message after Send with empty fields');
+      await Promise.all([page.waitForNavigation(), page.click('#validation button[formnovalidate]')]);
+      expectTrue(page.url().includes('draft=1'), 'the form was not sent by the button with formnovalidate: ' + page.url());
+      expectTrue(!page.url().includes('name=Alex'), 'the page was not loaded again with the empty form: ' + page.url());
+      expect(await page.locator('#validation form .mat-field.is-invalid').count(), 0, 'fields with a message after the draft was sent');
+    });
+    await check('a form with data-confirm sends the button that was pressed (name, value, formnovalidate) once the question is answered', async () => {
+      await page.evaluate(() => {
+        document.body.insertAdjacentHTML('beforeend', '<form class="mat-form" id="e2e-confirm-form" method="get" action="/Components" data-confirm="Really?" novalidate>' +
+          '<input class="mat-input" name="q" required aria-label="q" /><button type="submit" class="mat-btn" name="act" value="del" formnovalidate>Delete</button></form>');
+      });
+      await page.click('#e2e-confirm-form button');
+      await page.waitForSelector('dialog[open] button[value="ok"]');
+      await Promise.all([page.waitForNavigation(), page.click('dialog[open] button[value="ok"]')]);
+      expectTrue(page.url().includes('act=del'), 'the button that was pressed did not go along: ' + page.url());
+    });
     await ctx.close();
   }
   {
@@ -2000,13 +2393,53 @@ function expectTrue(value, what) {
       await page.check('#tsel-all');
       expect((await page.textContent(box + ' [data-bulk-count]')).trim(), '3', 'selected');
       expectTrue(await page.locator(box + ' [data-bulk-bar]').isVisible(), 'the bulk bar');
-      expect(await page.locator('tr.is-selected').count(), 3, 'rows marked');
+      expect(await page.locator(box + ' tr.is-selected').count(), 3, 'rows marked');
       await page.uncheck('#tsel-2');
       expect((await page.textContent(box + ' [data-bulk-count]')).trim(), '2', 'selected after one is taken away');
       expect(await page.$eval('#tsel-all', el => el.indeterminate), true, 'the header check shows the state in between');
       await page.uncheck('#tsel-1');
       await page.uncheck('#tsel-3');
       expectTrue(!(await page.locator(box + ' [data-bulk-bar]').isVisible()), 'the bulk bar is still shown with nothing selected');
+    });
+    await page.evaluate(() => document.getElementById('cards').scrollIntoView());
+    await check('a card with data-select-item is marked when its check is ticked, like a row: a tint behind the whole card, no bar at one side, and the bar counts', async () => {
+      const box = '[data-selectable]:has(#csel-1)';
+      const look = (sel) => page.$eval(sel, c => { const s = getComputedStyle(c); return { bg: s.backgroundColor, widths: [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth].join(' ') }; });
+      expect(await page.locator(box + ' .is-selected').count(), 0, 'cards marked at the start');
+      expectTrue(!(await page.locator(box + ' [data-bulk-bar]').isVisible()), 'the bulk bar is shown before a card is selected');
+      await page.check('#csel-1');
+      await page.check('#csel-3');
+      expect((await page.textContent(box + ' [data-bulk-count]')).trim(), '2', 'selected');
+      expectTrue(await page.locator(box + ' [data-bulk-bar]').isVisible(), 'the bulk bar');
+      expect(await page.$$eval(box + ' .mat-card', cards => cards.map(c => c.classList.contains('is-selected'))), [true, false, true], 'cards marked');
+      const on = await look(box + ' .mat-card.is-selected');
+      const off = await look(box + ' .mat-card:not(.is-selected)');
+      expectTrue(on.bg !== off.bg, 'a selected card has the background of one that is not: ' + on.bg);
+      expect(on.widths, off.widths, 'border widths of a selected card (a tint, not a bar at one side)');
+      await page.uncheck('#csel-1');
+      await page.uncheck('#csel-3');
+      expect(await page.locator(box + ' .is-selected').count(), 0, 'cards marked after both were taken away');
+      expectTrue(!(await page.locator(box + ' [data-bulk-bar]').isVisible()), 'the bulk bar is still shown with nothing selected');
+    });
+    await check('a .mat-tile and any element with data-select-item are marked too, also in markup that a script added, and the check for all reaches them; other elements are left alone', async () => {
+      await page.evaluate(() => {
+        document.body.insertAdjacentHTML('beforeend', '<div id="e2e-sel" data-selectable><input type="checkbox" id="e2e-all" data-select-all aria-label="Select all" />' +
+          '<div class="mat-tile" id="e2e-tile"><input type="checkbox" id="e2e-t1" data-select-row aria-label="Select the tile" /></div>' +
+          '<ul><li data-select-item id="e2e-item"><input type="checkbox" id="e2e-t2" data-select-row aria-label="Select the item" /></li>' +
+          '<li id="e2e-plain"><input type="checkbox" id="e2e-t3" data-select-row aria-label="Select the plain one" /></li></ul></div>');
+      });
+      const marked = () => page.evaluate(() => ['e2e-tile', 'e2e-item', 'e2e-plain'].map(id => document.getElementById(id).classList.contains('is-selected')));
+      await page.check('#e2e-t1');
+      expect(await marked(), [true, false, false], 'after the check of the tile');
+      await page.check('#e2e-t2');
+      expect(await marked(), [true, true, false], 'after the check of the item');
+      await page.check('#e2e-t3');
+      expect(await marked(), [true, true, false], 'after the check of an element that is not an item');
+      await page.uncheck('#e2e-all');
+      expect(await marked(), [false, false, false], 'after the check for all was taken away');
+      await page.check('#e2e-all');
+      expect(await marked(), [true, true, false], 'after the check for all');
+      await page.evaluate(() => document.getElementById('e2e-sel').remove());
     });
     await check('the width of a progress bar comes from data-value, and a stack shows its parts side by side', async () => {
       const share = await page.$eval('.mat-meter--lg[aria-label="Large"] .mat-meter__fill', el => Math.round(100 * el.getBoundingClientRect().width / el.parentElement.getBoundingClientRect().width));
@@ -2037,7 +2470,7 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
-  // ---------------------------------------------------------------------------------------------------- number stepper (FORM-16)
+  // ---------------------------------------------------------------------------------------------------- number stepper (FORM-20)
   console.log('\nNumber stepper');
   {
     const { ctx, page } = await open(desktopOptions, '/Components#number-stepper');
@@ -4332,6 +4765,408 @@ function expectTrue(value, what) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways');
       const form = await page.locator('form[action="/Changelog"] .mat-btn--primary').boundingBox();
       expectTrue(form && form.x >= 0 && form.x + form.width <= 390, 'the button leaves the screen');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- the select: create what is missing, suggestions (FORM-16)
+  console.log('\nSelect: create and suggestions');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#rich-select');
+    const panelOf = id => `#${id}-trigger ~ .mat-picker__panel`;
+    const search = id => `${panelOf(id)} input[type=search]`;
+    const createRow = id => `${panelOf(id)} .mat-picker__create`;
+    const valueOf = id => page.$eval(`#${id}`, el => el.value);
+    const shown = async id => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
+    const names = async id => (await page.locator(`${panelOf(id)} .mat-picker__option:not([hidden]) .mat-picker__name`).allTextContents()).map(t => t.trim());
+    const live = id => page.$eval(`#${id}-trigger ~ [role=status].mat-sr-only`, el => el.textContent);
+    const open1 = async id => { await page.evaluate(i => document.getElementById(i + '-trigger').scrollIntoView({ block: 'center' }), id); if (!(await page.locator(panelOf(id)).isVisible())) { await page.click(`#${id}-trigger`); } };
+    await page.evaluate(() => { window.__changes = []; document.addEventListener('change', e => { if (e.target.id) { window.__changes.push(e.target.id + '=' + e.target.value); } }); });
+
+    await check('a select with data-create-url always has the search field, and offers Create only for a text that is not the name of an option', async () => {
+      await open1('pk-create');
+      expect(await page.evaluate(() => document.activeElement.type), 'search', 'the search field has the focus on a wide screen');
+      expectTrue(await page.locator(createRow('pk-create')).isHidden(), 'the create row is shown with nothing typed');
+      await page.fill(search('pk-create'), 'Web');
+      expectTrue(await page.locator(createRow('pk-create')).isVisible(), 'no create row for "Web", which is only the start of a name');
+      await page.fill(search('pk-create'), 'WEBSITE');
+      expectTrue(await page.locator(createRow('pk-create')).isHidden(), 'a create row for the name of an option, written in other letters');
+      await page.fill(search('pk-create'), '');
+      expectTrue(await page.locator(createRow('pk-create')).isHidden(), 'the create row is shown with nothing typed');
+      expect(await page.locator(`${panelOf('pk-create')} .mat-picker__option[data-value]:not([hidden])`).count(), 3, 'the options with nothing typed');
+    });
+    await check('a click on Create posts name=<text> with the answer taken as a new option that is chosen: the field shows it, the panel closes, the change event fires and it is announced', async () => {
+      await page.fill(search('pk-create'), '  Intranet ');
+      expect((await page.textContent(createRow('pk-create'))).trim(), 'Create "Intranet"', 'the row');
+      expect(await page.getAttribute(createRow('pk-create'), 'role'), 'option', 'the row is an option of the list');
+      const [request] = await Promise.all([page.waitForRequest('**/api/demo/create'), page.click(createRow('pk-create'))]);
+      expect([request.method(), request.postData(), request.headers()['content-type'], request.headers().accept], ['POST', 'name=Intranet', 'application/x-www-form-urlencoded;charset=UTF-8', 'application/json'], 'the request');
+      await page.waitForFunction(() => document.getElementById('pk-create').value !== '');
+      const value = await valueOf('pk-create');
+      expectTrue(/^n-[0-9a-f]{8}$/.test(value), 'the key from the server: ' + value);
+      expect(await shown('pk-create'), 'Intranet', 'the field');
+      expectTrue(!(await page.locator(panelOf('pk-create')).isVisible()), 'the panel is still shown');
+      expect(await page.evaluate(() => document.activeElement.id), 'pk-create-trigger', 'the focus');
+      expect(await live('pk-create'), 'Created "Intranet"', 'the announcement');
+      expect(await page.evaluate(() => window.__changes.filter(c => c.startsWith('pk-create='))), ['pk-create=' + value], 'the change event of the real input');
+      const option = page.locator(`${panelOf('pk-create')} .mat-picker__option[data-value="${value}"]`);
+      expect([await option.count(), (await option.locator('.mat-picker__name').textContent()).trim(), (await option.locator('.mat-picker__desc').textContent()).trim(), await option.getAttribute('role')], [1, 'Intranet', 'Created just now', 'option'], 'the new option');
+    });
+    await check('a name that exists (any case) has no Create row; Enter takes the first match, or the exact one when another name contains it, and never creates a second one', async () => {
+      await open1('pk-create');
+      await page.fill(search('pk-create'), 'intranet');
+      expectTrue(await page.locator(createRow('pk-create')).isHidden(), 'a create row for the option that was just made');
+      await page.fill(search('pk-create'), 'back');
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-create'), 'backoffice', 'Enter chose the first match');
+      await page.evaluate(() => MatUi.picker.addOption('#pk-create', { value: 'web', name: 'Web' }));
+      await open1('pk-create');
+      await page.fill(search('pk-create'), 'web');
+      expect(await names('pk-create'), ['Website', 'Web'], 'both names contain the text');
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-create'), 'web', 'Enter chose the exact name, not the first that contains it');
+      expect(await page.evaluate(() => window.__changes.filter(c => c.startsWith('pk-create=')).length), 3, 'three changes so far, no new option');
+    });
+    await check('a refusal keeps the panel open, shows the message of the answer at the row, and typing takes it away; nothing is chosen', async () => {
+      await open1('pk-create');
+      await page.fill(search('pk-create'), 'error');
+      const before = await valueOf('pk-create');
+      await page.click(createRow('pk-create'));
+      await page.waitForSelector(`${panelOf('pk-create')} .mat-picker__create-msg:not([hidden])`);
+      expect((await page.textContent(`${panelOf('pk-create')} .mat-picker__create-msg`)).trim(), 'This demo refuses the name "error" on purpose, to show what a failure looks like.', 'the message of the server');
+      expect(await page.getAttribute(`${panelOf('pk-create')} .mat-picker__create-msg`, 'aria-live'), 'polite', 'the message is read aloud');
+      expectTrue(await page.locator(panelOf('pk-create')).isVisible(), 'the panel closed');
+      expect(await valueOf('pk-create'), before, 'the value after a refusal');
+      expect(await page.getAttribute(createRow('pk-create'), 'aria-busy'), null, 'the row is not busy any more');
+      expectTrue(await page.locator(createRow('pk-create')).isVisible(), 'the row went away: the user cannot try again');
+      await page.fill(search('pk-create'), 'erro');
+      expectTrue(await page.locator(`${panelOf('pk-create')} .mat-picker__create-msg`).isHidden(), 'the message stays after typing');
+    });
+    await check('no answer at all gives the default text, in the language of the page', async () => {
+      await page.route('**/api/demo/create', route => route.abort());
+      try {
+        await open1('pk-create');
+        await page.fill(search('pk-create'), 'Intranet 2');
+        await page.click(createRow('pk-create'));
+        await page.waitForSelector(`${panelOf('pk-create')} .mat-picker__create-msg:not([hidden])`);
+        expect((await page.textContent(`${panelOf('pk-create')} .mat-picker__create-msg`)).trim(), 'It could not be created. Please try again.', 'the default text');
+      } finally {
+        await page.unroute('**/api/demo/create');
+      }
+      await page.keyboard.press('Escape');
+    });
+    await check('the row is busy while the request runs and cannot be pressed twice; the anti-forgery token of the page goes along', async () => {
+      await page.evaluate(() => document.body.insertAdjacentHTML('beforeend', '<input type="hidden" name="__RequestVerificationToken" value="tok-9" />'));
+      const posts = [];
+      await page.route('**/api/demo/create', async route => { posts.push(route.request().postData()); await new Promise(r => setTimeout(r, 700)); await route.continue(); });
+      try {
+        await open1('pk-create');
+        await page.fill(search('pk-create'), 'Slow one');
+        await page.click(createRow('pk-create'));
+        expect(await page.getAttribute(createRow('pk-create'), 'aria-busy'), 'true', 'aria-busy while it runs');
+        expectTrue(/Creating/.test(await page.textContent(createRow('pk-create'))), 'the busy text: ' + await page.textContent(createRow('pk-create')));
+        await page.evaluate(sel => { const r = document.querySelector(sel); r.click(); r.click(); }, createRow('pk-create'));
+        await page.waitForFunction(() => document.getElementById('pk-create').value.startsWith('n-'));
+        await page.waitForTimeout(200);
+        expect(posts, ['name=Slow+one&__RequestVerificationToken=tok-9'], 'one request, with the token');
+      } finally {
+        await page.unroute('**/api/demo/create');
+        await page.evaluate(() => document.querySelectorAll('input[name=__RequestVerificationToken]').forEach(i => i.remove()));
+      }
+    });
+    await check('with the keyboard: Arrow down reaches the Create row like an option and Enter creates; Enter in the search creates where nothing matches', async () => {
+      await open1('pk-create');
+      await page.fill(search('pk-create'), 'Zebra');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.classList.contains('mat-picker__create')), true, 'the focus is on the Create row');
+      const first = await valueOf('pk-create');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(v => document.getElementById('pk-create').value !== v, first);
+      expect(await shown('pk-create'), 'Zebra', 'created with the keyboard');
+      await open1('pk-create');
+      await page.fill(search('pk-create'), 'Quokka');
+      const second = await valueOf('pk-create');
+      await page.keyboard.press('Enter');
+      await page.waitForFunction(v => document.getElementById('pk-create').value !== v, second);
+      expect(await shown('pk-create'), 'Quokka', 'Enter in the search creates');
+    });
+
+    await check('suggestions: the closed field says nothing yet; opening fetches them; they stand under "Suggestions", the whole list under "All"; the closed field then counts them', async () => {
+      expect(await shown('pk-suggest'), 'Choose tags', 'before the panel was opened');
+      await open1('pk-suggest');
+      await page.waitForSelector(`${panelOf('pk-suggest')} .mat-picker__group:not([hidden])`);
+      const group = `${panelOf('pk-suggest')} .mat-picker__group`;
+      expect((await page.locator(`${group} .mat-picker__group-head`).textContent()).trim(), 'Suggestions', 'the heading');
+      expect(await page.getAttribute(group, 'role'), 'group', 'the group');
+      expect((await page.locator(`${group} .mat-picker__name`).allTextContents()).map(t => t.trim()), ['Finance', 'Contracts', 'Invoices 2026'], 'the suggested entries');
+      expect((await page.textContent(`${panelOf('pk-suggest')} .mat-picker__group-head--all`)).trim(), 'All', 'the heading of the list');
+      expect(await page.locator(`${panelOf('pk-suggest')} .mat-picker__option[data-value]:not(.mat-picker__option--suggest)`).count(), 5, 'the list is all there');
+      await page.keyboard.press('Escape');
+      expect(await shown('pk-suggest'), '3 suggestions', 'the closed field');
+      expect(await page.$eval('#pk-suggest-trigger .mat-picker__value', el => [el.classList.contains('is-placeholder'), el.classList.contains('is-suggest')]), [true, true], 'marked as a suggestion');
+      const colour = await page.$eval('#pk-suggest-trigger .mat-picker__value', el => getComputedStyle(el).color);
+      const link = await page.evaluate(() => { const a = document.createElement('a'); a.href = '#'; document.body.appendChild(a); const c = getComputedStyle(a).color; a.remove(); return c; });
+      expect(colour, link, 'the colour of a link');
+    });
+    await check('suggestions are not shown while something is searched, and not once something is chosen; the suggested option is that option', async () => {
+      await open1('pk-suggest');
+      await page.fill(search('pk-suggest'), 'fam');
+      expectTrue(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group`).isHidden(), 'suggestions while searching');
+      expectTrue(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group-head--all`).isHidden(), 'the heading All while searching');
+      await page.fill(search('pk-suggest'), '');
+      expectTrue(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group`).isVisible(), 'suggestions after the search was emptied');
+      await page.click(`${panelOf('pk-suggest')} .mat-picker__group [data-value="contracts"]`);
+      expect(await valueOf('pk-suggest'), 'contracts', 'the suggestion is the option');
+      expectTrue(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group`).isHidden(), 'suggestions after a choice');
+      expectTrue(await page.locator(panelOf('pk-suggest')).isVisible(), 'the panel of several choices stays open');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-value')), 'contracts', 'the focus is on the option itself');
+      expect(await shown('pk-suggest'), 'Contracts', 'the closed field');
+    });
+    await check('a suggested name that is not an option creates it: added, chosen, the panel stays open for several choices and the search starts again', async () => {
+      await page.click(`${panelOf('pk-suggest')} [data-picker-action]`);
+      await page.evaluate(() => MatUi.picker.set('#pk-suggest', ''));
+      await open1('pk-suggest');
+      const [request] = await Promise.all([page.waitForRequest('**/api/demo/create'), page.click(`${panelOf('pk-suggest')} .mat-picker__group [data-suggest-name]`)]);
+      expect(request.postData(), 'name=Invoices+2026', 'the request');
+      await page.waitForFunction(() => /n-/.test(document.getElementById('pk-suggest').value));
+      expectTrue(/^n-[0-9a-f]{8}$/.test(await valueOf('pk-suggest')), 'one new key: ' + await valueOf('pk-suggest'));
+      expectTrue(await page.locator(panelOf('pk-suggest')).isVisible(), 'the panel closed');
+      expect(await page.inputValue(search('pk-suggest')), '', 'the search');
+      expect(await shown('pk-suggest'), 'Invoices 2026', 'the field');
+      await page.click(`${panelOf('pk-suggest')} .mat-picker__option[data-value="finance"]:not(.mat-picker__option--suggest)`);
+      expectTrue(/^finance, n-[0-9a-f]{8}$/.test(await valueOf('pk-suggest')), 'the keys stay in the order of the list: ' + await valueOf('pk-suggest'));
+      expect(await shown('pk-suggest'), 'Finance, Invoices 2026', 'the field');
+      await page.click(`${panelOf('pk-suggest')} [data-picker-action]`);
+    });
+    await check('the arrow keys skip suggestions that are hidden, a suggested name that was created is that option, and Enter in an empty search never creates a suggested name', async () => {
+      await open1('pk-suggest');
+      // two values are chosen, so there are no suggestions: Home stays on the list
+      await page.focus(`${panelOf('pk-suggest')} .mat-picker__option[data-value="family"]:not(.mat-picker__option--suggest)`);
+      await page.keyboard.press('Home');
+      expect(await page.evaluate(() => [document.activeElement.getAttribute('data-value'), document.activeElement.classList.contains('mat-picker__option--suggest')]), ['finance', false], 'Home');
+      await page.evaluate(() => MatUi.picker.set('#pk-suggest', ''));
+      // the name that was created from the suggestion is an option now, and so it is suggested as the option
+      expect(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group [data-suggest-name]`).count(), 0, 'the created name is still a suggestion to create');
+      expect(await page.locator(`${panelOf('pk-suggest')} .mat-picker__group .mat-picker__option`).count(), 3, 'three suggestions: two options and the one that was created');
+      // typed: the Create row first, then the first match and not a suggestion that is not shown
+      await page.fill(search('pk-suggest'), 'fam');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.classList.contains('mat-picker__create')), true, 'the Create row is first');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-value')), 'family', 'then the first match');
+      // an empty search and Enter: the first suggestion, an option that is there
+      await page.fill(search('pk-suggest'), '');
+      await page.focus(search('pk-suggest'));
+      const options = await page.locator(`${panelOf('pk-suggest')} .mat-picker__option[data-value]:not(.mat-picker__option--suggest)`).count();
+      await page.keyboard.press('Enter');
+      expect(await valueOf('pk-suggest'), 'finance', 'Enter chose the first suggestion');
+      expect(await page.locator(`${panelOf('pk-suggest')} .mat-picker__option[data-value]:not(.mat-picker__option--suggest)`).count(), options, 'nothing was created');
+      await page.click(`${panelOf('pk-suggest')} [data-picker-action]`);
+    });
+    await check('suggestions without create: only options that are there; a click chooses and closes; a name that is not an option is ignored', async () => {
+      await open1('pk-folder');
+      await page.waitForSelector(`${panelOf('pk-folder')} .mat-picker__group:not([hidden])`);
+      expect((await page.locator(`${panelOf('pk-folder')} .mat-picker__group .mat-picker__name`).allTextContents()).map(t => t.trim()), ['Documents', 'Photos'], 'the suggestions');
+      expect(await page.locator(`${panelOf('pk-folder')} .mat-picker__create`).count(), 0, 'no create row without data-create-url');
+      await page.click(`${panelOf('pk-folder')} .mat-picker__group [data-value="photos"]`);
+      expect(await valueOf('pk-folder'), 'photos', 'the value');
+      expectTrue(!(await page.locator(panelOf('pk-folder')).isVisible()), 'the panel is still shown');
+      const counted = await page.evaluate(() => MatUi.picker.suggest('#pk-folder', [{ value: 'receipts' }, { value: 'nothing' }, { name: 'A new one' }, { name: 'MANUALS' }, { value: 'receipts' }, 'text', null]));
+      expect(counted, 2, 'receipts and the name of manuals; a missing option and a new name are ignored');
+    });
+    await check('in a form: required with the message at the field; the row has the wording of the field; a created option is a real one and takes the message away', async () => {
+      await page.evaluate(() => document.getElementById('pk-corr-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('form[action="/Components#pk-corr"] button[type=submit]');
+      await page.waitForTimeout(200);
+      expect(await page.locator('#pk-corr').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is invalid');
+      expect((await page.locator('#pk-corr').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose or create a correspondent.', 'the message');
+      await page.click('#pk-corr-trigger');
+      await page.fill(search('pk-corr'), 'Tax office');
+      expect((await page.textContent(createRow('pk-corr'))).trim(), 'Create correspondent "Tax office"', 'the wording of the field');
+      await page.click(createRow('pk-corr'));
+      await page.waitForFunction(() => document.getElementById('pk-corr').value !== '');
+      expect(await page.locator('#pk-corr').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), false, 'the message after the choice');
+      expect(await shown('pk-corr'), 'Tax office', 'the field');
+    });
+    await check('from code: set chooses a value and fires change, addOption makes an option from text (never markup), suggest shows what a page fetched', async () => {
+      await page.evaluate(() => { window.__changes = []; MatUi.picker.set('#pk-corr', 'family'); });
+      expect([await valueOf('pk-corr'), await shown('pk-corr'), await page.evaluate(() => window.__changes)], ['family', 'Family', ['pk-corr=family']], 'set');
+      await page.evaluate(() => MatUi.picker.set(document.getElementById('pk-corr').closest('.mat-picker'), null));
+      expect(await shown('pk-corr'), '3 suggestions', 'set to nothing: nothing is chosen and the field has been asked for suggestions (the ones of the form above)');
+      const made = await page.evaluate(() => { const o = MatUi.picker.addOption('#pk-corr', { value: 'x1', name: '<b>Bold</b> & co', description: '<i>d</i>', tags: ['<u>t</u>'] }); return { html: o.innerHTML.includes('<b>'), name: o.querySelector('.mat-picker__name').textContent, tag: o.querySelector('.mat-tag').textContent, again: MatUi.picker.addOption('#pk-corr', { value: 'x1', name: 'other' }) === o }; });
+      expect(made, { html: false, name: '<b>Bold</b> & co', tag: '<u>t</u>', again: true }, 'addOption');
+      await page.evaluate(() => MatUi.picker.set('#pk-corr', 'x1'));
+      expect(await shown('pk-corr'), '<b>Bold</b> & co', 'the new option is shown as text');
+      await page.evaluate(() => MatUi.picker.set('#pk-corr', ''));
+      expect(await page.evaluate(() => MatUi.picker.suggest('#pk-corr', { items: [{ value: 'contracts' }, { name: 'Brand new' }, { name: 'family' }] })), 3, 'suggest takes { items } and names that exist or can be created');
+      expect(await shown('pk-corr'), '3 suggestions', 'the closed field');
+      expect(await page.evaluate(() => MatUi.picker.suggest('#pk-corr', [{ value: 'contracts' }])), 1, 'suggest again replaces the old ones');
+      expect(await shown('pk-corr'), '1 suggestion', 'singular');
+      expect(await page.evaluate(() => MatUi.picker.suggest('#pk-corr', [])), 0, 'no suggestions');
+      expect(await shown('pk-corr'), 'Choose a correspondent', 'the placeholder is back');
+    });
+    // the two refusals above are on purpose; the browser writes a request that failed into the console as an error
+    for (let i = consoleErrors.length - 1; i >= 0; i--) {
+      if (consoleErrors[i].startsWith('/Components#rich-select: ') && /status of 422|ERR_FAILED/.test(consoleErrors[i])) { consoleErrors.splice(i, 1); }
+    }
+    await check('the texts are English or German by lang and each can be replaced: data-create-label, data-pk-<name> on the field or on html', async () => {
+      await page.evaluate(() => { document.documentElement.lang = 'de'; MatUi.picker.suggest('#pk-corr', [{ value: 'contracts' }, { value: 'family' }]); });
+      expect(await shown('pk-corr'), '2 Vorschläge', 'German count');
+      await page.evaluate(() => MatUi.picker.suggest('#pk-corr', [{ value: 'contracts' }]));
+      expect(await shown('pk-corr'), '1 Vorschlag', 'German singular');
+      await page.evaluate(id => document.getElementById(id + '-trigger').scrollIntoView({ block: 'center' }), 'pk-create');
+      await page.click('#pk-create-trigger');
+      await page.fill(search('pk-create'), 'Neu');
+      expect((await page.textContent(createRow('pk-create'))).trim(), 'Anlegen: "Neu"', 'the German row');
+      await page.evaluate(() => document.getElementById('pk-create').closest('.mat-picker').setAttribute('data-pk-create', 'Neu anlegen: {0}'));
+      await page.fill(search('pk-create'), 'Neu2');
+      expect((await page.textContent(createRow('pk-create'))).trim(), 'Neu anlegen: Neu2', 'the text of the field');
+      await page.evaluate(() => { document.documentElement.lang = 'en'; document.documentElement.setAttribute('data-pk-suggestions', 'Tips'); });
+      await page.evaluate(() => MatUi.picker.suggest('#pk-corr', [{ value: 'contracts' }]));
+      await page.keyboard.press('Escape');
+      await page.click('#pk-corr-trigger');
+      expect((await page.locator(`${panelOf('pk-corr')} .mat-picker__group-head`).first().textContent()).trim(), 'Tips', 'the text of html');
+      await page.evaluate(() => document.documentElement.removeAttribute('data-pk-suggestions'));
+      await page.keyboard.press('Escape');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#rich-select');
+    await check('on a phone the panel with the Create row is a full-screen sheet; the keyboard does not pop up until the field is touched; the row can be pressed', async () => {
+      await page.evaluate(() => document.getElementById('pk-create-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('#pk-create-trigger');
+      const panel = '#pk-create-trigger ~ .mat-picker__panel';
+      const sheet = await page.$eval(panel, el => { const r = el.getBoundingClientRect(); return { full: Math.round(r.width) === innerWidth && Math.round(r.height) === innerHeight }; });
+      expect(sheet, { full: true }, 'the sheet');
+      expectTrue(await page.evaluate(() => document.activeElement.type !== 'search'), 'the search field has the focus on a phone');
+      await page.fill(panel + ' input[type=search]', 'Phone project');
+      await page.click(panel + ' .mat-picker__create');
+      await page.waitForFunction(() => document.getElementById('pk-create').value.startsWith('n-'));
+      expect((await page.textContent('#pk-create-trigger .mat-picker__value')).trim(), 'Phone project', 'the field');
+      expectTrue(!(await page.locator(panel).isVisible()), 'the sheet is still shown');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'no sideways scroll');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- coloured marks (COLOR-10)
+  console.log('\nColoured marks');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#pills');
+    const swatchOf = sel => page.$eval(sel, el => el.style.getPropertyValue('--mat-swatch').trim());
+    const dotOf = sel => page.$eval(sel, el => { const s = getComputedStyle(el, '::before'); return { content: s.content, width: s.width, height: s.height, radius: s.borderTopLeftRadius, background: s.backgroundColor }; });
+    await check('a tag with data-colour gets a dot of that colour before its text; the colour is written into --mat-swatch (any case, #rgb too) and the text stays muted', async () => {
+      expect(await swatchOf('.mat-tag[data-colour="#dc2626"]'), '#dc2626', 'the swatch');
+      expect(await swatchOf('.mat-tag[data-colour="#fff"]'), '#ffffff', 'a short colour is written out');
+      expect(await page.$eval('.mat-tag[data-colour="#dc2626"]', el => el.classList.contains('is-coloured')), true, 'the state class');
+      const red = await dotOf('.mat-tag[data-colour="#dc2626"]');
+      expect(red, { content: '""', width: '10px', height: '10px', radius: '50%', background: 'rgb(220, 38, 38)' }, 'the dot');
+      const plain = await page.$eval('.mat-tag:not([data-colour])', el => ({ dot: getComputedStyle(el, '::before').content, colour: getComputedStyle(el).color }));
+      expect(plain.dot, 'none', 'a tag without a colour has no dot');
+      const text = await page.$eval('.mat-tag[data-colour="#dc2626"]', el => getComputedStyle(el).color);
+      expect(text, plain.colour, 'the text of a coloured tag is the colour of any tag: it is never derived from the colour');
+      const white = await dotOf('.mat-tag[data-colour="#fff"]');
+      expect(white.background, 'rgb(255, 255, 255)', 'a white dot');
+    });
+    await check('a dot has 10 px, a colour or a neutral grey; an icon takes the colour; a ring in the colour of the text keeps white and black dots visible in both modes', async () => {
+      const dot = await page.$eval('.mat-dot[data-colour="#d97706"]', el => { const s = getComputedStyle(el); return { w: s.width, h: s.height, r: s.borderTopLeftRadius, bg: s.backgroundColor, ring: s.boxShadow }; });
+      expect([dot.w, dot.h, dot.r, dot.bg], ['10px', '10px', '50%', 'rgb(217, 119, 6)'], 'the dot');
+      expectTrue(/inset/.test(dot.ring), 'the ring: ' + dot.ring);
+      const neutral = await page.$eval('.mat-dot:not([data-colour])', el => [getComputedStyle(el).backgroundColor, getComputedStyle(document.documentElement).getPropertyValue('--mat-text-faint').trim()]);
+      expectTrue(neutral[0] === 'rgb(133, 130, 122)', 'the neutral dot is the faint grey: ' + neutral[0]);
+      const icon = await page.$eval('.mat-icon[data-colour="#7c3aed"]', el => ({ colour: getComputedStyle(el).color, stroke: getComputedStyle(el).stroke }));
+      expect(icon.colour, 'rgb(124, 58, 237)', 'the icon is in that colour');
+      for (const theme of ['light', 'dark']) {
+        await page.evaluate(t => document.documentElement.setAttribute('data-theme', t), theme);
+        const black = await page.$eval('.mat-tag[data-colour="#000000"]', el => { const s = getComputedStyle(el, '::before'); return [s.backgroundColor, s.boxShadow]; });
+        expect(black[0], 'rgb(0, 0, 0)', 'a black dot in ' + theme);
+        const ring = black[1].match(/rgba?\([^)]*\)|color\([^)]*\)/)[0];
+        expectTrue(ring.length > 0 && !/ 0\)$/.test(ring), 'the ring in ' + theme + ': ' + black[1]);
+      }
+      await page.evaluate(() => document.documentElement.removeAttribute('data-theme'));
+    });
+    await check('what is not #rgb or #rrggbb is ignored (no dot, no class, nothing inherited) and the table of the unit test gives the same answers here', async () => {
+      const table = [['#abc', true], ['#ABC', true], ['#aBc', true], ['#aabbcc', true], ['#AABBCC', true], ['#d6336c', true], ['#000', true], ['#fff', true],
+        ['abc', false], ['aabbcc', false], ['#ab', false], ['#abcd', false], ['#abcde', false], ['#aabbccd', false], ['#aabbccdd', false], ['#ggg', false], ['#12345g', false],
+        ['red', false], ['rgb(0, 0, 0)', false], ['', false], [' #abc', false], ['#abc ', false], ['url(#abc)', false]];
+      const answers = await page.evaluate(values => {
+        const box = document.createElement('div');
+        box.innerHTML = values.map(([v]) => '<span class="mat-tag" data-colour="' + v.replace(/"/g, '&quot;') + '">x</span>').join('');
+        // inside something that has a colour of its own: an invalid mark must not take it over
+        box.setAttribute('style', '--mat-swatch: #ff00ff');
+        document.querySelector('.mat-page').appendChild(box);
+        MatUi.refresh(box);
+        const out = [...box.children].map(el => [el.classList.contains('is-coloured'), el.style.getPropertyValue('--mat-swatch').trim(), getComputedStyle(el, '::before').content]);
+        box.remove();
+        return out;
+      }, table);
+      table.forEach(([value, valid], i) => {
+        const [coloured, swatch, content] = answers[i];
+        expect([coloured, content === '""'], [valid, valid], `"${value}" is ${valid ? '' : 'not '}a colour`);
+        if (valid) {
+          const h = value.slice(1).toLowerCase();
+          expect(swatch, '#' + (h.length === 3 ? [...h].map(c => c + c).join('') : h), `the swatch of "${value}"`);
+        } else {
+          expect(swatch, 'initial', `"${value}" does not take the colour of what is around it`);
+        }
+      });
+    });
+    await check('markup that is added later needs MatUi.refresh(scope); a colour that changes or goes away is followed', async () => {
+      const steps = await page.evaluate(() => {
+        const box = document.createElement('div');
+        box.innerHTML = '<span class="mat-tag" id="late-tag" data-colour="#123456">Late</span>';
+        document.querySelector('.mat-page').appendChild(box);
+        const tag = document.getElementById('late-tag');
+        const state = () => [tag.classList.contains('is-coloured'), tag.style.getPropertyValue('--mat-swatch').trim()];
+        const before = state();
+        MatUi.refresh(box);
+        const after = state();
+        tag.setAttribute('data-colour', '#abc');
+        MatUi.refresh(box);
+        const changed = state();
+        tag.setAttribute('data-colour', 'nope');
+        MatUi.refresh(box);
+        const ignored = state();
+        const other = document.createElement('span');
+        other.className = 'mat-tag';
+        other.setAttribute('data-colour', '#fedcba');
+        box.appendChild(other);
+        MatUi.refresh(box);
+        const had = [other.classList.contains('is-coloured'), other.style.getPropertyValue('--mat-swatch').trim()];
+        other.removeAttribute('data-colour');
+        MatUi.refresh(box);
+        const gone = [other.classList.contains('is-coloured'), other.style.getPropertyValue('--mat-swatch').trim()];
+        box.remove();
+        return { before, after, changed, ignored, had, gone };
+      });
+      expect(steps, { before: [false, ''], after: [true, '#123456'], changed: [true, '#aabbcc'], ignored: [false, 'initial'], had: [true, '#fedcba'], gone: [false, ''] }, 'the steps');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#rich-select');
+    await check('an option of a picker with data-colour has the dot in the list and in the closed field; addOption and the answer of the create endpoint take a colour', async () => {
+      const dotIn = sel => page.$eval(sel, el => getComputedStyle(el, '::before').backgroundColor);
+      await page.evaluate(() => document.getElementById('pk-create-trigger').scrollIntoView({ block: 'center' }));
+      await page.click('#pk-create-trigger');
+      expect(await dotIn('#pk-create-trigger ~ .mat-picker__panel [data-value="website"]'), 'rgb(37, 99, 235)', 'the dot of the option in the list');
+      await page.click('#pk-create-trigger ~ .mat-picker__panel [data-value="website"]');
+      expect(await page.$eval('#pk-create-trigger .mat-picker__value .mat-dot', el => getComputedStyle(el).backgroundColor), 'rgb(37, 99, 235)', 'the dot in the closed field');
+      expect((await page.textContent('#pk-create-trigger .mat-picker__value')).trim(), 'Website', 'and the name, the dot is no text');
+      expect(await page.getAttribute('#pk-create-trigger .mat-picker__value .mat-dot', 'aria-hidden'), 'true', 'the dot is decoration');
+      await page.evaluate(() => MatUi.picker.addOption('#pk-create', { value: 'c-red', name: 'Red thing', colour: '#ff0000' }));
+      await page.click('#pk-create-trigger');
+      expect(await dotIn('#pk-create-trigger ~ .mat-picker__panel [data-value="c-red"]'), 'rgb(255, 0, 0)', 'addOption with a colour');
+      await page.route('**/api/demo/create', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ value: 'c-green', name: 'Green thing', colour: '#00ff00' }) }));
+      try {
+        await page.fill('#pk-create-trigger ~ .mat-picker__panel input[type=search]', 'Green thing');
+        await page.click('#pk-create-trigger ~ .mat-picker__panel .mat-picker__create');
+        await page.waitForFunction(() => document.getElementById('pk-create').value === 'c-green');
+      } finally {
+        await page.unroute('**/api/demo/create');
+      }
+      expect(await page.$eval('#pk-create-trigger .mat-picker__value .mat-dot', el => getComputedStyle(el).backgroundColor), 'rgb(0, 255, 0)', 'a created option with the colour of the answer');
     });
     await ctx.close();
   }

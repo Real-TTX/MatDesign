@@ -26,6 +26,17 @@ registry reaches AA in light and dark**. If the CSS changes, the report must cha
 `--mat-app-accent-text`). Hover, the tints, the focus ring and the dark variant follow. In dark mode the accent is lightened (74 % accent, 26 % white) and the
 text on it is dark. This keeps 22 colours consistent without 22 stylesheets.
 
+**Schemes change surfaces, never the accent** (`COLOR-09`). `data-scheme="paper|contrast|oled"` on `<html>` is an opt-in set of surfaces, lines, text colours, shadows, dim layer and scrollbar for the same controls: *paper*
+(warm and slightly yellowed), *contrast* (pure white or black, lines instead of shadows, control borders at 3:1) and *oled* (black; dark mode only, in light mode it is the standard look). The values are the **end of
+`matui.tokens.css`**, not a part of their own: they are token values like the dark set, so the parser, the descriptions and the test that keeps the dark values written twice are the ones the tokens already have (a scheme's
+selectors start with `:root[data-scheme=…]`, so `CssTokens` never takes them for a base token or for the dark set; `CssTokens.Schemes` reads them). A scheme sets the same tokens in light and in dark, so its light values never
+show through in dark, and it sets no accent token, so every combination of scheme, mode, accent and app works without a rule of its own. One thing does follow the surfaces: the colour of a link. It is derived from the accent
+for a white or near-black page; on warm paper it comes out a little too light, so `--mat-accent-text` takes `--mat-accent-text-keep` (100 % in the standard look, 75 % on paper in light) of itself and the rest from
+`--mat-text`. That one share is what a scheme sets, for every accent and every app at once, and the standard look is byte-for-byte what it was (a test pins it, and the standard values were compared in a browser).
+`SchemeSurfaces` reads a scheme in one mode from the CSS and `AccentReport.Checks(surfaces)` and `SchemeSurfaces.Checks()` hold every pairing to AA for every app and every accent preset in every mode a scheme has, so the numbers on
+the Colour page are the CSS's. Where the standard look is a little under for one accent (a link of Matarchive on the page background, the link of Matdo on a chip in dark) the pairing is shown as advice for the standard look and
+required for every scheme: the standard look does not change.
+
 ## 3. The registry is data, the rulebook is code
 
 `AppRegistry` lists the apps with the accent the toolkit uses, the accent found in the app (so the site can say what changed and why), the logo colour, the class prefix and
@@ -55,12 +66,13 @@ that would make it the frame of a fixed popup; it names the element that holds t
 of the page. The choice of open and closed branches is remembered in the browser per app and never overrides the branch of the current page.
 
 The switcher has two choices that belong to the app, both in the model and not in the markup an app writes: **where it sits** (`ShellModel.SwitcherPlace`: `Top` under the logo, the default;
-`Bottom` as the first thing in the foot, directly above the user, where its popup opens upwards; `Both`, the buttons stay in step because the script updates every `.mat-switcher` in the scope)
+`Bottom` as the first thing in the foot, directly above the user, where its popup opens upwards; `Both`, the buttons stay in step because the script updates every `.mat-switcher` in the scope;
+`End` after the panels and above the foot, for a menu that starts with a main action (`SHELL-19`), the popup opening upwards too)
 and **whether menus are grouped** (`NavSet.Parent`, a `NavSetParent` with a title and an icon). `ShellModel.SwitcherEntries` gathers the menus of one parent below it: in the popup the parent is a
 button (`data-nav-group`, `aria-expanded`, `aria-controls`) that opens a `role="group"` with the menus (`data-nav-parent`), one level deep like the submenus of the items; it is not a menu itself.
 The group with the current menu is open when the page loads, the switcher then names the parent above the name of the menu, and a closed parent carries the dot of the menus inside it that
 need attention. The popup is placed again whenever a group is opened or closed, so that it never covers the switcher it came from. The sample app shows both with
-`/Preview?switcher=bottom|both&menus=tree`.
+`/Preview?switcher=bottom|both|end&menus=tree`.
 
 ### Forms are a part of their own
 
@@ -77,7 +89,7 @@ a code is one value and Tab should go to the next field, and a screen reader get
 is not cut but spread over the boxes, and no name, so that only the real input posts; an incomplete code is made **invalid** on the real input (`setCustomValidity`), so `required`, `pattern` and the messages of the form work without a
 second validation, and the boxes follow `disabled`, `readonly` and `aria-invalid` of the real input; **nothing is sent by itself** unless the author writes `data-submit` (then `requestSubmit()`, so the validation and `data-confirm` still
 run). The type stays 16 px or more (a phone zooms into smaller type) and the boxes shrink in width instead of overflowing, so a code of twelve fits a phone.
-The **number stepper** (`FORM-16`) is a native number field in a `mat-stepper[data-stepper]` wrapper. The script adds a button for less and one for more and marks the wrapper `is-ready`; only then
+The **number stepper** (`FORM-20`) is a native number field in a `mat-stepper[data-stepper]` wrapper. The script adds a button for less and one for more and marks the wrapper `is-ready`; only then
 the CSS hides the spinners of the browser, so without the script it is the native field. The arithmetic is done in whole numbers (the decimals of `step`, `min`, `max` and the value decide the scale), with the
 step base of the browser (`min`, else the `value` attribute, else 0), so a value that the script produces is one that the browser's own validation accepts. A button that cannot go further is
 `aria-disabled` and never `disabled` (the focus must not be lost); a press is handled on `pointerdown` (so that holding repeats, faster and faster) and a click without a press (`detail` 0, the keyboard or an
@@ -95,7 +107,21 @@ dropdown under the field on every screen size, never a full-screen sheet, becaus
 page (`Intl`) and the panel. The panel is `position: fixed` next to the button (below, above, or covering it when neither side has room) and full screen with an X on a phone, like every dialog.
 It lives inside the wrapper, so a picker in a dialog is not cut off by it, and Escape closes the picker first and the dialog second. The real input is invisible but lies over the button, so a
 browser message points at the right place, and whoever focuses it (a label, the validation) lands on the button. The texts are English and German (`data-pk-*` on `html` changes them; a test checks that
-both languages have every text).
+both languages have every text). The same table holds the label of the theme button (`data-theme-label` and `data-theme-name-*` replace it), so no text that the script writes is English only ([ADOPTING.md](ADOPTING.md), "The language of the toolkit's own texts").
+
+A select can **create what is missing and suggest** (`FORM-16`), both opt-in attributes of the wrapper (`data-create-url`, `data-suggest-url`), so a list that a user keeps does not have to be left to add one more name. The
+panel stays the one of the select: the first row of the list is the row that creates (an option of its own kind, `mat-picker__create`, that the arrow keys reach like any other), a suggested entry is a copy of the option
+(or, for a name that is not an option yet, a row that creates it) in a group under a heading, and none of them is ever counted as an option of the list (`isReal`). The server is asked with a plain `fetch` (a POST of the name with the
+anti-forgery token of the page, a GET for suggestions) and answers JSON; what comes back is turned into an option with `textContent`, never markup, and a refusal keeps the panel open and says why at the row. The markup of an
+existing select is untouched and nothing about it changes unless one of the attributes is there. The pages that fetch for many pickers at once, and the app that sets a picker from a button, use `MatUi.picker.suggest`, `.set` and `.addOption`.
+
+### Colours that users choose
+
+A colour a user picked for a tag, a project or a folder is **data**, not a part of the design (`COLOR-10`), and it has one way in: `data-colour="#rrggbb"` (`#rgb` too) on a tag, a dot (`mat-dot`, 10 px), an icon or an option of a picker. The script
+writes it into `--mat-swatch`, the property that the colour picker and the swatches already use, and marks the element `is-coloured`; the CSS draws a dot or colours the icon from it, so no page needs an inline style or a literal colour. A
+colour that is not a hex colour is ignored and blocked from being inherited (the mark looks neutral). The point of the design is what the colour is *not*: it is never the colour of the text. A tag keeps the muted text colour that reaches AA, so
+white, black or a colour that nothing reads well on is as safe as any other, and a thin ring in the colour of the text keeps a white dot visible in light mode and a black one in dark mode. The colour is never the only signal either: the name stands
+next to it (`COLOR-04`). `MarkupChecks` flags a `data-colour` that the script would ignore, because that typo would show nothing.
 
 ### Slider and range slider
 
@@ -243,8 +269,8 @@ writes: into `/data` (a volume), and only where a data directory is set (the ima
 (`admin.json`, created once and never overwritten); whoever opens the assistant first becomes the administrator, which is the price of a compose file without a password. Its session is a cookie that is
 HttpOnly, SameSite Lax and ends after eight hours or when the password changes, a sign-in that fails costs half a second and five of them lock the client out for a minute, and signing out is a POST with an
 anti-forgery token. The image runs as the unprivileged user of the base image and needs nothing else; the file system can be made read-only (a tmpfs for `/tmp`, the volume for `/data`) and the capabilities
-dropped (`read_only`, `cap_drop: [ALL]`, `no-new-privileges`) by whoever wants that, but the compose file leaves it out to stay simple. `Preview` and `Builder` take an app id, a theme and an accent from the query string and accept only known ids, `light`/`dark`
-and a `#rrggbb` value; everything else is ignored. A preview frame never saves its theme choice for the whole site (`data-preview`).
+dropped (`read_only`, `cap_drop: [ALL]`, `no-new-privileges`) by whoever wants that, but the compose file leaves it out to stay simple. `Preview` and `Builder` take an app id, a theme, a colour scheme and an accent from the query string and accept only known ids, `light`/`dark`,
+a scheme of the registry and a `#rrggbb` value; everything else is ignored. A preview frame never saves its theme or scheme choice for the whole site (`data-preview`).
 
 ## 11. Versions and delivery
 

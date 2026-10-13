@@ -178,6 +178,17 @@ else if (view == "settings")
                         </div>
                         <span class="mat-hint">The button at the bottom of the menu does the same.</span>
                     </div>
+                    <div class="mat-field">
+                        <span class="mat-label">Colour scheme</span>
+                        <div class="mat-seg" role="group" aria-label="Colour scheme">
+                            <button type="button" class="mat-seg__btn" data-scheme-set="standard" aria-pressed="true"><span>Standard</span></button>
+                            @foreach (var scheme in ColorSchemes.All)
+                            {
+                                <button type="button" class="mat-seg__btn" data-scheme-set="@scheme.Id" aria-pressed="false"><span>@scheme.Name</span></button>
+                            }
+                        </div>
+                        <span class="mat-hint">Changes the surfaces and the text, never the accent. Black is for dark mode: in light mode it looks like Standard.</span>
+                    </div>
                 </div></div>
             </div>
 

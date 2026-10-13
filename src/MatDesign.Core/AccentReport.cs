@@ -72,6 +72,46 @@ public sealed class AccentReport
 
     public bool Passes => Checks().Where(c => !c.Advisory).All(c => c.Passes);
 
+    /// <summary>
+    /// The colour of a link on the surfaces of a scheme, as the CSS derives it: the accent's own text colour (<see cref="LinkLight"/>, <see cref="LinkDark"/>), pulled toward the text
+    /// colour of the scheme by what <c>--mat-accent-text-keep</c> gives up. The standard look keeps all of it.
+    /// </summary>
+    public Rgb LinkOn(SchemeSurfaces surfaces)
+    {
+        var own = surfaces.Dark ? LinkDark : LinkLight;
+        return surfaces.AccentKeep >= 1 ? own : Colors.Mix(own, surfaces.Text, surfaces.AccentKeep);
+    }
+
+    /// <summary>
+    /// What has to hold for this accent on the surfaces of a colour scheme in one mode (the pairings that do not depend on the accent are <see cref="SchemeSurfaces.Checks"/>): the text
+    /// on the accent, a link on the page, on a surface, in the menu, on a hovered surface and on the tint of a chip or a pill, and the current item of the menu. For a scheme they all
+    /// have to reach AA. For the standard look only the first two are required, as they have always been; the others are advice, because a few accents are a little under them
+    /// there and the standard look is not changed.
+    /// </summary>
+    public IReadOnlyList<ContrastCheck> Checks(SchemeSurfaces surfaces)
+    {
+        var mode = surfaces.Mode;
+        var accent = surfaces.Dark ? DarkAccent : Accent;
+        var on = surfaces.Dark ? DarkOnAccent : OnAccent;
+        var link = LinkOn(surfaces);
+        var tint = new Rgba(accent, surfaces.Dark ? 0.26 : 0.19);
+        var tintOnSurface = tint.Over(surfaces.Surface);
+        var tintInMenu = tint.Over(surfaces.Nav);
+        var advice = surfaces.Scheme == ColorSchemes.Standard;
+        return
+        [
+            Check($"Text on the accent ({mode})", on, accent, 4.5),
+            Check($"Link on a surface ({mode})", link, surfaces.Surface, 4.5),
+            Check($"Link on the page ({mode})", link, surfaces.Bg, 4.5, advice),
+            Check($"Link in the menu ({mode})", link, surfaces.Nav, 4.5, advice),
+            Check($"Link on a hovered or tinted surface ({mode})", link, surfaces.Surface3, 4.5, advice),
+            Check($"Link on the tint of a chip or a pill ({mode})", link, tintOnSurface, 4.5, advice),
+            Check($"Current menu item, its label ({mode})", surfaces.Paint("--mat-text", tintInMenu), tintInMenu, 4.5),
+            Check($"Current menu item, its icon ({mode})", link, tintInMenu, 3.0, advice),
+            Check($"Accent against a surface ({mode}), for large parts", accent, surfaces.Surface, 3.0, advisory: true),
+        ];
+    }
+
     private static ContrastCheck Check(string name, Rgb fg, Rgb bg, double required, bool advisory = false)
         => new(name, fg, bg, Colors.Contrast(fg, bg), required, advisory);
 }

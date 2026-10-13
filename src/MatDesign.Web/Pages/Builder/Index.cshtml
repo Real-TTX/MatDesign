@@ -39,12 +39,23 @@
                             }
                         </div>
                     </div>
+                    <div class="mat-field">
+                        <label class="mat-label" for="b-scheme">Colour scheme</label>
+                        <select class="mat-select" id="b-scheme" name="scheme" data-autosubmit>
+                            <option value="" selected="@(Model.Scheme is null)">Standard</option>
+                            @foreach (var s in ColorSchemes.All)
+                            {
+                                <option value="@s.Id" selected="@(s.Id == Model.Scheme)">@s.Name</option>
+                            }
+                        </select>
+                        <span class="mat-hint">The surfaces, the lines and the text change, the accent does not (<a href="/Rules/Detail?id=COLOR-09">COLOR-09</a>). The preview and the contrast follow.</span>
+                    </div>
                 </div>
             </section>
 
             <div class="mat-btn-row">
                 <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("check")<span>Apply</span></button>
-                <a class="mat-btn mat-btn--secondary" href="/Builder?app=@Model.BaseApp.Id">@Ui.Icon("refresh")<span>Back to @Model.BaseApp.Name's colour</span></a>
+                <a class="mat-btn mat-btn--secondary" href="/Builder?app=@Model.BaseApp.Id@(Model.Scheme is null ? string.Empty : "&scheme=" + Model.Scheme)">@Ui.Icon("refresh")<span>Back to @Model.BaseApp.Name's colour</span></a>
             </div>
         </div>
 
@@ -70,6 +81,12 @@
 </form>
 
 <partial name="_ContrastCard" model="Model.Report" />
+
+@if (Model.SchemeInfo is { } schemeInfo)
+{
+    var schemeTitle = "Contrast on the scheme " + schemeInfo.Name;
+    <partial name="_SchemeChecks" model="(Model.Report, Model.SchemeModes, schemeTitle)" />
+}
 
 <section class="mat-section" aria-labelledby="preview-title">
     <div class="mat-section__head">
