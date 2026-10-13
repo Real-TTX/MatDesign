@@ -198,4 +198,25 @@ public partial class ScriptTests
         Assert.Contains("top layer", File.ReadAllText(Path.Combine(TestPaths.RepoRoot, "docs", "ADOPTING.md")));
         Assert.Contains(ComponentCatalog.All.Single(c => c.Id == "toasts").Behaviour, b => b.Contains("topmost", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public void The_item_of_a_ticked_check_is_marked_whether_it_is_a_row_a_tile_or_a_card_and_it_is_documented()
+    {
+        // data-selectable is not only for the rows of a table: the item is the nearest tr, .mat-tile or [data-select-item], and it has to be inside the box that is selectable (a table
+        // in a cell of another table must not mark that cell's row). The mark is a tint behind the whole item (COLOR-08, OneSidedAccentTests scans the CSS for a bar).
+        var update = Js[Js.IndexOf("function updateSelection(", StringComparison.Ordinal)..];
+        update = update[..update.IndexOf("doc.addEventListener('change'", StringComparison.Ordinal)];
+        Assert.Contains("r.closest('tr, .mat-tile, [data-select-item]')", update);
+        Assert.Contains("box.contains(item)", update);
+        Assert.Contains("item.classList.toggle('is-selected', r.checked)", update);
+
+        Assert.Contains("data-select-item", BlockComment().Match(Js).Value);
+        Assert.Contains("[data-select-item].is-selected { background: var(--mat-accent-soft); border-color: var(--mat-accent); }", TestPaths.ReadToolkit("css/matui.lists.css"));
+        Assert.Contains("data-select-item", File.ReadAllText(Path.Combine(TestPaths.RepoRoot, "docs", "ADOPTING.md")));
+
+        var example = ComponentCatalog.All.Single(c => c.Id == "cards").Examples.Single(e => e.Title.StartsWith("Selectable cards", StringComparison.Ordinal));
+        Assert.Equal(3, Regex.Matches(example.Html, "data-select-item").Count);
+        Assert.Equal(3, Regex.Matches(example.Html, "data-select-row").Count);
+        Assert.Contains("data-bulk-bar", example.Html);
+    }
 }

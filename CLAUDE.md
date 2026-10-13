@@ -98,6 +98,8 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   `data-confirm` on the form, which submits again with the same button.
 - Toasts (`SHELL-12`): one host `.mat-toasts`, at the end of `<body>` or, while a dialog is open, inside the topmost one of `dialogStack` (the dialogs `openDialog` opened): a modal dialog is in the top layer, so nothing
   outside of it is seen above it. The host moves in `openDialog` and in the `close` handler, which runs before a dialog the script built removes itself, so no toast is lost with it.
+- Selection (`data-selectable`): a check per item (`data-select-row`), maybe `data-select-all` and a `[data-bulk-bar]` with `[data-bulk-count]`. The script marks the item of a ticked check `is-selected`: the nearest `tr`,
+  `.mat-tile` or `[data-select-item]` inside the box. A selected row is `--mat-accent-soft-strong`, a selected `[data-select-item]` is `--mat-accent-soft` with the accent as its line (like a ticked `.mat-choice`): a tint, no bar (`COLOR-08`).
 - Pickers (`FORM-15`): a wrapper `mat-picker[data-picker="select|date|daterange|time|timerange|colour"]` around the real input `mat-picker__input`, which posts one value in a fixed
   format (`2026-10-10`, `..` for a range, `09:30`, `#b4235f`); the script adds the button and the panel (`position: fixed`, full screen with an X on a phone). Texts in English and German
   (`PK_TEXT`: both languages must have every key, a test checks; it also holds the label of the theme button and the AM and PM, so the script writes no text an app cannot change: `data-pk-*`,

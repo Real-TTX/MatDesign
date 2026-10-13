@@ -230,6 +230,9 @@ th[aria-sort="descending"] .mat-icon { transform: rotate(180deg); }
 .mat-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-3); padding: var(--mat-space-2) var(--mat-space-4); min-height: var(--mat-control-h-lg); background: var(--mat-accent-soft-strong); color: var(--mat-accent-text); border-radius: var(--mat-radius); }
 .mat-bulk[hidden] { display: none; }
 .mat-bulk__count { margin-right: auto; font-weight: 600; }
+/* An item that is not a table row (a card, the row of a list: data-select-item) is marked like a row when its check is ticked: a tint behind the whole item and the accent
+   colour for its line, like a ticked .mat-choice, never a bar at one side (COLOR-08). A .mat-tile has its own mark (above). */
+[data-select-item].is-selected { background: var(--mat-accent-soft); border-color: var(--mat-accent); }
 
 /* ---- Pills and vertical tabs; tabs that fill the width ---- */
 .mat-tabs--pills { gap: var(--mat-space-2); border-bottom: 0; }

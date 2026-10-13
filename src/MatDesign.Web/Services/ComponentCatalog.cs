@@ -463,7 +463,8 @@ public static class ComponentCatalog
             ],
             [
                 "To offer both views, wrap the list in an element with data-view-scope and give the table and the gallery data-view=\"list\" and data-view=\"gallery\"; the toolbar's view switch does the rest.",
-                "A tile that is selected carries is-selected.",
+                "A tile that is selected carries `is-selected`; in a `data-selectable` list the script sets it when the `data-select-row` check inside the tile is ticked, like for a table row (see Table and Cards).",
+                "A check inside a link is not valid HTML, so a selectable tile is a `div` with the link inside it.",
             ]),
 
         new("cards", "Cards", "Content", "box",

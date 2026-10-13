@@ -26,7 +26,8 @@
      data-counter="id"                      a text field writes "length / maxlength" into the element with this id
      data-indeterminate                     a checkbox that starts in the indeterminate state
      data-password-toggle="id"              the eye button of a password field: shows and hides the password (aria-pressed)
-     data-selectable                        a table with data-select-row checks, a data-select-all check in its header and a [data-bulk-bar] with [data-bulk-count]
+     data-selectable                        a table, a gallery or a list of cards with a data-select-row check per item, maybe a data-select-all check and a [data-bulk-bar] with [data-bulk-count];
+                                            the item of a ticked check is marked is-selected: its table row, its .mat-tile, or the nearest element with data-select-item
      data-picker="select|date|daterange|time|timerange|colour"
                                             a field that is filled in a panel (FORM-15); the real input inside is .mat-picker__input. Options of the wrapper:
                                             data-placeholder, data-clearable (a button that clears the value), data-min / data-max / data-week-start / data-flex (dates),
@@ -705,14 +706,18 @@
     });
   });
 
-  // ------------------------------------------------------------------------------------------------ selectable rows of a table
-  // An element with data-selectable holds a table with a checkbox per row (data-select-row), one in the header (data-select-all) and a bulk bar
-  // ([data-bulk-bar] with [data-bulk-count]) that is shown only while rows are selected. The row of a selected check is marked (is-selected).
+  // ------------------------------------------------------------------------------------------ selectable items: rows, tiles, cards
+  // An element with data-selectable holds a table, a gallery or a list of cards with a checkbox per item (data-select-row), maybe one that selects all of them
+  // (data-select-all) and a bulk bar ([data-bulk-bar] with [data-bulk-count]) that is shown only while something is selected. The item of a ticked check is marked
+  // is-selected: its table row, its .mat-tile, or the nearest element with data-select-item (a card, the row of a list of the app's own).
   function updateSelection(box) {
     var rows = $$('input[data-select-row]', box);
     var all = $('input[data-select-all]', box);
     var selected = rows.filter(function (r) { return r.checked; }).length;
-    rows.forEach(function (r) { var tr = r.closest('tr'); if (tr) { tr.classList.toggle('is-selected', r.checked); } });
+    rows.forEach(function (r) {
+      var item = r.closest('tr, .mat-tile, [data-select-item]');
+      if (item && box.contains(item)) { item.classList.toggle('is-selected', r.checked); }
+    });
     if (all) { all.checked = rows.length > 0 && selected === rows.length; all.indeterminate = selected > 0 && selected < rows.length; }
     var bar = $('[data-bulk-bar]', box);
     if (bar) {

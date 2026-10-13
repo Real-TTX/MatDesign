@@ -50,7 +50,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   energy, sensors, rooms, garden, scenes) first. SVG, as one sprite, as single files or as an archive; MatUi works without it
 
 **The documentation**
-- **51 components with 124 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
+- **51 components with 125 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
   it uses and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined

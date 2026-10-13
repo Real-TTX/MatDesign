@@ -137,6 +137,9 @@ A text that goes into the markup of a page (a label, a hint, the words of a `dat
 - The right control for the value (`FORM-12`): the type of the value (`email`, `tel`, `number`, `date`) with `autocomplete` and `inputmode`; radios up to five choices, a select above; a switch applies at once, a check is saved.
   A form with errors shows a **summary** at the top with a link to every field (`data-validation-summary`, `FORM-03`). Layouts: columns, label beside the field on a wide screen, one line, sections (`FORM-14`).
 - Every table cell has `data-label`: on a phone the rows become cards (`TABLE-02`).
+- A list that acts on several items at once is a `data-selectable` element: a check per item (`data-select-row`, with an `aria-label` that says which item), maybe one that selects all of them (`data-select-all`) and a
+  `data-bulk-bar` with a `data-bulk-count` that shows while something is selected. **The item of a ticked check is marked `is-selected`**, a tint behind the whole item (`COLOR-08`): its table row, its `.mat-tile`, or the
+  nearest element with `data-select-item`, so a list of cards, or of rows of your own, needs no script of its own to show what is selected.
 - A value that a native control cannot show well is chosen in a **picker** (`FORM-15`): an option with a picture, a description and tags, a date or a period, a time or a time range, a colour.
   The markup is a wrapper around the real input, which posts one value in a fixed format (`2026-10-10`, `2026-10-10..2026-10-14`, `09:30`, `09:00..17:30`, `#b4235f`, the key of an option);
   the script draws the button and the panel, which is full screen with an X on a phone. The MatCMS `richselect` and date pickers map onto `data-picker="select"` (with `data-multiple` for

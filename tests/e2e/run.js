@@ -891,17 +891,58 @@ function seenAt(page, selector) {
     });
     await page.evaluate(() => document.getElementById('table').scrollIntoView());
     await check('the check in the header selects every row, shows the bulk bar with the count and marks the rows', async () => {
-      expectTrue(!(await page.locator('[data-bulk-bar]').isVisible()), 'the bulk bar is shown before a row is selected');
+      const box = '[data-selectable]:has(#tsel-all)';
+      expectTrue(!(await page.locator(box + ' [data-bulk-bar]').isVisible()), 'the bulk bar is shown before a row is selected');
       await page.check('#tsel-all');
-      expect((await page.textContent('[data-bulk-count]')).trim(), '3', 'selected');
-      expectTrue(await page.locator('[data-bulk-bar]').isVisible(), 'the bulk bar');
-      expect(await page.locator('tr.is-selected').count(), 3, 'rows marked');
+      expect((await page.textContent(box + ' [data-bulk-count]')).trim(), '3', 'selected');
+      expectTrue(await page.locator(box + ' [data-bulk-bar]').isVisible(), 'the bulk bar');
+      expect(await page.locator(box + ' tr.is-selected').count(), 3, 'rows marked');
       await page.uncheck('#tsel-2');
-      expect((await page.textContent('[data-bulk-count]')).trim(), '2', 'selected after one is taken away');
+      expect((await page.textContent(box + ' [data-bulk-count]')).trim(), '2', 'selected after one is taken away');
       expect(await page.$eval('#tsel-all', el => el.indeterminate), true, 'the header check shows the state in between');
       await page.uncheck('#tsel-1');
       await page.uncheck('#tsel-3');
-      expectTrue(!(await page.locator('[data-bulk-bar]').isVisible()), 'the bulk bar is still shown with nothing selected');
+      expectTrue(!(await page.locator(box + ' [data-bulk-bar]').isVisible()), 'the bulk bar is still shown with nothing selected');
+    });
+    await page.evaluate(() => document.getElementById('cards').scrollIntoView());
+    await check('a card with data-select-item is marked when its check is ticked, like a row: a tint behind the whole card, no bar at one side, and the bar counts', async () => {
+      const box = '[data-selectable]:has(#csel-1)';
+      const look = (sel) => page.$eval(sel, c => { const s = getComputedStyle(c); return { bg: s.backgroundColor, widths: [s.borderTopWidth, s.borderRightWidth, s.borderBottomWidth, s.borderLeftWidth].join(' ') }; });
+      expect(await page.locator(box + ' .is-selected').count(), 0, 'cards marked at the start');
+      expectTrue(!(await page.locator(box + ' [data-bulk-bar]').isVisible()), 'the bulk bar is shown before a card is selected');
+      await page.check('#csel-1');
+      await page.check('#csel-3');
+      expect((await page.textContent(box + ' [data-bulk-count]')).trim(), '2', 'selected');
+      expectTrue(await page.locator(box + ' [data-bulk-bar]').isVisible(), 'the bulk bar');
+      expect(await page.$$eval(box + ' .mat-card', cards => cards.map(c => c.classList.contains('is-selected'))), [true, false, true], 'cards marked');
+      const on = await look(box + ' .mat-card.is-selected');
+      const off = await look(box + ' .mat-card:not(.is-selected)');
+      expectTrue(on.bg !== off.bg, 'a selected card has the background of one that is not: ' + on.bg);
+      expect(on.widths, off.widths, 'border widths of a selected card (a tint, not a bar at one side)');
+      await page.uncheck('#csel-1');
+      await page.uncheck('#csel-3');
+      expect(await page.locator(box + ' .is-selected').count(), 0, 'cards marked after both were taken away');
+      expectTrue(!(await page.locator(box + ' [data-bulk-bar]').isVisible()), 'the bulk bar is still shown with nothing selected');
+    });
+    await check('a .mat-tile and any element with data-select-item are marked too, also in markup that a script added, and the check for all reaches them; other elements are left alone', async () => {
+      await page.evaluate(() => {
+        document.body.insertAdjacentHTML('beforeend', '<div id="e2e-sel" data-selectable><input type="checkbox" id="e2e-all" data-select-all aria-label="Select all" />' +
+          '<div class="mat-tile" id="e2e-tile"><input type="checkbox" id="e2e-t1" data-select-row aria-label="Select the tile" /></div>' +
+          '<ul><li data-select-item id="e2e-item"><input type="checkbox" id="e2e-t2" data-select-row aria-label="Select the item" /></li>' +
+          '<li id="e2e-plain"><input type="checkbox" id="e2e-t3" data-select-row aria-label="Select the plain one" /></li></ul></div>');
+      });
+      const marked = () => page.evaluate(() => ['e2e-tile', 'e2e-item', 'e2e-plain'].map(id => document.getElementById(id).classList.contains('is-selected')));
+      await page.check('#e2e-t1');
+      expect(await marked(), [true, false, false], 'after the check of the tile');
+      await page.check('#e2e-t2');
+      expect(await marked(), [true, true, false], 'after the check of the item');
+      await page.check('#e2e-t3');
+      expect(await marked(), [true, true, false], 'after the check of an element that is not an item');
+      await page.uncheck('#e2e-all');
+      expect(await marked(), [false, false, false], 'after the check for all was taken away');
+      await page.check('#e2e-all');
+      expect(await marked(), [true, true, false], 'after the check for all');
+      await page.evaluate(() => document.getElementById('e2e-sel').remove());
     });
     await check('the width of a progress bar comes from data-value, and a stack shows its parts side by side', async () => {
       const share = await page.$eval('.mat-meter--lg[aria-label="Large"] .mat-meter__fill', el => Math.round(100 * el.getBoundingClientRect().width / el.parentElement.getBoundingClientRect().width));

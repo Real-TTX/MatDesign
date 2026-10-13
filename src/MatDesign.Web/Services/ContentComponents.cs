@@ -429,6 +429,7 @@ internal static class ContentComponents
             [
                 "A bulk action works on the rows that are selected on this page; it says so when there are more pages (\"7 selected on this page\").",
                 "Every check in a row has an accessible name that says which row (`aria-label=\"Select Documents\"`).",
+                "Items that are not rows are selected the same way: a `.mat-tile` (Gallery) and any element with `data-select-item` (Cards) are marked `is-selected` when their check is ticked.",
             ]),
 
         new("cards", [
@@ -438,8 +439,31 @@ internal static class ContentComponents
                       <div class="mat-card mat-card--horizontal"><img class="mat-card__media" src="/favicon.svg" alt="" /><div class="mat-card__body mat-stack mat-stack--sm"><strong>Beside the text</strong><p class="mat-muted">Below 600 px the picture goes above.</p></div></div>
                     </div>
                     """),
+                new("Selectable cards with a bulk bar", """
+                    <div class="mat-stack" data-selectable>
+                      <div class="mat-bulk" data-bulk-bar hidden role="status">
+                        <span class="mat-bulk__count"><strong data-bulk-count>0</strong> selected</span>
+                        <button type="button" class="mat-btn mat-btn--secondary mat-btn--sm">Archive</button>
+                      </div>
+                      <div class="mat-card" data-select-item>
+                        <div class="mat-card__head"><label class="mat-check"><input type="checkbox" id="csel-1" data-select-row aria-label="Select Rent agreement" /></label><h3 class="mat-card__title">Rent agreement</h3><span class="mat-pill">Contract</span></div>
+                        <div class="mat-card__body"><p class="mat-muted">Signed on 2026-03-01 and valid until 2029-02-28.</p></div>
+                      </div>
+                      <div class="mat-card" data-select-item>
+                        <div class="mat-card__head"><label class="mat-check"><input type="checkbox" id="csel-2" data-select-row aria-label="Select Insurance policy" /></label><h3 class="mat-card__title">Insurance policy</h3><span class="mat-pill">Contract</span></div>
+                        <div class="mat-card__body"><p class="mat-muted">Renews on 2027-01-01.</p></div>
+                      </div>
+                      <div class="mat-card" data-select-item>
+                        <div class="mat-card__head"><label class="mat-check"><input type="checkbox" id="csel-3" data-select-row aria-label="Select Electricity bill" /></label><h3 class="mat-card__title">Electricity bill</h3><span class="mat-pill mat-pill--ok">Paid</span></div>
+                        <div class="mat-card__body"><p class="mat-muted">September 2026, 86.40.</p></div>
+                      </div>
+                    </div>
+                    """, "Cards, tiles and the rows of a list of your own are selected like the rows of a table (see Table): the check has data-select-row, and the item around it is marked is-selected, a tint behind the whole item and a line in the accent colour. A table row and a mat-tile are items by themselves; for anything else put data-select-item on the element that is the item."),
             ],
-            []),
+            [
+                "The check of a card has an accessible name that says which card (`aria-label=\"Select Rent agreement\"`); a bulk action works on the cards that are selected on this page.",
+                "Without `data-select-item` (and not a `tr` or a `.mat-tile`) nothing is marked, but the check still counts and shows the bar.",
+            ]),
 
         new("tabs", [
                 new("Pills, filling and vertical", """

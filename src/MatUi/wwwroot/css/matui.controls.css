@@ -98,6 +98,8 @@
 }
 .mat-card__head { display: flex; align-items: center; gap: var(--mat-space-3); padding: var(--mat-space-4) var(--mat-space-6); border-bottom: 1px solid var(--mat-border); }
 .mat-card__head .mat-icon { font-size: 1.2rem; color: var(--mat-accent-text); }
+.mat-card__head .mat-check { align-items: center; min-height: 0; } /* the check of a selectable card sits on the line of the title */
+.mat-card__head .mat-check input { margin: 0; }
 .mat-card__title { font-size: var(--mat-fs-lg); font-weight: 650; }
 .mat-card__sub { color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
 .mat-card__body { padding: var(--mat-space-6); }
