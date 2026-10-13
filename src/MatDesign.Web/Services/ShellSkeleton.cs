@@ -108,7 +108,7 @@ public static class ShellSkeleton
             <a class="mat-menu__item" role="menuitem" href="/logout"><svg class="mat-icon"><use href="#mat-i-logout"></use></svg><span>Sign out</span></a>
           </div>
 
-          <!-- the popup of the switcher; an entry that is a link (<a class="mat-menu__item" href="/admin" ...>) is the start page of its menu: it loads that page instead of swapping the items -->
+          <!-- the popup of the switcher; an entry that is a link (<a class="mat-menu__item" href="/admin" ...>) is the start page of its menu: it loads that page instead of swapping the items; a context such as the tenant is a closed parent (data-nav-group) with a form button (mat-menu__form) for each choice, between the menus and the administration -->
           <div class="mat-menu" id="nav-switch-menu" role="menu" aria-label="Menus" data-nav-scope="mat-nav" hidden>
             <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="true" data-nav-set="work" data-nav-title="Work"><svg class="mat-icon"><use href="#mat-i-briefcase"></use></svg><span>Work</span><svg class="mat-icon mat-menu__check"><use href="#mat-i-check"></use></svg></button>
             <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="false" data-nav-set="admin" data-nav-title="Administration" data-nav-attention><svg class="mat-icon"><use href="#mat-i-shield"></use></svg><span>Administration</span><svg class="mat-icon mat-menu__check"><use href="#mat-i-check"></use></svg></button>

@@ -217,6 +217,8 @@ button.mat-nav__item:hover { background: var(--mat-surface-3); }
 .mat-menu__parent[aria-expanded="true"] .mat-menu__chev { transform: rotate(180deg); }
 .mat-menu__parent[aria-expanded="true"] .mat-nav__badge--sum { display: none; }
 .mat-menu__sub { margin: 2px 0 var(--mat-space-1) calc(var(--mat-space-3) + .6rem); padding-left: var(--mat-space-2); border-left: 1px solid var(--mat-border-strong); }
+/* A choice in the popup of the switcher (the tenant) is a button of a small form: the form takes no room of its own, the button is the entry. */
+.mat-menu__form { display: contents; }
 .mat-menu .mat-menu__item--sub { min-height: var(--mat-control-h-sm); font-size: var(--mat-fs-sm); }
 
 /* ---- The foot of the menu: theme button + user (context menu) + version ---- */

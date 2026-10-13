@@ -691,6 +691,39 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
+    // SHELL-15: choices (the tenant) are a closed parent with a form button each, between the menus and the administration
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=list&switcher=bottom&tenants=1');
+    const parent = '#nav-switch-menu [aria-controls="nav-switch-choices-tenants"]';
+    await check('the tenants are a closed parent between the menus and the administration, and open to a form button each', async () => {
+      await page.click('.mat-nav__foot .mat-switcher');
+      const order = await page.evaluate(() => Array.from(document.querySelectorAll('#nav-switch-menu > *')).map(e => e.getAttribute('data-nav-set') || (e.hasAttribute('data-nav-group') ? 'group:' + e.getAttribute('aria-controls') : e.tagName)));
+      expect(order, ['work', 'group:nav-switch-choices-tenants', 'DIV', 'admin'], 'order of the popup');
+      expect(await page.getAttribute(parent, 'aria-expanded'), 'false', 'closed');
+      expectTrue(!(await page.locator('#nav-switch-choices-tenants').isVisible()), 'the choices are visible while the parent is closed');
+      await page.click(parent);
+      expect(await page.getAttribute(parent, 'aria-expanded'), 'true', 'opened');
+      const choices = await page.locator('#nav-switch-choices-tenants button').evaluateAll(els => els.map(e => e.textContent.trim() + ':' + e.getAttribute('aria-checked') + ':' + e.type));
+      expect(choices, ['Muster GmbH:true:submit', 'Beispiel AG:false:submit', 'Dritte KG:false:submit'], 'the choices');
+      expect(await page.locator('#nav-switch-choices-tenants form.mat-menu__form[method="post"]').count(), 3, 'forms');
+      expectTrue(await page.locator('#nav-switch-menu').isVisible(), 'the popup closed while the parent was opened');
+      const box = await page.locator('#nav-switch-menu').boundingBox();
+      const switcher = await page.locator('.mat-nav__foot .mat-switcher').boundingBox();
+      expectTrue(box.y + box.height <= switcher.y + 2, 'the popup covers the switcher it opened from');
+    });
+    await check('the arrow keys walk the menus, the choices and the administration; Escape closes the popup', async () => {
+      await page.focus(parent);
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.textContent.trim()), 'Muster GmbH', 'first choice');
+      await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.textContent.trim()), 'Dritte KG', 'third choice');
+      await page.keyboard.press('ArrowDown');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('data-nav-set')), 'admin', 'the administration is last');
+      await page.keyboard.press('Escape');
+      expectTrue(await page.locator('#nav-switch-menu').isHidden(), 'the popup stays open after Escape');
+    });
+    await ctx.close();
+  }
+  {
     // SHELL-15: an entry that is a link is the start page of its menu: the browser loads it, the script does not swap the items
     const { ctx, page } = await open(desktopOptions, '/Components#switcher');
     const entry = '#switch-pages-menu [data-nav-set="admin"]';

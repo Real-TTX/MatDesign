@@ -967,11 +967,40 @@ public static class ComponentCatalog
                       <a class="mat-menu__item" href="#" role="menuitemradio" aria-checked="false" data-nav-set="admin" data-nav-title="Administration">{I("shield")}<span>Administration</span>{I("check", "mat-menu__check")}</a>
                     </div>
                     """, "For an app whose menus are areas with a page each: the entries are links (the start page of a menu, `href`), so choosing one loads that page and the page that loads shows its own menu. Here the links go nowhere; in the app the page of the Administration draws only the menu of the Administration, with its entry checked.", Frame: "menu"),
+                new("With choices (the tenant)", $"""
+                    <div id="switch-choices-demo">
+                      <div class="mat-nav__switch mat-nav__switch--foot">
+                        <button type="button" class="mat-switcher" data-menu-toggle="switch-choices-menu" data-menu-place="top" aria-haspopup="menu" aria-expanded="false">
+                          <span class="mat-switcher__icon">{I("briefcase")}</span>
+                          <span class="mat-switcher__text"><small data-nav-label="Menu">Menu</small><span class="mat-switcher__name">Work</span></span>
+                          {I("chevron-up", "mat-switcher__chev")}
+                          <span class="mat-switcher__dot" hidden></span>
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mat-menu" id="switch-choices-menu" role="menu" aria-label="Menus" data-nav-scope="switch-choices-demo" hidden>
+                      <a class="mat-menu__item" href="#" role="menuitemradio" aria-checked="true" data-nav-set="work" data-nav-title="Work">{I("briefcase")}<span>Work</span>{I("check", "mat-menu__check")}</a>
+                      <a class="mat-menu__item" href="#" role="menuitemradio" aria-checked="false" data-nav-set="account" data-nav-title="My account">{I("user")}<span>My account</span>{I("check", "mat-menu__check")}</a>
+                      <button type="button" class="mat-menu__item mat-menu__parent" role="menuitem" aria-expanded="false" aria-controls="switch-choices-tenants" data-nav-group>
+                        {I("store")}<span>Tenants</span>{I("chevron-down", "mat-menu__chev")}
+                      </button>
+                      <div class="mat-menu__sub" id="switch-choices-tenants" role="group" aria-label="Tenants" hidden>
+                        <form class="mat-menu__form" method="get" action="#">
+                          <button type="submit" class="mat-menu__item mat-menu__item--sub" role="menuitemradio" aria-checked="true"><span>Muster GmbH</span>{I("check", "mat-menu__check")}</button>
+                        </form>
+                        <form class="mat-menu__form" method="get" action="#">
+                          <button type="submit" class="mat-menu__item mat-menu__item--sub" role="menuitemradio" aria-checked="false"><span>Beispiel AG</span>{I("check", "mat-menu__check")}</button>
+                        </form>
+                      </div>
+                      <a class="mat-menu__item" href="#" role="menuitemradio" aria-checked="false" data-nav-set="admin" data-nav-title="Administration">{I("shield")}<span>Administration</span>{I("check", "mat-menu__check")}</a>
+                    </div>
+                    """, "For an app that serves several tenants or organisations: the switcher sits at the foot above the user, the menus come first, the tenants are a closed parent with a button of a form each (it posts, so a tenant is never changed by a link; here the forms go nowhere), and the Administration stands last.", Frame: "menu"),
             ],
             [
                 "The switcher appears only when an app has at least two menus; a menu the user may not use is not offered.",
                 "When a page loads, the menu that has the current page is shown. Choosing a menu swaps the items: nothing is loaded.",
                 "A menu can have a start page: its entry is a link (`<a href>`, `NavSet.Href`), so choosing it loads that page, which shows its own menu. The other pages carry no hidden panel of it.",
+                "Choices (`ShellModel.Choices`, for example the tenant) are a closed parent (`data-nav-group`) with a form button each (`mat-menu__form`, `role=\"menuitemradio\"`, the current one checked); they stand between the menus and the menus that are `NavSet.Last`.",
                 "The popup is a context menu drawn at the end of the page and names the element that holds the switcher and the panels (`data-nav-scope`).",
                 "Under the logo, above the items, at the foot of the menu directly above the user, or both: the logo and the foot (user, theme button, version) stay where they are, and the switchers show the same menu.",
                 "Or at the end of the menu, above the foot (`mat-nav__switch--end`, after the panels in the markup, the popup opens upwards): for a menu that starts with a main action.",
