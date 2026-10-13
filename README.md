@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **112 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **113 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -50,7 +50,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   energy, sensors, rooms, garden, scenes) first. SVG, as one sprite, as single files or as an archive; MatUi works without it
 
 **The documentation**
-- **51 components with 125 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
+- **51 components with 128 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
   it uses and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined

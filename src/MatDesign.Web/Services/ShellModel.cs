@@ -25,6 +25,9 @@ public sealed class ShellModel
 
     public bool HasSwitcher => Menus.Count > 1;
 
+    /// <summary>The switcher sits at the end of the menu, directly above the foot, instead of under the logo (SHELL-15): for an app whose menu starts with a main action (SHELL-19).</summary>
+    public bool SwitcherAtEnd { get; init; }
+
     /// <summary>The menu that is shown: the one that has the current page, otherwise the first.</summary>
     public NavSet CurrentMenu(string? active) => Menus.FirstOrDefault(m => m.Contains(active)) ?? Menus[0];
 

@@ -101,8 +101,10 @@ Replace the app's own frame with the shell:
 | Page head: icon, title (`h1`), one line | `SHELL-09` |
 | Badges at the right end of an item: a count (`99+` above 99) or a dot, in the tone of the meaning, with a text for screen readers | `SHELL-14` |
 | Submenus: a parent is a button that opens its children, one level deep; the branch with the current page is open | `SHELL-13` |
-| More than one menu (for example Administration): one panel of items per menu and the switcher under the logo | `SHELL-15` |
+| More than one menu (for example Administration): one panel of items per menu and the switcher under the logo, or at the end of the menu directly above the foot (`mat-nav__switch--end`, after the panels in the markup, its popup `data-menu-place="top"`) | `SHELL-15` |
+| A main action first in the menu, filled with the accent: `<a class="mat-nav__item mat-nav__item--primary">` with an icon and a label, one per app, no badge | `SHELL-19` |
 | A long page has an index beside it ("On this page"), an icon in the header bar that opens it in a dialog on small screens | `SHELL-16` |
+| Icons at the right end of the header bar (`mat-topbar__actions`), at most four; the one or two main actions (scan, add) filled with the accent: `mat-btn--primary mat-btn--icon` instead of `mat-btn--ghost` | `SHELL-17` |
 | Sign-in, setup and error pages without a menu: a centred card (`mat-auth`) | `SHELL-11` |
 
 Saving the theme: `data-theme-save-url` on the theme button posts the choice (`theme=system|light|dark`) so it can be kept per user; without it the choice stays in the browser.

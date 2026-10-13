@@ -327,6 +327,28 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
+    public async Task The_sample_app_can_show_a_main_action_first_in_the_menu_and_the_switcher_at_its_end()
+    {
+        // SHELL-19 and SHELL-15: ?action=1 puts the filled item first, ?switcher=end puts the switcher after the panels, above the foot, with a popup that opens upwards
+        var (_, html) = await Get("/Preview?app=matmail&view=list&action=1&switcher=end");
+        var panel = Regex.Match(html, "<nav[^>]*data-nav-panel=\"work\"[^>]*>(.*?)</nav>", RegexOptions.Singleline).Groups[1].Value;
+        Assert.Matches(@"^\s*<ul class=""mat-nav__list"">\s*<li>\s*<a class=""mat-nav__item mat-nav__item--primary\s*"" href=""[^""]+"">\s*<svg", panel);
+        Assert.Equal(1, Regex.Count(html, "mat-nav__item--primary"));
+
+        var at = html.IndexOf("class=\"mat-nav__switch mat-nav__switch--end\"", StringComparison.Ordinal);
+        Assert.True(at > html.LastIndexOf("data-nav-panel=\"admin\"", StringComparison.Ordinal), "the switcher comes before the last panel");
+        Assert.True(at < html.IndexOf("class=\"mat-nav__foot\"", StringComparison.Ordinal), "the switcher comes after the foot");
+        Assert.Contains("data-menu-place=\"top\"", html[at..html.IndexOf("</button>", at, StringComparison.Ordinal)]);
+
+        // without the options the sample is as it was
+        var (_, plain) = await Get("/Preview?app=matmail&view=list");
+        Assert.DoesNotContain("mat-nav__item--primary", plain);
+        Assert.DoesNotContain("mat-nav__switch--end", plain);
+        Assert.Contains("data-menu-place=\"bottom\"", plain);
+        Assert.True(plain.IndexOf("class=\"mat-nav__switch\"", StringComparison.Ordinal) < plain.IndexOf("data-nav-panel=\"work\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task The_sample_app_has_an_administration_behind_the_switcher_with_badges_and_a_submenu()
     {
         var (_, work) = await Get("/Preview?app=matmail&view=list");

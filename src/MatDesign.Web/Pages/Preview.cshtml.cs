@@ -9,6 +9,7 @@ namespace MatDesign.Web.Pages;
 /// <summary>
 /// A sample app of the family, drawn with the real shell and the real controls: it is what the preview frames of the site show.
 /// <c>?app=matmail&amp;theme=dark&amp;accent=%23ff6600&amp;view=list</c>. The search, filter and sort dialogs of the list work.
+/// <c>&amp;action=1</c> adds a main action to the menu (SHELL-19) and <c>&amp;switcher=end</c> puts the switcher at the end of the menu (SHELL-15).
 /// </summary>
 public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
 {
@@ -97,6 +98,25 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
         var customAccent = accent.Length == 7 && accent[0] == '#' && accent[1..].All(Uri.IsHexDigit) ? accent : null;
         Area = Request.Query["area"].ToString() is { Length: > 0 } requested && Areas.ContainsKey(requested) ? requested : null;
         var active = View == "auth" ? string.Empty : Query(View, Area);
+        // ?action=1 draws the main action (SHELL-19) as the first item of the menu, in place of "New item"; ?switcher=end puts the switcher at the end of the menu (SHELL-15).
+        var action = Request.Query["action"].ToString() == "1";
+        var switcherAtEnd = Request.Query["switcher"].ToString() == "end";
+        List<NavItem> itemPages =
+        [
+            new("All items", Query("list"), null, NavBadge.Count(12, "plain", "items")),
+            new("Needs review", Query("list", "review"), null, NavBadge.Count(3, "warn", "to review")),
+            new("Gallery", Query("gallery"), null),
+        ];
+        if (!action)
+        {
+            itemPages.Add(new("New item", Query("form"), null));
+        }
+
+        List<NavItem> start = [new("Dashboard", Query("dashboard"), "dashboard")];
+        if (action)
+        {
+            start.Insert(0, new("Add item", Query("form"), "plus", Primary: true));
+        }
 
         Shell = new ShellModel
         {
@@ -107,22 +127,14 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
             CustomAccent = customAccent,
             PreviewQuery = Base(),
             ActiveHref = active,
+            SwitcherAtEnd = switcherAtEnd,
             Menus =
             [
                 // The menu of the sample: a submenu with badges, and an administration behind the switcher.
                 new("work", "Work", "briefcase",
                 [
-                    new(null, [new("Dashboard", Query("dashboard"), "dashboard")]),
-                    new("Work",
-                    [
-                        new("Items", null, "list", Children:
-                        [
-                            new("All items", Query("list"), null, NavBadge.Count(12, "plain", "items")),
-                            new("Needs review", Query("list", "review"), null, NavBadge.Count(3, "warn", "to review")),
-                            new("Gallery", Query("gallery"), null),
-                            new("New item", Query("form"), null),
-                        ]),
-                    ]),
+                    new(null, start),
+                    new("Work", [new("Items", null, "list", Children: itemPages)]),
                     new("Account",
                     [
                         new("Settings", Query("settings"), "settings"),

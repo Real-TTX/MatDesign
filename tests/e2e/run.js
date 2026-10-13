@@ -28,6 +28,25 @@ function expectTrue(value, what) {
   if (!value) { throw new Error(what); }
 }
 
+// A computed colour ("rgb(1, 2, 3)", "rgba(...)" or "color(srgb 0.1 0.2 0.3)") as [r, g, b] in 0..255, and the WCAG contrast ratio of two of them.
+function parseColour(text) {
+  const n = (text.match(/-?\d*\.?\d+/g) || []).map(Number);
+  return text.startsWith('color(') ? n.slice(0, 3).map(v => v * 255) : n.slice(0, 3);
+}
+function contrastOf(a, b) {
+  const lum = ([r, g, bl]) => [r, g, bl].map(v => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const [hi, lo] = [lum(parseColour(a)), lum(parseColour(b))].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+// The accent of the page as the browser computes it (a variable cannot be compared with a computed colour): the fill, the text on it and the pressed fill.
+function accentOf(page) {
+  return page.evaluate(() => {
+    const probe = (prop, value) => { const t = document.createElement('i'); t.style.setProperty(prop, value); document.body.appendChild(t); const c = getComputedStyle(t).getPropertyValue(prop); t.remove(); return c; };
+    return { accent: probe('background-color', 'var(--mat-accent)'), onAccent: probe('color', 'var(--mat-on-accent)'), active: probe('background-color', 'var(--mat-accent-active)') };
+  });
+}
+
 // What a click on the middle of the first element with this selector would hit: "seen" when it is the element or something inside it, else what covers it
 // (a modal dialog is in the top layer, so whatever is outside of it is under it, whatever its z-index).
 function seenAt(page, selector) {
@@ -696,6 +715,102 @@ function seenAt(page, selector) {
       await page.click('[data-nav-set="admin"]');
       await page.waitForTimeout(250);
       expect((await page.textContent('.mat-switcher__name')).trim(), 'Administration', 'name');
+    });
+    await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- a main action, the switcher at the end, highlighted actions in the bar
+  console.log('\nMain action, switcher at the end, highlighted actions');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Preview?app=matmail&view=list&action=1&switcher=end');
+    await check('the main action is the first item of the menu, filled with the accent and readable on it', async () => {
+      const state = await page.evaluate(() => {
+        const items = Array.from(document.querySelectorAll('.mat-nav__scroll:not([hidden]) .mat-nav__item'));
+        const a = items[0];
+        const s = getComputedStyle(a);
+        return { first: a.classList.contains('mat-nav__item--primary'), text: a.textContent.trim(), bg: s.backgroundColor, colour: s.color, iconColour: getComputedStyle(a.querySelector('.mat-icon')).color, filled: document.querySelectorAll('.mat-nav__item--primary').length, current: a.getAttribute('aria-current') };
+      });
+      const probes = await accentOf(page);
+      expect([state.first, state.text, state.filled], [true, 'Add item', 1], 'the first item');
+      expect(state.bg, probes.accent, 'background of the main action');
+      expect(state.colour, probes.onAccent, 'text of the main action');
+      expect(state.iconColour, probes.onAccent, 'icon of the main action');
+      expectTrue(contrastOf(state.bg, state.colour) >= 4.5, 'the text of the main action is not readable on the accent: ' + contrastOf(state.bg, state.colour).toFixed(2));
+      expect(state.current, null, 'the main action is not the current page on the list page (it leads to the form)');
+    });
+    await check('the switcher sits at the end of the menu, above the foot, and its popup opens upwards', async () => {
+      const box = () => page.evaluate(() => {
+        const r = (s) => { const b = document.querySelector(s).getBoundingClientRect(); return { top: Math.round(b.top), bottom: Math.round(b.bottom) }; };
+        const kids = Array.from(document.querySelector('.mat-nav').children).map(c => c.className.split(' ')[0]);
+        return { brand: r('.mat-nav__brand'), panel: r('.mat-nav__scroll:not([hidden])'), sw: r('.mat-nav__switch'), foot: r('.mat-nav__foot'), kids };
+      });
+      const b = await box();
+      expect(b.kids, ['mat-nav__brand', 'mat-nav__scroll', 'mat-nav__scroll', 'mat-nav__switch', 'mat-nav__foot'], 'order of the blocks of the menu in the markup');
+      expectTrue(b.brand.bottom <= b.panel.top + 1 && b.panel.bottom <= b.sw.top + 1 && b.sw.bottom <= b.foot.top + 1, 'the blocks are not stacked brand, items, switcher, foot: ' + JSON.stringify(b));
+      await page.click('.mat-switcher');
+      await page.waitForTimeout(250);
+      const popup = await page.evaluate(() => { const m = document.getElementById('nav-switch-menu').getBoundingClientRect(); const s = document.querySelector('.mat-switcher').getBoundingClientRect(); return { popupBottom: Math.round(m.bottom), switcherTop: Math.round(s.top), popupTop: Math.round(m.top) }; });
+      expectTrue(popup.popupBottom <= popup.switcherTop && popup.popupTop >= 0, 'the popup does not open upwards and inside the window: ' + JSON.stringify(popup));
+      await page.click('[data-nav-set="admin"]');
+      await page.waitForTimeout(250);
+      expect((await page.textContent('.mat-switcher__name')).trim(), 'Administration', 'name');
+      expectTrue(await page.locator('[data-nav-panel="admin"]').isVisible() && !(await page.locator('[data-nav-panel="work"]').isVisible()), 'panels after choosing Administration');
+      const after = await box();
+      expectTrue(after.panel.bottom <= after.sw.top + 1 && after.sw.bottom <= after.foot.top + 1, 'the switcher moved when the menu was swapped: ' + JSON.stringify(after));
+    });
+    await check('on the page of the main action it stays filled, a step darker, and stays readable', async () => {
+      await page.goto(BASE + '/Preview?app=matmail&view=form&action=1&switcher=end', { waitUntil: 'networkidle' });
+      const probes = await accentOf(page);
+      const state = await page.evaluate(() => { const a = document.querySelector('.mat-nav__item--primary'); const s = getComputedStyle(a); return { current: a.getAttribute('aria-current'), bg: s.backgroundColor, colour: s.color }; });
+      expect(state.current, 'page', 'aria-current');
+      expect(state.bg, probes.active, 'background of the main action on its own page');
+      expectTrue(state.bg !== probes.accent, 'it looks the same on its own page');
+      expectTrue(contrastOf(state.bg, state.colour) >= 4.5, 'the text is not readable on the darker fill: ' + contrastOf(state.bg, state.colour).toFixed(2));
+    });
+    await check('without the options the sample menu is as it was: the switcher under the logo, no filled item', async () => {
+      await page.goto(BASE + '/Preview?app=matmail&view=list', { waitUntil: 'networkidle' });
+      const kids = await page.evaluate(() => Array.from(document.querySelector('.mat-nav').children).map(c => c.className.split(' ')[0]));
+      expect(kids, ['mat-nav__brand', 'mat-nav__switch', 'mat-nav__scroll', 'mat-nav__scroll', 'mat-nav__foot'], 'blocks');
+      expect(await page.locator('.mat-nav__item--primary').count(), 0, 'filled items');
+      expect(await page.getAttribute('.mat-switcher', 'data-menu-place'), 'bottom', 'the popup opens downwards under the logo');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list&action=1&switcher=end');
+    await check('on a phone the drawer has the main action first and the switcher above the foot, and the popup stays on the screen', async () => {
+      await page.click('[data-nav-toggle]');
+      await page.waitForTimeout(450);
+      const b = await page.evaluate(() => {
+        const r = (s) => { const x = document.querySelector(s).getBoundingClientRect(); return { top: Math.round(x.top), bottom: Math.round(x.bottom), left: Math.round(x.left), right: Math.round(x.right) }; };
+        return { first: document.querySelector('.mat-nav__scroll:not([hidden]) .mat-nav__item').classList.contains('mat-nav__item--primary'), panel: r('.mat-nav__scroll:not([hidden])'), sw: r('.mat-nav__switch'), foot: r('.mat-nav__foot'), vh: innerHeight };
+      });
+      expect(b.first, true, 'the main action is the first item');
+      expectTrue(b.panel.bottom <= b.sw.top + 1 && b.sw.bottom <= b.foot.top + 1 && b.foot.bottom <= b.vh + 1, 'the blocks of the drawer: ' + JSON.stringify(b));
+      await page.click('.mat-switcher');
+      await page.waitForTimeout(250);
+      const popup = await page.evaluate(() => { const m = document.getElementById('nav-switch-menu').getBoundingClientRect(); const s = document.querySelector('.mat-switcher').getBoundingClientRect(); const hit = document.elementFromPoint(m.x + m.width / 2, m.y + 12); return { above: Math.round(m.bottom) <= Math.round(s.top), inside: m.top >= 0 && m.right <= innerWidth, seen: !!(hit && hit.closest('#nav-switch-menu')) }; });
+      expect(popup, { above: true, inside: true, seen: true }, 'the popup on a phone');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#topbar');
+    await check('a highlighted action of the header bar is filled with the accent, readable, with room around it and in line with the content edge', async () => {
+      const state = await page.evaluate(() => {
+        const bar = Array.from(document.querySelectorAll('.mat-topbar')).find(b => b.querySelector('.mat-topbar__actions .mat-btn--primary'));
+        const buttons = Array.from(bar.querySelectorAll('.mat-topbar__actions .mat-btn--primary'));
+        const s = getComputedStyle(buttons[0]);
+        const rects = buttons.map(b => b.getBoundingClientRect());
+        const edge = bar.getBoundingClientRect().right - parseFloat(getComputedStyle(bar).paddingRight);
+        return { count: buttons.length, bg: s.backgroundColor, colour: s.color, gap: Math.round(rects[1].left - rects[0].right), lastToEdge: Math.round(edge - rects[rects.length - 1].right), side: Math.round(rects[0].width) };
+      });
+      const probes = await accentOf(page);
+      expect(state.count, 2, 'highlighted actions');
+      expect(state.bg, probes.accent, 'background');
+      expectTrue(contrastOf(state.bg, state.colour) >= 4.5, 'the icon is not readable on the accent');
+      expectTrue(state.gap >= 8, 'the highlighted buttons touch: gap ' + state.gap + ' px');
+      expectTrue(Math.abs(state.lastToEdge) <= 1, 'the last filled button is not in line with the edge of the content: ' + state.lastToEdge + ' px');
     });
     await ctx.close();
   }
