@@ -464,7 +464,9 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         Assert.Equal(HttpStatusCode.OK, css.StatusCode);
         Assert.Equal("*", css.Headers.GetValues("Access-Control-Allow-Origin").Single());
         var text = await css.Content.ReadAsStringAsync();
-        Assert.StartsWith($"/* MatUi {AppVersion.Current}", text);
+        // the version of the toolkit first (what an app compares), then the build of the site that made the file
+        Assert.StartsWith($"/* MatUi {AppVersion.MatUi} (", text);
+        Assert.Contains($") - build {AppVersion.Current} - bundled from", text.Split('\n')[0]);
         foreach (var part in ToolkitFiles.CssParts)
         {
             Assert.Contains(File.ReadAllText(TestPaths.Toolkit($"css/{part}")).Split('\n')[^2].Trim(), text);

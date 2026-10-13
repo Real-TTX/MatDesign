@@ -1,4 +1,6 @@
 /* ==========================================================================
+   Version 0.1.0 of the toolkit MatUi (what changed in each version: CHANGELOG.md; how to update an app: docs/VERSIONING.md).
+   `node tools/bump.js` writes the version here, in matui.boot.js and in MatUiVersion (Directory.Build.props); window.MatUi.version has it.
    MatUi · behaviour
    Dependency-free. Everything is wired by delegated listeners and data-attributes, so server-rendered and dynamically added
    markup behave the same. The public API is window.MatUi (dialog, confirm, alert, prompt, toast, theme, accent).
@@ -5106,7 +5108,7 @@
   if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', init); } else { init(); }
 
   window.MatUi = {
-    version: '1',
+    version: '0.1.0',
     dialog: { open: openDialog, close: closeDialog },
     confirm: confirmDialog,
     alert: alertDialog,

@@ -113,6 +113,9 @@ ui.MapGet("/matui.js", (ToolkitFiles files, HttpContext http) => ToolkitFiles.Re
 ui.MapGet("/matui.boot.js", (ToolkitFiles files, HttpContext http) => ToolkitFiles.Result(http, files.BootScript, "text/javascript; charset=utf-8", files.Hash));
 ui.MapGet("/matui-icons.svg", (ToolkitFiles files, HttpContext http) => ToolkitFiles.Result(http, files.Sprite, "image/svg+xml; charset=utf-8", files.Hash));
 ui.MapGet("/matui.zip", (ToolkitFiles files) => Results.File(files.Zip, "application/zip", files.ZipName));
+// What version this is, and what changed in each: the manifest is what a program compares (version, hash and SHA-256 of every file), the changelog is what a person reads.
+ui.MapGet("/manifest.json", (ToolkitFiles files, HttpContext http) => ToolkitFiles.Result(http, files.ManifestText(), "application/json; charset=utf-8", files.Hash));
+ui.MapGet("/CHANGELOG.md", (HttpContext http) => { var text = Changelog.LoadText(); return ToolkitFiles.Result(http, text, "text/markdown; charset=utf-8", ToolkitFiles.ShortHash(text)); });
 ui.MapGet("/css/{name}", (string name, ToolkitFiles files, HttpContext http) =>
     files.Css(name) is { } css ? ToolkitFiles.Result(http, css, "text/css; charset=utf-8", files.Hash) : Results.NotFound());
 
@@ -133,7 +136,38 @@ api.MapGet("/rules", (DesignData design) => design.Rules.Select(r => new { r.Id,
 api.MapGet("/tokens", (ToolkitFiles files) => files.Tokens.Select(t => new { t.Name, t.Light, t.Dark, t.Description, t.Group }));
 api.MapGet("/icons", (ToolkitFiles files) => files.IconNames);
 api.MapGet("/iconlib", (IconLibrary library) => Results.Content(library.Catalogue, "application/json; charset=utf-8"));
-api.MapGet("/version", (ToolkitFiles files) => new { toolkit = AppVersion.Current, hash = files.Hash });
+// toolkit = the build of the site, matui = the version of the toolkit (semantic versioning: the number an app compares with its copy)
+api.MapGet("/version", (ToolkitFiles files) => new { toolkit = AppVersion.Current, matui = AppVersion.MatUi, hash = files.Hash });
+// What an app takes with an update: the versions after <since> (all of them without it), each with its sections and, where it breaks something, its migration steps.
+api.MapGet("/changelog", (string? since) =>
+{
+    if (since is not null && !Changelog.IsVersion(since))
+    {
+        return Results.BadRequest(new { error = "since is a version of three numbers, like 0.1.0." });
+    }
+
+    var log = Changelog.Current;
+    var releases = since is null ? log.Releases : log.Since(since);
+    static object Shape(ChangelogEntry e) => new
+    {
+        version = e.Version,
+        date = e.Date,
+        note = e.Note,
+        breaking = e.Breaking,
+        migration = e.Migration,
+        sections = e.Sections.GroupBy(s => s.Name).ToDictionary(g => g.Key, g => g.SelectMany(s => s.Items).ToList()),
+    };
+
+    return Results.Json(new
+    {
+        version = AppVersion.MatUi,
+        since,
+        upToDate = since is not null && Changelog.Compare(since, AppVersion.MatUi) >= 0,
+        breaking = releases.Any(r => r.Breaking),
+        unreleased = log.Unreleased is { } unreleased ? Shape(unreleased) : null,
+        releases = releases.Select(Shape),
+    });
+});
 
 // ---- The releases of the design system (the Studio makes them): what an app copies from, and how it learns that there is a newer one. Public and read-only, like /ui. ----
 api.MapGet("/releases", (ReleaseService service) => service.Releases().Select(m => new { m.Version, m.At, m.Hash, m.Note, files = m.Files.Count, url = $"/releases/{m.Version}/" }));

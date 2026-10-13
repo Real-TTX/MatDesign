@@ -11,11 +11,11 @@
         <div class="mat-row mat-row--between">
             <div>
                 <h2 id="zip-title">MatUi @Model.Version</h2>
-                <p class="mat-muted">Hash <code>@Model.Hash</code>. Everything below in one archive, with a README.</p>
+                <p class="mat-muted">Build <code>@Model.Build</code>, hash <code>@Model.Hash</code>. Everything below in one archive, with a README, the changelog and a manifest.</p>
             </div>
             <a class="mat-btn mat-btn--primary" href="@Model.ZipUrl">@Ui.Icon("download")<span>Download the archive (@Ui.Kb(Model.ZipBytes))</span></a>
         </div>
-        <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body"><strong>Copy, do not link.</strong> An app carries these files itself and never loads them from this site (<a href="/Rules/Detail?id=CODE-03">CODE-03</a>): it must work offline and as a PWA. Update by copying again; the version is in the first line of <code>matui.css</code>.</div></div>
+        <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body"><strong>Copy, do not link.</strong> An app carries these files itself and never loads them from this site (<a href="/Rules/Detail?id=CODE-03">CODE-03</a>): it must work offline and as a PWA. Update by copying <strong>all</strong> the files again; the version is in the first line of <code>matui.css</code> and in <code>MatUi.version</code>, and <a href="/Changelog">the changelog</a> says what an update takes with it.</div></div>
     </div>
 </section>
 
@@ -59,6 +59,24 @@
     </div>
 </section>
 
+<section class="mat-section" aria-labelledby="versions-title">
+    <div class="mat-section__head">
+        <h2 id="versions-title">Versions and updating</h2>
+        <p class="mat-section__lead">
+            MatUi has a version of its own, with semantic versioning: a patch fixes something, a minor adds something, a major needs work in the app.
+            A version that breaks something says so in the changelog and says what to do.
+        </p>
+    </div>
+    <div class="mat-card"><div class="mat-card__body">
+        <dl class="mat-kv">
+            <dt>This version</dt><dd><strong>@Model.Version</strong>, built by MatDesign <code>@Model.Build</code></dd>
+            <dt>What changed</dt><dd><a href="/Changelog">The changelog</a>, or as a file <a href="/ui/CHANGELOG.md">/ui/CHANGELOG.md</a>, or as data <a href="/api/changelog">/api/changelog</a> (<code>?since=0.1.0</code> gives what an app on 0.1.0 takes with an update)</dd>
+            <dt>For a program</dt><dd><a href="/ui/manifest.json">/ui/manifest.json</a>: the version and every file with its SHA-256; the archive carries it as <code>matui.manifest.json</code></dd>
+            <dt>Check an app</dt><dd><code>node tools/matui-check.js &lt;folder of the app&gt;</code> finds its copy of MatUi, says which version it is, whether files were changed by hand and what an update takes with it</dd>
+            <dt>How it works</dt><dd><code>docs/VERSIONING.md</code>: what is a breaking change, how a version is made and how an app updates</dd>
+        </dl>
+    </div></div>
+</section>
 <section class="mat-section" aria-labelledby="use-title">
     <div class="mat-section__head"><h2 id="use-title">Use it</h2></div>
     <div data-tabs>

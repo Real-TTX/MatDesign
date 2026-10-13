@@ -151,7 +151,7 @@ public static class Navigation
                 new("Patterns", "/Patterns", "template"),
                 new("Builder", "/Builder", "wrench"),
             ]),
-            new("Use it", [new("Download", "/Download", "download")]),
+            new("Use it", [new("Download", "/Download", "download"), new("Changelog", "/Changelog", "file-text")]),
         ]),
     ];
 
