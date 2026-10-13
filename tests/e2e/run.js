@@ -1167,8 +1167,11 @@ function expectTrue(value, what) {
     });
     await check('a side dialog sits at the right edge and closes with its X', async () => {
       await page.evaluate(() => document.getElementById('dialogs').scrollIntoView());
+      // the animation is noted when it starts: on a page of two megabytes it can be over before a later look would find it
+      await page.evaluate(() => { window.__side = []; document.getElementById('dlg-side').addEventListener('animationstart', e => window.__side.push(e.animationName)); });
       await page.click('[data-dialog-open="dlg-side"]');
-      expect(await page.$eval('#dlg-side', el => el.getAnimations().map(a => a.animationName)), ['mat-panel-in-end'], 'the animation of the panel (not the one of the centred dialog)');
+      await page.waitForFunction(() => window.__side.length > 0);
+      expect(await page.evaluate(() => window.__side), ['mat-panel-in-end'], 'the animation of the panel (not the one of the centred dialog)');
       await page.waitForFunction(() => document.getElementById('dlg-side').getAnimations().length === 0);
       const state = await page.$eval('#dlg-side', el => { const r = el.getBoundingClientRect(); return { open: el.open, atRight: Math.abs(r.right - innerWidth) <= 1, height: Math.round(r.height) === innerHeight, narrow: r.width < innerWidth }; });
       expect(state, { open: true, atRight: true, height: true, narrow: true }, 'side dialog');
@@ -2108,6 +2111,7 @@ function expectTrue(value, what) {
     });
     await check('"Show in a page" at a component opens the panel of its group and outlines the component there', async () => {
       await page.goto(BASE + '/Components#group-lists-and-data', { waitUntil: 'networkidle' });
+      await page.waitForFunction(() => document.readyState === 'complete');
       await page.click('#toolbar [data-context-show]');
       await page.waitForFunction(() => { const f = document.querySelector('#context-group-lists-and-data iframe'); return f && f.getAttribute('data-loaded') === 'true'; });
       await page.waitForTimeout(300);
@@ -2122,6 +2126,7 @@ function expectTrue(value, what) {
       expect(await (await frameOf('group-lists-and-data')).evaluate(() => getComputedStyle(document.querySelector('.mat-gallery')).outlineStyle), 'solid', 'the outline of the gallery');
       expectTrue((await page.getAttribute('#context-group-lists-and-data [data-context-open-page]', 'href')).includes('view=gallery'), 'the link to the page is still the table');
       await page.goto(BASE + '/Components#group-feedback', { waitUntil: 'networkidle' });
+      await page.waitForFunction(() => document.readyState === 'complete');
       await page.click('#dialogs [data-context-show]');
       await page.waitForFunction(() => { const f = document.querySelector('#context-group-feedback iframe'); return f && f.getAttribute('data-loaded') === 'true'; });
       await page.waitForTimeout(500);
@@ -2459,6 +2464,7 @@ function expectTrue(value, what) {
       });
       await check('the component is on its page, live, in its group and in the index of the page', async () => {
         await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+        await page.waitForFunction(() => document.readyState === 'complete');
         expect(await page.locator('#' + compId + ' .mat-pill--ok').count(), 1, 'the example drawn live on the page');
         expect(await page.locator('.mat-toc-aside a[href="#' + compId + '"]').count(), 1, 'the link in the index');
         expectTrue((await page.locator('#group-content').evaluate((el, id) => !!el.querySelector('#' + id), compId)), 'the component is not in the group Content');
