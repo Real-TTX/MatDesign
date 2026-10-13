@@ -4261,6 +4261,81 @@ function expectTrue(value, what) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the version of the toolkit and its changelog
+  console.log('\nThe version of the toolkit');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Changelog');
+    const api = async url => (await page.request.get(BASE + url)).json();
+    await check('the script, the manifest and the API say the same version, and the first line of the stylesheet names it', async () => {
+      const served = await api('/api/version');
+      expectTrue(/^\d+\.\d+\.\d+$/.test(served.matui), 'the version is not three numbers: ' + served.matui);
+      expect(await page.evaluate(() => window.MatUi.version), served.matui, 'MatUi.version');
+      expect((await api('/ui/manifest.json')).version, served.matui, 'the manifest');
+      const css = await (await page.request.get(BASE + '/ui/matui.css')).text();
+      expectTrue(css.startsWith(`/* MatUi ${served.matui} (`), 'the first line of matui.css: ' + css.split('\n')[0]);
+      expectTrue(css.split('\n')[0].includes(' - build '), 'the build is not in the first line');
+    });
+    await check('the changelog page lists the versions with their sections and shows what is not released yet', async () => {
+      expect((await page.textContent('h1')).trim(), 'Changelog', 'h1');
+      expectTrue(await page.locator('#unreleased').isVisible(), 'no Unreleased');
+      expectTrue((await page.locator('.mat-card h3').allTextContents()).some(t => t.startsWith('Version ')), 'no version');
+      expectTrue((await page.locator('.doc-changes__name').allTextContents()).includes('Added'), 'no section Added');
+      // the toolkit classes in the text of an entry are code
+      expectTrue(await page.locator('.doc-changes code').count() > 5, 'the `code` of the entries is not drawn as code');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways');
+    });
+    await check('what an update takes with it: a version that is older, the current one and one that is no version', async () => {
+      const current = (await api('/api/version')).matui;
+      await page.fill('#since', '0.0.1');
+      await page.click('form button[type=submit]');
+      await page.waitForLoadState('networkidle');
+      expectTrue((await page.textContent('.mat-alert--info, .mat-alert--warning')).includes('newer version'), 'no summary of the newer versions');
+      await page.fill('#since', current);
+      await page.click('form button[type=submit]');
+      await page.waitForLoadState('networkidle');
+      expectTrue((await page.textContent('.mat-alert--success')).includes('up to date'), 'the current version is not up to date');
+      await page.fill('#since', 'banana');
+      await page.click('form button[type=submit]');
+      await page.waitForLoadState('networkidle');
+      expectTrue((await page.textContent('.mat-error')).includes('three numbers'), 'no message for something that is not a version');
+      expect(await page.getAttribute('#since', 'value'), 'banana', 'the input is kept');
+    });
+    await check('the changelog as data answers for a version, and the page is in the menu', async () => {
+      const since = await api('/api/changelog?since=0.0.1');
+      expect(since.upToDate, false, 'upToDate');
+      expectTrue(since.releases.length > 0, 'no versions after 0.0.1');
+      expectTrue(since.releases.every(r => typeof r.version === 'string' && typeof r.breaking === 'boolean' && Array.isArray(r.migration)), 'the shape of a version');
+      expect((await page.request.get(BASE + '/api/changelog?since=old')).status(), 400, 'a bad version');
+      expectTrue((await page.locator('.mat-nav a[href="/Changelog"]').getAttribute('aria-current')) === 'page', 'the page is not the open item of the menu');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Download');
+    await check('the download page names the version and where to read what changed, and the archive carries its manifest', async () => {
+      const version = (await (await page.request.get(BASE + '/api/version')).json()).matui;
+      const text = await page.textContent('main');
+      expectTrue(text.includes(`MatUi ${version}`), 'the version is not on the page');
+      for (const address of ['/Changelog', '/ui/CHANGELOG.md', '/ui/manifest.json', '/api/changelog']) { expectTrue(await page.locator(`a[href^="${address}"]`).count() > 0, 'no link to ' + address); }
+      const manifest = await (await page.request.get(BASE + '/ui/manifest.json')).json();
+      expect(manifest.version, version, 'the manifest');
+      for (const file of manifest.files.slice(0, 3)) {
+        const body = await (await page.request.get(BASE + file.url)).text();
+        expect(require('crypto').createHash('sha256').update(body, 'utf8').digest('hex'), file.sha256, 'the hash of ' + file.name);
+      }
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Changelog');
+    await check('on a phone the changelog is one column and the form fits', async () => {
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'the page scrolls sideways');
+      const form = await page.locator('form[action="/Changelog"] .mat-btn--primary').boundingBox();
+      expectTrue(form && form.x >= 0 && form.x + form.width <= 390, 'the button leaves the screen');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- layout and utilities
   console.log('\nLayout and utilities');
   {

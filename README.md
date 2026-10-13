@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **110 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **116 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -46,7 +46,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   energy, sensors, rooms, garden, scenes) first. SVG, as one sprite, as single files or as an archive; MatUi works without it
 
 **The documentation**
-- **51 components with 118 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
+- **64 components with 183 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
   it uses and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined
@@ -343,6 +343,9 @@ Each run of the browser checks makes one release (a release never changes), so t
 Other tools: `node tools/icons.js` rebuilds the icon sprite from `tools/icons.base.json` and `node tools/iconlib.js` the icon library from `tools/iconlib/`
 (CI fails when either is stale),
 `node tools/audit.js` rescans the other repositories for the audit snapshot.
+
+**Versions:** MatUi has a version of its own (`MatUiVersion`, semantic versioning), a [changelog](CHANGELOG.md) (also on the site at `/Changelog`) and a guide for updating an app ([docs/VERSIONING.md](docs/VERSIONING.md)).
+`node tools/bump.js <patch|minor|major>` makes the next version, `node tools/matui-check.js <folder of an app>` shows how an app's copy stands against it.
 
 **What the tests hold the site to**, among other things:
 

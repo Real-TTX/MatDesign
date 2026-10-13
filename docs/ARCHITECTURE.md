@@ -176,7 +176,7 @@ All of this is values in `matui.tokens.css` and a few rules per file, so a diffe
 
 ### What is deliberately not in the toolkit
 
-Compared with a general kit such as Bootstrap there is **no navbar** (the shell replaces it, `SHELL-01`), **no carousel**, **no jumbotron or hero** (an app is not a landing page), **no off-canvas as a
+Compared with a general kit such as Bootstrap there is **no navbar** (the shell replaces it, `SHELL-01`), **no jumbotron or hero** (an app is not a landing page), **no off-canvas as a
 component of its own** (a dialog from the side, `mat-dialog--end`, does it), and **no theming with Sass variables** (the tokens are custom properties and an app sets one colour). What an app needs
 beyond that is a component of its own with the app's prefix (`CODE-04`).
 

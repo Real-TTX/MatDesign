@@ -199,6 +199,8 @@ with the one it carries, and when the release is newer copies `/releases/<versio
 checking each file against the SHA-256 of the manifest. Every release also carries `styleguide.html`, the rules and every component with its examples as one static page (`/releases/<version>/styleguide.html`), and `design.json` with the same as data. The app still carries its own copy (`CODE-03`): the release is where the copy comes from, not something it loads at run time. The Studio's **Versions** page is where it is written down which release each app has,
 and which apps are behind.
 
+**The toolkit has a version of its own** (semantic versioning): it is in the first line of `matui.css` and in `MatUi.version`, and `/Changelog` (also `/ui/CHANGELOG.md` and `/api/changelog?since=0.1.0`) says what changed in each version, what breaks and what an app has to do. `node tools/matui-check.js <folder of the app>` finds the app's copy, says which version it is, whether the files are all one version and whether one was changed by hand, and what an update takes with it. How a version is made and how an app updates, step by step: [VERSIONING.md](VERSIONING.md).
+
 ## 7. Check it
 
 1. Run the app, look at **every page in light and dark, and at 390 px** (`MOBILE-01`). Take screenshots and look at them.
