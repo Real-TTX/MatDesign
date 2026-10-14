@@ -143,6 +143,7 @@ api.MapGet("/schemes", (ToolkitFiles files) => ColorSchemes.All.Select(s => new
 }));
 api.MapGet("/rules", (DesignData design) => design.Rules.Select(r => new { r.Id, r.Area, r.Title, r.Statement, level = r.Level.ToString(), r.Source, r.Check }));
 api.MapGet("/tokens", (ToolkitFiles files) => files.Tokens.Select(t => new { t.Name, t.Light, t.Dark, t.Description, t.Group }));
+api.MapGet("/properties", (ToolkitFiles files) => files.Properties.Select(p => new { p.Component, p.Name, p.Type, p.Fallback, p.Description }));
 api.MapGet("/icons", (ToolkitFiles files) => files.IconNames);
 api.MapGet("/iconlib", (IconLibrary library) => Results.Content(library.Catalogue, "application/json; charset=utf-8"));
 // toolkit = the build of the site, matui = the version of the toolkit (semantic versioning: the number an app compares with its copy)

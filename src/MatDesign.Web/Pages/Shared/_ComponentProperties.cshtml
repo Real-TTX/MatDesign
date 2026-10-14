@@ -1,0 +1,29 @@
+@model IReadOnlyList<MatDesign.Core.ComponentProperty>
+@*
+    The documented properties of a component (stage 11 of docs/PRODUCT.md, SPACE-06): name, type, what the control uses when it is not set, and what it changes.
+    Read from the @@prop lines of the CSS, so this table cannot differ from the toolkit.
+*@
+<div class="mat-table-wrap">
+    <table class="mat-table mat-table--compact doc-props">
+        <caption class="mat-sr-only">Component properties</caption>
+        <thead>
+            <tr>
+                <th scope="col">Property</th>
+                <th scope="col">Type</th>
+                <th scope="col">Default</th>
+                <th scope="col">What it changes</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td data-label="Property"><code>@p.Name</code></td>
+                    <td data-label="Type">@p.Type</td>
+                    <td data-label="Default"><code>@p.Fallback</code></td>
+                    <td data-label="What it changes">@p.Description</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

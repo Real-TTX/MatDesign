@@ -45,26 +45,31 @@
 }
 
 /* ---- Table ---- */
+/* @prop table | --mat-table-radius | length | var(--mat-radius-lg) | Corner radius of the frame around a table. */
+/* @prop table | --mat-table-pad-x | length | var(--mat-space-4) | Space at the sides between the edge of a cell and its content (also in the card a row becomes on a phone). */
+/* @prop table | --mat-table-pad-y | length | var(--mat-space-3) | Space above and below the content of a cell (a compact table keeps its own). */
+/* @prop table | --mat-table-font-size | length | var(--mat-fs-sm) | Size of the text in a table, the headings included. */
+/* @prop table | --mat-table-head-font-weight | number | 600 | Weight of the letters of the column headings. */
 .mat-table-wrap {
   overflow-x: auto;
   background: var(--mat-surface);
   border: 1px solid var(--mat-border);
-  border-radius: var(--mat-radius-lg);
+  border-radius: var(--mat-table-radius, var(--mat-radius-lg));
   box-shadow: var(--mat-shadow-1);
 }
-.mat-table { width: 100%; border-collapse: collapse; font-size: var(--mat-fs-sm); }
-.mat-table caption { text-align: left; padding: var(--mat-space-3) var(--mat-space-4); color: var(--mat-text-muted); }
+.mat-table { width: 100%; border-collapse: collapse; font-size: var(--mat-table-font-size, var(--mat-fs-sm)); }
+.mat-table caption { text-align: left; padding: var(--mat-table-pad-y, var(--mat-space-3)) var(--mat-table-pad-x, var(--mat-space-4)); color: var(--mat-text-muted); }
 .mat-table th {
-  padding: var(--mat-space-3) var(--mat-space-4);
+  padding: var(--mat-table-pad-y, var(--mat-space-3)) var(--mat-table-pad-x, var(--mat-space-4));
   text-align: left;
-  font-size: var(--mat-fs-sm);
-  font-weight: 600;
+  font-size: var(--mat-table-font-size, var(--mat-fs-sm));
+  font-weight: var(--mat-table-head-font-weight, 600);
   color: var(--mat-text-muted);
   background: var(--mat-surface-2);
   border-bottom: 1px solid var(--mat-border);
   white-space: nowrap;
 }
-.mat-table td { padding: var(--mat-space-3) var(--mat-space-4); border-top: 1px solid var(--mat-border); vertical-align: middle; }
+.mat-table td { padding: var(--mat-table-pad-y, var(--mat-space-3)) var(--mat-table-pad-x, var(--mat-space-4)); border-top: 1px solid var(--mat-border); vertical-align: middle; }
 .mat-table tbody tr:hover { background: var(--mat-surface-2); }
 .mat-table tbody tr.is-selected { background: var(--mat-accent-soft-strong); }
 .mat-table th.mat-num { text-align: right; }
@@ -80,7 +85,7 @@
 @media (max-width: 720px) {
   .mat-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .mat-table, .mat-table tbody, .mat-table tr, .mat-table td { display: block; width: 100%; }
-  .mat-table tr { padding: var(--mat-space-3) var(--mat-space-4); border-top: 1px solid var(--mat-border); }
+  .mat-table tr { padding: var(--mat-table-pad-y, var(--mat-space-3)) var(--mat-table-pad-x, var(--mat-space-4)); border-top: 1px solid var(--mat-border); }
   .mat-table tbody tr:first-child { border-top: 0; }
   .mat-table td { display: flex; align-items: baseline; justify-content: space-between; gap: var(--mat-space-4); padding: var(--mat-space-1) 0; border: 0; text-align: right; }
   .mat-table td::before { content: attr(data-label); flex: none; color: var(--mat-text-muted); font-size: var(--mat-fs-sm); font-weight: 500; text-align: left; }
@@ -170,14 +175,19 @@ a.mat-tile:hover { border-color: var(--mat-text-faint); background: var(--mat-su
 .mat-tile__meta { color: var(--mat-text-muted); font-size: var(--mat-fs-xs); }
 
 /* ---- Tabs (one style app-wide: underline) ---- */
-.mat-tabs { display: flex; gap: var(--mat-space-1); border-bottom: 1px solid var(--mat-border); overflow-x: auto; }
+/* @prop tabs | --mat-tabs-height | length | var(--mat-control-h) | Least height of a tab of the underline style. A floor: on a touch screen keep it at 44 px or more (MOBILE-04). */
+/* @prop tabs | --mat-tabs-pad-x | length | var(--mat-space-4) | Space between the edge of a tab and its label. */
+/* @prop tabs | --mat-tabs-gap | length | var(--mat-space-1) | Space between two tabs. */
+/* @prop tabs | --mat-tabs-indicator-width | length | 2px | Thickness of the line under the current tab. */
+/* @prop tabs | --mat-tabs-font-weight | number | 600 | Weight of the letters of a tab. */
+.mat-tabs { display: flex; gap: var(--mat-tabs-gap, var(--mat-space-1)); border-bottom: 1px solid var(--mat-border); overflow-x: auto; }
 .mat-tab {
   display: inline-flex; align-items: center; gap: var(--mat-space-2);
-  min-height: var(--mat-control-h); padding: 0 var(--mat-space-4);
+  min-height: var(--mat-tabs-height, var(--mat-control-h)); padding: 0 var(--mat-tabs-pad-x, var(--mat-space-4));
   margin-bottom: -1px;
-  border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+  border: 0; border-bottom: var(--mat-tabs-indicator-width, 2px) solid transparent; border-radius: 0;
   background: transparent; color: var(--mat-text-muted);
-  font-weight: 600; white-space: nowrap; cursor: pointer; text-decoration: none;
+  font-weight: var(--mat-tabs-font-weight, 600); white-space: nowrap; cursor: pointer; text-decoration: none;
   transition: color var(--mat-dur-fast) var(--mat-ease), border-color var(--mat-dur-fast) var(--mat-ease);
 }
 .mat-tab:hover { color: var(--mat-text); text-decoration: none; }
@@ -185,6 +195,8 @@ a.mat-tile:hover { border-color: var(--mat-text-faint); background: var(--mat-su
 .mat-tabpanel { padding-top: var(--mat-space-5); }
 
 /* ---- Context menu (the user menu, row menus). Positioned by matui.js. ---- */
+/* @prop menu | --mat-menu-radius | length | var(--mat-radius-lg) | Corner radius of a context menu. */
+/* @prop menu | --mat-menu-pad | length | var(--mat-space-2) | Space between the edge of a context menu and its items. */
 .mat-menu {
   position: fixed;
   z-index: var(--mat-z-menu);
@@ -192,10 +204,10 @@ a.mat-tile:hover { border-color: var(--mat-text-faint); background: var(--mat-su
   max-width: min(92vw, 340px);
   max-height: 80dvh;
   overflow-y: auto;
-  padding: var(--mat-space-2);
+  padding: var(--mat-menu-pad, var(--mat-space-2));
   background: var(--mat-surface);
   border: 1px solid var(--mat-border-strong);
-  border-radius: var(--mat-radius-lg);
+  border-radius: var(--mat-menu-radius, var(--mat-radius-lg));
   box-shadow: var(--mat-shadow-2);
   animation: mat-menu-in var(--mat-dur) var(--mat-ease);
   transform-origin: bottom left;
@@ -204,11 +216,14 @@ a.mat-tile:hover { border-color: var(--mat-text-faint); background: var(--mat-su
 .mat-menu__head { display: flex; align-items: center; gap: var(--mat-space-3); padding: var(--mat-space-3); border-bottom: 1px solid var(--mat-border); margin-bottom: var(--mat-space-2); min-width: 0; }
 .mat-menu__head strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mat-menu__head small { display: block; color: var(--mat-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* @prop menu | --mat-menu-item-radius | length | var(--mat-radius-sm) | Corner radius of an item of a context menu. */
+/* @prop menu | --mat-menu-item-height | length | var(--mat-control-h) | Least height of an item of a context menu. A floor: on a touch screen keep it at 44 px or more (MOBILE-04). */
+/* @prop menu | --mat-menu-item-pad-x | length | var(--mat-space-3) | Space between the edge of an item of a context menu and its content. */
 .mat-menu__item {
   display: flex; align-items: center; gap: var(--mat-space-3);
-  width: 100%; min-height: var(--mat-control-h);
-  padding: 0 var(--mat-space-3);
-  border: 0; border-radius: var(--mat-radius-sm);
+  width: 100%; min-height: var(--mat-menu-item-height, var(--mat-control-h));
+  padding: 0 var(--mat-menu-item-pad-x, var(--mat-space-3));
+  border: 0; border-radius: var(--mat-menu-item-radius, var(--mat-radius-sm));
   background: transparent; color: var(--mat-text);
   font-weight: 560; text-align: left; text-decoration: none; cursor: pointer;
 }
@@ -271,7 +286,7 @@ th[aria-sort="ascending"] .mat-table__sort, th[aria-sort="descending"] .mat-tabl
 th[aria-sort="ascending"] .mat-icon, th[aria-sort="descending"] .mat-icon { opacity: 1; }
 th[aria-sort="descending"] .mat-icon { transform: rotate(180deg); }
 .mat-table th.mat-table__select, .mat-table td.mat-table__select { width: 1%; padding-right: 0; }
-.mat-table .mat-table__select input { width: 18px; height: 18px; accent-color: var(--mat-accent); cursor: pointer; vertical-align: middle; }
+.mat-table .mat-table__select input { width: var(--mat-check-size, 18px); height: var(--mat-check-size, 18px); accent-color: var(--mat-accent); cursor: pointer; vertical-align: middle; }
 .mat-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-3); padding: var(--mat-space-2) var(--mat-space-4); min-height: var(--mat-control-h-lg); background: var(--mat-accent-soft-strong); color: var(--mat-accent-text); border-radius: var(--mat-radius); }
 .mat-bulk[hidden] { display: none; }
 .mat-bulk__count { margin-right: auto; font-weight: 600; }

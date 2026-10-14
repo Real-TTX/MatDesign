@@ -92,16 +92,21 @@
 .mat-nav__group-action.is-active, .mat-nav__group-action[aria-current="page"] { background: var(--mat-accent-soft-strong); color: var(--mat-accent-text); }
 .mat-nav__group-action:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mat-accent) 70%, transparent); }
 @media (pointer: coarse) { .mat-nav__group-action { width: 2.75rem; height: 2.75rem; margin-block: -.75rem; } }
+/* @prop nav | --mat-nav-item-radius | length | var(--mat-radius) | Corner radius of an item of the menu (the focus ring of an item follows it). */
+/* @prop nav | --mat-nav-item-height | length | var(--mat-control-h) | Least height of an item of the menu. A floor: on a touch screen keep it at 44 px or more (MOBILE-04). */
+/* @prop nav | --mat-nav-item-pad-x | length | var(--mat-space-3) | Space between the edge of an item of the menu and its icon and label. */
+/* @prop nav | --mat-nav-item-gap | length | var(--mat-space-3) | Space between the icon of an item of the menu and its label. */
+/* @prop nav | --mat-nav-item-font-weight | number | 500 | Weight of the label of an item of the menu (the current item and the main action keep their own). */
 .mat-nav__item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--mat-space-3);
-  min-height: var(--mat-control-h);
-  padding: 0 var(--mat-space-3);
-  border-radius: var(--mat-radius);
+  gap: var(--mat-nav-item-gap, var(--mat-space-3));
+  min-height: var(--mat-nav-item-height, var(--mat-control-h));
+  padding: 0 var(--mat-nav-item-pad-x, var(--mat-space-3));
+  border-radius: var(--mat-nav-item-radius, var(--mat-radius));
   color: var(--mat-text);
-  font-weight: 500;
+  font-weight: var(--mat-nav-item-font-weight, 500);
   text-decoration: none;
   transition: background var(--mat-dur-fast) var(--mat-ease), color var(--mat-dur-fast) var(--mat-ease);
 }
@@ -113,7 +118,8 @@
 .mat-nav__item.is-active .mat-icon,
 .mat-nav__item[aria-current="page"] .mat-icon { color: var(--mat-accent-text); }
 /* Keyboard focus: inside the menu the ring is drawn inward (the submenu clips what is outside its box). */
-.mat-nav__item:focus-visible, .mat-switcher:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mat-accent) 70%, transparent); border-radius: var(--mat-radius); }
+.mat-nav__item:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mat-accent) 70%, transparent); border-radius: var(--mat-nav-item-radius, var(--mat-radius)); }
+.mat-switcher:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--mat-accent) 70%, transparent); border-radius: var(--mat-radius); }
 
 /* ---- A main action (SHELL-19): the first item of the menu, filled with the accent, for the one thing the app is mostly used for ---- */
 .mat-nav__item--primary {
@@ -160,7 +166,7 @@
 .mat-nav__badge--dot.mat-nav__badge--plain { background: var(--mat-text-faint); }
 
 /* ---- Submenus (SHELL-13): a parent opens its children; the branch with the current page is open ---- */
-button.mat-nav__item { width: 100%; border: 0; background: transparent; font: inherit; font-weight: 560; text-align: left; cursor: pointer; }
+button.mat-nav__item { width: 100%; border: 0; background: transparent; font: inherit; font-weight: var(--mat-nav-item-font-weight, 560); text-align: left; cursor: pointer; }
 button.mat-nav__item:hover { background: var(--mat-surface-3); }
 .mat-nav__chev { margin-left: auto; flex: none; color: var(--mat-text-muted); font-size: 1rem; transition: transform var(--mat-dur) var(--mat-ease); }
 .mat-nav__badge + .mat-nav__chev { margin-left: var(--mat-space-2); }
@@ -319,6 +325,9 @@ button.mat-nav__item:hover { background: var(--mat-surface-3); }
   flex-direction: column;
 }
 
+/* @prop topbar | --mat-topbar-pad-x | length | var(--mat-content-pad) | Space between the sides of the window and the content of the header bar (its height is the token for the height of the bar). */
+/* @prop topbar | --mat-topbar-gap | length | var(--mat-space-3) | Space between the burger button, the breadcrumb and the actions of the header bar. */
+/* @prop topbar | --mat-topbar-border-width | length | 1px | Thickness of the line under the header bar. */
 .mat-topbar {
   position: sticky;
   top: 0;
@@ -326,11 +335,11 @@ button.mat-nav__item:hover { background: var(--mat-surface-3); }
   flex: none;
   display: flex;
   align-items: center;
-  gap: var(--mat-space-3);
+  gap: var(--mat-topbar-gap, var(--mat-space-3));
   min-height: var(--mat-topbar-h);
-  padding: 0 var(--mat-content-pad);
+  padding: 0 var(--mat-topbar-pad-x, var(--mat-content-pad));
   background: var(--mat-glass);
-  border-bottom: 1px solid var(--mat-border);
+  border-bottom: var(--mat-topbar-border-width, 1px) solid var(--mat-border);
 }
 .mat-burger {
   display: none;
@@ -350,7 +359,8 @@ button.mat-nav__item:hover { background: var(--mat-surface-3); }
 /* The breadcrumb: the last item is the current page and is not a link. */
 .mat-crumbs { min-width: 0; flex: 1 1 auto; }
 .mat-crumbs ol { list-style: none; display: flex; align-items: center; flex-wrap: nowrap; gap: var(--mat-space-2); min-width: 0; }
-.mat-crumbs li { display: flex; align-items: center; gap: var(--mat-space-2); min-width: 0; font-size: var(--mat-fs-sm); color: var(--mat-text-muted); white-space: nowrap; }
+/* @prop topbar | --mat-topbar-crumb-font-size | length | var(--mat-fs-sm) | Size of the text of the breadcrumb. */
+.mat-crumbs li { display: flex; align-items: center; gap: var(--mat-space-2); min-width: 0; font-size: var(--mat-topbar-crumb-font-size, var(--mat-fs-sm)); color: var(--mat-text-muted); white-space: nowrap; }
 .mat-crumbs li + li::before { content: "/"; color: var(--mat-text-faint); flex: none; }
 .mat-crumbs a { color: var(--mat-text-muted); overflow: hidden; text-overflow: ellipsis; }
 .mat-crumbs a:hover { color: var(--mat-accent-text); }
@@ -457,7 +467,7 @@ button.mat-nav__item:hover { background: var(--mat-surface-3); }
   .mat-app.is-nav-open .mat-nav { transform: none; visibility: visible; transition-delay: 0s; }
   .mat-app.is-nav-open .mat-backdrop { opacity: 1; pointer-events: auto; }
   .mat-burger { display: inline-grid; }
-  .mat-topbar { padding-top: var(--mat-safe-top); padding-left: calc(var(--mat-content-pad) + var(--mat-safe-left)); padding-right: calc(var(--mat-content-pad) + var(--mat-safe-right)); }
+  .mat-topbar { padding-top: var(--mat-safe-top); padding-left: calc(var(--mat-topbar-pad-x, var(--mat-content-pad)) + var(--mat-safe-left)); padding-right: calc(var(--mat-topbar-pad-x, var(--mat-content-pad)) + var(--mat-safe-right)); }
 }
 
 /* Phones: of the breadcrumb only the last two items stay. */

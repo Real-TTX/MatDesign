@@ -395,6 +395,9 @@ public static class RuleBook
         new("SPACE-05", "SPACE", "Scrollbars appear while scrolling",
             "Scrollbars are invisible until something scrolls and fade out about a second after. On a touch screen the system's overlay scrollbars apply.",
             RuleLevel.Must, Owner, Check: "Test (script)"),
+        new("SPACE-06", "SPACE", "Component shape is changed through documented properties",
+            "The shape of a control (its radius, padding, height, border width, gap, type size and weight) is changed through the documented `--mat-<component>-*` properties and through the global tokens, never by overriding the classes of the toolkit. A property is set on `:root` for every app, on `[data-app]` for one app or on one element, to a value of its type (a length, a number, a duration, a token for a colour or a font), and an app that sets none sees no change: every use in the toolkit is `var(--mat-btn-radius, var(--mat-radius))`, so the fallback is the default and the property has no value of its own. A height is a floor that a touch screen keeps at 44 px or more (MOBILE-04), and no property gives a control a colour of its own (COLOR-01) or a shadow (SPACE-03). The properties are written in the CSS, one `@prop` line above the rule that uses them, and the pages of the components and the tokens page list them from there.",
+            RuleLevel.Should, Design, Why: "A brand that overrides classes copies the toolkit's selectors and breaks with its next version; a documented property is a promise that survives it and that an editor can offer with a type and limits.", Do: ":root { --mat-btn-radius: 0; } /* every button square */", Dont: ".mat-btn { border-radius: 0; } /* a class overridden in the app */", Check: "Test (component properties)"),
 
         // ---------------------------------------------------------------------------------------------------- ICON
         new("ICON-01", "ICON", "One sprite, inline",

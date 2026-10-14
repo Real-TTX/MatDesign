@@ -201,6 +201,25 @@ information, and together it makes every app look like every other app that was 
 A test (`ToolkitCssTests`) pins the parts that are easy to slide back into: no `radial-gradient`, no `backdrop-filter`, no brand gradient token, no upper-case table headings.
 All of this is values in `matui.tokens.css` and a few rules per file, so a different decision is a small change, but it is a decision about how every app looks.
 
+### Component properties: handles for the shape of a control
+
+The tokens set the look of everything at once (the radius of a button *and* of an input and a menu item is `--mat-radius`). A brand, and later the Studio's editor, also needs to change one control: square
+buttons with round inputs, a card with more room. The toolkit offers that through a small, deliberate set of **`--mat-<component>-<aspect>` properties** (`SPACE-06`; 68, three to six per component: radius,
+padding, a height, a border width, a gap, a type size or weight; button, field, card, dialog, context menu, tag, pill, badge, tabs, table, alert, toast, switch, check, menu item, header bar). The decisions:
+
+- **The fallback is the default, the property has no value.** Every use is `border-radius: var(--mat-btn-radius, var(--mat-radius))`: no default in `:root`, so an app that sets nothing computes exactly what it did
+  before (a browser check compares the computed styles of every example with and without). The fallback is a global token; only where the toolkit has none (a border of 1 px, the 42 px of a switch) it is a literal
+  of the type. A property that is used with two defaults (`--mat-btn-radius` is `--mat-radius-sm` for a small button) says the first in its declaration; the small button follows the same property, so one value squares every size.
+- **Set where it should apply.** Custom properties inherit, so `:root` sets one for the app, `[data-app]` for one app and an element for what is inside it: the same three places as the tokens, no class to override.
+- **A height is a floor.** `--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-nav-item-height` and `--mat-menu-item-height` fall back to `--mat-control-h`, which the tokens make 44 px under
+  `(pointer: coarse)` (`MOBILE-04`); a brand that wants less sets it for `(pointer: fine)` only. The editor of stage 12 will refuse a value below the floor for a touch screen.
+- **No colour, no shadow.** A shape is not a look: colours stay the tokens' business (`COLOR-01`) and the flat look does not get a switch to turn it off (`SPACE-03`, `COLOR-08`). The type `colour` exists in the format for
+  a later property and is not used.
+- **Declared in the CSS, one line above the rule that uses it**: `/* @prop btn | --mat-btn-radius | length | var(--mat-radius) | Corner radius of every button. */` (component, name, type, fallback, description).
+  `ComponentProperties` (Core, next to `CssTokens`) reads the lines; the Foundations > Tokens page, the page of each component and `/api/properties` are drawn from them; and a unit test fails when a property of a
+  component group is used with a fallback and has no line, a line has no use, a fallback is not a token that exists (or a literal of the type), or a part gives one a value. So the list can never go stale, and the
+  editor has something to turn (type, default and description come with it).
+
 ### What is deliberately not in the toolkit
 
 Compared with a general kit such as Bootstrap there is **no navbar** (the shell replaces it, `SHELL-01`), **no jumbotron or hero** (an app is not a landing page), **no off-canvas as a

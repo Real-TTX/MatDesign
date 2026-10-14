@@ -40,6 +40,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 - Number stepper: `mat-stepper` with `data-stepper` (`FORM-20`).
 - Slider and range slider with two thumbs: `mat-slider` with `data-slider` (`FORM-17`).
 - Code input: `mat-otp` with `data-otp`, for one-time codes and PINs (`FORM-19`).
+- Documented component properties (`SPACE-06`): 68 custom properties `--mat-<component>-<aspect>` that change the shape of a control without overriding its classes: `--mat-btn-radius`, `--mat-btn-height`, `--mat-btn-pad-x`, `--mat-btn-border-width`, `--mat-btn-font-weight`, `--mat-input-*` (radius, height, pad-x, border-width), `--mat-card-*`, `--mat-dialog-*`, `--mat-menu-*`, `--mat-tag-*`, `--mat-pill-*`, `--mat-badge-*`, `--mat-tabs-*`, `--mat-table-*`, `--mat-alert-*`, `--mat-toast-*`, `--mat-switch-*` (width, height, thumb), `--mat-check-*`, `--mat-nav-item-*` and `--mat-topbar-*`. Set one on `:root` (every app), on `[data-app]` (one app) or on one element. None has a value in the toolkit: every use is `var(--mat-btn-radius, var(--mat-radius))`, so an app that sets none sees no change (a check in a browser compares the computed styles of every example). A height is a floor: keep it at 44 px or more on a touch screen. The list with types and defaults is in the CSS (one `@prop` line above the rule), on the Foundations > Tokens page, on the page of each component and at `/api/properties`.
 
 ### Changed
 

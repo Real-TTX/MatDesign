@@ -58,6 +58,7 @@ src/MatDesign.Core         no web types
   Studio/Diff.cs             what changed between two revisions: the fields (Flatten, Changes) and the lines (Lines)
   Studio/HtmlFormatter.cs    indents and wraps the markup of an example for showing it as code (white space only; a test holds that for every example)
   Studio/MarkupChecks.cs     the contract of the markup of an example (classes, icons, no inline/outside/script, labels, ids ...): the unit tests and the Studio use this one code
+  ComponentProperties.cs     the documented `--mat-<component>-*` properties: reads the `@prop` lines of the CSS (ComponentProperty), the uses `var(--mat-x-y, fallback)`, `Problems` (what makes the list stale), Components (group id, title, the catalogue components that show it)
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /releases/* (the releases of the Studio), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
   Studio/VersionTracker.cs   which release of MatUi each app uses (written down by hand) and where that stands against the releases
@@ -160,6 +161,12 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.
 - Nothing is loaded from another site; apps copy the toolkit (`CODE-03`).
+- Component properties (`SPACE-06`): the shape of a control is changed through `--mat-<component>-<aspect>` (radius, height, pad-x/pad-y, border-width, gap, font size/weight; `btn`, `input`, `card`, `dialog`, `menu`, `tag`, `pill`, `badge`, `tabs`, `table`,
+  `alert`, `toast`, `switch`, `check`, `nav`, `topbar`), never by overriding a class. **Every use is `var(--mat-btn-radius, var(--mat-radius))`: the fallback is a global token (a literal of the type only where there is none), the property
+  has no value anywhere**, so an app that sets none computes what it always did. Declare each one with ONE line above the rule that uses it: `/* @prop btn | --mat-btn-radius | length | var(--mat-radius) | Corner radius of every button. */`
+  (component, name, type colour|length|number|duration|font, fallback, description ending with a full stop), and add the component to `ComponentProperties.Components` with the catalogue components that show it. A new property of a control
+  that is used with a fallback and has no `@prop` line fails `ComponentPropertiesTests`, so does a line with no use. No colour, no shadow, no `!important`; a height property is a floor (default `--mat-control-h`, 44 px on a touch screen: do not
+  add a smaller coarse value). Listed on Foundations > Tokens, on the page of each component, at `/api/properties`; `tests/e2e/run.js` sets every property to its default (same computed styles as none) and sets properties on `:root` and on one element; `node tests/e2e/properties-before-after.js <url> [git ref]` compares ~160,000 elements with the CSS from before the properties (served from git): run it again when a rule that uses a property changes.
 
 **The site**
 - Every page has exactly one `h1`, the shell (menu, logo, breadcrumb, theme button, user, version) and no inline style; every list page has its toolbar above the list and

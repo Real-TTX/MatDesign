@@ -48,6 +48,9 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 - An optional **icon library** in files of its own: **1,925 icons in 54 categories** – an icon can be in several –
   with *General* and **Home automation** (302 icons: lighting, climate, doors and windows, alarm, appliances,
   energy, sensors, rooms, garden, scenes) first. SVG, as one sprite, as single files or as an archive; MatUi works without it
+- **68 documented component properties** (`--mat-btn-radius`, `--mat-card-pad`, `--mat-table-pad-y` ...) that change the shape of a control
+  from `:root`, `[data-app]` or one element, without overriding a class. They have no value in the toolkit (each use falls back to a global token),
+  so an app that sets none sees no change; the list, with types and defaults, is read from the CSS
 
 **The documentation**
 - **65 components with 195 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes

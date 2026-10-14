@@ -6309,6 +6309,145 @@ function seenAt(page, selector) {
     await phone.ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- component properties (SPACE-06)
+  // The properties have no value in the toolkit: an unset one changes nothing (tests/e2e/properties-before-after.js compares with the CSS from before, once), a set one changes its control
+  // and nothing else. A sample of the components page keeps this check small; the dump is the computed style of what the properties touch.
+  {
+    const STYLE = ['borderTopLeftRadius', 'borderTopRightRadius', 'borderBottomLeftRadius', 'borderBottomRightRadius', 'minWidth', 'minHeight', 'width', 'height', 'paddingTop', 'paddingRight', 'paddingBottom',
+      'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'rowGap', 'columnGap', 'fontSize', 'fontWeight', 'top', 'left', 'marginBottom'];
+    const SAMPLE = ['buttons', 'button-group', 'fields', 'input-groups', 'cards', 'pills', 'tabs', 'table', 'alerts', 'choices', 'menu', 'navmenu', 'dialogs'];
+    // what the properties of the sample touch, one line per element: its place, its class, the values and the size it takes
+    const dumpSample = (page) => page.evaluate(({ props, sample }) => {
+      const out = {};
+      const take = (el, i) => {
+        const cs = getComputedStyle(el);
+        const r = el.getBoundingClientRect();
+        out[i + ' ' + el.tagName.toLowerCase() + '.' + String(el.className).replace(/\s+/g, '.')] = props.map(p => cs[p]).join(',') + ' | ' + r.width.toFixed(1) + 'x' + r.height.toFixed(1);
+        if (el.classList.contains('mat-switch__track')) { const a = getComputedStyle(el, '::after'); out[i + ' after'] = [a.top, a.left, a.width, a.height, a.transform].join(','); }
+      };
+      const els = [...document.querySelectorAll('.mat-topbar, .mat-topbar *, .mat-nav__item')];
+      for (const id of sample) { els.push(...document.querySelectorAll('#' + id + ' .doc-example__live, #' + id + ' .doc-example__live *')); }
+      els.forEach((el, i) => take(el, i));
+      return out;
+    }, { props: STYLE, sample: SAMPLE });
+    const firstDifference = (a, b) => Object.keys(a).filter(k => a[k] !== b[k]).slice(0, 3).map(k => k + ': ' + a[k] + ' <> ' + b[k]);
+
+    for (const [name, options] of [['desktop', desktopOptions], ['phone', phoneOptions]]) {
+      const { ctx, page } = await open(options, '/Components');
+      await check(`component properties, ${name}: every property set to its documented default gives the computed styles of none set`, async () => {
+        const props = await page.evaluate(async () => (await (await fetch('/api/properties')).json()));
+        expectTrue(props.length >= 40 && props.length <= 75, 'the number of properties: ' + props.length);
+        const unset = await dumpSample(page);
+        expectTrue(Object.keys(unset).length > 150, 'the sample has elements: ' + Object.keys(unset).length);
+        // used with another default in one place (the small button, the card on a phone, the menu items that are buttons): left out of this comparison
+        const another = ['--mat-btn-radius', '--mat-card-pad', '--mat-nav-item-font-weight'];
+        await page.evaluate((list) => list.forEach(p => document.documentElement.style.setProperty(p.name, p.fallback)), props.filter(p => !another.includes(p.name)));
+        const explicit = await dumpSample(page);
+        expect(firstDifference(unset, explicit), [], 'computed styles that differ');
+        expect(Object.keys(explicit).length, Object.keys(unset).length, 'the number of elements');
+        await page.evaluate((list) => list.forEach(p => document.documentElement.style.removeProperty(p.name)), props);
+      });
+      await ctx.close();
+    }
+
+    {
+      const { ctx, page } = await open(desktopOptions, '/Components');
+      const radii = (sel) => page.$$eval(sel, els => [...new Set(els.map(e => getComputedStyle(e).borderTopLeftRadius + '/' + getComputedStyle(e).borderBottomRightRadius))]);
+      await check('--mat-btn-radius: 0 on :root squares every button, of every size and in a group, and no other control changes', async () => {
+        const outsideGroups = '.mat-btn:not(.mat-input-group > .mat-btn)'; // a button in an input group takes the radius of the field next to it
+        const before = { btn: await radii(outsideGroups), input: await radii('.mat-input'), card: await radii('.mat-card'), tag: await radii('.mat-tag') };
+        expectTrue(before.btn.length > 1, 'buttons have more than one radius to start with (the small ones): ' + before.btn);
+        await page.evaluate(() => document.documentElement.style.setProperty('--mat-btn-radius', '0'));
+        expect(await radii(outsideGroups), ['0px/0px'], 'every button is square');
+        expect(await radii('.mat-input'), before.input, 'inputs are as before');
+        expect(await radii('.mat-card'), before.card, 'cards are as before');
+        expect(await radii('.mat-tag'), before.tag, 'tags are as before');
+        await page.evaluate(() => document.documentElement.style.removeProperty('--mat-btn-radius'));
+        expect(await radii(outsideGroups), before.btn, 'removing it brings the old radii back');
+      });
+
+      await check('a property set on one element changes the controls inside it and not those of the same kind outside', async () => {
+        const pad = (i) => page.$$eval('.doc-example__live .mat-card__body', (els, n) => getComputedStyle(els[n]).paddingLeft, i);
+        const outside = await pad(1);
+        const inside = await pad(0);
+        expectTrue(parseFloat(outside) > 4, 'a card has room to start with: ' + outside);
+        await page.evaluate(() => document.querySelector('.doc-example__live .mat-card').style.setProperty('--mat-card-pad', '3px'));
+        expect(await pad(0), '3px', 'the card with the property');
+        expect(await pad(1), outside, 'another card');
+        await page.evaluate(() => document.querySelector('.doc-example__live .mat-card').style.removeProperty('--mat-card-pad'));
+        expect(await pad(0), inside, 'unset again');
+      });
+
+      await check('the heights of the controls follow their properties (the floor of the touch screen is the default)', async () => {
+        const h = (sel) => page.$eval(sel, e => Math.round(e.getBoundingClientRect().height));
+        const start = { btn: await h('#buttons .mat-btn:not(.mat-btn--sm):not(.mat-btn--lg):not(.mat-btn--icon)'), input: await h('#fields .mat-input:not(.mat-input--sm):not(.mat-input--lg)') };
+        expect(start, { btn: 40, input: 40 }, 'the default heights with a mouse');
+        await page.evaluate(() => { const s = document.documentElement.style; s.setProperty('--mat-btn-height', '52px'); s.setProperty('--mat-input-height', '56px'); });
+        expect(await h('#buttons .mat-btn:not(.mat-btn--sm):not(.mat-btn--lg):not(.mat-btn--icon)'), 52, 'button');
+        expect(await h('#fields .mat-input:not(.mat-input--sm):not(.mat-input--lg)'), 56, 'input');
+        // the icon-only button stays square, the small and the large size keep theirs
+        const icon = await page.$eval('#buttons .mat-btn--icon:not(.mat-btn--sm)', e => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; });
+        expect(icon, [52, 52], 'an icon button is square');
+        expect(await h('#buttons .mat-btn--sm:not(.mat-btn--icon)'), 32, 'the small button keeps its height');
+        await page.evaluate(() => { const s = document.documentElement.style; s.removeProperty('--mat-btn-height'); s.removeProperty('--mat-input-height'); });
+      });
+
+      await check('the switch follows its width, height and knob: the knob stays centred and travels the whole way', async () => {
+        const knob = () => page.$eval('#choices .mat-switch input:not(:disabled) + .mat-switch__track', t => {
+          const a = getComputedStyle(t, '::after');
+          const on = t.previousElementSibling.checked;
+          const travel = new DOMMatrix(a.transform).m41;
+          return { w: t.getBoundingClientRect().width, h: t.getBoundingClientRect().height, top: parseFloat(a.top), left: parseFloat(a.left), size: parseFloat(a.width), travel, on };
+        });
+        await page.evaluate(() => { const s = document.documentElement.style; s.setProperty('--mat-switch-width', '64px'); s.setProperty('--mat-switch-height', '32px'); s.setProperty('--mat-switch-thumb', '24px'); });
+        const k = await knob();
+        expect([k.w, k.h, k.size, k.top, k.left], [64, 32, 24, 4, 4], 'the track, the knob and its distance from the edge');
+        // switched on, it has moved by the width less the height, so the gap at the right is the gap at the left
+        await page.$eval('#choices .mat-switch input:not(:disabled)', i => { i.checked = true; });
+        const on = await knob();
+        expect(on.travel, 32, 'the way of the knob');
+        expect(on.w - (on.left + on.travel + on.size), on.left, 'the gap at the right end equals the gap at the left');
+        await page.$eval('#choices .mat-switch input:not(:disabled)', i => { i.checked = false; });
+        await page.evaluate(() => { const s = document.documentElement.style; ['width', 'height', 'thumb'].forEach(p => s.removeProperty('--mat-switch-' + p)); });
+      });
+
+      await check('the properties of a table reach its cells and the properties of a tab reach the line under it', async () => {
+        await page.evaluate(() => { const s = document.documentElement.style; s.setProperty('--mat-table-pad-x', '30px'); s.setProperty('--mat-tabs-indicator-width', '5px'); });
+        expect(await page.$eval('#table .mat-table td', e => getComputedStyle(e).paddingLeft), '30px', 'the cell');
+        expect(await page.$eval('#table .mat-table th', e => getComputedStyle(e).paddingRight), '30px', 'the heading');
+        expect(await page.$eval('#tabs .mat-tab', e => getComputedStyle(e).borderBottomWidth), '5px', 'the line under a tab');
+        await page.evaluate(() => { const s = document.documentElement.style; s.removeProperty('--mat-table-pad-x'); s.removeProperty('--mat-tabs-indicator-width'); });
+      });
+
+      await check('the page of a component lists its properties, and the tokens page lists all of them by component', async () => {
+        const rows = await page.$$eval('#props-buttons ~ .mat-table-wrap tbody tr, #buttons .doc-example[aria-labelledby="props-buttons"] tbody tr', trs => trs.map(tr => [...tr.cells].map(c => c.textContent.trim())));
+        expectTrue(rows.length >= 5, 'the buttons page has its rows: ' + rows.length);
+        expect(rows.find(r => r[0] === '--mat-btn-radius').slice(1, 3), ['length', 'var(--mat-radius)'], 'the radius of a button: type and default');
+        expect(await page.$$eval('#meter [id^="props-"]', e => e.length), 0, 'a component without properties has no table');
+        const tokens = await open(desktopOptions, '/Foundations/Tokens');
+        const groups = await tokens.page.$$eval('#component-properties h3', e => e.length);
+        const names = await tokens.page.$$eval('#component-properties tbody tr td:first-child', e => e.map(x => x.textContent.trim()));
+        expectTrue(groups >= 14, 'the groups: ' + groups);
+        expect(names.length, (await page.evaluate(async () => (await (await fetch('/api/properties')).json()).length)), 'every property is listed once');
+        expect(await tokens.page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, 'no sideways scroll');
+        await tokens.ctx.close();
+      });
+      await ctx.close();
+    }
+
+    // on a phone the default heights are the floor of 44 px, and a card keeps its smaller side space
+    {
+      const { ctx, page } = await open(phoneOptions, '/Components');
+      await check('on a touch screen the default control heights are 44 px and a card has its side space of 20 px (nothing set)', async () => {
+        const h = (sel) => page.$eval(sel, e => Math.round(e.getBoundingClientRect().height));
+        expect(await h('#buttons .mat-btn:not(.mat-btn--sm):not(.mat-btn--lg):not(.mat-btn--icon)'), 44, 'button');
+        expect(await h('#fields .mat-input:not(.mat-input--sm):not(.mat-input--lg)'), 44, 'input');
+        expect(await page.$eval('#cards .mat-card__body', e => getComputedStyle(e).paddingLeft), '20px', 'card side space on a phone');
+      });
+      await ctx.close();
+    }
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {

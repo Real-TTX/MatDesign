@@ -211,6 +211,11 @@
   .doc-tokens td code { white-space: nowrap; }
 }
 
+/* The documented properties of a component (a table in the component page and on the tokens page): the names are long, so they break rather than push the table wide. */
+.doc-props td code { overflow-wrap: anywhere; }
+.doc-props td:first-child { min-width: 14rem; }
+@media (max-width: 720px) { .doc-props td:first-child { min-width: 0; } }
+
 /* ---- A diff: the lines of a change, what is new and what is gone ---- */
 .doc-diff { display: flex; flex-direction: column; gap: 1px; font-family: var(--mat-mono); font-size: var(--mat-fs-sm); }
 .doc-diff__line { display: flex; gap: var(--mat-space-2); padding: 0 var(--mat-space-2); border-radius: var(--mat-radius-xs); white-space: pre-wrap; overflow-wrap: anywhere; }

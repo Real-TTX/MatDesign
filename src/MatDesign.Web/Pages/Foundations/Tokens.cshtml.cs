@@ -22,6 +22,18 @@ public class TokensModel : PageModel
 
     public IReadOnlyList<DesignToken> Items { get; private set; } = [];
 
+    /// <summary>All documented component properties (<c>@prop</c> lines of the CSS).</summary>
+    public IReadOnlyList<ComponentProperty> Properties => _toolkit.Properties;
+
+    /// <summary>The component properties by component, in the order of <see cref="ComponentProperties.Components"/>.</summary>
+    public IReadOnlyList<PropertyGroup> PropertyGroups => ComponentProperties.Components
+        .Select(c => new PropertyGroup(c.Id, c.Title, ComponentProperties.Of(_toolkit.Properties, c.Id).ToList()))
+        .Where(g => g.Properties.Count > 0)
+        .ToList();
+
+    /// <summary>The properties of one component group, for the section "Component properties".</summary>
+    public sealed record PropertyGroup(string Id, string Title, IReadOnlyList<ComponentProperty> Properties);
+
     /// <summary>A colour the page can draw as a swatch (a hex or rgb value); derived colours (color-mix, var) are not drawn.</summary>
     public static bool Drawable(string value) => value.StartsWith('#') || value.StartsWith("rgb", StringComparison.Ordinal);
 

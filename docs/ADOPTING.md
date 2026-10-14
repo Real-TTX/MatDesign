@@ -259,6 +259,24 @@ categories, an icon can be in several, with *General* and *Home automation* firs
 - Use it like the others: `<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-il-lamp"></use></svg>`. An icon without a visible label needs an `aria-label` (`ICON-03`).
 - An icon that gets a meaning in your interface (save, delete, filter …) belongs in the sprite of the toolkit (`ICON-02`: one meaning, one icon everywhere), not only in the library.
 
+## 4c. Change the shape of a control: component properties (`SPACE-06`)
+
+If the app wants its buttons square, its cards roomier or its tabs thicker, it does **not** override `.mat-btn`: it sets one of the documented properties `--mat-<component>-<aspect>`
+(68 of them: `--mat-btn-radius`, `--mat-card-pad`, `--mat-table-pad-y` ...; every one with its type and its default on **Foundations → Tokens → Component properties**, on the page of the component and at
+`/api/properties`). They have **no value in the toolkit**: each use is `var(--mat-btn-radius, var(--mat-radius))`, so an app that sets none looks exactly as before. Where you set it decides who gets it:
+
+```css
+:root             { --mat-btn-radius: 0; }           /* every button of every page of the app */
+[data-app="mymat"] { --mat-card-pad: var(--mat-space-4); } /* the apps with that data-app (also inside a preview frame) */
+.my-toolbar       { --mat-btn-height: 36px; }        /* the controls inside this one element and nothing else */
+```
+
+A custom property inherits, so an element sets it for itself and everything inside it. Use a value of the type the table gives: a length (`6px`, `0`, `var(--mat-space-3)`), a number
+(a font weight), a duration; a colour or a font only as a token. Three things to know: a **height is a floor** (`--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-nav-item-height`,
+`--mat-menu-item-height`: their default is the control height, 40 px with a mouse and 44 px on a touch screen), so keep it at 44 px or more under `@media (pointer: coarse)` (`MOBILE-04`: set a smaller one
+only inside `@media (pointer: fine)`); a property of the **default size** leaves the `sm` and `lg` sizes alone (the radius is the exception: one value for every size of a control); and a property
+changes a shape, never a colour or a shadow (`COLOR-01`, `SPACE-03`). The accent, the surfaces and the dark mode stay the tokens' business.
+
 ## 5. Dialogs (`DIALOG-*`)
 
 - **Every confirmation, alert and input is a dialog** of the toolkit: `data-confirm="…"` on a button, link or form; `MatUi.confirm`, `MatUi.alert`, `MatUi.prompt` from a script. Remove

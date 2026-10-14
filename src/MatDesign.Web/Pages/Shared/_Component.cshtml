@@ -1,5 +1,6 @@
 @model ComponentDoc
 @inject MatDesign.Web.Studio.DesignData Design
+@inject MatDesign.Web.Services.ToolkitFiles Toolkit
 @*
     One component on the components page: what it is, the rules it follows, the classes and attributes it uses, each example live with its code beside it
     (below on a narrow window, and for examples that need the width), and what is good to know. The code is always shown, highlighted, with a Copy button.
@@ -11,6 +12,7 @@
     const int ApiShown = 14; // the classes that are listed at once; the rest opens with "+n more"
     var classes = ComponentApi.Classes(c);
     var attributes = ComponentApi.Attributes(c);
+    var properties = MatDesign.Core.ComponentProperties.ForDoc(Toolkit.Properties, c.Id);
 }
 <section class="doc-component mat-anchor" id="@c.Id" aria-labelledby="h-@c.Id">
     <header class="doc-component__head">
@@ -93,6 +95,17 @@
                     <pre class="mat-code" id="@sourceId" tabindex="0"><code>@Html.Raw(MatDesign.Web.Studio.CodeHighlighter.Of(ex.Js ?? ex.Html, script))</code></pre>
                 </div>
             </div>
+        </div>
+    }
+
+    @if (properties.Count > 0)
+    {
+        <div class="doc-example" role="group" aria-labelledby="props-@c.Id">
+            <div class="doc-example__head">
+                <h4 id="props-@c.Id">Properties</h4>
+                <p>Set these on <code>:root</code>, on <code>[data-app]</code> or on one element to change the shape of the control. Unset, the control uses the default shown (<a href="/Rules/Detail?id=SPACE-06">SPACE-06</a>, <a href="/Foundations/Tokens#component-properties">all properties</a>).</p>
+            </div>
+            <partial name="_ComponentProperties" model="properties" />
         </div>
     }
 
