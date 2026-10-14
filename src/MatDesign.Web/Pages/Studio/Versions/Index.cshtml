@@ -12,7 +12,16 @@
 <div class="mat-list">
     <partial name="_Toolbar" model="Model.Toolbar" />
 
-    @if (Model.Items.Count == 0)
+    @if (Model.Toolbar.Total == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("tag")</span>
+            <div class="mat-empty__title">No apps yet</div>
+            <p>The versions of MatUi are written down per app. Add the first app, then write down the release it uses.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Apps/Edit">@Ui.Icon("plus")<span>Add the first app</span></a>
+        </div>
+    }
+    else if (Model.Items.Count == 0)
     {
         <div class="mat-empty">
             <span class="mat-empty__icon">@Ui.Icon("search")</span>

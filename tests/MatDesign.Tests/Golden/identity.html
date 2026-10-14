@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en" data-app="matdesign" >
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#d6336c" />
+    <title>Apps · MatDesign</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/ui/matui.boot.js?v=d2126bc2b9"></script>
+    <link rel="stylesheet" href="/ui/matui.css?v=d2126bc2b9" />
+    <link rel="stylesheet" href="/css/site.css?v=IZvpJ2UeI9K3HqAhIei-X7zZuGLPnvIsY0um4HUd2mE" />
+</head>
+
+<body>
+    <a class="mat-skip" href="#main">Skip to the content</a>
+    <!-- sprite -->
+
+
+    <div class="mat-app">
+        <aside class="mat-nav" id="mat-nav">
+            <div class="mat-nav__brand">
+                <a href="/" aria-label="MatDesign, start page">
+                    <span class="mat-logo mat-logo--md" data-app="matdesign" role="img" aria-label="MatDesign"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg></span>
+                    <span>
+                        <span class="mat-nav__name">MatDesign</span>
+                        <span class="mat-nav__tagline">Identity of the Mat apps</span>
+                    </span>
+                </a>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-nav__close" data-nav-close aria-label="Close the menu"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-x"></use></svg></button>
+            </div>
+
+            
+
+    <nav class="mat-nav__scroll" aria-label="Design" data-nav-panel="design">
+        <ul class="mat-nav__list">
+                        <li>
+                            <a class="mat-nav__item " href="/">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-home"></use></svg><span>Overview</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Identity</li>
+                        <li>
+                            <a class="mat-nav__item is-active" href="/Identity" aria-current="page">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-apps"></use></svg><span>Apps</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Identity/Palette">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><span>Palette</span>
+<span class="mat-nav__badge mat-nav__badge--warn">16<span class="mat-sr-only"> pairs of accents that are too close</span></span>                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Identity/Audit">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-check-square"></use></svg><span>Audit</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Rules</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Rules">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-book"></use></svg><span>Rulebook</span>
+<span class="mat-nav__badge mat-nav__badge--plain">99+<span class="mat-sr-only"> rules</span></span>                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Foundations</li>
+                        <li class="mat-nav__branch ">
+                            <button type="button" class="mat-nav__item mat-nav__parent" aria-expanded="false" aria-controls="nav-sub-design-foundations" data-nav-branch="foundations">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-layers"></use></svg><span>Foundations</span>
+                                <svg class="mat-icon mat-nav__chev" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-down"></use></svg>
+                            </button>
+                            <div class="mat-nav__sub" id="nav-sub-design-foundations">
+                                <ul class="mat-nav__list">
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations">
+                                                <span>Colour</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Type">
+                                                <span>Type</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Space">
+                                                <span>Space and shape</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Motion">
+                                                <span>Motion</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Icons">
+                                                <span>Icons</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/IconLibrary">
+                                                <span>Icon library</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Tokens">
+                                                <span>All tokens</span>
+                                            </a>
+                                        </li>
+                                </ul>
+                            </div>
+                        </li>
+        </ul>
+    </nav>
+    <nav class="mat-nav__scroll" aria-label="Toolkit" data-nav-panel="toolkit" hidden="hidden">
+        <ul class="mat-nav__list">
+                        <li>
+                            <a class="mat-nav__item " href="/Shell">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sidebar"></use></svg><span>Shell</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Build with it</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Components">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-toggle"></use></svg><span>Components</span>
+<span class="mat-nav__badge mat-nav__badge--plain">68<span class="mat-sr-only"> components</span></span>                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Layout">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-grid"></use></svg><span>Layout</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Utilities">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sliders"></use></svg><span>Utilities</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Patterns">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-template"></use></svg><span>Patterns</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Builder">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Builder</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Use it</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Download">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-download"></use></svg><span>Download</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Changelog">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-file-text"></use></svg><span>Changelog</span>
+                            </a>
+                        </li>
+        </ul>
+    </nav>
+
+
+
+            <div class="mat-nav__foot">
+                    <div class="mat-nav__switch mat-nav__switch--foot">
+    <button type="button" class="mat-switcher" data-menu-toggle="nav-switch-menu" data-menu-place="top" aria-haspopup="menu" aria-expanded="false">
+        <span class="mat-switcher__icon"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg></span>
+        <span class="mat-switcher__text"><small data-nav-label="Menu">Menu</small><span class="mat-switcher__name">Design</span></span>
+        <svg class="mat-icon mat-switcher__chev" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-up"></use></svg>
+        <span class="mat-switcher__dot" hidden="hidden"></span>
+    </button>
+</div>
+
+                <div class="mat-nav__account">
+                    <button type="button" class="mat-user" data-menu-toggle="user-menu" aria-haspopup="menu" aria-expanded="false">
+                        <span class="mat-avatar" aria-hidden="true">V</span>
+                        <span class="mat-user__text">
+                            <span class="mat-user__name">Visitor</span>
+                            <span class="mat-user__role">Guest</span>
+                        </span>
+                        <svg class="mat-icon mat-user__chev" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-up"></use></svg>
+                    </button>
+                    <button type="button" class="mat-theme" data-theme-toggle data-theme-state="system" aria-label="Theme: System. Click for Light." title="Theme: System. Click for Light.">
+                        <svg class="mat-icon" data-theme-icon="system" aria-hidden="true" focusable="false"><use href="#mat-i-monitor"></use></svg>
+                        <svg class="mat-icon" data-theme-icon="light" aria-hidden="true" focusable="false"><use href="#mat-i-sun"></use></svg>
+                        <svg class="mat-icon" data-theme-icon="dark" aria-hidden="true" focusable="false"><use href="#mat-i-moon"></use></svg>
+                    </button>
+                </div>
+                <div class="mat-nav__version">MatDesign local-20261014</div>
+            </div>
+        </aside>
+
+        <div class="mat-main">
+            <header class="mat-topbar">
+                <button type="button" class="mat-burger" data-nav-toggle aria-label="Open the menu" aria-controls="mat-nav" aria-expanded="false"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-menu"></use></svg></button>
+                <nav class="mat-crumbs" aria-label="Breadcrumb">
+                    <ol>
+                            <li><a href="/">MatDesign</a></li>
+                                    <li><a href="/Identity">Identity</a></li>
+                                    <li aria-current="page">Apps</li>
+                    </ol>
+                </nav>
+            </header>
+
+            <main class="mat-page " id="main">
+                    <div class="mat-page__head">
+                        <div class="mat-page__title">
+                            <h1>Apps</h1>
+                                <p class="mat-page__sub">The family. Each app has one accent colour; the toolkit uses it everywhere in that app.</p>
+                        </div>
+                    </div>
+
+                
+<div class="mat-list" data-view-scope>
+    
+<div class="mat-toolbar" role="toolbar" aria-label="Apps tools">
+        <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn " data-dialog-open="apps-search" data-shortcut="/" aria-haspopup="dialog">
+            <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-search"></use></svg><span>Search</span>        </button>
+            <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn " data-dialog-open="apps-filter" aria-haspopup="dialog">
+                <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sliders"></use></svg><span>Filter</span>            </button>
+            <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn " data-dialog-open="apps-sort" aria-haspopup="dialog">
+                <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sort"></use></svg><span>Sort</span>            </button>
+        <span class="mat-toolbar__spacer"></span>
+            <div class="mat-seg" role="group" aria-label="View">
+                    <button type="button" class="mat-seg__btn" data-view-switch="list" data-view-key="apps" aria-pressed="true" aria-label="List" data-tip="List"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-list"></use></svg></button>
+                    <button type="button" class="mat-seg__btn" data-view-switch="gallery" data-view-key="apps" aria-pressed="false" aria-label="Gallery" data-tip="Gallery"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-grid"></use></svg></button>
+            </div>
+        <span class="mat-toolbar__info" aria-live="polite">22 apps</span>
+</div>
+
+
+<form id="apps-form" method="get" action="/Identity" hidden>
+        <input type="hidden" name="view" value="list" />
+</form>
+
+    <dialog class="mat-dialog mat-dialog--sm" id="apps-search" aria-labelledby="apps-search-title">
+        <div class="mat-dialog__form">
+            <div class="mat-dialog__head">
+                <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-search"></use></svg>
+                <h2 class="mat-dialog__title" id="apps-search-title">Search</h2>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-x"></use></svg></button>
+            </div>
+            <div class="mat-dialog__body">
+                <div class="mat-field">
+                    <label class="mat-label" for="apps-q">Search for</label>
+                    <input class="mat-input" type="search" id="apps-q" name="q" form="apps-form" placeholder="Name, tagline or colour" autocomplete="off" />
+                    <span class="mat-hint">Press <kbd>/</kbd> on the page to open this dialog.</span>
+                </div>
+            </div>
+            <div class="mat-dialog__foot">
+                <div class="mat-btn-row mat-btn-row--plain">
+                    <button type="submit" form="apps-form" class="mat-btn mat-btn--primary"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-search"></use></svg><span>Apply</span></button>
+                    <button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button>
+                    <span class="mat-btn-row__spacer"></span>
+                    <a class="mat-btn mat-btn--ghost mat-btn--end" href="/Identity?view=list">Clear search</a>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog class="mat-dialog mat-dialog--sm" id="apps-filter" aria-labelledby="apps-filter-title">
+        <div class="mat-dialog__form">
+            <div class="mat-dialog__head">
+                <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sliders"></use></svg>
+                <h2 class="mat-dialog__title" id="apps-filter-title">Filter</h2>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-x"></use></svg></button>
+            </div>
+            <div class="mat-dialog__body mat-form">
+                    <div class="mat-field">
+                        <label class="mat-label" for="apps-f-category">Category</label>
+                        <select class="mat-select" id="apps-f-category" name="category" form="apps-form">
+                            <option value="">All</option>
+                                <option value="Platform">Platform</option>
+                                <option value="Infrastructure">Infrastructure</option>
+                                <option value="Productivity">Productivity</option>
+                                <option value="Monitoring and data">Monitoring and data</option>
+                                <option value="Business">Business</option>
+                                <option value="Home and fun">Home and fun</option>
+                        </select>
+                    </div>
+                    <div class="mat-field">
+                        <label class="mat-label" for="apps-f-colour">Colour in the app</label>
+                        <select class="mat-select" id="apps-f-colour" name="colour" form="apps-form">
+                            <option value="">All</option>
+                                <option value="changed">Changed by the toolkit</option>
+                                <option value="same">As found</option>
+                                <option value="none">None found</option>
+                        </select>
+                    </div>
+            </div>
+            <div class="mat-dialog__foot">
+                <div class="mat-btn-row mat-btn-row--plain">
+                    <button type="submit" form="apps-form" class="mat-btn mat-btn--primary"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sliders"></use></svg><span>Apply</span></button>
+                    <button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button>
+                    <span class="mat-btn-row__spacer"></span>
+                    <a class="mat-btn mat-btn--ghost mat-btn--end" href="/Identity">Reset everything</a>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog class="mat-dialog mat-dialog--sm" id="apps-sort" aria-labelledby="apps-sort-title">
+        <div class="mat-dialog__form">
+            <div class="mat-dialog__head">
+                <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sort"></use></svg>
+                <h2 class="mat-dialog__title" id="apps-sort-title">Sort</h2>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-x"></use></svg></button>
+            </div>
+            <div class="mat-dialog__body mat-form">
+                <fieldset class="mat-field mat-fieldset">
+                    <legend class="mat-label">Sort by</legend>
+                    <div class="mat-options">
+                            <label class="mat-option"><input type="radio" id="apps-sort-by-name" name="sort" value="name" form="apps-form" checked="checked" /><span>Name</span></label>
+                            <label class="mat-option"><input type="radio" id="apps-sort-by-category" name="sort" value="category" form="apps-form" /><span>Category</span></label>
+                            <label class="mat-option"><input type="radio" id="apps-sort-by-hue" name="sort" value="hue" form="apps-form" /><span>Colour (by hue)</span></label>
+                    </div>
+                </fieldset>
+                <fieldset class="mat-field mat-fieldset">
+                    <legend class="mat-label">Order</legend>
+                    <div class="mat-options">
+                        <label class="mat-option"><input type="radio" id="apps-dir-asc" name="dir" value="asc" form="apps-form" checked="checked" /><span>Ascending</span></label>
+                        <label class="mat-option"><input type="radio" id="apps-dir-desc" name="dir" value="desc" form="apps-form" /><span>Descending</span></label>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="mat-dialog__foot">
+                <div class="mat-btn-row mat-btn-row--plain">
+                    <button type="submit" form="apps-form" class="mat-btn mat-btn--primary"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sort"></use></svg><span>Apply</span></button>
+                    <button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button>
+                    <span class="mat-btn-row__spacer"></span>
+                    <a class="mat-btn mat-btn--ghost mat-btn--end" href="/Identity?view=list">Default order</a>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+
+        <div class="mat-table-wrap" data-view="list">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Apps of the Mat family</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">App</th><th scope="col">Category</th><th scope="col">Accent</th>
+                        <th scope="col" class="mat-hide-sm">In the app today</th><th scope="col" class="mat-hide-sm">Logo colour</th>
+                    </tr>
+                </thead>
+                <tbody>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matarchive" role="img" aria-label="Matarchive"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-archive"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matarchive">Matarchive</a><small>Backup and sync jobs</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Infrastructure</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#4fd1c5"><rect width="4" height="4" fill="#4fd1c5"></rect></svg><code>#4fd1c5</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#4fd1c5"><rect width="4" height="4" fill="#4fd1c5"></rect></svg><code>#4fd1c5</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-muted">none</span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matbiz" role="img" aria-label="Matbiz"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-briefcase"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matbiz">Matbiz</a><small>Modular ERP</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Business</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#1b6ec2"><rect width="4" height="4" fill="#1b6ec2"></rect></svg><code>#1b6ec2</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#1b6ec2"><rect width="4" height="4" fill="#1b6ec2"></rect></svg><code>#1b6ec2</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-muted">none</span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matbu" role="img" aria-label="MatBu"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-archive"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matbu">MatBu</a><small>Backup and sync</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Infrastructure</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#0b7f8a"><rect width="4" height="4" fill="#0b7f8a"></rect></svg><code>#0b7f8a</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#0b7f8a"><rect width="4" height="4" fill="#0b7f8a"></rect></svg><code>#0b7f8a</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#0b7f8a"><rect width="4" height="4" fill="#0b7f8a"></rect></svg><code>#0b7f8a</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matcad" role="img" aria-label="Matcad"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-route"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matcad">Matcad</a><small>Reverse proxy with automatic HTTPS</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Infrastructure</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2f6feb"><rect width="4" height="4" fill="#2f6feb"></rect></svg><code>#2f6feb</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2f6feb"><rect width="4" height="4" fill="#2f6feb"></rect></svg><code>#2f6feb</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2f6feb"><rect width="4" height="4" fill="#2f6feb"></rect></svg><code>#2f6feb</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matcms" role="img" aria-label="MatCMS"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-template"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matcms">MatCMS</a><small>Block-based CMS for websites</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Productivity</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><code>#2563eb</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><code>#2563eb</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#3b82f6"><rect width="4" height="4" fill="#3b82f6"></rect></svg><code>#3b82f6</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matddns" role="img" aria-label="Matddns"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-globe"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matddns">Matddns</a><small>DynDNS client with failover</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Infrastructure</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#204db6"><rect width="4" height="4" fill="#204db6"></rect></svg><code>#204db6</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#4f8cff"><rect width="4" height="4" fill="#4f8cff"></rect></svg><code>#4f8cff</code> <span class="mat-pill mat-pill--warn mat-pill--plain">changed</span> </span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#4f8cff"><rect width="4" height="4" fill="#4f8cff"></rect></svg><code>#4f8cff</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matdesign" role="img" aria-label="MatDesign"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matdesign">MatDesign</a><small>Design and identity of all Mat apps</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Platform</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#d6336c"><rect width="4" height="4" fill="#d6336c"></rect></svg><code>#d6336c</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-muted">none found</span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-muted">none</span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matdo" role="img" aria-label="Matdo"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-check-square"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matdo">Matdo</a><small>Tasks and projects</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Productivity</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#8300bc"><rect width="4" height="4" fill="#8300bc"></rect></svg><code>#8300bc</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#8300bc"><rect width="4" height="4" fill="#8300bc"></rect></svg><code>#8300bc</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#540078"><rect width="4" height="4" fill="#540078"></rect></svg><code>#540078</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matdock" role="img" aria-label="MatDock"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-whale"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matdock">MatDock</a><small>Advanced Docker management</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Infrastructure</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#1d78be"><rect width="4" height="4" fill="#1d78be"></rect></svg><code>#1d78be</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2496ed"><rect width="4" height="4" fill="#2496ed"></rect></svg><code>#2496ed</code> <span class="mat-pill mat-pill--warn mat-pill--plain">changed</span> </span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2496ed"><rect width="4" height="4" fill="#2496ed"></rect></svg><code>#2496ed</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matfile" role="img" aria-label="MatFile"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-hard-drive"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matfile">MatFile</a><small>File explorer for your NAS</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Productivity</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#3472d8"><rect width="4" height="4" fill="#3472d8"></rect></svg><code>#3472d8</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#3b82f6"><rect width="4" height="4" fill="#3b82f6"></rect></svg><code>#3b82f6</code> <span class="mat-pill mat-pill--warn mat-pill--plain">changed</span> </span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#3b82f6"><rect width="4" height="4" fill="#3b82f6"></rect></svg><code>#3b82f6</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matgate" role="img" aria-label="Matgate"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-shield"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matgate">Matgate</a><small>One login for your home network</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Infrastructure</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#0a7d57"><rect width="4" height="4" fill="#0a7d57"></rect></svg><code>#0a7d57</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-muted">none found</span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-muted">none</span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matlan" role="img" aria-label="Matlan"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-message-square"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matlan">Matlan</a><small>Language practice</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Home and fun</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#418251"><rect width="4" height="4" fill="#418251"></rect></svg><code>#418251</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#4d9b61"><rect width="4" height="4" fill="#4d9b61"></rect></svg><code>#4d9b61</code> <span class="mat-pill mat-pill--warn mat-pill--plain">changed</span> </span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-muted">none</span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matmail" role="img" aria-label="MatMail"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-mail-m"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matmail">MatMail</a><small>Mail gateway with a web mail client</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Productivity</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#475569"><rect width="4" height="4" fill="#475569"></rect></svg><code>#475569</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#475569"><rect width="4" height="4" fill="#475569"></rect></svg><code>#475569</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#475569"><rect width="4" height="4" fill="#475569"></rect></svg><code>#475569</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matmon" role="img" aria-label="Matmon"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-activity"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matmon">Matmon</a><small>Monitoring for your services</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Monitoring and data</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#295cff"><rect width="4" height="4" fill="#295cff"></rect></svg><code>#295cff</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#295cff"><rect width="4" height="4" fill="#295cff"></rect></svg><code>#295cff</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#1b86d0"><rect width="4" height="4" fill="#1b86d0"></rect></svg><code>#1b86d0</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matos" role="img" aria-label="MatOS"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-monitor"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matos">MatOS</a><small>A desktop for your Docker host, in the browser</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Platform</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#8558ec"><rect width="4" height="4" fill="#8558ec"></rect></svg><code>#8558ec</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#8b5cf6"><rect width="4" height="4" fill="#8b5cf6"></rect></svg><code>#8b5cf6</code> <span class="mat-pill mat-pill--warn mat-pill--plain">changed</span> </span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-muted">none</span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matpaper" role="img" aria-label="MatPaper"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-paperclip"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matpaper">MatPaper</a><small>Document management system</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Productivity</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#268538"><rect width="4" height="4" fill="#268538"></rect></svg><code>#268538</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2f9e44"><rect width="4" height="4" fill="#2f9e44"></rect></svg><code>#2f9e44</code> <span class="mat-pill mat-pill--warn mat-pill--plain">changed</span> </span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#268538"><rect width="4" height="4" fill="#268538"></rect></svg><code>#268538</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matplay" role="img" aria-label="MatPlay"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-gamepad"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matplay">MatPlay</a><small>Scorekeeper for game nights</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Home and fun</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#00819b"><rect width="4" height="4" fill="#00819b"></rect></svg><code>#00819b</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#0099b8"><rect width="4" height="4" fill="#0099b8"></rect></svg><code>#0099b8</code> <span class="mat-pill mat-pill--warn mat-pill--plain">changed</span> </span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#00e5ff"><rect width="4" height="4" fill="#00e5ff"></rect></svg><code>#00e5ff</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matsplit" role="img" aria-label="MatSplit"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-dollar"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matsplit">MatSplit</a><small>Shared expenses for trips and flats</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Home and fun</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#bf5610"><rect width="4" height="4" fill="#bf5610"></rect></svg><code>#bf5610</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#ef6c14"><rect width="4" height="4" fill="#ef6c14"></rect></svg><code>#ef6c14</code> <span class="mat-pill mat-pill--warn mat-pill--plain">changed</span> </span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#e4570a"><rect width="4" height="4" fill="#e4570a"></rect></svg><code>#e4570a</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="matstat" role="img" aria-label="Matstat"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-bar-chart"></use></svg></span>
+                                    <span><a href="/Identity/App?id=matstat">Matstat</a><small>Data integration, statistics and reporting</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Monitoring and data</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><code>#2563eb</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><code>#2563eb</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-muted">none</span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="mattiverse" role="img" aria-label="Mattiverse"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sparkles"></use></svg></span>
+                                    <span><a href="/Identity/App?id=mattiverse">Mattiverse</a><small>Launcher and store for your Docker apps</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Platform</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6164ec"><rect width="4" height="4" fill="#6164ec"></rect></svg><code>#6164ec</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6366f1"><rect width="4" height="4" fill="#6366f1"></rect></svg><code>#6366f1</code> <span class="mat-pill mat-pill--warn mat-pill--plain">changed</span> </span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#4f46e5"><rect width="4" height="4" fill="#4f46e5"></rect></svg><code>#4f46e5</code></span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="mattrakr" role="img" aria-label="MatTrakr"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-progress-play"></use></svg></span>
+                                    <span><a href="/Identity/App?id=mattrakr">MatTrakr</a><small>Movies, series and books</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Home and fun</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6c5ce7"><rect width="4" height="4" fill="#6c5ce7"></rect></svg><code>#6c5ce7</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6c5ce7"><rect width="4" height="4" fill="#6c5ce7"></rect></svg><code>#6c5ce7</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-muted">none</span>                             </td>
+                        </tr>
+                        <tr>
+                            <td data-label="App">
+                                <div class="mat-table__name">
+                                    <span class="mat-logo mat-logo--sm" data-app="msbi" role="img" aria-label="msBi"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-layers"></use></svg></span>
+                                    <span><a href="/Identity/App?id=msbi">msBi</a><small>Self-hosted business intelligence</small></span>
+                                </div>
+                            </td>
+                            <td data-label="Category">Monitoring and data</td>
+                            <td data-label="Accent"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6d5df6"><rect width="4" height="4" fill="#6d5df6"></rect></svg><code>#6d5df6</code></span></td>
+                            <td data-label="In the app today" class="mat-hide-sm">
+ <span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6d5df6"><rect width="4" height="4" fill="#6d5df6"></rect></svg><code>#6d5df6</code></span>                             </td>
+                            <td data-label="Logo colour" class="mat-hide-sm">
+ <span class="mat-muted">none</span>                             </td>
+                        </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="mat-gallery" data-view="gallery" hidden>
+                <a class="mat-tile" href="/Identity/App?id=matarchive" data-app="matarchive">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matarchive" role="img" aria-label="Matarchive"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-archive"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">Matarchive</span>
+                        <span class="mat-tile__meta">Infrastructure · <code>#4fd1c5</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matbiz" data-app="matbiz">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matbiz" role="img" aria-label="Matbiz"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-briefcase"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">Matbiz</span>
+                        <span class="mat-tile__meta">Business · <code>#1b6ec2</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matbu" data-app="matbu">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matbu" role="img" aria-label="MatBu"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-archive"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatBu</span>
+                        <span class="mat-tile__meta">Infrastructure · <code>#0b7f8a</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matcad" data-app="matcad">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matcad" role="img" aria-label="Matcad"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-route"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">Matcad</span>
+                        <span class="mat-tile__meta">Infrastructure · <code>#2f6feb</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matcms" data-app="matcms">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matcms" role="img" aria-label="MatCMS"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-template"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatCMS</span>
+                        <span class="mat-tile__meta">Productivity · <code>#2563eb</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matddns" data-app="matddns">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matddns" role="img" aria-label="Matddns"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-globe"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">Matddns</span>
+                        <span class="mat-tile__meta">Infrastructure · <code>#204db6</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matdesign" data-app="matdesign">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matdesign" role="img" aria-label="MatDesign"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatDesign</span>
+                        <span class="mat-tile__meta">Platform · <code>#d6336c</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matdo" data-app="matdo">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matdo" role="img" aria-label="Matdo"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-check-square"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">Matdo</span>
+                        <span class="mat-tile__meta">Productivity · <code>#8300bc</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matdock" data-app="matdock">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matdock" role="img" aria-label="MatDock"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-whale"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatDock</span>
+                        <span class="mat-tile__meta">Infrastructure · <code>#1d78be</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matfile" data-app="matfile">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matfile" role="img" aria-label="MatFile"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-hard-drive"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatFile</span>
+                        <span class="mat-tile__meta">Productivity · <code>#3472d8</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matgate" data-app="matgate">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matgate" role="img" aria-label="Matgate"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-shield"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">Matgate</span>
+                        <span class="mat-tile__meta">Infrastructure · <code>#0a7d57</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matlan" data-app="matlan">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matlan" role="img" aria-label="Matlan"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-message-square"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">Matlan</span>
+                        <span class="mat-tile__meta">Home and fun · <code>#418251</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matmail" data-app="matmail">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matmail" role="img" aria-label="MatMail"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-mail-m"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatMail</span>
+                        <span class="mat-tile__meta">Productivity · <code>#475569</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matmon" data-app="matmon">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matmon" role="img" aria-label="Matmon"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-activity"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">Matmon</span>
+                        <span class="mat-tile__meta">Monitoring and data · <code>#295cff</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matos" data-app="matos">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matos" role="img" aria-label="MatOS"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-monitor"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatOS</span>
+                        <span class="mat-tile__meta">Platform · <code>#8558ec</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matpaper" data-app="matpaper">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matpaper" role="img" aria-label="MatPaper"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-paperclip"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatPaper</span>
+                        <span class="mat-tile__meta">Productivity · <code>#268538</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matplay" data-app="matplay">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matplay" role="img" aria-label="MatPlay"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-gamepad"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatPlay</span>
+                        <span class="mat-tile__meta">Home and fun · <code>#00819b</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matsplit" data-app="matsplit">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matsplit" role="img" aria-label="MatSplit"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-dollar"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatSplit</span>
+                        <span class="mat-tile__meta">Home and fun · <code>#bf5610</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=matstat" data-app="matstat">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="matstat" role="img" aria-label="Matstat"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-bar-chart"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">Matstat</span>
+                        <span class="mat-tile__meta">Monitoring and data · <code>#2563eb</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=mattiverse" data-app="mattiverse">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="mattiverse" role="img" aria-label="Mattiverse"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sparkles"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">Mattiverse</span>
+                        <span class="mat-tile__meta">Platform · <code>#6164ec</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=mattrakr" data-app="mattrakr">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="mattrakr" role="img" aria-label="MatTrakr"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-progress-play"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">MatTrakr</span>
+                        <span class="mat-tile__meta">Home and fun · <code>#6c5ce7</code></span>
+                    </span>
+                </a>
+                <a class="mat-tile" href="/Identity/App?id=msbi" data-app="msbi">
+                    <span class="mat-tile__media"><span class="mat-logo mat-logo--xl" data-app="msbi" role="img" aria-label="msBi"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-layers"></use></svg></span></span>
+                    <span class="mat-tile__body">
+                        <span class="mat-tile__title">msBi</span>
+                        <span class="mat-tile__meta">Monitoring and data · <code>#6d5df6</code></span>
+                    </span>
+                </a>
+        </div>
+
+    
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="/Identity/Palette"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><span>Check the palette</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/api/apps"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-code"></use></svg><span>Apps as JSON</span></a>
+    </div>
+</div>
+
+            </main>
+
+            <footer class="mat-footer">
+                <p class="mat-footer__text">MatDesign · the design and identity of the Mat apps</p>
+                <ul class="mat-footer__links">
+                    <li><a href="/Rules">Rules</a></li>
+                    <li><a href="/Download">Download MatUi</a></li>
+                </ul>
+            </footer>
+        </div>
+    </div>
+
+    <div class="mat-menu" id="user-menu" role="menu" aria-label="Visitor" hidden>
+        <div class="mat-menu__head">
+            <span class="mat-avatar" aria-hidden="true">V</span>
+            <div><strong>Visitor</strong><small>The Studio is off</small></div>
+        </div>
+                <a class="mat-menu__item " role="menuitem" href="/Studio/Login"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-login"></use></svg><span>Studio: sign in</span></a>
+                <a class="mat-menu__item " role="menuitem" href="/Download"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-download"></use></svg><span>Download the toolkit</span></a>
+                <a class="mat-menu__item " role="menuitem" href="/Rules"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-book"></use></svg><span>Rulebook</span></a>
+                <a class="mat-menu__item " role="menuitem" href="/api/version"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-code"></use></svg><span>API: version</span></a>
+    </div>
+
+        <div class="mat-menu" id="nav-switch-menu" role="menu" aria-label="Menus" data-nav-scope="mat-nav" hidden>
+            <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="true" data-nav-set="design" data-nav-title="Design"  data-nav-attention>
+
+            <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><span>Design</span>
+ <span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn"><span class="mat-sr-only">needs attention</span></span>             <svg class="mat-icon mat-menu__check" aria-hidden="true" focusable="false"><use href="#mat-i-check"></use></svg>
+                    </button>
+            <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="false" data-nav-set="toolkit" data-nav-title="Toolkit"  >
+
+            <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-toggle"></use></svg><span>Toolkit</span>
+            <svg class="mat-icon mat-menu__check" aria-hidden="true" focusable="false"><use href="#mat-i-check"></use></svg>
+                    </button>
+    </div>
+
+
+
+    <script src="/ui/matui.js?v=d2126bc2b9"></script>
+    
+</body>
+</html>

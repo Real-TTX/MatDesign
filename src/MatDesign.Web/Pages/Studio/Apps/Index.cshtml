@@ -10,7 +10,17 @@
 <div class="mat-list">
     <partial name="_Toolbar" model="Model.Toolbar" />
 
-    @if (Model.Items.Count == 0)
+    @if (Model.Toolbar.Total == 0)
+    {
+        @* no app at all, no tool in effect: the primary action instead of a way to reset the tools (LIST-11) *@
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("apps")</span>
+            <div class="mat-empty__title">No apps yet</div>
+            <p>Add the first app of the company: a name, a colour and an icon. It shows on every page of the site and in the toolkit files.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Apps/Edit">@Ui.Icon("plus")<span>Add the first app</span></a>
+        </div>
+    }
+    else if (Model.Items.Count == 0)
     {
         <div class="mat-empty">
             <span class="mat-empty__icon">@Ui.Icon("search")</span>
@@ -56,7 +66,10 @@
 
     <partial name="_Pager" model="Model.Pager" />
 
-    <div class="mat-actions">
-        <a class="mat-btn mat-btn--primary" href="/Studio/Apps/Edit">@Ui.Icon("plus")<span>New app</span></a>
-    </div>
+    @if (Model.Toolbar.Total > 0)
+    {
+        <div class="mat-actions">
+            <a class="mat-btn mat-btn--primary" href="/Studio/Apps/Edit">@Ui.Icon("plus")<span>New app</span></a>
+        </div>
+    }
 </div>

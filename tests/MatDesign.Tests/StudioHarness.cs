@@ -14,12 +14,16 @@ public sealed partial class StudioHarness : IDisposable
 
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "matdesign-studio-" + Guid.NewGuid().ToString("N"));
 
-    public StudioHarness(WebApplicationFactory<Program> factory)
+    public StudioHarness(WebApplicationFactory<Program> factory, IReadOnlyDictionary<string, string>? settings = null)
     {
         Factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("MATDESIGN_DATA", _directory);
             builder.UseSetting("MATDESIGN_ADMIN_PASSWORD", Password);
+            foreach (var (key, value) in settings ?? new Dictionary<string, string>())
+            {
+                builder.UseSetting(key, value);
+            }
         });
         Client = Factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
     }

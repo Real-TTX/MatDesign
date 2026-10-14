@@ -35,7 +35,8 @@ public partial class IndexModel(DesignData design, MatDesign.Web.Services.Toolki
 
     public AccentReport Report { get; private set; } = null!;
 
-    public MatApp Nearest { get; private set; } = null!;
+    /// <summary>The app whose accent is nearest to the one tried; null when the site has no other app.</summary>
+    public MatApp? Nearest { get; private set; }
 
     public double NearestDistance { get; private set; }
 
@@ -52,7 +53,7 @@ public partial class IndexModel(DesignData design, MatDesign.Web.Services.Toolki
     {
         Scheme = ColorSchemes.Normalize(scheme);
         SchemeModes = Scheme is null ? [] : ColorSchemes.Get(Scheme)!.DarkOnly ? [toolkit.Surfaces(Scheme, dark: true)] : [toolkit.Surfaces(Scheme, dark: false), toolkit.Surfaces(Scheme, dark: true)];
-        BaseApp = design.App(app) ?? design.App("mattiverse")!;
+        BaseApp = design.App(app) ?? design.Pick("mattiverse");
         var hex = accent is not null && HexRegex().IsMatch(accent) ? accent.ToLowerInvariant() : BaseApp.Accent.ToLowerInvariant();
         Accent = hex;
         Custom = !hex.Equals(BaseApp.Accent, StringComparison.OrdinalIgnoreCase);
@@ -61,9 +62,11 @@ public partial class IndexModel(DesignData design, MatDesign.Web.Services.Toolki
         Report = AccentReport.For(effective);
 
         var rgb = Rgb.Parse(hex);
-        var nearest = design.Apps.Where(a => a.Id != BaseApp.Id).Select(a => (App: a, Distance: Colors.Distance(rgb, a.AccentRgb))).MinBy(x => x.Distance);
+        // a site that has no other app has nothing to be mistaken for
+        var others = design.Apps.Where(a => a.Id != BaseApp.Id).Select(a => (App: a, Distance: Colors.Distance(rgb, a.AccentRgb))).ToList();
+        var nearest = others.Count == 0 ? default : others.MinBy(x => x.Distance);
         Nearest = nearest.App;
-        NearestDistance = nearest.Distance;
+        NearestDistance = others.Count == 0 ? double.MaxValue : nearest.Distance;
 
         Snippet = BuildSnippet(effective);
     }

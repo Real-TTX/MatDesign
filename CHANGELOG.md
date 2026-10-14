@@ -61,6 +61,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 - `data-selectable` also marks cards and tiles: the item of a ticked check is `is-selected` (its table row, its `mat-tile`, or the nearest element with `data-select-item`), a tint behind the whole item.
 - `--mat-accent-text` is mixed with `--mat-text` by `--mat-accent-text-keep` (100 % in the standard look, so nothing changes there; a colour scheme sets that one share).
 - A toast is shown above an open dialog, inside the topmost one, instead of behind it.
+- The site that serves the toolkit names its own surfaces after the company that runs it (`IDENT-09`, stage 14 of docs/PRODUCT.md): the README of the archive and of a release says "Made by <site name>" and "the UI toolkit of the <company> apps", and the apps part of `matui.css` of a company that started from the blank template has one rule more, `[data-app="this-site"] { --mat-app-accent: ...; }`, for the colour of the site itself. An instance that has no company, and every release made before, is the demo and is unchanged: no file of MatUi differs, nothing to do for an app.
 
 ### Fixed
 

@@ -7,6 +7,7 @@
     var firstRules = new[] { "SHELL-01", "SHELL-03", "SHELL-07", "SHELL-08", "LIST-03", "FORM-01", "DIALOG-03", "IDENT-01" }
         .Select(id => Design.Rule(id)!).ToList();
     var apps = Design.Apps;
+    var tenant = Design.Tenant;
     var pages = new (string Name, string Href, string Text)[]
     {
         ("Foundations", "/Foundations", "Colour, type, space, shape, motion and the icons."),
@@ -17,7 +18,7 @@
         ("Builder", "/Builder", "Try an accent colour in both modes and check the contrast."),
         ("Audit", "/Identity/Audit", "How close each app is to the rules today."),
         ("Download", "/Download", "The CSS, the script and the icon sprite, and the rules as JSON."),
-    };
+    }.Where(entry => entry.Href != "/Identity/Audit" || Design.Template.OffersAudit).ToArray();
 }
 
 @functions {
@@ -30,9 +31,9 @@
 }
 
 <header class="doc-intro">
-    <h1>MatDesign</h1>
+    <h1>@tenant.SiteName</h1>
     <p>
-        How the Mat apps are meant to look. The rulebook lists the rules, the components show them at work, and <code>MatUi</code>
+        How the @tenant.Apps are meant to look. The rulebook lists the rules, the components show them at work, and <code>MatUi</code>
         is the CSS and script an app copies to follow them.
     </p>
     <p class="mat-muted">
@@ -71,18 +72,30 @@
         <h2 id="family-title">The apps</h2>
         <p class="mat-section__lead">Each has one accent colour of its own. Everything else is shared.</p>
     </div>
-    <div class="mat-grid">
-        @foreach (var app in apps)
-        {
-            <a class="mat-card doc-app" href="/Identity/App?id=@app.Id" data-app="@app.Id">
-                @Ui.Logo(app)
-                <span class="doc-app__text">
-                    <span class="doc-app__name">@app.Name</span>
-                    <span class="doc-app__line">@app.Tagline</span>
-                </span>
-            </a>
-        }
-    </div>
+    @if (apps.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("apps")</span>
+            <div class="mat-empty__title">No apps yet</div>
+            <p>@tenant.Company has no apps on this site. Add the first one in the Studio: a name, a colour and an icon.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Apps/Edit">@Ui.Icon("plus")<span>Add the first app</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-grid">
+            @foreach (var app in apps)
+            {
+                <a class="mat-card doc-app" href="/Identity/App?id=@app.Id" data-app="@app.Id">
+                    @Ui.Logo(app)
+                    <span class="doc-app__text">
+                        <span class="doc-app__name">@app.Name</span>
+                        <span class="doc-app__line">@app.Tagline</span>
+                    </span>
+                </a>
+            }
+        </div>
+    }
 </section>
 
 <section class="mat-section" aria-labelledby="inside-title">

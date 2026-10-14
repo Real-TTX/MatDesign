@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **126 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **128 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -53,7 +53,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   so an app that sets none sees no change; the list, with types and defaults, is read from the CSS
 
 **The documentation**
-- **68 components with 236 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
+- **68 components with 241 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
   it uses and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined
@@ -70,6 +70,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   design data and a **styleguide** that opens straight from the release directory
 - **Brand**: the company's names and the tokens of the toolkit it sets, light and dark, within limits that keep it usable (touch targets, body text, line height, radii), with a live preview and a contrast check (AA) before it is saved or released
 - **Versions**: which release of MatUi each app carries, and which one is behind
+- **Company and templates**: the instance belongs to one company, whose names the site, its releases and the archive carry; it starts from the **demo** (the Mat apps) or a **blank** brand with no apps
 - **Component properties and overrides**: the 68 `--mat-<component>-*` properties are editable next to the real control with a live preview, per brand, per app (`[data-app]`) and, for the surfaces, inside each colour scheme; a height under 44 px is written for a mouse only, so a touch screen keeps its 44 px; the order is toolkit, brand, app, scheme
 
 ## The rules in one minute
@@ -231,11 +232,19 @@ docker run -d --name matdesign --restart unless-stopped -p 8060:8060 \
 ### 2. The first visit: the setup assistant
 
 The **Studio** is where apps, rules and components are maintained and a change becomes a release. Open
-**http://localhost:8060/Studio** right after the start: the **setup assistant** asks for the first administrator – a name
-and a password (at least 10 characters, typed twice) – signs you in and leads into the Studio. From then on the Studio asks
-for that name and password (repeated failures lock the client out for a while).
+**http://localhost:8060/Studio** right after the start: the **setup assistant** asks in three steps for your **company**, for
+the **template** the site starts from, and for the first administrator – a name and a password (at least 10 characters, typed
+twice) – signs you in and leads into the Studio. From then on the Studio asks for that name and password (repeated failures
+lock the client out for a while).
 
-![The setup assistant: a name and a password typed twice](docs/images/studio-setup.png)
+![The setup assistant, step 2: the template the site starts from](docs/images/studio-setup.png)
+
+**Start your own.** MatDesign is software for any company that builds its own branding, toolkit and release pipeline; Mat is the
+first company and the sample. Choose **Demo** to look around with the Mat apps as sample data and change them, or **Blank**
+to start with your own brand and no apps: the site, its releases and the archive then carry your names (company, short name,
+site name, tagline), the Mat apps, the audit of their repositories and the Mat brand are not offered, and you add your own
+apps in the Studio. The **Company** page changes the names and switches the template later; nothing is deleted when you do,
+and switching back brings the other layer back.
 
 Whoever opens the page first becomes the administrator, so do it right after the start. The password is kept as a salted hash
 in the `matdesign-data` volume, which also keeps everything the Studio saves; an update is just
@@ -291,6 +300,7 @@ None of them is needed to run it – the image has the right defaults.
 |---|---|---|
 | `MATDESIGN_DATA` | `/data` (in the image) | Data directory of the Studio; it must be writable. Without it the Studio is off and the site is read-only |
 | `MATDESIGN_ADMIN_PASSWORD` | – | Optional, for automation (CI, a throwaway stack): the password of the administrator `admin`, which skips the setup assistant. It wins over the account in the volume |
+| `MATDESIGN_TEMPLATE` / `MATDESIGN_COMPANY` | – | Optional, for automation (a throwaway stack, the browser checks): the template (`demo` or `blank`) and the company where the setup assistant starts, and what the site is when no assistant ever ran. Without them: the demo |
 | `ASPNETCORE_URLS` | `http://+:8060` | Address inside the container |
 
 ### The `/data` volume
@@ -298,8 +308,9 @@ None of them is needed to run it – the image has the right defaults.
 ```
 /data
 ├─ admin.json     the administrator: a name and a salted hash of the password (written by the setup assistant)
+├─ tenant.json    the company and the template, as the setup assistant wrote them (changes are items in studio/)
 ├─ studio/        what the Studio saves: one append-only log of revisions per item
-│                 (apps, rules, components, brand, releases, runs, versions in use)
+│                 (apps, rules, components, brand, company, releases, runs, versions in use)
 ├─ releases/      one directory per release: the toolkit, design.json, the styleguide, manifest.json
 └─ keys/          DataProtection keys (the Studio session survives a restart)
 ```
@@ -320,6 +331,8 @@ place that could.
 | Studio 5–6 | **History** (diff, restore) and **checks** | ✅ |
 | Studio 7–8 | **Releases** through a pipeline, served for the apps; **versions** per app | ✅ |
 | Setup | The **setup assistant** creates the first administrator; the release compose has no variables and no `.env` file | ✅ |
+| Company | The setup assistant asks for the **company** and the **template** (demo or blank); the site, its releases and the archive carry the company's names; a **Company** page; rule `IDENT-09` | ✅ |
+| White label | A release can carry the toolkit under a company's own **class prefix and product name** (`acme-btn`, `window.AcmeUi`, `acmeui.css`): renamed on token boundaries in the Build stage, held to nine checks, a trial build in the Studio; rule `CODE-09` | ✅ |
 | Icon library | 1,925 icons in 54 categories, **Home automation** with its areas, search, single files, archive, in a release | ✅ |
 | Documentation | **Code beside every example**, a real page per group, a styleguide in every release | ✅ |
 | Releases | The real sample pages in a release (today: code and live examples only) | open |
@@ -346,6 +359,7 @@ The behaviour of the script is checked in a real browser (Playwright against the
 cd tests/e2e && npm install && node run.js http://localhost:8060
 ```
 
+`node white-label.js` (also in `tests/e2e`) checks the white label build: the Studio page, the renamed toolkit run in the browser behind the renamer of the site, and 243 screenshots of the original and the renamed toolkit compared pixel by pixel.
 Each run of the browser checks makes one release (a release never changes), so the dev volume grows;
 `docker compose -f docker-compose.dev.yml down -v` followed by `up -d --build` starts it clean.
 

@@ -127,7 +127,7 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
 
     public void OnGet()
     {
-        App = design.App(Request.Query["app"].ToString()) ?? design.App("matdesign")!;
+        App = design.Pick(Request.Query["app"].ToString());
         View = Request.Query["view"].ToString() is "list" or "gallery" or "form" or "dashboard" or "settings" or "auth" ? Request.Query["view"].ToString() : "list";
         var theme = Request.Query["theme"].ToString() is "light" or "dark" ? Request.Query["theme"].ToString() : null;
         var accent = Request.Query["accent"].ToString();

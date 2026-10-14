@@ -78,7 +78,7 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
         var html = await _studio.Get("/Studio/Brand/Components");
 
         Assert.Equal(1, html.Split("<h1").Length - 1);
-        Assert.False(StyleAttribute().IsMatch(html));
+        Assert.DoesNotMatch(StyleAttribute(), html);
         Assert.Contains("68 properties in 16 components", html);
         foreach (var property in Toolkit.EditableProperties)
         {
@@ -422,7 +422,7 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
 
         Assert.Equal(16, Regex.Matches(html, "data-app=\"matx\"").Count(m => m.Index > 0) - Regex.Matches(html, "<html[^>]*data-app=\"matx\"").Count);
         Assert.Contains("/js/brand.js", html);
-        Assert.False(StyleAttribute().IsMatch(html));
+        Assert.DoesNotMatch(StyleAttribute(), html);
         // a new app has no id to scope a preview to
         var fresh = await _studio.Get("/Studio/Apps/Edit");
         var at = fresh.IndexOf("data-prop-group=\"btn\" data-app", StringComparison.Ordinal);

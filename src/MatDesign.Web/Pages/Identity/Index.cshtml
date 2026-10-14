@@ -1,5 +1,6 @@
 @page "/Identity"
 @model MatDesign.Web.Pages.Identity.IndexModel
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     ViewData["Title"] = "Apps";
     ViewData["PageSub"] = "The family. Each app has one accent colour; the toolkit uses it everywhere in that app.";
@@ -9,7 +10,16 @@
 <div class="mat-list" data-view-scope>
     <partial name="_Toolbar" model="Model.Toolbar" />
 
-    @if (Model.Items.Count == 0)
+    @if (Design.Apps.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("apps")</span>
+            <div class="mat-empty__title">No apps yet</div>
+            <p>@Design.Tenant.Company has no apps on this site. Add the first one in the Studio: a name, a colour and an icon.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Apps/Edit">@Ui.Icon("plus")<span>Add the first app</span></a>
+        </div>
+    }
+    else if (Model.Items.Count == 0)
     {
         <div class="mat-empty">
             <span class="mat-empty__icon">@Ui.Icon("search")</span>
@@ -22,7 +32,7 @@
     {
         <div class="mat-table-wrap" data-view="list">
             <table class="mat-table">
-                <caption class="mat-sr-only">Apps of the Mat family</caption>
+                <caption class="mat-sr-only">Apps of the @Design.Tenant.Family</caption>
                 <thead>
                     <tr>
                         <th scope="col">App</th><th scope="col">Category</th><th scope="col">Accent</th>

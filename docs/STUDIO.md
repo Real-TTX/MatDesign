@@ -98,6 +98,7 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 9 | **Setup assistant:** the first visit creates the administrator (name and password, kept as a hash in the volume), so the release compose file has no password and no variables | **done** |
 | 10 | **Brand and tokens** (docs/PRODUCT.md, stage 10): the item `brand`, a token editor with a live preview, the brand overlay in `matui.css`, releases and the archive, history, restore and checks | **done** |
 | 12 | **Token editor per component, per app and per colour scheme** (docs/PRODUCT.md, stage 12): the 68 component properties next to the real control with a live preview, overrides on `[data-app]`, tokens inside each colour scheme, the 44 px rule for touch targets | **done** |
+| 14 | **Demo data and templates** (docs/PRODUCT.md, stage 14): the item `tenant`, the setup assistant's company and template steps, the Company page, the template layer under `DesignData`, a site that names itself after its company, `IDENT-09` | **done** |
 | 15 | **White label build** (docs/PRODUCT.md, stage 15): the item `whitelabel` (prefix and product name), the renamer, the Build stage with checks on the renamed copy, a trial build, history, restore and a check | **done** |
 
 ### Brand
@@ -183,6 +184,29 @@ of the app that has the copy. `VersionTracker` compares that with the releases: 
 **no release yet**, or **not written down**. Being behind is advice (a check says so and links to the app's page), never an error: updating an app is the work of its own repository. The overview counts
 the apps that are behind. The record is an item of the kind `usage`, one per app, with a history of its own.
 
+### Company and templates
+
+One item, `tenant` of the kind `tenant` (`studio/tenant/tenant/<revision>.json`), kept like the others with a history and a restore. It holds the **company** (full name), the **short name** (the word in "the Mat apps"), the **site name** (what the site calls itself: under the logo, in
+the title of every page, in the footer and on the version line; `<short name> Design`, and exactly `MatDesign` for the demo), the **tagline** (under the site name in the menu), the **template** and, for a blank start, the **accent of the site**. `DesignData.Tenant` is what every page reads.
+It comes from the first of: the Studio's item, the file `tenant.json` that the setup assistant wrote once, the environment (`MATDESIGN_TEMPLATE=demo|blank`, `MATDESIGN_COMPANY`; documented here and used by the browser checks to start a blank site), and the demo: an instance without any of
+them (every volume from before the tenants) is the demo, unchanged. `TenantValidator` holds what is saved (names of a sensible length without markup or control characters, a template that exists, and for the blank template an accent that reaches AA in light and dark like the accent of any app),
+and again for what is read from the disk; the check `tenant` of `/Studio/Checks` and the pipeline run it, and a company on the volume that is not valid is left out and reported.
+
+**Templates.** `demo` is everything as it always was: the Mat apps with their accents, the audit snapshot, the Mat brand and the sample apps that the patterns and the colour page draw. `blank` is the toolkit's own content only: the rules and the documentation of the components stay (they document MatUi), the
+Mat apps, the audit and the Mat brand are not offered, the brand is neutral (the names of the company, no token changed), the accent of the site is `#2563eb` unless the company chose another, and the app list starts empty: the company adds its apps in the Studio. The built-in `[data-app]` rules stay in
+`matui.apps.css` (a file of the toolkit); they are simply not offered. Studio items sit on top of both. **Switching the template deletes nothing** (the Company page says so and asks first): the items the Studio saved stay, the apps a company added stay in the blank template, and switching back brings the demo layer back.
+
+**The page** `/Studio/Company` (the menu, between Apps and Brand): the names and, for a blank start, the accent, with Check and Save and a History button; below them the two templates as cards and one button that switches to the other, behind a question (`data-confirm`) that says what the site stops offering.
+**The shell and the pages** read the names from the tenant: the logo and name, the tagline and the version line, the title of every page, the footer, the sign-in and the setup pages, the start page, the Download page, the README of the archive, and in a release the changelog line, the manifest (`company`), `design.json` (`tenant`)
+and the styleguide. Where a blank site has no apps its lists are empty states with the way out (the start page, the apps page of the site and of the Studio, the versions, the palette), and the audit page is not there. What still says Mat on a blank site is the toolkit's: the text of the rules, the components and their examples, the `mat-` classes and `MatUi` (stage 15 renames them).
+
+### Setup
+
+The assistant has three steps in one form: **your company** (the name, and an optional short name that is the first word when left empty), **where to start** (the two templates as cards: *Demo*, "The Mat apps as a sample, to look around and change", and *Blank*, "Start with your own brand and no apps"), and **the administrator** (as before).
+With the script it shows one step at a time (Next checks the step it leaves, Back keeps what was typed, Enter goes on instead of sending an unfinished form); without it all three are on the page and the form is sent as it is. The server checks everything and shows the step that has the first problem. The company and the template are written to `tenant.json` once,
+together with the administrator. A post that has only the name and the password (a script, an old client) creates the administrator and leaves the site what the environment says, the demo by default. The release `docker-compose.yml` still has no variable; `MATDESIGN_TEMPLATE` and `MATDESIGN_COMPANY` are for automation (a throwaway stack, the browser checks):
+they are where the assistant starts, and what the site is when it never runs (`MATDESIGN_ADMIN_PASSWORD` skips it).
+
 ## Releases in practice
 
 **Making one:** Studio → Releases → New release. The form suggests the next patch number (0.1.0 for the first), checks the version before anything runs (three numbers, not released yet, higher than the last
@@ -206,6 +230,8 @@ the version, no inline style, no id twice, a label on every table cell), crawls 
 drives a real browser through the Studio: the setup assistant (when the site has no administrator yet, it creates one with `STUDIO_NAME` / `STUDIO_PASSWORD`, default `admin` / `studio-dev`), sign-in and lock, creating, refusing, saving and deleting an app, a rule and a component, the history and a restore, the checks, a release and the files it serves, the
 versions, and every page at the width of a phone. **Each run of the browser checks makes one release** (they never change), so the development volume grows by one release per run;
 `docker compose -f docker-compose.dev.yml down -v` followed by `up -d --build` starts it clean.
+`tests/e2e/blank.js` is the blank start in a second site (`MATDESIGN_TEMPLATE=blank MATDESIGN_COMPANY=Acme`, its own port and an empty data directory): the assistant's three steps by the real form, the shell saying the company and no Mat app anywhere, a first app, and the Company page switching to the demo and back.
+`run.js` goes through the same steps for the demo (`STUDIO_COMPANY`, default Mat, and `STUDIO_TEMPLATE`, default demo) and has a short block for the Company page.
 
 ## What it does not do
 

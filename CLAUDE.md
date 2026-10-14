@@ -14,6 +14,8 @@ Stack: ASP.NET Core on **.NET 10**, C#, **Razor Pages**, plain CSS and plain Jav
 `MATDESIGN_DATA` is set (the image sets it). Its first administrator is created by the **setup assistant** on the first visit (`/Studio/Setup`; a name and a password, kept as a hash in `admin.json`),
 so **the release `docker-compose.yml` has no variables and no `.env` file: keep it that way, do not bring a password or a port variable back**. `MATDESIGN_ADMIN_PASSWORD` is only an optional shortcut for
 automation. The browser checks create the administrator when they find none (`STUDIO_NAME` / `STUDIO_PASSWORD`, default `admin` / `studio-dev`).
+The instance belongs to **one company** (docs/PRODUCT.md): the setup assistant also asks for its name and for the **template** the site starts from, `demo` (the Mat apps as sample data) or `blank`; the site names itself after the company (`IDENT-09`).
+`MATDESIGN_TEMPLATE` / `MATDESIGN_COMPANY` are only for automation, like the password (the browser checks start a blank site with them); an instance without a tenant is the demo.
 
 Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and [docs/ADOPTING.md](docs/ADOPTING.md) for what an app has to do to use MatUi.
 
@@ -30,6 +32,10 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
   computed styles. `MSYS_NO_PATHCONV=1` for Git Bash arguments that start with `/`. Shell strings with backticks, apostrophes or `$$` get mangled: write files with
   the editor tools, not with `node -e` or heredocs. A script that merges text into a file must use a replacer function (`text.replace(a, () => b)`): in a plain replacement string
   `$$` becomes `$` (it turned `$$(...)` of the script into `$(...)` once).
+- **Browser checks of a blank start (stage 14):** start a second site on an empty data directory with the template in the environment and run `blank.js` against it:
+  `MATDESIGN_DATA=<empty dir> MATDESIGN_TEMPLATE=blank MATDESIGN_COMPANY=Acme ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/MatDesign.Web --no-build --urls http://localhost:8189` and
+  `cd tests/e2e && node blank.js http://localhost:8189` (`SHOTS=<dir>` also takes screenshots). It goes through the setup assistant's steps by the real form, so it needs a fresh directory each run. `run.js` goes through the same steps for the demo
+  (`STUDIO_COMPANY`, `STUDIO_TEMPLATE`).
 - **Icon sprite:** `node tools/icons.js` rebuilds `src/MatUi/wwwroot/img/matui-icons.svg` from `tools/icons.base.json` plus the extras in the script (CI fails when it is stale).
 - **Icon library (optional, ICON-05):** `node tools/iconlib.js` builds `src/MatUi/wwwroot/iconlib/` (sprite `mat-il-*`, catalogue, licence, README) from `tools/iconlib/`: `lucide.json` (vendored Lucide, written by
   `import-lucide.js <checkout>` when Lucide is updated), `custom.json` (icons drawn for MatDesign: one line each, with tags and categories; look at them on a contact sheet before keeping one) and `categories.json`
@@ -63,6 +69,9 @@ src/MatDesign.Core         no web types
   Studio/BrandTokens.cs      which tokens of matui.tokens.css a brand may set (the others are derived or structure, with the reason), their kind (colour, length, number, duration, font stack, easing) and limits
   Studio/BrandValidator.cs   what a brand has to be: IsSafe/IsSafeValue (nothing that can leave a declaration), Normalize, CheckValue (kind and limits), Validate (names, scale, contrast)
   Studio/BrandContrast.cs    the toolkit's contrast checks run on the surfaces of a brand, per scheme, mode and app accent (SchemeSurfaces.Pairings is the shared list of pairings)
+  DesignTemplates.cs         the templates (stage 14): ITemplate = the built-in layer (apps, audit, sample apps, the site app, the brand in force); `demo` (AppRegistry as it is, the Mat brand, the matdesign app as the site) and `blank` (no apps, a neutral brand, the app `this-site`)
+  Studio/Tenant.cs           the company of the instance (item `tenant`): company, short name, site name, tagline, template, accent; the demo tenant, `tenant.json` (Read/WriteFile), the words "Mat apps" / "Mat app" / "Mat family" as `Apps` / `App` / `Family`
+  Studio/TenantValidator.cs  what a tenant has to be: Normalize, IsSafe, Validate (names, template, for a blank site an accent that reaches AA)
   Studio/ComponentTokens.cs  the documented component properties as values the Studio may set (PropertyToken: kind, limits by name, touch target or not, what the control uses today); FloorPx 32, TouchPx 44
   Studio/AppOverrides.cs     what an app sets on top of the brand (MatApp.Tokens and .Properties): the subset of tokens (shape, spacing, type, motion), Normalize, IsSafe, Validate
   Studio/WhiteLabel.cs       the white label build (CODE-09): WhiteLabelSetting (prefix and name, the item `whitelabel`), WhiteLabel (Validate, Rename on token boundaries in one pass, RenameJson, Leftovers, Examples): pure, no web types
@@ -86,6 +95,10 @@ src/MatDesign.Web          the site
   Pages/Studio/Brand         the brand editor: names, a token table per group of the CSS (an input by kind, a colour picker, a reset), a preview outside the form, the contrast, a section per colour scheme; wwwroot/js/brand.js is its script (also of the next two)
   Pages/Studio/BrandComponents  /Studio/Brand/Components: the 68 properties by component, each group with a table and the real control beside it (PropertyPreviews: the mapping to the catalogue, as data; Shared/_PropertyGroup, _BrandTabs); /Studio/Apps/Edit has the section Overrides of this app (same rows)
   Pages/Studio/Brand         the brand editor: names, a token table per group of the CSS (an input by kind, a colour picker, a reset), a preview outside the form, the contrast; wwwroot/js/brand.js is its script
+  Pages/Studio/Company       the Company page: the names and the accent of a blank site, the two templates and the switch (a question first, nothing is deleted); Setup has the company and the template as steps 1 and 2 (wwwroot/js/setup.js shows one at a time)
+  wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
+tests/MatDesign.Tests      unit tests + the site in memory
+tests/e2e                  run.js: the behaviour in a real browser against a running site; blank.js: a blank start on a second site (see Build / run / test)
   Pages/Studio/Releases/WhiteLabel  the white label page (CODE-09): prefix and name with live validation (wwwroot/js/whitelabel.js), before and after, the trial build, save and reset; Studio/WhiteLabelBuild.cs (WhiteLabelStore; WhiteLabelBuild.Apply renames the files of a release, the JSON and the archive, writes the hash of the copy and runs the checks), Studio/WhiteLabelEndpoints.cs (POST .../WhiteLabel/rename: the renamer as an address, for the browser checks)
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
@@ -219,6 +232,10 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - After a change to CSS, JS or cshtml the container must be rebuilt.
 - **The brand is tokens, never CSS (`COLOR-11`, docs/STUDIO.md "Brand")**: `ToolkitFiles.BrandOverlay` appends it to the apps part (the part count stays ten): `:root` for light, the dark set twice and identical, nothing when the brand sets nothing. A new token that a brand may set needs a
   kind the editor knows (`BrandTokens.Describe`), and a limit if usability depends on it; a brand is never held below the contrast the toolkit holds (`BrandContrast`, the `brand` check). The page of the editor sets the unsaved values on `[data-brand-preview]` through the CSSOM, never as a style attribute.
+- **The site names itself after its company, never after another (`IDENT-09`, docs/STUDIO.md "Company and templates")**: a page never writes `MatDesign`, `Mat apps` or an app of the family; it reads `DesignData.Tenant` (`SiteName`, `Company`, `Apps`, `App`, `Family`) and `DesignData.SiteApp`, and
+  asks `DesignData.Apps` / `Pick("matpaper")` (the sample app, or the site when this instance has no such app) instead of `AppRegistry` or `Design.App("matdesign")`. The built-in layer comes from the tenant's template (`ITemplate`); `demo` is the site as it always was
+  and an instance with no tenant is the demo, so a change for a company must leave the demo's pages as they were (`TemplateSiteTests` compares them with the ones in `tests/MatDesign.Tests/Golden`, served by main before the tenants). A list that can be empty has an empty state with the
+  way out (`LIST-11`), not a broken page. The toolkit's own names (`MatUi`, `mat-`, the text of the rules and components) stay until stage 15.
 - **Properties, apps and schemes (stage 12, docs/STUDIO.md "Components, apps and schemes")**: the order in `matui.css` is toolkit, colours of the apps, brand (tokens, properties, schemes), overrides of each app (`ToolkitFiles.Build`); light on the selector, the dark set
   twice and identical, nothing set writes nothing. **A height of a control that is pressed under 44 px is written inside `@media (pointer: fine)` only** (`ComponentTokens.AppliesToFinePointerOnly`), never under 32 px: do not write one into `:root` or `[data-app]` directly. A new `@prop` needs no Studio code (limits by name); an
   app owns shape, spacing, type, motion and its accent, never surfaces. A preview inside a form has `form="pv-none"` on its controls (`PropertyPreviews.Detach`). `data-*` attributes with a null value render as `data-x=""` in Razor: write them conditionally.

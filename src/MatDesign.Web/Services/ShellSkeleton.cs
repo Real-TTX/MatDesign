@@ -3,6 +3,10 @@ namespace MatDesign.Web.Services;
 /// <summary>The page skeleton an app puts in its layout, as the shell page shows it. It is the markup of <c>_Layout.cshtml</c> without the Razor.</summary>
 public static class ShellSkeleton
 {
+    /// <summary>The skeleton written for an app of this site: the example app, MatMail, is the one the page names; a site that has no such app shows the skeleton with its own name and id.</summary>
+    public static string For(MatDesign.Core.MatApp app)
+        => app.Id == "matmail" ? Html : Html.Replace("MatMail", app.Name, StringComparison.Ordinal).Replace("matmail", app.Id, StringComparison.Ordinal);
+
     public const string Html = """
         <!DOCTYPE html>
         <html lang="en" data-app="matmail">

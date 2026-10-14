@@ -67,7 +67,11 @@
                 </div>
             </section>
 
-            @if (Model.TooClose)
+            @if (Model.Nearest is null)
+            {
+                <div class="mat-alert mat-alert--info">@Ui.Icon("info")<div class="mat-alert__body"><strong>Nothing to compare with yet.</strong> This site has no other app, so no accent can be mistaken for one. Add apps in the Studio and the nearest one shows here.</div></div>
+            }
+            else if (Model.TooClose)
             {
                 <div class="mat-alert mat-alert--warning">@Ui.Icon("alert")<div class="mat-alert__body"><strong>Close to @Model.Nearest.Name.</strong> The distance is @distance (OKLab x 10); below @PaletteAdvisor.TooClose.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) two apps are easy to mix up on a small logo or a tab (<a href="/Rules/Detail?id=IDENT-04">IDENT-04</a>).</div></div>
             }

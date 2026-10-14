@@ -16,5 +16,6 @@
         @RenderBody()
     </main>
     <script src="/ui/matui.js?v=@Toolkit.Hash"></script>
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

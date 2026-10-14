@@ -46,6 +46,7 @@ public sealed record ReleaseManifest(
     IReadOnlyList<string> Changelog,
     IReadOnlyList<ReleaseFile> Files,
     string? Toolkit = null,
+    string? Company = null,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] WhiteLabelSetting? WhiteLabel = null);
 
 /// <summary>
@@ -59,7 +60,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
     public static readonly IReadOnlyList<string> StageNames = ["Check", "Version", "Build", "Publish", "Notify"];
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
-    private static readonly string[] ToolkitKinds = ["apps", "rules", "components", Brand.Kind];
+    private static readonly string[] ToolkitKinds = ["apps", "rules", "components", Brand.Kind, Tenant.Kind];
 
     private readonly object _running = new();
 
@@ -289,7 +290,8 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
 
                 log.Add($"Version {version} is new" + (Latest is { } last ? $" and higher than {last.Version}." : ": it is the first release."));
                 changes = ChangesSince(Latest?.At);
-                changelog = changes.Count == 0 ? "No change in the Studio since the last release." : $"{changes.Count} change(s) in the Studio since the last release.";
+                // the header of the changelog names the company whose design this is (stage 14)
+                changelog = changes.Count == 0 ? $"{design.Tenant.SiteName}: no change in the Studio since the last release." : $"{design.Tenant.SiteName}: {changes.Count} change(s) in the Studio since the last release.";
                 log.Add(changelog);
                 log.AddRange(changes.Take(20).Select(c => "  - " + c));
                 return true;
@@ -342,7 +344,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
                     return false;
                 }
 
-                manifest = new ReleaseManifest(version, DateTimeOffset.UtcNow, by, note, releaseHash, runId, report!.Errors, report.Advice, design.Apps.Count, design.Rules.Count, design.Components.Count, changes, files, AppVersion.MatUi, appliedWhiteLabel);
+                manifest = new ReleaseManifest(version, DateTimeOffset.UtcNow, by, note, releaseHash, runId, report!.Errors, report.Advice, design.Apps.Count, design.Rules.Count, design.Components.Count, changes, files, AppVersion.MatUi, design.Tenant.Company, appliedWhiteLabel);
                 File.WriteAllText(Path.Combine(buildDirectory!, "manifest.json"), JsonSerializer.Serialize(manifest, Json), new UTF8Encoding(false));
                 Directory.Move(buildDirectory!, directory);
                 buildDirectory = null;
@@ -456,6 +458,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
     /// <summary>The design data of this moment as JSON: what an app or a tool can read without the site.</summary>
     private string DesignJson() => JsonSerializer.Serialize(new
     {
+        tenant = new { design.Tenant.Company, design.Tenant.ShortName, design.Tenant.SiteName, design.Tenant.Tagline, template = design.Tenant.Template },
         brand = new
         {
             design.Brand.Company, design.Brand.ShortName, design.Brand.Tagline,

@@ -56,6 +56,11 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
   watch(page, 'studio');
   await page.goto(BASE + '/Studio/Login', { waitUntil: 'networkidle' });
   if (page.url().includes('/Studio/Setup')) {
+    // the assistant has three steps: the company, the template (the demo: these checks are about the Mat apps) and the administrator
+    await page.fill('#Company', process.env.STUDIO_COMPANY || 'Mat');
+    await page.click('[data-setup-next]');
+    await page.locator(`.mat-choice:has(input[value="${process.env.STUDIO_TEMPLATE || 'demo'}"])`).click();
+    await page.click('[data-setup-next]');
     await page.fill('#Name', name);
     await page.fill('#Password', password);
     await page.fill('#Repeat', password);
