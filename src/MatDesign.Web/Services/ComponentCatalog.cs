@@ -1203,6 +1203,7 @@ public static class ComponentCatalog
         .. ScheduleComponents.All,
         .. GroupComponents.All,
         .. ListComponents.All,
+        .. UploadComponents.All,
     ]);
 
     /// <summary>A component with the examples that other files add to it.</summary>

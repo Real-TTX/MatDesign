@@ -6309,6 +6309,410 @@ function seenAt(page, selector) {
     await phone.ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- file upload (FORM-21)
+  console.log('\nFile upload');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#file-upload');
+    const up = id => `.mat-upload:has(#${id})`;
+    const names = id => page.$$eval(`${up(id)} .mat-upload__name`, els => els.map(e => e.textContent));
+    const inputNames = id => page.$eval('#' + id, el => [...el.files].map(f => f.name));
+    const issues = id => page.$$eval(`${up(id)} .mat-upload__issues li`, els => els.map(e => e.textContent.replace(/\u00a0/g, ' ').trim()));
+    const browse = id => `${up(id)} .mat-upload__browse`;
+    // what a person drags: files of a name, a type and a size (bytes), put in a DataTransfer; the events are the ones of a real drag
+    const dragEvent = (id, type, specs) => page.evaluate(({ id, type, specs }) => {
+      const dt = new DataTransfer();
+      (specs || []).forEach(([name, mime, size]) => dt.items.add(new File([new Uint8Array(size || 10)], name, { type: mime, lastModified: 1700000000000 })));
+      const target = document.getElementById(id).closest('.mat-upload');
+      const e = new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true });
+      target.dispatchEvent(e);
+      return e.defaultPrevented;
+    }, { id, type, specs });
+    const dropFiles = (id, specs) => dragEvent(id, 'drop', specs);
+    // events that the page hears on the wrapper and on the field
+    const listen = id => page.evaluate(i => {
+      const wrap = document.getElementById(i).closest('.mat-upload');
+      window.__up = { changes: [], refused: [], fieldEvents: [], fieldFiles: [] };
+      wrap.addEventListener('mat:upload-change', e => window.__up.changes.push({ source: e.detail.source, files: e.detail.files.map(f => f.name), added: e.detail.added.map(f => f.name), removed: e.detail.removed.map(f => f.name) }));
+      wrap.addEventListener('mat:upload-refused', e => window.__up.refused.push(e.detail.refused.map(r => r.reason + ':' + r.name)));
+      document.getElementById(i).addEventListener('change', e => { window.__up.fieldEvents.push('change'); window.__up.fieldFiles.push([...e.target.files].map(f => f.name)); });
+      document.getElementById(i).addEventListener('input', () => window.__up.fieldEvents.push('input'));
+    }, id);
+    const heard = () => page.evaluate(() => window.__up);
+    const pdf = (name, size) => ({ name, mimeType: 'application/pdf', buffer: Buffer.alloc(size || 100, 1) });
+    const choose = async (selector, files, how) => {
+      const [chooser] = await Promise.all([page.waitForEvent('filechooser'), how()]);
+      await chooser.setFiles(files);
+      return chooser;
+    };
+
+    await page.evaluate(() => document.getElementById('file-upload').scrollIntoView());
+    await check('an upload is wired: the real input is out of the Tab order and a screen reader, one button is named by the label and by what it says, and the limits are in the zone', async () => {
+      expect(await page.locator('.mat-upload.is-ready').count(), 7, 'uploads that were wired');
+      const s = await page.evaluate(() => {
+        const input = document.getElementById('up-docs'), button = document.querySelector('.mat-upload:has(#up-docs) .mat-upload__browse');
+        const name = ['up-docs-label', 'up-docs-title'].map(i => document.getElementById(i).textContent).join(' ');
+        return {
+          tab: input.tabIndex, hidden: input.getAttribute('aria-hidden'), opacity: getComputedStyle(input).opacity, events: getComputedStyle(input).pointerEvents,
+          labelled: button.getAttribute('aria-labelledby'), type: button.type, described: button.getAttribute('aria-describedby'), name,
+          limits: document.getElementById('up-docs-limits').textContent.replace(/\u00a0/g, ' '), title: document.getElementById('up-docs-title').textContent,
+          stops: [...document.querySelectorAll('.mat-upload:has(#up-docs) button, .mat-upload:has(#up-docs) input')].filter(e => e.tabIndex >= 0).length,
+        };
+      });
+      expect(s.tab, -1, 'tabindex of the real input');
+      expect(s.hidden, 'true', 'aria-hidden of the real input');
+      expect(s.opacity, '0', 'the real input is invisible');
+      expect(s.events, 'none', 'the real input takes no pointer');
+      expect(s.labelled, 'up-docs-label up-docs-title', 'the button is named by the label and by its text');
+      expect(s.type, 'button', 'type of the button');
+      expect(s.described.split(' ').slice(0, 2), ['up-docs-limits', 'up-docs-hint'], 'the button is told the limits and the hint');
+      expect(s.name, 'Documents Drop files here or choose them', 'name of the button');
+      expect(s.limits, 'PDF, PNG, JPG · up to 5 files · up to 10 MB each', 'limits');
+      expect(s.stops, 1, 'stops of the Tab key in the zone');
+    });
+    await check('the zone opens the dialog with a click, Enter and Space, and what is chosen is listed and held by the real input; the next choice is added to the list', async () => {
+      await listen('up-docs');
+      await choose(null, [pdf('contract.pdf', 2048), { name: 'scan.png', mimeType: 'image/png', buffer: Buffer.alloc(1536, 1) }], () => page.click(`${up('up-docs')} .mat-upload__zone`, { position: { x: 30, y: 30 } }));
+      expect(await names('up-docs'), ['contract.pdf', 'scan.png'], 'the list after a click on the zone (not on the button)');
+      expect(await inputNames('up-docs'), ['contract.pdf', 'scan.png'], 'the files of the real input');
+      expect(await page.$$eval(`${up('up-docs')} .mat-upload__meta`, els => els.map(e => e.textContent.replace(/\u00a0/g, ' '))), ['2 KB', '1.5 KB'], 'the sizes');
+      await page.focus(browse('up-docs'));
+      await choose(null, [pdf('invoice.pdf', 300)], () => page.keyboard.press('Enter'));
+      expect(await names('up-docs'), ['contract.pdf', 'scan.png', 'invoice.pdf'], 'the list after Enter');
+      await choose(null, [pdf('second.pdf', 300)], () => page.keyboard.press('Space'));
+      expect(await names('up-docs'), ['contract.pdf', 'scan.png', 'invoice.pdf', 'second.pdf'], 'the list after Space');
+      expect(await inputNames('up-docs'), ['contract.pdf', 'scan.png', 'invoice.pdf', 'second.pdf'], 'the files of the real input hold all of them');
+      const h = await heard();
+      // the page hears one change per choice, and the files of the field are already the whole list when it does
+      expect(h.fieldEvents.filter(e => e === 'change').length, 3, 'change events of the field');
+      expect(h.fieldFiles.at(-1), ['contract.pdf', 'scan.png', 'invoice.pdf', 'second.pdf'], 'the files that a listener sees');
+      expect(h.changes.map(c => c.source), ['picker', 'picker', 'picker'], 'sources');
+      expect(h.changes[1].added, ['invoice.pdf'], 'what the second choice added');
+    });
+    await check('a drag over the control tints the zone and draws a solid line all around it, and the text says what happens; leaving ends it', async () => {
+      expect(await dragEvent('up-letter', 'dragenter', [['a.pdf', 'application/pdf']]), true, 'the drag is allowed to end here');
+      const over = await page.evaluate(() => {
+        const zone = document.querySelector('.mat-upload:has(#up-letter) .mat-upload__zone'), cs = getComputedStyle(zone);
+        return { drag: zone.closest('.mat-upload').classList.contains('is-drag'), style: cs.borderTopStyle, sides: [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth, cs.borderLeftWidth], colours: new Set([cs.borderTopColor, cs.borderRightColor, cs.borderBottomColor, cs.borderLeftColor]).size, bg: cs.backgroundColor, text: document.getElementById('up-letter-title').textContent };
+      });
+      expect(over.drag, true, 'is-drag');
+      expect(over.style, 'solid', 'the line is solid');
+      expect(over.sides, ['2px', '2px', '2px', '2px'], 'the line on every side');
+      expect(over.colours, 1, 'one colour on every side');
+      expect(over.text, 'Drop to add', 'the text of a drag');
+      expect(await dragEvent('up-letter', 'dragleave', [['a.pdf', 'application/pdf']]), false, 'a leave');
+      const left = await page.evaluate(() => ({ drag: document.querySelector('.mat-upload:has(#up-letter)').classList.contains('is-drag'), text: document.getElementById('up-letter-title').textContent, style: getComputedStyle(document.querySelector('.mat-upload:has(#up-letter) .mat-upload__zone')).borderTopStyle }));
+      expect(left, { drag: false, text: 'Drop a file here or choose one', style: 'dashed' }, 'after leaving');
+      // a drag that carries no file (text, a link) is left alone
+      expect(await page.evaluate(() => { const e = new DragEvent('dragenter', { dataTransfer: new DataTransfer(), bubbles: true, cancelable: true }); document.getElementById('up-letter').closest('.mat-upload').dispatchEvent(e); return [e.defaultPrevented, document.querySelector('.mat-upload:has(#up-letter)').classList.contains('is-drag')]; }), [false, false], 'a drag without files');
+    });
+    await check('a drop is checked for type, size, number and duplicates: every refusal is named with its reason in words, the others are added, and the page hears of both', async () => {
+      await page.reload();
+      await page.waitForFunction(() => document.readyState === 'complete');
+      await listen('up-docs');
+      expect(await dropFiles('up-docs', [['a.pdf', 'application/pdf', 1000], ['virus.exe', 'application/x-msdownload', 1000], ['huge.pdf', 'application/pdf', 12 * 1048576], ['b.jpg', 'image/jpeg', 2000], ['a.pdf', 'application/pdf', 1000]]), true, 'the drop is handled');
+      expect(await names('up-docs'), ['a.pdf', 'b.jpg'], 'the files that were added');
+      expect(await inputNames('up-docs'), ['a.pdf', 'b.jpg'], 'the files of the real input');
+      expect(await issues('up-docs'), [
+        'virus.exe: this type of file is not accepted. Allowed: PDF, PNG, JPG.',
+        'huge.pdf: the file is too large (12 MB). The limit is 10 MB.',
+        'a.pdf: this file has already been added.',
+      ], 'the reasons');
+      // every file of the example has a name; the refusals sit in a live region and carry an icon, never a colour alone
+      expect(await page.$eval(`${up('up-docs')} .mat-upload__status`, el => [el.getAttribute('role'), el.getAttribute('aria-live'), el.querySelectorAll('.mat-icon').length]), ['status', 'polite', 3], 'the live region of the refusals');
+      await dropFiles('up-docs', [['c.pdf', 'application/pdf'], ['d.pdf', 'application/pdf'], ['e.pdf', 'application/pdf'], ['f.pdf', 'application/pdf']]);
+      expect(await names('up-docs'), ['a.pdf', 'b.jpg', 'c.pdf', 'd.pdf', 'e.pdf'], 'five at most');
+      expect(await issues('up-docs'), ['f.pdf: not added. At most 5 files are allowed.'], 'the number');
+      const h = await heard();
+      expect(h.refused, [['type:virus.exe', 'size:huge.pdf', 'duplicate:a.pdf'], ['count:f.pdf']], 'mat:upload-refused');
+      expect(h.changes.map(c => [c.source, c.added]), [['drop', ['a.pdf', 'b.jpg']], ['drop', ['c.pdf', 'd.pdf', 'e.pdf']]], 'mat:upload-change');
+      // a drop tells the form like a choice in the dialog does
+      expect(h.fieldEvents, ['input', 'change', 'input', 'change'], 'the events of the field');
+      expect(h.fieldFiles.at(-1), ['a.pdf', 'b.jpg', 'c.pdf', 'd.pdf', 'e.pdf'], 'what the form sees');
+      // the next thing that is added or taken away clears the old message
+      await page.click(`${up('up-docs')} .mat-upload__item >> nth=0 >> .mat-upload__remove`);
+      expect(await issues('up-docs'), [], 'the message is gone after a change');
+    });
+    await check('a file is removed with its button, which is named by the file: the list and the real input follow, the focus goes to the next button, and the last one hands it back to the zone', async () => {
+      expect(await names('up-docs'), ['b.jpg', 'c.pdf', 'd.pdf', 'e.pdf'], 'the list after the first removal');
+      expect(await inputNames('up-docs'), ['b.jpg', 'c.pdf', 'd.pdf', 'e.pdf'], 'the real input after the first removal');
+      expect(await page.getAttribute(`${up('up-docs')} .mat-upload__remove >> nth=1`, 'aria-label'), 'Remove c.pdf', 'name of the button');
+      expect(await page.getAttribute(`${up('up-docs')} .mat-upload__remove >> nth=1`, 'title'), 'Remove c.pdf', 'tooltip of the button');
+      await page.focus(`${up('up-docs')} .mat-upload__item >> nth=1 >> .mat-upload__remove`);
+      await page.keyboard.press('Enter');
+      expect(await names('up-docs'), ['b.jpg', 'd.pdf', 'e.pdf'], 'the list after a removal with the keyboard');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Remove d.pdf', 'the focus is on the button of the file that moved up');
+      await page.keyboard.press('Space');
+      await page.keyboard.press('Space');
+      expect(await page.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Remove b.jpg', 'the focus goes to the one before when the last is gone');
+      await page.keyboard.press('Enter');
+      expect(await names('up-docs'), [], 'an empty list');
+      expect(await page.evaluate(() => document.activeElement.classList.contains('mat-upload__browse')), true, 'the focus is back on the zone');
+      expect(await inputNames('up-docs'), [], 'the real input is empty');
+      expect(await page.$eval(`${up('up-docs')} .mat-upload__list`, el => el.hidden), true, 'the empty list is not drawn');
+      const h = await heard();
+      expect(h.changes.slice(-1)[0], { source: 'remove', files: [], added: [], removed: ['b.jpg'] }, 'the last event');
+      expect(await page.$eval(`${up('up-docs')} .mat-sr-only`, el => el.textContent), 'b.jpg removed', 'what a screen reader is told');
+    });
+    await check('without multiple a new file replaces the old one and the rest of a drop is refused; the list follows the real input', async () => {
+      await dropFiles('up-letter', [['one.pdf', 'application/pdf', 500], ['two.pdf', 'application/pdf', 500]]);
+      expect(await names('up-letter'), ['one.pdf'], 'one file');
+      expect(await issues('up-letter'), ['two.pdf: not added. Only one file is allowed.'], 'the second is refused');
+      await dropFiles('up-letter', [['three.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 500]]);
+      expect(await names('up-letter'), ['three.docx'], 'replaced');
+      expect(await inputNames('up-letter'), ['three.docx'], 'the real input');
+      await dropFiles('up-letter', [['big.pdf', 'application/pdf', 3 * 1048576]]);
+      expect(await names('up-letter'), ['three.docx'], 'a refused file does not replace the one that is there');
+      expect(await issues('up-letter'), ['big.pdf: the file is too large (3 MB). The limit is 2 MB.'], 'size');
+    });
+    await check('a required field says so at the field when the form is sent without a file, the focus lands on the zone, and the message goes when a file is chosen; a reset empties the list', async () => {
+      await page.click(`${up('up-letter')} .mat-upload__remove`);
+      expect(await inputNames('up-letter'), [], 'no file');
+      await page.click('form[action="/Components#file-upload"] button[type=submit]');
+      await page.waitForTimeout(300);
+      const s = await page.evaluate(() => ({
+        error: document.querySelector('.mat-field:has(#up-letter) .mat-error').textContent, invalid: document.getElementById('up-letter').getAttribute('aria-invalid'),
+        field: document.querySelector('.mat-field:has(#up-letter)').classList.contains('is-invalid'), focus: document.activeElement.classList.contains('mat-upload__browse') && document.activeElement.closest('.mat-upload').contains(document.getElementById('up-letter')),
+        line: getComputedStyle(document.querySelector('.mat-upload:has(#up-letter) .mat-upload__zone')).borderTopColor, plain: getComputedStyle(document.querySelector('.mat-upload:has(#up-docs) .mat-upload__zone')).borderTopColor,
+      }));
+      expect(s.error, 'Please choose your application letter.', 'the message of the form');
+      expect(s.invalid, 'true', 'aria-invalid');
+      expect(s.field, true, 'the field is marked');
+      expect(s.focus, true, 'the focus is on the zone');
+      expectTrue(s.line !== s.plain, 'the zone has the colour of an error: ' + s.line);
+      await dropFiles('up-letter', [['letter.pdf', 'application/pdf', 100]]);
+      expect(await page.$eval('.mat-field:has(#up-letter) .mat-error', el => el.textContent), '', 'the message is gone with a file');
+      await page.evaluate(() => document.querySelector('form[action="/Components#file-upload"]').reset());
+      await page.waitForTimeout(50);
+      expect(await names('up-letter'), [], 'a reset empties the list');
+      expect(await inputNames('up-letter'), [], 'and the real input');
+    });
+    await check('a form that is sent holds exactly the files of the list: removing a file takes it out of what the form posts', async () => {
+      const posted = await page.evaluate(async () => {
+        await window.MatUi.upload.add('up-docs', []);
+        const form = document.createElement('form');
+        document.getElementById('up-docs').closest('.mat-field').appendChild(form);
+        window.MatUi.upload.clear('up-docs');
+        const dt = new DataTransfer();
+        ['x.pdf', 'y.pdf', 'z.pdf'].forEach(n => dt.items.add(new File([new Uint8Array(5)], n, { type: 'application/pdf', lastModified: 1700000000000 })));
+        window.MatUi.upload.add('up-docs', dt.files);
+        window.MatUi.upload.remove('up-docs', 'y.pdf');
+        const body = new FormData();
+        [...document.getElementById('up-docs').files].forEach(f => body.append('docs', f));
+        form.remove();
+        return body.getAll('docs').map(f => f.name);
+      });
+      expect(posted, ['x.pdf', 'z.pdf'], 'the files in the body');
+      await page.evaluate(() => window.MatUi.upload.clear('up-docs'));
+    });
+    await check('an image has a thumbnail that is a real picture, an object URL that is released with the file, and a file of another kind has an icon; data-preview="none" turns it off', async () => {
+      await page.evaluate(async () => {
+        const c = document.createElement('canvas'); c.width = 20; c.height = 10; c.getContext('2d').fillRect(0, 0, 20, 10);
+        const blob = await new Promise(r => c.toBlob(r));
+        const dt = new DataTransfer();
+        dt.items.add(new File([blob], 'pic.png', { type: 'image/png', lastModified: 1700000000000 }));
+        dt.items.add(new File([new Uint8Array(5)], 'doc.pdf', { type: 'application/pdf', lastModified: 1700000000000 }));
+        window.MatUi.upload.add('up-docs', dt.files);
+      });
+      const s = await page.evaluate(async () => {
+        const img = document.querySelector('.mat-upload:has(#up-docs) .mat-upload__thumb img');
+        await img.decode();
+        const items = [...document.querySelectorAll('.mat-upload:has(#up-docs) .mat-upload__thumb')];
+        return { src: img.src.slice(0, 5), width: img.naturalWidth, alt: img.getAttribute('alt'), url: img.src, icons: items.map(t => t.querySelectorAll('img').length + '/' + t.querySelectorAll('svg').length) };
+      });
+      expect([s.src, s.width, s.alt, s.icons], ['blob:', 20, '', ['1/0', '0/1']], 'thumbnails');
+      expect(await page.evaluate(u => fetch(u).then(r => r.ok ? 'alive' : 'gone'), s.url), 'alive', 'the object URL works while the file is in the list');
+      await page.evaluate(() => { window.__revoked = []; const revoke = URL.revokeObjectURL; URL.revokeObjectURL = u => { window.__revoked.push(u); revoke.call(URL, u); }; });
+      await page.click(`${up('up-docs')} .mat-upload__item >> nth=0 >> .mat-upload__remove`);
+      expect(await page.evaluate(() => window.__revoked), [s.url], 'the object URL is released with the file');
+      await page.evaluate(() => { document.getElementById('up-docs').closest('.mat-upload').setAttribute('data-preview', 'none'); window.MatUi.upload.clear('up-docs'); });
+      await page.evaluate(async () => {
+        const dt = new DataTransfer();
+        dt.items.add(new File([new Uint8Array(5)], 'again.png', { type: 'image/png', lastModified: 1700000000001 }));
+        window.MatUi.upload.add('up-docs', dt.files);
+      });
+      expect(await page.locator(`${up('up-docs')} .mat-upload__thumb img`).count(), 0, 'no thumbnail with data-preview="none"');
+      await page.evaluate(() => { document.getElementById('up-docs').closest('.mat-upload').removeAttribute('data-preview'); window.MatUi.upload.clear('up-docs'); });
+    });
+    await check('paste adds the images of the clipboard only where data-paste is written, with a name that has the date; text and other files are left alone or refused in words', async () => {
+      await listen('up-photos');
+      await page.focus(browse('up-photos'));
+      const paste = (id, files) => page.evaluate(({ id, files }) => {
+        const dt = new DataTransfer();
+        files.forEach(([name, mime]) => dt.items.add(new File([new Uint8Array(30)], name, { type: mime })));
+        const e = new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true });
+        document.querySelector('.mat-upload:has(#' + id + ') .mat-upload__browse').dispatchEvent(e);
+        return e.defaultPrevented;
+      }, { id, files });
+      expect(await paste('up-photos', [['image.png', 'image/png']]), true, 'a pasted image is taken');
+      const added = await names('up-photos');
+      expect(added.length, 1, 'one image');
+      expectTrue(/^image-\d{8}-\d{6}\.png$/.test(added[0]), 'the name of a pasted image: ' + added[0]);
+      expect(await paste('up-photos', []), false, 'text on the clipboard is left to the browser');
+      expect(await paste('up-photos', [['notes.pdf', 'application/pdf']]), true, 'a file that is not an image is handled');
+      expect(await issues('up-photos'), ['Only images can be pasted here.'], 'and refused in words');
+      expect(await names('up-photos'), added, 'nothing was added');
+      expect(await paste('up-docs', [['image.png', 'image/png']]), false, 'an upload without data-paste ignores a paste');
+      expect(await names('up-docs'), [], 'and takes nothing');
+      expect((await heard()).changes.map(c => c.source), ['paste'], 'source');
+      await page.evaluate(() => window.MatUi.upload.clear('up-photos'));
+    });
+    await check('an app that uploads by itself draws progress as a progressbar with a name, done and a failure in words, and a new try clears them', async () => {
+      await dropFiles('up-self', [['one.bin', 'application/octet-stream', 2000], ['two.bin', 'application/octet-stream', 3000], ['three.bin', 'application/octet-stream', 4000]]);
+      expect(await page.evaluate(() => [MatUi.upload.setProgress('up-self', 0, 42), MatUi.upload.setProgress('up-self', 'two.bin', 100), MatUi.upload.setError('up-self', 2, 'The server did not take this file.'), MatUi.upload.setProgress('up-self', 9, 5)]), [true, true, true, false], 'the answers of the API');
+      const s = await page.evaluate(() => [...document.querySelectorAll('.mat-upload:has(#up-self) .mat-upload__item')].map(li => ({
+        cls: li.className.replace('mat-upload__item', '').trim(), meta: li.querySelector('.mat-upload__meta').textContent.replace(/\u00a0/g, ' '),
+        bar: li.querySelector('.mat-upload__bar').hidden ? null : [li.querySelector('.mat-upload__bar').getAttribute('role'), li.querySelector('.mat-upload__bar').getAttribute('aria-valuenow'), li.querySelector('.mat-upload__bar').getAttribute('aria-label'), getComputedStyle(li.querySelector('.mat-upload__fill')).width, li.querySelector('.mat-upload__bar').getBoundingClientRect().width],
+        problem: li.querySelector('.mat-upload__problem').hidden ? null : li.querySelector('.mat-upload__problem').textContent.trim(),
+        icon: li.querySelectorAll('.mat-upload__problem svg, .mat-upload__state svg').length,
+      })));
+      expect(s[0].cls, 'is-uploading', 'state of the first');
+      expect(s[0].meta, '2 KB · 42 %', 'text of the first');
+      expect(s[0].bar.slice(0, 3), ['progressbar', '42', 'one.bin'], 'the progressbar');
+      expectTrue(Math.abs(parseFloat(s[0].bar[3]) / s[0].bar[4] - 0.42) < 0.03, 'the fill is 42 % of the bar: ' + s[0].bar[3] + ' of ' + s[0].bar[4]);
+      expect([s[1].cls, s[1].meta, s[1].bar, s[1].icon], ['is-done', '2.9 KB · Uploaded', null, 1], 'done, in words with an icon');
+      expect([s[2].cls, s[2].problem, s[2].bar, s[2].icon], ['is-error', 'The server did not take this file.', null, 1], 'the failure, in words with an icon');
+      expect(await page.$eval(`${up('up-self')} .mat-upload__remove >> nth=2`, el => el.getAttribute('aria-describedby') === el.closest('.mat-upload__item').querySelector('.mat-upload__problem').id), true, 'the remove button of a failed file is told why');
+      await page.evaluate(() => { MatUi.upload.setError('up-self', 2); });
+      expect(await page.$eval(`${up('up-self')} .mat-upload__problem >> nth=2`, el => el.textContent.trim()), 'Upload failed', 'the default message');
+      await page.evaluate(() => { MatUi.upload.setProgress('up-self', 2); MatUi.upload.setProgress('up-self', 1); });
+      expect(await page.$$eval(`${up('up-self')} .mat-upload__item`, lis => lis.map(li => li.className.replace('mat-upload__item', '').trim())), ['is-uploading', '', ''], 'a new try takes progress and error away');
+      await page.evaluate(() => MatUi.upload.clear('up-self'));
+    });
+    await check('the Tab key passes the zone once (never the real input), goes on through the remove buttons and back; a disabled input disables the button and the remove buttons', async () => {
+      await dropFiles('up-docs', [['k.pdf', 'application/pdf'], ['l.pdf', 'application/pdf']]);
+      const at = () => page.evaluate(() => { const a = document.activeElement; return [a.classList.contains('mat-upload__remove') ? 'remove' : a.classList.contains('mat-upload__browse') ? 'browse' : 'other', a.getAttribute('aria-label'), document.querySelector('.mat-upload:has(#up-docs)').contains(a)]; });
+      await page.focus(browse('up-docs'));
+      await page.keyboard.press('Tab');
+      expect(await at(), ['remove', 'Remove k.pdf', true], 'after one Tab');
+      await page.keyboard.press('Tab');
+      expect((await at())[1], 'Remove l.pdf', 'after two');
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Shift+Tab');
+      expect((await at()).slice(0, 1), ['browse'], 'back on the zone');
+      await page.keyboard.press('Shift+Tab');
+      expect((await at())[2], false, 'one more Shift+Tab leaves the control: the real input is not a stop');
+      await page.evaluate(() => { document.getElementById('up-docs').disabled = true; });
+      await page.waitForTimeout(50);
+      expect(await page.$eval(browse('up-docs'), el => el.disabled), true, 'the button follows the input');
+      expect(await page.$$eval(`${up('up-docs')} .mat-upload__remove`, els => els.map(e => e.disabled)), [true, true], 'the remove buttons');
+      expect(await page.$eval(up('up-docs'), el => el.classList.contains('is-disabled')), true, 'is-disabled');
+      await page.evaluate(() => { document.getElementById('up-docs').disabled = false; });
+      await page.waitForTimeout(50);
+      expect(await page.$eval(browse('up-docs'), el => el.disabled), false, 'and enabled again');
+      await page.evaluate(() => MatUi.upload.clear('up-docs'));
+    });
+    await check('a disabled upload has a disabled button and takes no drop; a drop elsewhere on the page is left alone', async () => {
+      expect(await page.$eval(browse('up-off'), el => el.disabled), true, 'the button');
+      expect(await dropFiles('up-off', [['x.pdf', 'application/pdf']]), true, 'the drop is cancelled so that the browser does not open the file');
+      expect(await names('up-off'), [], 'and takes nothing');
+      expect(await dragEvent('up-off', 'dragenter', [['x.pdf', 'application/pdf']]), true, 'a drag');
+      expect(await page.$eval(up('up-off'), el => el.classList.contains('is-drag')), false, 'is not tinted');
+      expect(await page.evaluate(() => { const e = new DragEvent('drop', { dataTransfer: (() => { const d = new DataTransfer(); d.items.add(new File(['x'], 'x.txt')); return d; })(), bubbles: true, cancelable: true }); document.querySelector('h1').dispatchEvent(e); return e.defaultPrevented; }), false, 'a drop on the page');
+    });
+    await check('the texts are German on a German page, the sizes follow the language, and a touch or a drag says it in German too', async () => {
+      await page.evaluate(() => {
+        document.documentElement.lang = 'de';
+        const host = document.createElement('div');
+        host.id = 'up-de-host';
+        host.innerHTML = '<div class="mat-field"><label class="mat-label" for="up-de">Dateien</label><div class="mat-upload" data-upload data-max-files="3" data-max-size="1.5MB"><input class="mat-upload__input" type="file" id="up-de" name="de" multiple accept=".pdf" /></div></div>';
+        document.getElementById('file-upload').appendChild(host);
+        MatUi.refresh(host);
+      });
+      expect(await page.textContent('#up-de-title'), 'Dateien hierher ziehen oder auswählen', 'the zone');
+      expect((await page.textContent('#up-de-limits')).replace(/\u00a0/g, ' '), 'PDF · bis zu 3 Dateien · je bis zu 1,5 MB', 'the limits, with a decimal comma');
+      await dropFiles('up-de', [['bild.png', 'image/png'], ['gross.pdf', 'application/pdf', 2 * 1048576], ['gut.pdf', 'application/pdf', 100]]);
+      expect(await issues('up-de'), ['bild.png: Dieser Dateityp wird nicht angenommen. Erlaubt: PDF.', 'gross.pdf: Die Datei ist zu groß (2 MB). Das Limit ist 1,5 MB.'], 'the refusals');
+      expect(await page.getAttribute('#up-de-title >> xpath=ancestor::div[contains(@class,"mat-upload")]//button[contains(@class,"mat-upload__remove")]', 'aria-label'), 'gut.pdf entfernen', 'the remove button');
+      expect(await page.getAttribute(`${up('up-de')} .mat-upload__list`, 'aria-label'), 'Ausgewählte Dateien', 'the list');
+      await dragEvent('up-de', 'dragenter', [['a.pdf', 'application/pdf']]);
+      expect(await page.textContent('#up-de-title'), 'Zum Hinzufügen loslassen', 'while dragging');
+      await dragEvent('up-de', 'dragleave', []);
+      await page.evaluate(() => { document.documentElement.setAttribute('data-up-refusedtype', 'Nein: {0}'); });
+      await dropFiles('up-de', [['x.png', 'image/png']]);
+      expect(await issues('up-de'), ['Nein: x.png'], 'a text that the app changed with an attribute of html');
+      await page.evaluate(() => { document.documentElement.lang = 'en'; document.documentElement.removeAttribute('data-up-refusedtype'); document.getElementById('up-de-host').remove(); });
+    });
+    await check('a file name is shown as text, never as markup, and a dollar sign in it survives', async () => {
+      await dropFiles('up-self', [['<img src=x onerror=alert(1)>$&.bin', 'application/octet-stream', 10]]);
+      const s = await page.evaluate(() => ({ name: document.querySelector('.mat-upload:has(#up-self) .mat-upload__name').textContent, images: document.querySelectorAll('.mat-upload:has(#up-self) .mat-upload__name img').length, label: document.querySelector('.mat-upload:has(#up-self) .mat-upload__remove').getAttribute('aria-label') }));
+      expect(s, { name: '<img src=x onerror=alert(1)>$&.bin', images: 0, label: 'Remove <img src=x onerror=alert(1)>$&.bin' }, 'the name');
+      await page.evaluate(() => MatUi.upload.clear('up-self'));
+    });
+    await check('light and dark: the text of the zone, the limits and the messages are readable on what they sit on', async () => {
+      await dropFiles('up-docs', [['x.exe', 'application/x-msdownload']]);
+      await page.evaluate(() => { MatUi.upload.add('up-self', [new File([new Uint8Array(4)], 'bad.bin', { type: 'application/octet-stream' })]); MatUi.upload.setError('up-self', 0, 'The server did not take this file.'); });
+      const measure = () => page.evaluate(() => {
+        // the background that is seen: the translucent tints of the ancestors laid over the first opaque one
+        const bg = el => {
+          const layers = [];
+          for (let e = el; e; e = e.parentElement) {
+            const n = (getComputedStyle(e).backgroundColor.match(/-?\d*\.?\d+/g) || []).map(Number);
+            if (n.length < 3 || n[3] === 0) { continue; }
+            layers.push([n[0], n[1], n[2], n.length > 3 ? n[3] : 1]);
+            if (layers[layers.length - 1][3] === 1) { break; }
+          }
+          let out = [255, 255, 255];
+          layers.reverse().forEach(([r, g, b, a]) => { out = [r * a + out[0] * (1 - a), g * a + out[1] * (1 - a), b * a + out[2] * (1 - a)]; });
+          return 'rgb(' + out.map(Math.round).join(', ') + ')';
+        };
+        const pick = sel => { const el = document.querySelector(sel); return { colour: getComputedStyle(el).color, bg: bg(el) }; };
+        return { title: pick('.mat-upload:has(#up-docs) .mat-upload__title'), limits: pick('.mat-upload:has(#up-docs) .mat-upload__limits'), issue: pick('.mat-upload:has(#up-docs) .mat-upload__issues li'), problem: pick('.mat-upload:has(#up-self) .mat-upload__problem'), name: pick('.mat-upload:has(#up-self) .mat-upload__name') };
+      });
+      const modes = {};
+      for (const mode of ['light', 'dark']) {
+        await page.evaluate(m => MatUi.theme.set(m), mode);
+        await page.waitForTimeout(300);
+        modes[mode] = await measure();
+      }
+      for (const [mode, m] of Object.entries(modes)) {
+        for (const [what, c] of Object.entries(m)) { expectTrue(contrastOf(c.colour, c.bg) >= 4.5, `${what} in ${mode}: ${c.colour} on ${c.bg} has a contrast of ${contrastOf(c.colour, c.bg).toFixed(2)}`); }
+      }
+      expectTrue(modes.light.title.bg !== modes.dark.title.bg, 'the zone changes with the theme');
+      await page.evaluate(() => { MatUi.theme.set('system'); MatUi.upload.clear('up-docs'); MatUi.upload.clear('up-self'); });
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components#file-upload');
+    await check('on a phone the zone says Tap to choose, the targets are as large as a control, a long name wraps and nothing is wider than the screen', async () => {
+      await page.evaluate(() => document.getElementById('up-docs').scrollIntoView({ block: 'center' }));
+      expect(await page.textContent('#up-docs-title'), 'Tap to choose files', 'the text on a touch screen');
+      expect(await page.textContent('#up-letter-title'), 'Tap to choose a file', 'one file');
+      await page.evaluate(() => {
+        const dt = new DataTransfer();
+        dt.items.add(new File([new Uint8Array(20)], 'a-very-long-name-for-a-file-that-keeps-going-on-and-on-and-on-and-on-until-it-is-longer-than-a-phone.pdf', { type: 'application/pdf', lastModified: 1 }));
+        dt.items.add(new File([new Uint8Array(20)], 'virus-with-a-long-name-that-the-zone-does-not-accept-because-it-is-not-a-pdf-nor-an-image.exe', { type: 'application/x-msdownload', lastModified: 1 }));
+        document.getElementById('up-docs').closest('.mat-upload').dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true, cancelable: true }));
+      });
+      const s = await page.evaluate(() => {
+        const box = sel => { const r = document.querySelector(sel).getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; };
+        const wrap = document.querySelector('.mat-upload:has(#up-docs)').getBoundingClientRect(), item = document.querySelector('.mat-upload:has(#up-docs) .mat-upload__item').getBoundingClientRect();
+        return {
+          coarse: matchMedia('(pointer: coarse)').matches, overflow: document.documentElement.scrollWidth > innerWidth, remove: box('.mat-upload:has(#up-docs) .mat-upload__remove'), browse: box('.mat-upload:has(#up-docs) .mat-upload__browse'),
+          inside: item.right <= wrap.right + 1 && item.left >= wrap.left - 1, issue: document.querySelector('.mat-upload:has(#up-docs) .mat-upload__issues li').getBoundingClientRect().right <= wrap.right + 1,
+        };
+      });
+      expect(s.coarse, true, 'a touch screen');
+      expect(s.overflow, false, 'sideways scroll');
+      expectTrue(s.remove[0] >= 44 && s.remove[1] >= 44, 'the remove button is ' + s.remove.join('x'));
+      expectTrue(s.browse[1] >= 44, 'the button of the zone is ' + s.browse.join('x'));
+      expect([s.inside, s.issue], [true, true], 'the row and the message stay inside the control');
+    });
+    await check('a tap on the zone opens the dialog, and the compact zone puts its limits on a second line', async () => {
+      await page.evaluate(() => document.getElementById('up-avatar').scrollIntoView({ block: 'center' }));
+      const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.tap('.mat-upload:has(#up-avatar) .mat-upload__zone')]);
+      await chooser.setFiles([{ name: 'me.png', mimeType: 'image/png', buffer: Buffer.alloc(100, 1) }]);
+      expect(await page.$$eval('.mat-upload:has(#up-avatar) .mat-upload__name', els => els.map(e => e.textContent)), ['me.png'], 'the file that was chosen');
+      const rows = await page.evaluate(() => {
+        const zone = document.querySelector('.mat-upload:has(#up-avatar) .mat-upload__zone');
+        return { title: document.getElementById('up-avatar-title').getBoundingClientRect().top, limits: document.getElementById('up-avatar-limits').getBoundingClientRect().top, overflow: zone.scrollWidth > zone.clientWidth };
+      });
+      expectTrue(rows.limits > rows.title, 'the limits are below the text on a phone');
+      expect(rows.overflow, false, 'the compact zone does not overflow');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {

@@ -40,6 +40,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 - Number stepper: `mat-stepper` with `data-stepper` (`FORM-20`).
 - Slider and range slider with two thumbs: `mat-slider` with `data-slider` (`FORM-17`).
 - Code input: `mat-otp` with `data-otp`, for one-time codes and PINs (`FORM-19`).
+- File upload: `mat-upload` with `data-upload`, a drop zone around a real file input, with the list of the chosen files, limits and refusals in words (`FORM-21`). Markup: `<div class="mat-upload" data-upload data-max-files="5" data-max-size="10MB"><input class="mat-upload__input" type="file" id="docs" name="docs" multiple accept=".pdf,.png"></div>`; without the script it is the native file field (`required`, `accept`, `multiple` work either way). The script checks `accept`, `data-max-size` and `data-max-files`, names every refused file with the reason, keeps the real input equal to the list (so the form posts what the list shows), shows thumbnails of images (`data-preview="none"` turns them off) and adds pasted images with `data-paste`. Events `mat:upload-change` and `mat:upload-refused`; for an app that uploads by itself `MatUi.upload.setProgress(el, file, 0..100)`, `.setError`, `.files`, `.add`, `.remove`, `.clear`. Texts in English and German (`data-up-<name>` on `<html>` changes one). Nothing to do for an app but copy the files.
 
 ### Changed
 

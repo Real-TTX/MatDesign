@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **121 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **122 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -50,7 +50,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   energy, sensors, rooms, garden, scenes) first. SVG, as one sprite, as single files or as an archive; MatUi works without it
 
 **The documentation**
-- **65 components with 195 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
+- **66 components with 201 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
   it uses and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined
@@ -308,7 +308,7 @@ place that could.
 |---|---|---|
 | Toolkit | MatUi (ten CSS parts, one script, the icon sprite), colour maths, rulebook, app registry | ✅ |
 | Site | Rulebook, foundations, shell, identity, builder, download – tests, container, CI | ✅ |
-| Components | Menu badges, submenus and switcher, forms (with a **number stepper**, a **slider and range slider** and a **code input**), **pickers** (select, a **dropdown with checkboxes** and Select all, date and period, time, colour, **tags**, **appointment**), a **calendar** that is always shown, **groups in a table** (rows under a heading that folds, the add row last), content components (with a **carousel** and a **schedule**: agenda, day, week, month and year with calendar weeks), **lists of rows** (like ion-list: contacts, inbox, settings, files, tasks, sliding actions, reordering), **layout system**, utilities | ✅ |
+| Components | Menu badges, submenus and switcher, forms (with a **number stepper**, a **slider and range slider**, a **code input** and a **file upload** with a drop zone), **pickers** (select, a **dropdown with checkboxes** and Select all, date and period, time, colour, **tags**, **appointment**), a **calendar** that is always shown, **groups in a table** (rows under a heading that folds, the add row last), content components (with a **carousel** and a **schedule**: agenda, day, week, month and year with calendar weeks), **lists of rows** (like ion-list: contacts, inbox, settings, files, tasks, sliding actions, reordering), **layout system**, utilities | ✅ |
 | Flat look | No gradients, glow or blur; selected is a tint (`COLOR-08`); toolbar with search field | ✅ |
 | Studio 1–2 | Data store, sign-in, **apps** | ✅ |
 | Studio 3–4 | **Rules** and **components** with live examples | ✅ |

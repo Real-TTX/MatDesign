@@ -101,6 +101,11 @@
      data-dismiss                           close the alert around it
      data-view-switch="list|gallery"        switch between the two views of a list (remembered per data-view-key)
      data-shortcut="/"                      key that clicks the element, or focuses it when it is a text field (not while typing)
+     data-upload                            a file upload (FORM-21): .mat-upload around the real file input (.mat-upload__input; accept, multiple and required are its own); the script draws a drop
+                                            zone, the list of the chosen files (name, size, a thumbnail for an image, a remove button) and what was refused and why. data-max-size="10MB" (KB, MB, GB;
+                                            1 KB is 1024 bytes), data-max-files="5" (with multiple), data-paste (images from the clipboard, while the focus is in the control), data-preview="none" (no
+                                            thumbnails). Without multiple a new file replaces the old one. Events: mat:upload-change (detail.files, added, removed, source), mat:upload-refused
+                                            (detail.refused). API: MatUi.upload.init / files / add / remove / clear / setProgress / setError. The texts: data-up-<name> on <html>
    ========================================================================== */
 (function () {
   'use strict';
@@ -6004,6 +6009,505 @@
     }
   };
 
+  // ------------------------------------------------------------------------------------------------ file upload (FORM-21, matui.forms.css)
+  // <div class="mat-upload" data-upload><input class="mat-upload__input" type="file" id="" name="" multiple accept=".pdf"></div> is the native file field
+  // without the script, and it stays the thing that is validated and posted (required, accept, multiple work). The script hides it and draws a drop zone (files
+  // dragged onto it, or a click, Enter or Space on its button, which is the one Tab stop), the list of the chosen files (name, size, a thumbnail for an image, a
+  // remove button named by the file) and a line for what was refused and why. Every file that arrives (from the dialog, a drop, a paste or MatUi.upload.add) is
+  // checked against accept, data-max-size and data-max-files; a refused file is named with the reason in words, the others are still added. The files of the
+  // real input are kept in step with the list (a DataTransfer), so the form posts exactly what the list shows. Without `multiple` a new file replaces the old one.
+  // data-paste adds the images of the clipboard (only while the focus is in the control). An app that uploads by itself draws progress and failures with
+  // MatUi.upload.setProgress / setError. Events on the wrapper: mat:upload-change (detail.files, added, removed, source) and mat:upload-refused (detail.refused).
+  var UP_TEXT = {
+    en: {
+      dropOne: 'Drop a file here or choose one', dropMany: 'Drop files here or choose them', tapOne: 'Tap to choose a file', tapMany: 'Tap to choose files', dropping: 'Drop to add',
+      upToFiles: 'up to {0} files', upToSize: 'up to {0}', upToSizeEach: 'up to {0} each', pasteImage: 'you can also paste an image',
+      typeImages: 'images', typeAudio: 'audio', typeVideo: 'video', typeText: 'text',
+      files: 'Chosen files', remove: 'Remove {0}', added: '{0} added', addedMany: '{0} files added', removed: '{0} removed',
+      refusedType: '{0}: this type of file is not accepted. Allowed: {1}.', refusedSize: '{0}: the file is too large ({1}). The limit is {2}.',
+      refusedCount: '{0}: not added. At most {1} files are allowed.', refusedOne: '{0}: not added. Only one file is allowed.',
+      refusedDuplicate: '{0}: this file has already been added.', refusedFolder: '{0}: a folder cannot be uploaded. Choose the files in it instead.',
+      refusedPaste: 'Only images can be pasted here.',
+      percent: '{0} %', done: 'Uploaded', failed: 'Upload failed', pastedName: 'image'
+    },
+    de: {
+      dropOne: 'Datei hierher ziehen oder auswählen', dropMany: 'Dateien hierher ziehen oder auswählen', tapOne: 'Tippen, um eine Datei auszuwählen', tapMany: 'Tippen, um Dateien auszuwählen', dropping: 'Zum Hinzufügen loslassen',
+      upToFiles: 'bis zu {0} Dateien', upToSize: 'bis zu {0}', upToSizeEach: 'je bis zu {0}', pasteImage: 'ein Bild lässt sich auch einfügen',
+      typeImages: 'Bilder', typeAudio: 'Audio', typeVideo: 'Video', typeText: 'Text',
+      files: 'Ausgewählte Dateien', remove: '{0} entfernen', added: '{0} hinzugefügt', addedMany: '{0} Dateien hinzugefügt', removed: '{0} entfernt',
+      refusedType: '{0}: Dieser Dateityp wird nicht angenommen. Erlaubt: {1}.', refusedSize: '{0}: Die Datei ist zu groß ({1}). Das Limit ist {2}.',
+      refusedCount: '{0}: nicht hinzugefügt. Es sind höchstens {1} Dateien erlaubt.', refusedOne: '{0}: nicht hinzugefügt. Es ist nur eine Datei erlaubt.',
+      refusedDuplicate: '{0}: Diese Datei wurde schon hinzugefügt.', refusedFolder: '{0}: Ein Ordner kann nicht hochgeladen werden. Die Dateien darin lassen sich einzeln auswählen.',
+      refusedPaste: 'Hier lassen sich nur Bilder einfügen.',
+      percent: '{0} %', done: 'Hochgeladen', failed: 'Hochladen fehlgeschlagen', pastedName: 'bild'
+    }
+  };
+
+  function upText(key, a, b, c) {
+    var table = UP_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || UP_TEXT.en;
+    var s = root.getAttribute('data-up-' + key.toLowerCase()) || table[key] || UP_TEXT.en[key] || key;
+    var args = [a, b, c];
+    return s.replace(/\{(\d)\}/g, function (m, i) { var v = args[+i]; return v === undefined ? '' : v; });
+  }
+
+  // "10MB", "512 KB", "1.5 GB" or a number of bytes (1 KB is 1024 bytes); 0 when there is no limit or it cannot be read
+  function upSizeOf(text) {
+    var m = /^\s*(\d+(?:[.,]\d+)?)\s*(b|kb|k|mb|m|gb|g)?\s*$/i.exec(text || '');
+    if (!m) { return 0; }
+    var unit = (m[2] || 'b').toLowerCase().charAt(0);
+    return Math.round(parseFloat(m[1].replace(',', '.')) * (unit === 'g' ? 1073741824 : unit === 'm' ? 1048576 : unit === 'k' ? 1024 : 1));
+  }
+  function upFormatSize(bytes) {
+    var units = ['B', 'KB', 'MB', 'GB'], n = bytes, i = 0, text;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i += 1; }
+    try { text = n.toLocaleString(root.lang || 'en', { maximumFractionDigits: i === 0 ? 0 : 1, useGrouping: false }); } catch (err) { text = String(Math.round(n * 10) / 10); }
+    return text + ' ' + units[i];
+  }
+
+  // accept as the browser reads it: ".pdf" (the end of the name), a kind such as image followed by a slash and a star (every type of that kind), "application/pdf" (one type)
+  var UP_KIND = /^([a-z]+)\/\*$/;
+  var UP_KIND_TEXT = { image: 'typeImages', audio: 'typeAudio', video: 'typeVideo', text: 'typeText' };
+  function upAcceptList(input) { return (input.getAttribute('accept') || '').split(',').map(function (s) { return s.trim().toLowerCase(); }).filter(Boolean); }
+  function upAccepts(list, file) {
+    if (!list.length) { return true; }
+    var name = file.name.toLowerCase(), type = (file.type || '').toLowerCase();
+    return list.some(function (t) {
+      var kind = UP_KIND.exec(t);
+      if (t.charAt(0) === '.') { return name.slice(-t.length) === t; }
+      if (kind) { return type.indexOf(kind[1] + '/') === 0; }
+      return type === t;
+    });
+  }
+  // the accepted types as people say them: "PDF, PNG, images"
+  function upTypeLabel(list) {
+    var out = [];
+    list.forEach(function (t) {
+      var s, kind = UP_KIND.exec(t);
+      if (t.charAt(0) === '.') { s = t.slice(1).toUpperCase(); }
+      else if (kind) { s = UP_KIND_TEXT[kind[1]] ? upText(UP_KIND_TEXT[kind[1]]) : kind[1]; }
+      else { s = (t.split('/')[1] || t).split('+')[0].replace(/^x-/, '').toUpperCase(); }
+      if (s && out.indexOf(s) < 0) { out.push(s); }
+    });
+    return out.join(', ');
+  }
+  function upIconFor(file) {
+    var n = file.name.toLowerCase(), t = (file.type || '').toLowerCase();
+    if (t.indexOf('image/') === 0) { return 'image'; }
+    if (t === 'application/pdf' || t.indexOf('text/') === 0 || /\.(pdf|txt|md|doc|docx|odt|rtf)$/.test(n)) { return 'file-text'; }
+    if (/\.(zip|tar|gz|tgz|7z|rar)$/.test(n)) { return 'archive'; }
+    return 'file';
+  }
+  function upSupported() {
+    try { return typeof DataTransfer === 'function' && !!new DataTransfer().files; } catch (err) { return false; }
+  }
+  function upTouch() { return !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); }
+
+  // what the wrapper is told: the limits of the real input and of the data attributes (read when they are needed, so that a change of one is seen)
+  function upConf(u) {
+    var multiple = u.input.multiple, max = parseInt(u.wrap.getAttribute('data-max-files'), 10);
+    return { multiple: multiple, room: multiple ? (max > 0 ? max : Infinity) : 1, max: max > 0 ? max : 0, maxSize: upSizeOf(u.wrap.getAttribute('data-max-size')), accept: upAcceptList(u.input) };
+  }
+
+  function upOf(ref) {
+    var el = typeof ref === 'string' ? (doc.getElementById(ref) || $(ref)) : ref;
+    var wrap = el && el.closest ? el.closest('.mat-upload') : null;
+    return wrap && wrap._matUpload ? wrap._matUpload : null;
+  }
+  function upSay(u, text) {
+    u.live.textContent = '';
+    if (text) { u.live.textContent = text; }
+  }
+
+  // The words in the zone: what to do, and the limits (so that the person knows them before choosing, not only when a file is refused).
+  function upPaintZone(u) {
+    var c = upConf(u), parts = [], types = upTypeLabel(c.accept);
+    u.title.textContent = u.wrap.classList.contains('is-drag') ? upText('dropping') : upText((upTouch() ? 'tap' : 'drop') + (c.multiple ? 'Many' : 'One'));
+    if (types) { parts.push(types); }
+    if (c.multiple && c.max) { parts.push(upText('upToFiles', c.max)); }
+    if (c.maxSize) { parts.push(upText(c.multiple ? 'upToSizeEach' : 'upToSize', upFormatSize(c.maxSize))); }
+    if (u.wrap.hasAttribute('data-paste')) { parts.push(upText('pasteImage')); }
+    u.limits.textContent = parts.length ? parts.join(' · ').replace(/^./, function (ch) { return ch.toUpperCase(); }) : '';
+    u.limits.hidden = !parts.length;
+  }
+
+  // the state of the real input is the one of the control: disabled, and the red mark that showError() puts on it
+  function upState(u) {
+    var off = u.input.disabled;
+    u.wrap.classList.toggle('is-disabled', off);
+    u.wrap.classList.toggle('is-invalid', u.input.getAttribute('aria-invalid') === 'true');
+    u.browse.disabled = off;
+    u.entries.forEach(function (e) { e.remove.disabled = off; });
+    upPaintZone(u);
+  }
+
+  // the real input holds exactly the chosen files (a form posts what the list shows)
+  function upSync(u) {
+    var dt = new DataTransfer();
+    u.entries.forEach(function (e) { dt.items.add(e.file); });
+    u.input.files = dt.files;
+    u.list.hidden = u.entries.length === 0;
+  }
+
+  function upPaintEntry(e) {
+    var state = e.error ? 'error' : e.done ? 'done' : e.progress !== null ? 'uploading' : '';
+    e.el.classList.toggle('is-uploading', state === 'uploading');
+    e.el.classList.toggle('is-done', state === 'done');
+    e.el.classList.toggle('is-error', state === 'error');
+    e.meta.textContent = upFormatSize(e.file.size) + (state === 'uploading' ? ' · ' + upText('percent', Math.round(e.progress)) : '');
+    if (state === 'done') { e.meta.insertAdjacentHTML('beforeend', ' · <span class="mat-upload__state">' + icon('check-circle') + esc(upText('done')) + '</span>'); }
+    e.bar.hidden = state !== 'uploading';
+    if (state === 'uploading') {
+      e.bar.setAttribute('aria-valuenow', String(Math.round(e.progress)));
+      e.fill.style.setProperty('--mat-up-progress', e.progress + '%');
+    }
+    e.problem.hidden = state !== 'error';
+    e.problem.innerHTML = state === 'error' ? icon('alert') + '<span>' + esc(e.error) + '</span>' : '';
+    if (state === 'error') { e.remove.setAttribute('aria-describedby', e.problem.id); } else { e.remove.removeAttribute('aria-describedby'); }
+  }
+
+  function upEntry(u, file) {
+    var e = { file: file, url: '', progress: null, done: false, error: '' };
+    var id = nextId('mat-up-file');
+    if (u.wrap.getAttribute('data-preview') !== 'none' && /^image\/(png|jpe?g|gif|webp|avif|bmp|svg\+xml)$/i.test(file.type) && window.URL && URL.createObjectURL) { e.url = URL.createObjectURL(file); }
+    e.el = doc.createElement('li');
+    e.el.className = 'mat-upload__item';
+    e.thumb = doc.createElement('span');
+    e.thumb.className = 'mat-upload__thumb';
+    e.thumb.setAttribute('aria-hidden', 'true');
+    var fallback = function () { e.thumb.textContent = ''; e.thumb.innerHTML = icon(upIconFor(file)); };
+    if (e.url) {
+      var img = doc.createElement('img');
+      img.alt = '';
+      img.src = e.url;
+      img.addEventListener('error', fallback);
+      e.thumb.appendChild(img);
+    } else { fallback(); }
+    var body = doc.createElement('span');
+    body.className = 'mat-upload__body';
+    var name = doc.createElement('span');
+    name.className = 'mat-upload__name';
+    name.textContent = file.name;
+    e.meta = doc.createElement('span');
+    e.meta.className = 'mat-upload__meta';
+    e.bar = doc.createElement('span');
+    e.bar.className = 'mat-upload__bar';
+    e.bar.setAttribute('role', 'progressbar');
+    e.bar.setAttribute('aria-label', file.name);
+    e.bar.setAttribute('aria-valuemin', '0');
+    e.bar.setAttribute('aria-valuemax', '100');
+    e.bar.hidden = true;
+    e.fill = doc.createElement('span');
+    e.fill.className = 'mat-upload__fill';
+    e.bar.appendChild(e.fill);
+    e.problem = doc.createElement('span');
+    e.problem.className = 'mat-upload__problem';
+    e.problem.id = id + '-problem';
+    e.problem.hidden = true;
+    body.appendChild(name);
+    body.appendChild(e.meta);
+    body.appendChild(e.bar);
+    body.appendChild(e.problem);
+    e.remove = doc.createElement('button');
+    e.remove.type = 'button';
+    e.remove.className = 'mat-btn mat-btn--ghost mat-btn--icon mat-upload__remove';
+    e.remove.setAttribute('aria-label', upText('remove', file.name));
+    e.remove.title = upText('remove', file.name);
+    e.remove.innerHTML = icon('x');
+    e.remove.disabled = u.input.disabled;
+    e.el.appendChild(e.thumb);
+    e.el.appendChild(body);
+    e.el.appendChild(e.remove);
+    e.el._matUploadEntry = e;
+    u.list.appendChild(e.el);
+    u.entries.push(e);
+    upPaintEntry(e);
+    return e;
+  }
+  function upDrop(u, e) {
+    if (e.url) { URL.revokeObjectURL(e.url); e.url = ''; }
+    e.el.remove();
+    u.entries.splice(u.entries.indexOf(e), 1);
+  }
+
+  // what the person is told about the files that were refused: a list at the field, a live region, in words with an icon (never only a colour)
+  function upIssues(u, messages) {
+    u.status.textContent = '';
+    if (!messages.length) { return; }
+    var ul = doc.createElement('ul');
+    ul.className = 'mat-upload__issues';
+    messages.forEach(function (m) {
+      var li = doc.createElement('li');
+      li.innerHTML = icon('alert') + '<span></span>';
+      li.lastChild.textContent = m;
+      ul.appendChild(li);
+    });
+    u.status.appendChild(ul);
+  }
+
+  function upFileList(u) { return u.entries.map(function (e) { return e.file; }); }
+  function upChanged(u, source, added, removed) {
+    u.wrap.dispatchEvent(new CustomEvent('mat:upload-change', { bubbles: true, detail: { files: upFileList(u), added: added, removed: removed, source: source } }));
+  }
+  // a change that did not come from the dialog is told to the form like the browser would: input and change on the real input (the control ignores them)
+  function upTell(u) {
+    u.busy = true;
+    try {
+      u.input.dispatchEvent(new Event('input', { bubbles: true }));
+      u.input.dispatchEvent(new Event('change', { bubbles: true }));
+    } finally { u.busy = false; }
+  }
+
+  // Files arrive (source: picker, drop, paste, api). Each is checked in this order: folder, type, size, already added, room. What is refused is named; the rest is added.
+  // Without `multiple` the first file replaces the one that was there. folders: the indexes of the files that are folders (a drop).
+  function upAdd(u, files, source, folders) {
+    var c = upConf(u), refused = [], accepted = [], removed = [], added = [], types = upTypeLabel(c.accept), have = upFileList(u);
+    function refuse(file, reason, message) { refused.push({ file: file, name: file.name, reason: reason, message: message }); }
+    function same(a, b) { return a.name === b.name && a.size === b.size && a.lastModified === b.lastModified; }
+    files.forEach(function (file, i) {
+      if (folders && folders.indexOf(i) >= 0) { refuse(file, 'folder', upText('refusedFolder', file.name)); }
+      else if (!upAccepts(c.accept, file)) { refuse(file, 'type', upText('refusedType', file.name, types)); }
+      else if (c.maxSize && file.size > c.maxSize) { refuse(file, 'size', upText('refusedSize', file.name, upFormatSize(file.size), upFormatSize(c.maxSize))); }
+      else if (have.concat(accepted).some(function (o) { return same(o, file); })) { refuse(file, 'duplicate', upText('refusedDuplicate', file.name)); }
+      else { accepted.push(file); }
+    });
+    if (c.room === 1) {
+      accepted.slice(1).forEach(function (f) { refuse(f, 'count', upText('refusedOne', f.name)); });
+      accepted = accepted.slice(0, 1);
+      if (accepted.length) { removed = u.entries.slice(); }
+    } else {
+      var free = Math.max(0, c.room - u.entries.length);
+      accepted.slice(free).forEach(function (f) { refuse(f, 'count', upText('refusedCount', f.name, c.room)); });
+      accepted = accepted.slice(0, free);
+    }
+    var removedFiles = removed.map(function (e) { return e.file; });
+    removed.forEach(function (e) { upDrop(u, e); });
+    accepted.forEach(function (f) { added.push(upEntry(u, f).file); });
+    upSync(u);
+    upIssues(u, refused.map(function (r) { return r.message; }));
+    if (added.length) { upSay(u, added.length === 1 ? upText('added', added[0].name) : upText('addedMany', added.length)); }
+    if (added.length || removedFiles.length) {
+      upChanged(u, source, added, removedFiles);
+      if (source !== 'picker') { upTell(u); }
+    }
+    if (refused.length) { u.wrap.dispatchEvent(new CustomEvent('mat:upload-refused', { bubbles: true, detail: { refused: refused, source: source } })); }
+    return { added: added, removed: removedFiles, refused: refused };
+  }
+
+  function upEntryOf(u, ref) {
+    if (typeof ref === 'number') { return u.entries[ref] || null; }
+    for (var i = 0; i < u.entries.length; i += 1) {
+      if (u.entries[i].file === ref || u.entries[i].file.name === ref) { return u.entries[i]; }
+    }
+    return null;
+  }
+  function upRemoveEntry(u, e, source) {
+    var at = u.entries.indexOf(e), name = e.file.name;
+    upDrop(u, e);
+    upSync(u);
+    upIssues(u, []);
+    upSay(u, upText('removed', name));
+    upChanged(u, source, [], [e.file]);
+    upTell(u);
+    return at;
+  }
+  function upClear(u, source) {
+    var removed = upFileList(u);
+    u.entries.slice().forEach(function (e) { upDrop(u, e); });
+    upSync(u);
+    upIssues(u, []);
+    upSay(u, '');
+    if (removed.length) { upChanged(u, source, [], removed); }
+    return removed.length;
+  }
+
+  function upDragState(u, on) {
+    u.wrap.classList.toggle('is-drag', on);
+    upPaintZone(u);
+  }
+
+  function upPasted(file) {
+    var ext = (/^image\/([a-z0-9]+)/i.exec(file.type) || [])[1] || 'png', d = new Date();
+    var two = function (n) { return (n < 10 ? '0' : '') + n; };
+    ext = ext === 'jpeg' ? 'jpg' : ext;
+    var stamp = d.getFullYear() + two(d.getMonth() + 1) + two(d.getDate()) + '-' + two(d.getHours()) + two(d.getMinutes()) + two(d.getSeconds());
+    return new File([file], upText('pastedName') + '-' + stamp + '.' + ext, { type: file.type, lastModified: file.lastModified });
+  }
+
+  function upInit(wrap) {
+    var old = wrap._matUpload;
+    if (old) { upState(old); return; }
+    var input = $('.mat-upload__input', wrap);
+    if (!input || input.type !== 'file' || !upSupported()) { return; }
+    var u = { wrap: wrap, input: input, entries: [], busy: false, drag: 0 };
+    wrap._matUpload = u;
+    if (!input.id) { input.id = nextId('mat-up'); }
+
+    u.zone = doc.createElement('div');
+    u.zone.className = 'mat-upload__zone';
+    u.zone.innerHTML = icon('upload');
+    u.browse = doc.createElement('button');
+    u.browse.type = 'button';
+    u.browse.className = 'mat-upload__browse';
+    u.title = doc.createElement('span');
+    u.title.className = 'mat-upload__title';
+    u.title.id = input.id + '-title';
+    u.browse.appendChild(u.title);
+    u.limits = doc.createElement('span');
+    u.limits.className = 'mat-upload__limits';
+    u.limits.id = input.id + '-limits';
+    u.zone.appendChild(u.browse);
+    u.zone.appendChild(u.limits);
+    // the button is named by the label of the field and by what it says, and told the limits and the hint of the field
+    var lab = $('label[for="' + input.id + '"]');
+    if (lab) { if (!lab.id) { lab.id = input.id + '-label'; } u.browse.setAttribute('aria-labelledby', lab.id + ' ' + u.title.id); }
+    else if (input.getAttribute('aria-label')) { u.browse.setAttribute('aria-label', input.getAttribute('aria-label')); }
+    u.browse.setAttribute('aria-describedby', (u.limits.id + ' ' + (input.getAttribute('aria-describedby') || '')).trim());
+
+    u.list = doc.createElement('ul');
+    u.list.className = 'mat-upload__list';
+    u.list.setAttribute('aria-label', upText('files'));
+    u.list.hidden = true;
+    u.status = doc.createElement('div');
+    u.status.className = 'mat-upload__status';
+    u.status.setAttribute('role', 'status');
+    u.status.setAttribute('aria-live', 'polite');
+    u.live = doc.createElement('span');
+    u.live.className = 'mat-sr-only';
+    u.live.setAttribute('role', 'status');
+    u.live.setAttribute('aria-live', 'polite');
+    wrap.appendChild(u.zone);
+    wrap.appendChild(u.list);
+    wrap.appendChild(u.status);
+    wrap.appendChild(u.live);
+
+    // the real input is not offered to the Tab key or a screen reader (the button is); whoever focuses it (a message of the form) lands on the button
+    input.tabIndex = -1;
+    input.setAttribute('aria-hidden', 'true');
+    wrap.classList.add('is-ready');
+    upState(u);
+    if (typeof MutationObserver === 'function') {
+      new MutationObserver(function () { upState(u); }).observe(input, { attributes: true, attributeFilter: ['disabled', 'accept', 'multiple', 'aria-invalid'] });
+      new MutationObserver(function () { upState(u); }).observe(wrap, { attributes: true, attributeFilter: ['data-max-size', 'data-max-files', 'data-paste'] });
+    }
+    // files that the field holds when the page is drawn (the browser restores them after a reload) are the list
+    if (input.files && input.files.length) { upAdd(u, Array.prototype.slice.call(input.files), 'picker'); }
+  }
+  function initUploads(scope) { $$('.mat-upload[data-upload]', scope).forEach(upInit); }
+
+  // ---- the events of the upload
+  doc.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t.closest) { return; }
+    var browse = t.closest('.mat-upload__browse'), remove = t.closest('.mat-upload__remove'), u = upOf(browse || remove);
+    if (!u || u.input.disabled) { return; }
+    if (browse) { u.input.click(); return; }
+    var item = remove.closest('.mat-upload__item'), entry = item && item._matUploadEntry;
+    if (!entry) { return; }
+    // the focus goes to the button of the next file, else of the one before, else back to the zone: it never falls on the page
+    var at = upRemoveEntry(u, entry, 'remove'), next = u.entries[at] || u.entries[at - 1];
+    (next ? next.remove : u.browse).focus();
+  });
+  // a file chosen in the dialog: the person's choice is added to the list, and the field is put back to the whole list before anybody else hears of the change
+  doc.addEventListener('change', function (e) {
+    var t = e.target, u = t && t.classList && t.classList.contains('mat-upload__input') ? upOf(t) : null;
+    if (!u || u.busy) { return; }
+    var picked = Array.prototype.slice.call(t.files || []), done = picked.length ? upAdd(u, picked, 'picker') : null;
+    // an empty field is a dialog that was cancelled (some browsers then clear the field): the list stays, and so does the field
+    if (!picked.length) { upSync(u); }
+    if (!done || (!done.added.length && !done.removed.length)) { e.stopImmediatePropagation(); }
+  }, true);
+  doc.addEventListener('focusin', function (e) {
+    var t = e.target, u = t.classList && t.classList.contains('mat-upload__input') ? upOf(t) : null;
+    if (u && !u.input.disabled) { u.browse.focus(); }
+  });
+
+  function upHasFiles(e) { var types = e.dataTransfer && e.dataTransfer.types; return !!types && Array.prototype.indexOf.call(types, 'Files') >= 0; }
+  doc.addEventListener('dragenter', function (e) {
+    var u = upOf(e.target);
+    if (!u || !upHasFiles(e)) { return; }
+    e.preventDefault();
+    if (u.input.disabled) { return; }
+    u.drag += 1;
+    upDragState(u, true);
+  });
+  doc.addEventListener('dragover', function (e) {
+    var u = upOf(e.target);
+    if (!u || !upHasFiles(e)) { return; }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = u.input.disabled ? 'none' : 'copy';
+  });
+  doc.addEventListener('dragleave', function (e) {
+    var u = upOf(e.target);
+    if (!u || u.drag === 0) { return; }
+    u.drag -= 1;
+    if (u.drag === 0) { upDragState(u, false); }
+  });
+  doc.addEventListener('drop', function (e) {
+    $$('.mat-upload.is-drag').forEach(function (w) { if (w._matUpload) { w._matUpload.drag = 0; upDragState(w._matUpload, false); } });
+    var u = upOf(e.target);
+    if (!u || !upHasFiles(e)) { return; }
+    e.preventDefault();
+    if (u.input.disabled) { return; }
+    var files = Array.prototype.slice.call(e.dataTransfer.files || []), folders = [], items = Array.prototype.filter.call(e.dataTransfer.items || [], function (it) { return it.kind === 'file'; });
+    items.forEach(function (it, i) {
+      var entry = it.webkitGetAsEntry ? it.webkitGetAsEntry() : null;
+      if (entry && entry.isDirectory) { folders.push(i); }
+    });
+    if (files.length) { upAdd(u, files, 'drop', folders); }
+  });
+  doc.addEventListener('dragend', function () { $$('.mat-upload.is-drag').forEach(function (w) { if (w._matUpload) { w._matUpload.drag = 0; upDragState(w._matUpload, false); } }); });
+
+  // an image on the clipboard (a screenshot) is added while the focus is in the control; text and everything else is left to the browser
+  doc.addEventListener('paste', function (e) {
+    var u = upOf(e.target);
+    if (!u || !u.wrap.hasAttribute('data-paste') || u.input.disabled) { return; }
+    var data = e.clipboardData, files = data && data.files ? Array.prototype.slice.call(data.files) : [];
+    if (!files.length) { return; }
+    e.preventDefault();
+    var images = files.filter(function (f) { return /^image\//i.test(f.type); });
+    if (images.length) { upAdd(u, images.map(upPasted), 'paste'); }
+    else { upIssues(u, [upText('refusedPaste')]); }
+  });
+  doc.addEventListener('reset', function (e) {
+    setTimeout(function () { $$('.mat-upload', e.target).forEach(function (w) { if (w._matUpload) { upClear(w._matUpload, 'reset'); } }); }, 0);
+  }, true);
+
+  // ---- for an app: the files of a control, and what it draws for an upload it does by itself
+  function upFiles(ref) { var u = upOf(ref); return u ? upFileList(u) : []; }
+  function upAddFiles(ref, files) {
+    var u = upOf(ref);
+    return u ? upAdd(u, Array.prototype.slice.call(files || []), 'api') : { added: [], removed: [], refused: [] };
+  }
+  function upRemoveFile(ref, which) {
+    var u = upOf(ref), e = u && upEntryOf(u, which);
+    if (e) { upRemoveEntry(u, e, 'api'); }
+    return !!e;
+  }
+  function upClearFiles(ref) { var u = upOf(ref); if (u && upClear(u, 'api')) { upTell(u); } }
+  // percent 0 to 100 draws a bar (100 is "Uploaded"); null or undefined takes the progress, the mark and the error of that file away (a new try)
+  function upSetProgress(ref, which, percent) {
+    var u = upOf(ref), e = u && upEntryOf(u, which);
+    if (!e) { return false; }
+    var p = parseFloat(percent);
+    e.error = '';
+    e.progress = isFinite(p) ? clamp(p, 0, 100) : null;
+    e.done = e.progress !== null && e.progress >= 100;
+    if (e.done) { e.progress = null; upSay(u, e.file.name + ': ' + upText('done')); }
+    upPaintEntry(e);
+    return true;
+  }
+  // a file that the server did not take: its message (the default is "Upload failed") in words at the file; an empty message takes the failure away
+  function upSetError(ref, which, message) {
+    var u = upOf(ref), e = u && upEntryOf(u, which);
+    if (!e) { return false; }
+    e.error = message === undefined || message === null ? upText('failed') : String(message);
+    e.progress = null;
+    e.done = false;
+    upPaintEntry(e);
+    if (e.error) { upSay(u, e.file.name + ': ' + e.error); }
+    return true;
+  }
+
   // ------------------------------------------------------------------------------------------------------- init
   // a meter is filled by data: <div class="mat-meter__fill" data-value="63"> (no inline style in the markup)
   function fillMeters(scope) {
@@ -6038,6 +6542,7 @@
     initCarousels();
     initSchedules();
     initItemLists();
+    initUploads();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
     restoreBranches();
@@ -6083,6 +6588,7 @@
     schedule: schedule,
     groups: { set: function (group, open) { setGroup(group, open !== false, true); }, setAll: function (scope, open) { setAllGroups(scope, open !== false); }, restore: restoreGroups },
     itemlist: { init: initItemLists, close: function () { ilCloseAll(); }, open: function (item, side) { if (item && item._matSlide) { ilOpen(item, side === 'start' ? 'start' : 'end'); } } },
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); restoreGroups(scope); }
+    upload: { init: initUploads, files: upFiles, add: upAddFiles, remove: upRemoveFile, clear: upClearFiles, setProgress: upSetProgress, setError: upSetError },
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); initUploads(scope); restoreGroups(scope); }
   };
 })();

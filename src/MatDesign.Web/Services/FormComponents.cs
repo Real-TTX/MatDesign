@@ -485,7 +485,7 @@ internal static class FormComponents
                         <label class="mat-dropzone" for="spc-drop">{I("upload")}<strong>Drop files here or click to choose</strong><span class="mat-muted">PDF, up to 10 MB each</span><input type="file" id="spc-drop" name="files" multiple accept=".pdf" aria-describedby="spc-drop-label" /><span class="mat-dropzone__files"></span></label>
                       </div>
                     </div>
-                    """, "Drag files onto the zone: their names appear in it. The file input covers the whole zone, so a click and the keyboard work as they do for any file field."),
+                    """, "Drag files onto the zone: their names appear in it. The file input covers the whole zone, so a click and the keyboard work as they do for any file field. This is the plain zone: for a list of the chosen files, limits that are checked and refusals in words, use the file upload (`FORM-21`)."),
             ],
             [
                 "An icon in a field is decoration (it has no name); the field's label says what it is.",

@@ -323,6 +323,98 @@ input[type="file"].mat-input { padding: 6px; }
 .mat-dropzone input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .mat-dropzone__files { font-size: var(--mat-fs-sm); color: var(--mat-text); overflow-wrap: anywhere; }
 
+/* ---- File upload (FORM-21): a drop zone and the list of the files that were chosen ----
+   .mat-upload[data-upload] wraps the real file input (.mat-upload__input), which is what is validated and posted. Without the script it is the file field of the browser;
+   matui.js hides it (.is-ready) and draws the zone (.mat-upload__zone: the icon, the button .mat-upload__browse and the limits), the list (.mat-upload__list of
+   .mat-upload__item with a thumbnail, the name, the size or the progress, and a remove button) and the line of refused files (.mat-upload__status).
+   The button is the one Tab stop of the zone; its ::after covers the whole zone, so a click anywhere in the zone is a click on the button. A file that is dragged over the
+   control gives the whole zone a tint and a line all around it (COLOR-08). Nothing is wider than the control, and the targets are as large as any control on a touch screen. */
+.mat-upload { position: relative; display: block; min-width: 0; max-width: 100%; }
+.mat-upload__input {
+  display: block; width: 100%; min-height: var(--mat-control-h); padding: var(--mat-space-2) var(--mat-space-3);
+  background: var(--mat-surface); color: var(--mat-text);
+  border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius);
+  font: inherit; font-size: var(--mat-fs-sm);
+}
+.mat-upload__input::file-selector-button { margin-right: var(--mat-space-3); padding: 4px var(--mat-space-3); border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius-xs); background: var(--mat-surface-2); color: var(--mat-text); font: inherit; cursor: pointer; }
+.mat-upload__input:focus { border-color: var(--mat-accent); box-shadow: var(--mat-focus-ring); outline: none; }
+.mat-upload__input:disabled { background: var(--mat-surface-3); color: var(--mat-text-muted); cursor: not-allowed; }
+/* with the script the real input lies over the control, invisible, so that a message of the browser points at the right place; whoever focuses it lands on the button */
+.mat-upload.is-ready > .mat-upload__input { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; padding: 0; border: 0; opacity: 0; pointer-events: none; }
+
+.mat-upload__zone {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: var(--mat-space-1);
+  padding: var(--mat-space-6) var(--mat-space-4);
+  background: var(--mat-surface-2); color: var(--mat-text-muted);
+  border: 2px dashed var(--mat-border-strong); border-radius: var(--mat-radius-lg);
+  text-align: center;
+  transition: border-color var(--mat-dur-fast) var(--mat-ease), background var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-upload__zone > .mat-icon { font-size: 1.75rem; color: var(--mat-accent-text); }
+.mat-upload__browse { position: static; min-height: var(--mat-control-h); margin: 0; padding: 0 var(--mat-space-2); background: transparent; border: 0; color: var(--mat-text); font-size: var(--mat-fs-md); font-weight: 600; cursor: pointer; }
+.mat-upload__browse::after { content: ""; position: absolute; inset: 0; border-radius: var(--mat-radius-lg); }
+.mat-upload__browse:focus-visible { outline: none; }
+.mat-upload__title { overflow-wrap: anywhere; }
+.mat-upload__limits { max-width: 100%; font-size: var(--mat-fs-xs); color: var(--mat-text-muted); overflow-wrap: anywhere; }
+.mat-upload__limits[hidden] { display: none; }
+.mat-upload__zone:hover { border-color: var(--mat-accent); background: var(--mat-surface-3); }
+.mat-upload__zone:has(.mat-upload__browse:focus-visible) { border-color: var(--mat-accent); box-shadow: var(--mat-focus-ring); }
+/* a file over the control: a tint behind the zone and the line all around it, now a solid one */
+.mat-upload.is-drag .mat-upload__zone { border-style: solid; border-color: var(--mat-accent); background: var(--mat-accent-soft); color: var(--mat-text); }
+.mat-upload.is-disabled .mat-upload__zone { background: var(--mat-surface-3); border-color: var(--mat-border); }
+.mat-upload.is-disabled .mat-upload__zone > .mat-icon { color: var(--mat-text-faint); }
+.mat-upload__browse:disabled { color: var(--mat-text-muted); cursor: not-allowed; }
+/* the message and the border in the colour of the meaning (FORM-03) */
+.mat-field.is-invalid .mat-upload__input, .mat-field.is-invalid .mat-upload__zone, .mat-upload.is-invalid .mat-upload__zone { border-color: var(--mat-danger); }
+.mat-field.is-invalid .mat-upload__zone:has(.mat-upload__browse:focus-visible), .mat-upload.is-invalid .mat-upload__zone:has(.mat-upload__browse:focus-visible) { box-shadow: 0 0 0 3px color-mix(in srgb, var(--mat-danger) 35%, transparent); }
+
+/* compact: one row, for a form with little room */
+.mat-upload--compact .mat-upload__zone { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; gap: var(--mat-space-1) var(--mat-space-3); padding: var(--mat-space-2) var(--mat-space-4); text-align: left; }
+.mat-upload--compact .mat-upload__zone > .mat-icon { font-size: 1.25rem; }
+.mat-upload--compact .mat-upload__browse { padding-inline: 0; font-size: var(--mat-fs-sm); text-align: left; }
+.mat-upload--compact .mat-upload__limits { margin-left: auto; }
+
+/* the chosen files */
+.mat-upload__list { display: flex; flex-direction: column; gap: var(--mat-space-2); margin: var(--mat-space-3) 0 0; padding: 0; list-style: none; }
+.mat-upload__list[hidden] { display: none; }
+.mat-upload__item {
+  display: flex; align-items: center; gap: var(--mat-space-3); min-width: 0; min-height: 3.5rem;
+  padding: var(--mat-space-2) var(--mat-space-2) var(--mat-space-2) var(--mat-space-3);
+  background: var(--mat-surface); border: 1px solid var(--mat-border); border-radius: var(--mat-radius);
+}
+.mat-upload__item.is-error { background: var(--mat-danger-bg); border-color: var(--mat-danger); }
+.mat-upload__thumb { flex: none; display: grid; place-items: center; width: 40px; height: 40px; overflow: hidden; background: var(--mat-surface-3); color: var(--mat-text-muted); border-radius: var(--mat-radius-sm); font-size: 1.25rem; }
+.mat-upload__thumb > img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.mat-upload__body { flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mat-upload__name { font-size: var(--mat-fs-sm); font-weight: 600; color: var(--mat-text); overflow-wrap: anywhere; }
+.mat-upload__meta { font-size: var(--mat-fs-xs); color: var(--mat-text-muted); font-variant-numeric: tabular-nums; }
+.mat-upload__state { display: inline-flex; align-items: center; gap: var(--mat-space-1); color: var(--mat-success-text); font-weight: 600; }
+.mat-upload__bar { display: block; height: 4px; margin-top: var(--mat-space-1); overflow: hidden; background: var(--mat-surface-3); border-radius: var(--mat-radius-pill); }
+.mat-upload__bar[hidden] { display: none; }
+.mat-upload__fill { display: block; width: var(--mat-up-progress, 0%); height: 100%; background: var(--mat-accent); border-radius: inherit; transition: width var(--mat-dur-fast) var(--mat-ease); }
+.mat-upload__problem { display: flex; align-items: flex-start; gap: var(--mat-space-1); font-size: var(--mat-fs-xs); color: var(--mat-danger-text); }
+.mat-upload__problem[hidden] { display: none; }
+.mat-upload__problem > .mat-icon, .mat-upload__issues .mat-icon { flex: none; margin-top: .15em; }
+.mat-upload__remove { flex: none; }
+
+/* what was refused, in words: the live region is always there and takes no room while it is empty */
+.mat-upload__status:not(:empty) { margin-top: var(--mat-space-2); }
+.mat-upload__issues { display: flex; flex-direction: column; gap: var(--mat-space-1); margin: 0; padding: 0; list-style: none; }
+.mat-upload__issues li { display: flex; align-items: flex-start; gap: var(--mat-space-1); font-size: var(--mat-fs-sm); color: var(--mat-danger-text); overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .mat-upload__zone { padding: var(--mat-space-5) var(--mat-space-3); }
+  .mat-upload--compact .mat-upload__limits { flex-basis: 100%; margin-left: 0; }
+}
+/* a touch screen: the one button of the zone is as large as a prominent control (the buttons of the list are 44 px from the tokens) */
+@media (pointer: coarse) { .mat-upload__browse { min-height: var(--mat-control-h-lg); } }
+/* forced colours (a high-contrast mode) drop backgrounds: the list keeps its lines, the drag and the progress use the system colours */
+@media (forced-colors: active) {
+  .mat-upload__fill { background: Highlight; }
+  .mat-upload__bar, .mat-upload__item { border: 1px solid CanvasText; }
+  .mat-upload.is-drag .mat-upload__zone { border-color: Highlight; }
+}
+
 /* ---- Layouts: columns (the grid above), a label beside the field, one line, sections with their heading on the left ---- */
 .mat-form__grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .mat-form__grid--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
