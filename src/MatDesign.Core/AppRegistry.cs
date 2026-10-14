@@ -69,9 +69,9 @@ public static class AppRegistry
             FoundAccent: "#4fd1c5", OnAccent: "#0b1020", AccentText: "#1d7f77", CssPrefix: "(none)", TokenScheme: "--accent, --panel",
             Notes: "Only a dark theme. The accent is light, so text on it is dark."),
 
-        new("matmail", "MatMail", "Mail gateway with a web mail client", Productivity, "#1a56db", "mail", "MatMail",
-            FoundAccent: "#475569", LogoColor: "#1a56db", Port: 9933, CssPrefix: "mm-", TokenScheme: "--color-*",
-            Notes: "The default UI accent is slate (user-selectable), the logo is blue: the toolkit follows the logo."),
+        new("matmail", "MatMail", "Mail gateway with a web mail client", Productivity, "#475569", "mail-m", "MatMail",
+            FoundAccent: "#475569", LogoColor: "#475569", Port: 9933, CssPrefix: "mm-", TokenScheme: "--color-*",
+            Notes: "The accent is slate, the colour MatMail started with (user-selectable), and the logo follows it. The app icon is an envelope whose flap is an M, with a seal and a stamp in warm colours."),
         new("matpaper", "MatPaper", "Document management system", Productivity, "#268538", "paperclip", "MatPaper",
             FoundAccent: "#2f9e44", LogoColor: "#268538", Port: 4994, CssPrefix: "mp-", TokenScheme: "--color-*",
             Notes: "Has schemes (standard, paper, contrast, black) and a user-selectable accent. Green darkened for white text."),

@@ -15,6 +15,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 ### Added
 
+- A new icon in the sprite, `mail-m` (an envelope whose flap is an M): the glyph of the MatMail logo (`IDENT-03`, one glyph per app logo). `<svg class="mat-icon"><use href="#mat-i-mail-m"></use></svg>`. Nothing to do for an app but copy the files; the envelope `mail` stays.
 - A new icon in the sprite, `paperclip` (a paper clip): the glyph of the MatPaper logo (`IDENT-03`, one glyph per app logo, like `whale` for MatDock). `<svg class="mat-icon"><use href="#mat-i-paperclip"></use></svg>`. Nothing to do for an app but copy the files; the registry of this site uses it for MatPaper instead of `file-text`.
 - The icon action of a group heading (`mat-nav__group-action`) is marked like a current item when it is a link to the current page (`SHELL-02`, `COLOR-08`): put `aria-current="page"` (or `is-active`) on it and it gets the tint of the accent behind it and the accent on its icon, as the current item of the menu does. Without it nothing changes. `NavSet.Contains` (and so `ShellModel.CurrentMenu`) now also counts the address of a group action as a page of its menu, because that page is usually no item; the sample marks it with `?groupaction=1&area=lists`.
 - A new icon in the sprite, `progress-play` (a progress ring with a play triangle): the glyph of the MatTrakr logo (`IDENT-03`, one glyph per app logo, like `whale` for MatDock). `<svg class="mat-icon"><use href="#mat-i-progress-play"></use></svg>`. Nothing to do for an app but copy the files; the registry of this site uses it for MatTrakr instead of `tv`.
@@ -42,6 +43,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 ### Changed
 
+- The accent of MatMail is graphite, `#475569` (it was `#1a56db`): the colour MatMail started with, and its new logo (the M envelope, glyph `mail-m`) follows it (`IDENT-03`): `[data-app="matmail"]` in `matui.apps.css` and the registry of this site. MatMail takes it with its next copy of the toolkit and changes its `theme-color` and `Ui.App.Accent` with it.
 - The accent of Matddns is a dark blue, `#204db6` (it was `#4173d1`), to go with its new icon: `[data-app="matddns"]` in `matui.apps.css` and the registry of this site. It is the darkest blue that still holds AA in both themes (white text on it in light, the toolkit's ink on its lightened form in dark). Matddns takes it with its next copy of the toolkit and changes its `theme-color` and `Ui.App.Accent` with it.
 - `MatUi.version` is the version of the toolkit (a string such as `0.1.0`); it used to be the fixed string `1`.
 - The first line of `matui.css` is `/* MatUi <version> (<hash>) - build <build> - ... */`; the build that it used to name first is now second.
