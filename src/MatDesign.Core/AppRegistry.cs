@@ -98,7 +98,7 @@ public static class AppRegistry
         new("matsplit", "MatSplit", "Shared expenses for trips and flats", Home, "#bf5610", "dollar", "MatSplit",
             FoundAccent: "#ef6c14", LogoColor: "#e4570a", Port: 4774, CssPrefix: "ms-", TokenScheme: "--ms-*",
             Notes: "Warm palette. Orange darkened for white text."),
-        new("mattrakr", "MatTrakr", "Movies, series and books", Home, "#6c5ce7", "tv", "MatTrakr",
+        new("mattrakr", "MatTrakr", "Movies, series and books", Home, "#6c5ce7", "progress-play", "MatTrakr",
             FoundAccent: "#6c5ce7", Port: 9242, CssPrefix: "mt-", TokenScheme: "--mt-*"),
         new("matplay", "MatPlay", "Scorekeeper for game nights", Home, "#00819b", "gamepad", "MatPlay",
             FoundAccent: "#0099b8", LogoColor: "#00e5ff", Port: 4664, CssPrefix: "mp-", TokenScheme: "--primary, --panel",
