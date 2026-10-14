@@ -17,8 +17,11 @@ public enum Severity
 public sealed record Finding(string Check, Severity Severity, string Message, string? Kind = null, string? Id = null, string? Link = null);
 
 /// <summary>What a check looks at: the design data as it is now (built in, with what the Studio saved), the toolkit and the Studio's storage.</summary>
-public sealed record CheckContext(DesignData Design, ToolkitFiles Toolkit, StudioService Studio, Func<VersionTracker> VersionsOf)
+public sealed record CheckContext(DesignData Design, ToolkitFiles Toolkit, StudioService Studio, Func<VersionTracker> VersionsOf, Func<ReleaseService>? ReleasesOf = null)
 {
+    /// <summary>The pipeline, for a check that needs to try the build (the white label setting): asked for when needed, because the pipeline needs the checks.</summary>
+    public ReleaseService? Releases => ReleasesOf?.Invoke();
+
     /// <summary>Which version of MatUi each app uses (asked for when a check needs it: the tracker needs the releases, which need the checks).</summary>
     public VersionTracker Versions => VersionsOf();
 }
@@ -89,7 +92,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
     public CheckReport Run()
     {
         var version = design.Version;
-        var context = new CheckContext(design, toolkit, studio, () => services.GetRequiredService<VersionTracker>());
+        var context = new CheckContext(design, toolkit, studio, () => services.GetRequiredService<VersionTracker>(), () => services.GetRequiredService<ReleaseService>());
         var results = All.Select(check => new CheckResult(check, check.Run(context).ToList())).ToList();
         return new CheckReport(version, DateTimeOffset.UtcNow, results);
     }
@@ -112,6 +115,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
             "apps" => design.App(finding.Id) is not null,
             "rules" => design.Rule(finding.Id) is not null,
             Brand.Kind => finding.Id == Brand.ItemId,
+            WhiteLabelSetting.Kind => finding.Id == WhiteLabelSetting.ItemId,
             _ => design.Component(finding.Id) is not null,
         };
         if (exists)
@@ -138,7 +142,40 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
         new("naming", "Toolkit", "The toolkit follows its naming", "Every class of the stylesheets starts with mat- (or is a state such as is-active) (CODE-04).", Naming),
         new("menu", "Site", "The menus are well formed", "Every menu has at most one level of submenus, its ids are unique, and so are its addresses.", Menus),
         new("volume", "Studio", "Nothing on the volume is left out", "Every item the Studio saved is read back by the site; an item that was edited by hand into something unsafe or wrong is not, and is reported here.", Volume),
+        new("whitelabel", "Release", "The white label setting builds", "The prefix and the name of the white label setting pass what a save holds them to, and a trial build with them (the renamer and the checks of the toolkit on the renamed copy) finds nothing: a release with a setting that fails is refused (CODE-09).", WhiteLabelBuilds),
     ];
+
+    private static IEnumerable<Finding> WhiteLabelBuilds(CheckContext c)
+    {
+        if (!c.Studio.Enabled)
+        {
+            yield break;
+        }
+
+        var stored = c.Studio.Store.Current(WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId);
+        if (stored is null or { Deleted: true })
+        {
+            yield break;
+        }
+
+        var saved = WhiteLabelStore.Saved(c.Studio);
+        if (saved is null)
+        {
+            yield return new Finding("whitelabel", Severity.Error, "The white label setting on the volume is not valid (a prefix or a name the build cannot use): a release would not carry it.", WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId);
+            yield break;
+        }
+
+        if (saved.IsNoOp || c.Releases is not { } releases)
+        {
+            yield break;
+        }
+
+        var trial = releases.TrialBuild(saved);
+        foreach (var finding in trial.Findings.Take(20))
+        {
+            yield return new Finding("whitelabel", Severity.Error, $"With the prefix {saved.Prefix}- and the name {saved.Name}: [{finding.Check}] {(finding.Path is null ? string.Empty : finding.Path + ": ")}{finding.Message}", WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId);
+        }
+    }
 
     private static IEnumerable<Finding> AppsValid(CheckContext c)
     {

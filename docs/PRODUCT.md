@@ -23,6 +23,8 @@ branding, its own CI/CD for it and its own toolkit**. Mat is the first company t
 - **The Studio edits data, never free CSS.** A brand is a set of values for tokens that the toolkit documents, each with a type and limits, checked on save. The files of
   the toolkit stay reviewed and tested in the repository (docs/STUDIO.md, "What it does not do").
 - **The mechanics are shared, the look is data.** Controls, scripts and tests are the same for everybody; what differs is the tokens, the assets and the names.
+- **The names can be the company's own (stage 15, `CODE-09`).** A release carries the toolkit under a prefix and a product name of the company; the rename is done by the build on a copy and checked, and the source of the toolkit keeps
+  `mat-` and `MatUi`. Without a setting nothing changes.
 - **Nothing is loaded from another site** (`CODE-03`): fonts and logos of a brand are files in its volume and in its releases.
 
 ## Stages
@@ -36,7 +38,7 @@ Each stage ends with the build clean, the tests and browser checks green, the co
 | 12 | **Token editor per component and per app** | The editor lists the properties of a component next to its examples with a preview beside each control; overrides can be global, per app (`[data-app]`) and per colour scheme. |
 | 13 | **Assets** | Logo, word mark and favicon (uploaded, checked: type, size, no script in an SVG) and the fonts of a brand as files that are served and released; `@font-face` generated, `font-display: swap`. |
 | 14 | **Demo data and templates** | The setup assistant asks for the company and starts from a template: **Demo** (the current Mat data, unchanged), or a blank brand; the site's own name, logo and menu come from the brand and no longer say MatDesign. |
-| 15 | **White label build** | A release can rename the toolkit for the company (`mat-` to its prefix, `MatUi` to its name) in the Build stage, with the tests of the toolkit run on the result. |
+| 15 | **White label build** | **Done:** a release can rename the toolkit for the company (`mat-` to its prefix, `MatUi` to its name) in the Build stage, with the tests of the toolkit run on the result. A `whitelabel` item (prefix and name) in the Studio, the renamer `WhiteLabel` (token boundaries, one pass, files, JSON and the archive), nine checks on the renamed copy that fail the stage, a trial build, history, restore and a check (docs/STUDIO.md, "White label"; `CODE-09`). |
 | 16 | **People and roles** | More than one user per instance with roles (administrator, editor, viewer) and the activity list that names them. |
 
 The order is a dependency: stage 11 gives the editor of stage 12 its handles, stage 13 completes a brand, stage 14 removes the last thing that says Mat.

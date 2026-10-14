@@ -56,6 +56,9 @@ One source, `MatUiVersion` in `Directory.Build.props`, and four places that carr
 | `matui.boot.js` | `/* MatUi boot 0.1.0: ... */` |
 | served and copied | the first line of `matui.css`; `/ui/manifest.json`, `matui.manifest.json` in the archive; `/api/version` (`matui`); the Download and Changelog pages |
 
+A white-label release (docs/STUDIO.md, "White label") carries the same number in the same places under the company's names: `window.AcmeUi.version`, the first line `/* AcmeUi 0.1.0 (hash) ... */` of `acmeui.css`, `acmeui.manifest.json` with
+`"name": "AcmeUi"`. The version does not change because of the rename, and neither does the contract: the changelog of the archive is the toolkit's, with its names renamed. The hash in the first line is the hash of the renamed files.
+
 The version in the source is **the last release**. What is not released yet is under **Unreleased**; the nightly and local builds of the site carry it.
 
 ## Making a version (the maintainers)

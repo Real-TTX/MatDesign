@@ -20,8 +20,8 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
 ## Build / run / test
 
 - **Build:** `dotnet build MatDesign.slnx` (note: `.slnx`). SDK 10 (see `global.json`). Expected: 0 warnings, 0 errors.
-- **Tests:** `dotnet test`: xunit, no Docker, no browser. It also starts the whole site in memory and crawls it. **Browser checks:** `cd tests/e2e && npm install && node run.js http://localhost:8060`
-  (Playwright against the running container; CI runs it too). Add a check there when behaviour of `matui.js` changes: reading a script proves little.
+- **Tests:** `dotnet test`: xunit, no Docker, no browser. It also starts the whole site in memory and crawls it. **Browser checks:** `cd tests/e2e && npm install && node run.js http://localhost:8060` and `node white-label.js http://localhost:8060`
+  (Playwright against the running container; CI runs both). Add a check there when behaviour of `matui.js` changes: reading a script proves little.
 - **Run / test the site: always rebuild the container and redeploy the stack** (project rule): `./scripts/redeploy.ps1` (`-Port` changes the host port).
   Dev stack: `docker-compose.dev.yml`, container `matdesign-dev`, port 8060, explicit subnet `10.253.60.0/24` (the development PC has all Docker address pools used up:
   `all predefined address pools have been fully subnetted`; change it with `MATDESIGN_DEV_SUBNET`). CSS, JS and cshtml are baked into the image: rebuild after a change.
@@ -63,6 +63,8 @@ src/MatDesign.Core         no web types
   Studio/BrandTokens.cs      which tokens of matui.tokens.css a brand may set (the others are derived or structure, with the reason), their kind (colour, length, number, duration, font stack, easing) and limits
   Studio/BrandValidator.cs   what a brand has to be: IsSafe/IsSafeValue (nothing that can leave a declaration), Normalize, CheckValue (kind and limits), Validate (names, scale, contrast)
   Studio/BrandContrast.cs    the toolkit's contrast checks run on the surfaces of a brand, per scheme, mode and app accent (SchemeSurfaces.Pairings is the shared list of pairings)
+  Studio/WhiteLabel.cs       the white label build (CODE-09): WhiteLabelSetting (prefix and name, the item `whitelabel`), WhiteLabel (Validate, Rename on token boundaries in one pass, RenameJson, Leftovers, Examples): pure, no web types
+  Studio/WhiteLabelChecks.cs the checks of the toolkit run on a renamed copy (leftovers, classes, properties, sprite ids, the shape of the script with JsShape, braces, replacement arithmetic, MarkupChecks on every example, file names): any finding fails the Build stage
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /releases/* (the releases of the Studio), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
   Studio/VersionTracker.cs   which release of MatUi each app uses (written down by hand) and where that stands against the releases
@@ -80,9 +82,10 @@ src/MatDesign.Web          the site
                              in the foot or at the end of the menu: `ShellModel.SwitcherPlace`), _MenuSwitchPopup (its popup; menus grouped below a `NavSetParent`), _Head, _Toolbar, _Pager,
                              _DocSection + _Toc + _Component + _ContextPage (the components, layout and utilities pages), _AccentSwatches, _ContrastCard (+ _ContrastRows, _SchemeChecks), _FoundationsTabs
   Pages/Studio/Brand         the brand editor: names, a token table per group of the CSS (an input by kind, a colour picker, a reset), a preview outside the form, the contrast; wwwroot/js/brand.js is its script
+  Pages/Studio/Releases/WhiteLabel  the white label page (CODE-09): prefix and name with live validation (wwwroot/js/whitelabel.js), before and after, the trial build, save and reset; Studio/WhiteLabelBuild.cs (WhiteLabelStore; WhiteLabelBuild.Apply renames the files of a release, the JSON and the archive, writes the hash of the copy and runs the checks), Studio/WhiteLabelEndpoints.cs (POST .../WhiteLabel/rename: the renamer as an address, for the browser checks)
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
-tests/e2e                  run.js: the behaviour in a real browser against a running site
+tests/e2e                  run.js: the behaviour in a real browser against a running site; white-label.js: the white label build (the Studio page, the renamed toolkit behind the renamer of the site, the look of the original and the copy compared pixel by pixel)
 tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js, bump.js (makes a version of the toolkit), matui-check.js (checks an app's copy of it)
 ```
 
@@ -212,6 +215,7 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - After a change to CSS, JS or cshtml the container must be rebuilt.
 - **The brand is tokens, never CSS (`COLOR-11`, docs/STUDIO.md "Brand")**: `ToolkitFiles.BrandOverlay` appends it to the apps part (the part count stays ten): `:root` for light, the dark set twice and identical, nothing when the brand sets nothing. A new token that a brand may set needs a
   kind the editor knows (`BrandTokens.Describe`), and a limit if usability depends on it; a brand is never held below the contrast the toolkit holds (`BrandContrast`, the `brand` check). The page of the editor sets the unsaved values on `[data-brand-preview]` through the CSSOM, never as a style attribute.
+- **A company's prefix and name are made by the build, never by hand (`CODE-09`, docs/STUDIO.md "White label")**: the source keeps `mat-` and `MatUi`; the item `whitelabel` makes the Build stage rename the assembled files (`WhiteLabelBuild.Apply`), on token boundaries, in one pass (`WhiteLabel`), and `WhiteLabelChecks` holds the copy to the toolkit's checks (a finding fails the stage). A new kind of name in the toolkit (a new data attribute, a storage key, a global, a file) needs a rule in `WhiteLabel` or a reason it is covered, and a test; never build a name from two strings (`'mat' + '-x'`), never cut the prefix off by its length. A release without a setting stays byte for byte what it was (a test compares it with the toolkit's own files). `tools/matui-check.js` reads the product and file names from the manifest.
 - **The browser checks make one release per run** (a release never changes): the development volume grows; `docker compose -f docker-compose.dev.yml down -v` then `up -d --build` starts it clean (with the setup assistant again; the checks create the administrator).
 
 **Code**

@@ -2,6 +2,8 @@
 // Checks the copy of the toolkit MatUi that an app carries (docs/VERSIONING.md):
 //   node tools/matui-check.js <folder of the app> [--changelog <CHANGELOG.md or its address>] [--json]
 // It finds the files of MatUi in the folder (matui.css, matui.js, matui.boot.js, matui-icons.svg, matui.manifest.json) by what is written in them, and says
+// A white label release (docs/PRODUCT.md, stage 15) names the files after the company's product (acmeui.css, acmeui.js, ..., acmeui.manifest.json): the tool reads the product and the file names from
+// the manifest (<stem>.manifest.json, with the name of the product inside) and so finds them too; a copy without a manifest is looked for under the names of MatUi itself.
 //   - which version each file is, and whether they are all the same version (the files of one version belong together),
 //   - whether a file was changed by hand: the archive that an app copies holds matui.manifest.json with the SHA-256 of every file,
 //   - what an update takes with it: the versions after this one in the changelog, whether one of them breaks something and the migration steps.
@@ -18,7 +20,9 @@ const folder = args.find((a, i) => !a.startsWith('--') && !(args[i - 1] || '').s
 if (!folder) { console.error('usage: node tools/matui-check.js <folder of the app> [--changelog <file or address>] [--json]'); process.exit(64); }
 
 const SKIP = new Set(['node_modules', 'bin', 'obj', '.git', '.vs', '.idea', 'packages', 'dist-old']);
-const NAMES = new Set(['matui.css', 'matui.js', 'matui.boot.js', 'matui-icons.svg', 'matui.manifest.json']);
+const DEFAULT_STEM = 'matui';
+// the files of a product: <stem>.css, <stem>.js, <stem>.boot.js, <stem>-icons.svg and <stem>.manifest.json, with the kind each one is
+const filesOf = stem => ({ [stem + '.css']: 'css', [stem + '.js']: 'js', [stem + '.boot.js']: 'boot', [stem + '-icons.svg']: 'sprite', [stem + '.manifest.json']: 'manifest' });
 
 // ---- the changelog (the same format as MatDesign.Core.Changelog reads)
 function parseChangelog(markdown) {
@@ -54,50 +58,73 @@ async function loadChangelog() {
 function walk(dir, found) {
   for (const item of fs.readdirSync(dir, { withFileTypes: true })) {
     if (item.isDirectory()) { if (!SKIP.has(item.name)) { walk(path.join(dir, item.name), found); } continue; }
-    if (NAMES.has(item.name)) { found.push(path.join(dir, item.name)); }
+    found.push(path.join(dir, item.name));
   }
+}
+
+// The products in a folder: MatUi, and every <stem>.manifest.json whose manifest names the product the stem is made from (a white label build writes it)
+function productsIn(paths) {
+  const stems = new Map([[DEFAULT_STEM, 'MatUi']]);
+  for (const file of paths) {
+    const m = /^(.+)\.manifest\.json$/.exec(path.basename(file));
+    if (!m) { continue; }
+    try {
+      const manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (manifest && typeof manifest.name === 'string' && manifest.name.toLowerCase() === m[1] && Array.isArray(manifest.files)) { stems.set(m[1], manifest.name); }
+    } catch (e) { /* not a manifest of the toolkit */ }
+  }
+  return stems;
 }
 const sha = text => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 
-function describe(file) {
+function describe(file, stem, kind, product) {
   const text = fs.readFileSync(file, 'utf8');
   const name = path.basename(file);
   let version = null, note = null;
-  if (name === 'matui.css') {
+  if (kind === 'css') {
     const first = text.split('\n')[0];
-    const m = /^\/\*\s*MatUi\s+(\d+\.\d+\.\d+)\s+\(([0-9a-f]+)\)/.exec(first);
-    if (m) { version = m[1]; } else if (/^\/\*\s*MatUi\s+\S+\s+\([0-9a-f]+\)/.test(first)) { note = 'from before the toolkit had a version: ' + first.slice(0, 80); }
-  } else if (name === 'matui.js') {
-    const m = /Version (\d+\.\d+\.\d+) of the toolkit MatUi/.exec(text.slice(0, 600)) || /version: '(\d+\.\d+\.\d+)'/.exec(text);
-    if (m) { version = m[1]; } else if (/window\.MatUi\s*=/.test(text)) { note = 'from before the toolkit had a version'; }
-  } else if (name === 'matui.boot.js') {
-    const m = /MatUi boot (\d+\.\d+\.\d+):/.exec(text.slice(0, 200));
+    const m = /^\/\*\s*(\S+)\s+(\d+\.\d+\.\d+)\s+\(([0-9a-f]+)\)/.exec(first);
+    if (m) { version = m[2]; product = m[1]; } else if (/^\/\*\s*\S+\s+\S+\s+\([0-9a-f]+\)/.test(first)) { note = 'from before the toolkit had a version: ' + first.slice(0, 80); }
+  } else if (kind === 'js') {
+    const m = /Version (\d+\.\d+\.\d+) of the toolkit \S+/.exec(text.slice(0, 600)) || /version: '(\d+\.\d+\.\d+)'/.exec(text);
+    if (m) { version = m[1]; } else if (/window\.[A-Za-z]+\s*=/.test(text)) { note = 'from before the toolkit had a version'; }
+  } else if (kind === 'boot') {
+    const m = /\S+ boot (\d+\.\d+\.\d+):/.exec(text.slice(0, 200));
     if (m) { version = m[1]; } else { note = 'from before the toolkit had a version'; }
-  } else if (name === 'matui.manifest.json') {
-    try { version = JSON.parse(text).version; } catch (e) { note = 'not readable'; }
+  } else if (kind === 'manifest') {
+    try { const manifest = JSON.parse(text); version = manifest.version; product = manifest.name || product; } catch (e) { note = 'not readable'; }
   }
-  return { file, name, text, version: isVersion(version) ? version : null, note };
+  return { file, name, stem, kind, product, text, version: isVersion(version) ? version : null, note };
 }
 
 (async () => {
   const root = path.resolve(folder);
   if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) { console.error(`${root} is not a folder.`); process.exit(64); }
-  const paths = [];
-  walk(root, paths);
-  const files = paths.map(describe);
+  const everything = [];
+  walk(root, everything);
+  const products = productsIn(everything);
+  const files = [];
+  for (const file of everything) {
+    for (const [stem, product] of products) {
+      const kind = filesOf(stem)[path.basename(file)];
+      if (kind) { files.push(describe(file, stem, kind, product)); break; }
+    }
+  }
   const result = { folder: root, copies: [], problems: [], status: 'none' };
 
-  // group the files by the folder they are in: that is a copy
+  // group the files by the folder they are in and the product they belong to: that is a copy
   const groups = new Map();
-  for (const f of files) { const key = path.dirname(f.file); (groups.get(key) || groups.set(key, []).get(key)).push(f); }
+  for (const f of files) { const key = path.dirname(f.file) + '|' + f.stem; (groups.get(key) || groups.set(key, []).get(key)).push(f); }
   const { text: changelogText, from } = await loadChangelog().catch(e => { console.error('The changelog could not be read: ' + e.message); process.exit(64); });
   const releases = parseChangelog(changelogText).filter(e => !e.unreleased && isVersion(e.version)).sort((a, b) => compare(b.version, a.version));
   const newest = releases.length ? releases[0].version : null;
   let worst = 0;
 
-  for (const [dir, group] of groups) {
-    if (!group.some(f => f.name === 'matui.css' || f.name === 'matui.js')) { continue; }
-    const copy = { dir: path.relative(root, dir) || '.', files: group.map(f => ({ name: f.name, version: f.version, note: f.note })), version: null, newest, modified: [], newer: [], breaking: false, migration: [], problems: [] };
+  for (const [key, group] of groups) {
+    const dir = key.slice(0, key.lastIndexOf('|'));
+    if (!group.some(f => f.kind === 'css' || f.kind === 'js')) { continue; }
+    const product = (group.find(f => f.kind === 'manifest') || group.find(f => f.kind === 'css') || group[0]).product;
+    const copy = { dir: path.relative(root, dir) || '.', product, stem: group[0].stem, files: group.map(f => ({ name: f.name, version: f.version, note: f.note })), version: null, newest, modified: [], newer: [], breaking: false, migration: [], problems: [] };
     const versions = [...new Set(group.filter(f => f.version).map(f => f.version))];
     if (versions.length === 0) {
       copy.problems.push('no version in these files: the copy is from before the toolkit had a version. Update it by copying all the files again.');
@@ -109,7 +136,7 @@ function describe(file) {
     copy.version = versions.length === 1 ? versions[0] : null;
 
     // changed by hand: against the manifest that came with the archive
-    const manifest = group.find(f => f.name === 'matui.manifest.json');
+    const manifest = group.find(f => f.kind === 'manifest');
     if (manifest) {
       try {
         const listed = JSON.parse(manifest.text).files || [];
@@ -120,10 +147,10 @@ function describe(file) {
           const content = fs.readFileSync(target, 'utf8');
           if (sha(content) !== entry.sha256 && sha(content.replace(/^﻿/, '').replace(/\r\n/g, '\n')) !== entry.sha256) { copy.modified.push(entry.name); }
         }
-      } catch (e) { copy.problems.push('matui.manifest.json is not readable.'); }
+      } catch (e) { copy.problems.push(manifest.name + ' is not readable.'); }
       if (copy.modified.length) { copy.problems.push(`changed since it was copied: ${copy.modified.join(', ')}. An update overwrites them: move what is needed to the app's own files first.`); worst = 2; }
     } else {
-      copy.problems.push('no matui.manifest.json: it cannot be told whether a file was changed by hand (the archive of the toolkit holds one).');
+      copy.problems.push(`no ${group[0].stem}.manifest.json: it cannot be told whether a file was changed by hand (the archive of the toolkit holds one).`);
     }
 
     if (copy.version && newest) {
@@ -145,10 +172,11 @@ function describe(file) {
   result.changelog = from;
 
   if (json) { console.log(JSON.stringify(result, null, 2)); process.exit(worst === 64 ? 64 : worst); }
-  console.log(`MatUi in ${root}`);
+  const named = [...new Set(result.copies.map(c => c.product))];
+  console.log(`${named.length === 1 ? named[0] : 'MatUi'} in ${root}`);
   console.log(`changelog: ${from}${newest ? `  (newest version ${newest})` : ''}`);
   for (const copy of result.copies) {
-    console.log(`\n${copy.dir}:  ${copy.version ? 'version ' + copy.version : 'no version'}`);
+    console.log(`\n${copy.dir}:  ${copy.version ? 'version ' + copy.version : 'no version'}${copy.product && copy.product !== 'MatUi' ? ' of ' + copy.product : ''}`);
     for (const f of copy.files) { console.log(`  ${f.name.padEnd(22)} ${f.version || f.note || '-'}`); }
     if (copy.version && newest && copy.newer.length === 0 && copy.modified.length === 0 && copy.problems.length === 0) { console.log('  up to date.'); }
     for (const r of copy.newer) {

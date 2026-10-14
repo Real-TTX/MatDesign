@@ -337,6 +337,14 @@ and which apps are behind.
 
 **The toolkit has a version of its own** (semantic versioning): it is in the first line of `matui.css` and in `MatUi.version`, and `/Changelog` (also `/ui/CHANGELOG.md` and `/api/changelog?since=0.1.0`) says what changed in each version, what breaks and what an app has to do. `node tools/matui-check.js <folder of the app>` finds the app's copy, says which version it is, whether the files are all one version and whether one was changed by hand, and what an update takes with it. How a version is made and how an app updates, step by step: [VERSIONING.md](VERSIONING.md).
 
+## 6b. A white-labelled copy (`CODE-09`)
+
+A company that runs its own MatDesign can have its releases carry its own class prefix and product name (Studio, Release, White label). Such an archive is the same toolkit under other names: the classes are `acme-btn`, the properties `--acme-radius`,
+the attributes `data-acme-...`, the events `acme:theme`, the keys of the storage `acme-theme`, the global `window.AcmeUi`, and the files `acmeui.css`, `acmeui.js`, `acmeui.boot.js`, `acmeui-icons.svg` and `acmeui.manifest.json` (the sprite ids are `acme-i-...`). An app that copies
+that archive uses the prefix of the archive everywhere this document says `mat-`, `--mat-`, `data-mat-` or `MatUi`, and its own classes carry the app's prefix as before (`CODE-02`): a company that white-labels the toolkit and an app that
+copies the original must not share a page. Update by copying all the files of the archive again, never by renaming in the app: the next release has the same names. `node tools/matui-check.js <folder of the app>` reads the product and the file names from
+`<name>.manifest.json`, so it checks such a copy like any other (it names the product); a copy without a manifest is looked for under the names of MatUi itself. The version is the same number as the toolkit's: the manifest names the product.
+
 ## 7. Check it
 
 1. Run the app, look at **every page in light and dark, and at 390 px** (`MOBILE-01`). Take screenshots and look at them.

@@ -45,7 +45,8 @@ public sealed record ReleaseManifest(
     int Components,
     IReadOnlyList<string> Changelog,
     IReadOnlyList<ReleaseFile> Files,
-    string? Toolkit = null);
+    string? Toolkit = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] WhiteLabelSetting? WhiteLabel = null);
 
 /// <summary>
 /// The pipeline that turns the data of the Studio into a release of the design system: <c>Check</c> (every check of <see cref="DesignChecks"/> must pass) → <c>Version</c> (the number must be
@@ -232,6 +233,8 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
             var files = new List<ReleaseFile>();
             CheckReport? report = null;
             ReleaseManifest? manifest = null;
+            var releaseHash = toolkit.Hash;
+            WhiteLabelSetting? appliedWhiteLabel = null;
             var failed = false;
 
             void Stage(string name, Func<List<string>, bool> run)
@@ -305,27 +308,28 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
                     log.Add($"{path}  {bytes.Length.ToString("N0", CultureInfo.InvariantCulture)} bytes");
                 }
 
-                static byte[] Text(string text) => new UTF8Encoding(false).GetBytes(text);
-                Write("matui.css", Text(toolkit.ReleaseBundle(version)));
-                Write("matui.js", Text(toolkit.ReleaseScript(version)));
-                Write("matui.boot.js", Text(toolkit.ReleaseBootScript(version)));
-                Write("CHANGELOG.md", Text(Changelog.LoadText()));
-                Write("matui-icons.svg", Text(toolkit.Sprite));
-                foreach (var part in ToolkitFiles.CssParts)
+                var assembled = AssembleFiles(version);
+
+                // a company's release carries its own prefix and name (stage 15): the copy is renamed here and checked before anything is written
+                if (WhiteLabelStore.Active(studio) is { } whiteLabel)
                 {
-                    Write($"css/{part}", Text(toolkit.Css(part)!));
+                    var built = WhiteLabelBuild.Apply(assembled, whiteLabel, toolkit.Hash);
+                    LogWhiteLabel(log, built);
+                    if (!built.Passed)
+                    {
+                        return false;
+                    }
+
+                    assembled = built.Files.ToList();
+                    releaseHash = built.Hash;
+                    appliedWhiteLabel = whiteLabel;
                 }
 
-                Write($"matui-{version}.zip", toolkit.ReleaseZip(version));
+                foreach (var file in assembled)
+                {
+                    Write(file.Path, file.Bytes);
+                }
 
-                // the optional icon library, in a folder of its own: an app that does not need it never has to look there
-                Write("iconlib/matui-iconlib.svg", Text(iconLibrary.Sprite));
-                Write("iconlib/iconlib.json", Text(iconLibrary.Catalogue));
-                Write("iconlib/LICENSE.txt", Text(iconLibrary.License));
-                Write("design.json", Text(DesignJson()));
-                Write(Styleguide.CssName, Text(Styleguide.Css()));
-                Write(Styleguide.SampleName, Text(Styleguide.SampleImage()));
-                Write(Styleguide.HtmlName, Text(Styleguide.Html(design, toolkit, version, toolkit.Hash)));
                 return true;
             });
 
@@ -338,7 +342,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
                     return false;
                 }
 
-                manifest = new ReleaseManifest(version, DateTimeOffset.UtcNow, by, note, toolkit.Hash, runId, report!.Errors, report.Advice, design.Apps.Count, design.Rules.Count, design.Components.Count, changes, files, AppVersion.MatUi);
+                manifest = new ReleaseManifest(version, DateTimeOffset.UtcNow, by, note, releaseHash, runId, report!.Errors, report.Advice, design.Apps.Count, design.Rules.Count, design.Components.Count, changes, files, AppVersion.MatUi, appliedWhiteLabel);
                 File.WriteAllText(Path.Combine(buildDirectory!, "manifest.json"), JsonSerializer.Serialize(manifest, Json), new UTF8Encoding(false));
                 Directory.Move(buildDirectory!, directory);
                 buildDirectory = null;
@@ -397,6 +401,57 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
             .OrderBy(i => i.Revision.At)
             .Select(i => $"{StudioFormat.KindName(i.Kind)} {i.Id}: {StudioFormat.What(i.Revision).ToLowerInvariant()}{(i.Revision.Note.Length > 0 && i.Revision.Note != StudioFormat.What(i.Revision) ? ", " + i.Revision.Note : string.Empty)}")
             .ToList();
+
+    /// <summary>The files of a release as the toolkit and the design data give them now, in the order the Build stage writes them (the names of the source; a white label build renames them).</summary>
+    private List<BuildFile> AssembleFiles(string version)
+    {
+        var files = new List<BuildFile>();
+        static byte[] Text(string text) => new UTF8Encoding(false).GetBytes(text);
+        void Add(string path, byte[] bytes) => files.Add(new BuildFile(path, bytes));
+
+        Add("matui.css", Text(toolkit.ReleaseBundle(version)));
+        Add("matui.js", Text(toolkit.ReleaseScript(version)));
+        Add("matui.boot.js", Text(toolkit.ReleaseBootScript(version)));
+        Add("CHANGELOG.md", Text(Changelog.LoadText()));
+        Add("matui-icons.svg", Text(toolkit.Sprite));
+        foreach (var part in ToolkitFiles.CssParts)
+        {
+            Add($"css/{part}", Text(toolkit.Css(part)!));
+        }
+
+        Add($"matui-{version}.zip", toolkit.ReleaseZip(version));
+
+        // the optional icon library, in a folder of its own: an app that does not need it never has to look there
+        Add("iconlib/matui-iconlib.svg", Text(iconLibrary.Sprite));
+        Add("iconlib/iconlib.json", Text(iconLibrary.Catalogue));
+        Add("iconlib/LICENSE.txt", Text(iconLibrary.License));
+        Add("design.json", Text(DesignJson()));
+        Add(Styleguide.CssName, Text(Styleguide.Css()));
+        Add(Styleguide.SampleName, Text(Styleguide.SampleImage()));
+        Add(Styleguide.HtmlName, Text(Styleguide.Html(design, toolkit, version, toolkit.Hash)));
+        return files;
+    }
+
+    /// <summary>The log of the white label step of the Build stage: which rename was applied, how often per file, and what the checks found.</summary>
+    private static void LogWhiteLabel(List<string> log, WhiteLabelBuildResult built)
+    {
+        log.Add($"White label: {WhiteLabel.Describe(built.Setting, built.Totals)}.");
+        foreach (var file in built.Report.Where(f => f.Replacements > 0))
+        {
+            log.Add($"  {file.Path}: {StudioFormat.Count(file.Replacements, "replacement")}");
+        }
+
+        log.Add($"The hash of the copy is {built.Hash} (the toolkit's is {built.SourceHash}).");
+        log.AddRange(WhiteLabelChecks.Lines(built.Findings).Take(40).Select(l => "  ! " + l));
+        log.Add(built.Passed
+            ? $"The checks of the toolkit run on the copy: {WhiteLabelChecks.Summary(built.Findings)}"
+            : "The copy is not released: " + WhiteLabelChecks.Summary(built.Findings));
+    }
+
+    /// <summary>
+    /// A trial of the white label build: the renamer and every check on the files of the next release as they are now, without making a release. Used by the page of the setting and by the check of the Studio.
+    /// </summary>
+    public WhiteLabelBuildResult TrialBuild(WhiteLabelSetting setting) => WhiteLabelBuild.Apply(AssembleFiles(SuggestNext()), setting, toolkit.Hash);
 
     /// <summary>The design data of this moment as JSON: what an app or a tool can read without the site.</summary>
     private string DesignJson() => JsonSerializer.Serialize(new

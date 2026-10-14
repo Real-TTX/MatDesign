@@ -100,7 +100,7 @@ jobs:
         run: |
           dotnet run --project src/MatDesign.Web -c Release --no-build --urls http://localhost:8060 > /tmp/matdesign.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:8060/health && break; sleep 1; done
-          (cd tests/e2e && npm ci --no-audit --no-fund && node run.js http://localhost:8060) || { cat /tmp/matdesign.log; exit 1; }
+          (cd tests/e2e && npm ci --no-audit --no-fund && node run.js http://localhost:8060 && node white-label.js http://localhost:8060) || { cat /tmp/matdesign.log; exit 1; }
 
       - name: Resolve version string
         id: appver

@@ -97,6 +97,7 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | **done** |
 | 9 | **Setup assistant:** the first visit creates the administrator (name and password, kept as a hash in the volume), so the release compose file has no password and no variables | **done** |
 | 10 | **Brand and tokens** (docs/PRODUCT.md, stage 10): the item `brand`, a token editor with a live preview, the brand overlay in `matui.css`, releases and the archive, history, restore and checks | **done** |
+| 15 | **White label build** (docs/PRODUCT.md, stage 15): the item `whitelabel` (prefix and product name), the renamer, the Build stage with checks on the renamed copy, a trial build, history, restore and a check | **done** |
 
 ### Brand
 
@@ -123,6 +124,31 @@ A colour scheme (a more specific selector) still wins over the brand on the toke
 **The page** `/Studio/Brand`: the names, then the tokens grouped by the groups of `matui.tokens.css` (name and description, the toolkit's value, an input for Light and one for Dark, a reset), a preview beside the form and the contrast of the brand below. The input of a colour is
 a colour picker and a text field kept in step by `wwwroot/js/brand.js` (no inline script, no inline style); the script applies the unsaved values to `[data-brand-preview]` through the CSSOM (a few real controls: buttons, a field, a card, a tag, pills, a switch, a table, alerts, the switcher),
 shows the preview in light or in dark whatever the page is in, and works out the contrast of the pairings that do not depend on the accent while you type, from the same list of pairings (`data-pairings`) the server uses. Check and Save run the whole check on the server, with the accent of every app.
+
+### White label
+
+One item, `whitelabel` of the kind `whitelabel` (`studio/whitelabel/whitelabel/<revision>.json`), kept like the others: append-only, with history, a restore and an entry in the activity list. It holds a class **prefix** and a **product name**
+(`WhiteLabelSetting`); until one is saved, or while it keeps the toolkit's own `mat` and `MatUi`, a release is what it always was, byte for byte. The page is `/Studio/Releases/WhiteLabel` (menu: Release, and a button on the Releases page).
+Rules of the setting (`WhiteLabel.Validate`, run again in the browser while you type and for an item read from the disk): a prefix is 2 to 8 lower-case letters and digits starting with a letter, none of `data`, `aria`, `js`, `is`, `has`, `on`,
+`ng`, `v`, `x`, `matui`, nothing that starts with `xml`; a name is 3 to 24 letters starting with a capital (it need not end in `Ui`), not `MatUi` (unless the prefix is `mat`), not `Mat` or `MatUi` in other capitals.
+
+**The renamer** (`WhiteLabel`, in `MatDesign.Core`, pure) works on token boundaries in one pass: `mat-xxx` (classes, ids, animation names, the keys of `localStorage`, the sprite ids `mat-i-` and `mat-il-`, the bare `"mat-"` of a selector),
+`--mat-xxx`, `data-mat-xxx`, `mat:xxx` (events), `_matXxx` (the private properties the script puts on elements), `MatUi` (the global, comments, the first line of the bundle, the README) and `matui` in a file name (it becomes the name in lower case:
+`acmeui.css`, `acmeui.boot.js`, `acmeui-icons.svg`, `acmeui.manifest.json`, `acmeui-<version>.zip`). Nothing is renamed when a letter, digit, `_`, `$` or `-` stands in front of it (`format-`, `automat-`, `Mattiverse`, `Matdo`, `x-mat-y`) or a letter, digit
+or `_` follows `MatUi` (`MatUiVersion`); addresses with a scheme and the repository's tool `matui-check.js` are never touched. The design data (`design.json`) is renamed as JSON strings and keys, not as text, because the serializer writes a quote as `"`,
+which would hide the name behind a digit. The traps found in `matui.js` and how each is handled are listed in docs/ARCHITECTURE.md, "White label build".
+
+**In the pipeline.** The Build stage assembles the files as before (`ReleaseService.AssembleFiles`), and when a setting is in force `WhiteLabelBuild.Apply` renames every file and its path, writes a hash of the copy into the first line of the bundle, the manifest
+and the README, opens the archive, renames its entries, writes its manifest again from the renamed entries and writes the archive again (fixed time stamps, so the same input is the same archive). The log of the stage says which rename was applied and how
+many replacements each file got. Then `WhiteLabelChecks` runs on the result, in C# because the image has no node, and **a finding fails the stage** (nothing is published): no name of the source left in any file or file name; every class of the source
+stylesheet is in the renamed one and every class the script, the examples and the style guide use exists; every custom property that is used is defined, and every renamed class and property is what the source had; every icon that is named is in the sprite;
+the script has the same strings, comments, regular expressions and brackets as the source, all well formed, and defines its global once; the braces of the stylesheets balance; the length of every file differs from the source by exactly what its replacements add;
+every renamed example passes `MarkupChecks` against the renamed stylesheet and sprite; the files are named after the product; the archive holds the renamed files and a manifest with their hashes. Only what the rename broke is reported: what was already
+wrong in the source is found by running the same look at the original and subtracting. The manifest of the release names the setting (`whiteLabel`).
+
+**The page** shows the setting, a table of before and after that follows the typing, the list of what is renamed, and **Check a trial build**: the renamer and every check on the files of the next release, with the findings and the replacements per
+file, without making a release. Saving a setting whose trial fails is refused. The check `whitelabel` of `/Studio/Checks` runs the same trial for a saved setting (an error stops a release at Check; a setting on the volume that is not valid is reported too).
+`POST /Studio/Releases/WhiteLabel/rename?prefix=&name=` (administrator only) answers a text renamed by the same function; the browser checks (`tests/e2e/white-label.js`) put the browser behind it to run the renamed toolkit.
 
 ### Versions
 
