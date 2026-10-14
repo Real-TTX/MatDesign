@@ -6890,6 +6890,378 @@ function seenAt(page, selector) {
     await phone.ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- tree view (LIST-17)
+  console.log('\nTree view');
+  {
+    // helpers that live in the page: an item is found by the text of its label
+    const injectTree = page => page.evaluate(() => {
+      window.__log = [];
+      ['mat:tree-select', 'mat:tree-toggle', 'mat:tree-load', 'mat:tree-filter'].forEach(type => document.addEventListener(type, e => {
+        const d = e.detail || {};
+        window.__log.push({ type, name: d.item ? d.item.querySelector('.mat-tree__label').textContent.trim() : '', open: d.open, values: d.values, value: d.value, shown: d.shown, total: d.total });
+      }));
+      const labelOf = i => (i.querySelector(':scope > .mat-tree__row .mat-tree__label') || { textContent: '' }).textContent.trim();
+      window.__tr = {
+        item: (id, name) => [...document.querySelectorAll('#' + id + ' .mat-tree__item')].find(i => labelOf(i) === name),
+        info(id, name) {
+          const i = this.item(id, name);
+          if (!i) { return null; }
+          return {
+            role: i.getAttribute('role'), level: +i.getAttribute('aria-level'), size: +i.getAttribute('aria-setsize'), pos: +i.getAttribute('aria-posinset'),
+            expanded: i.getAttribute('aria-expanded'), selected: i.getAttribute('aria-selected'), checked: i.getAttribute('aria-checked'), hidden: i.hidden,
+            tab: i.tabIndex, busy: i.getAttribute('aria-busy'), loading: i.classList.contains('is-loading'), lazy: i.hasAttribute('data-lazy'),
+            names: (i.getAttribute('aria-labelledby') || '').split(' ').map(x => (document.getElementById(x) || { textContent: '?' }).textContent.trim()),
+            shown: i.getClientRects().length > 0, level0: i.style.getPropertyValue('--mat-tree-level'),
+            group: (i.querySelector(':scope > ul') || { getAttribute: () => null }).getAttribute('role'),
+          };
+        },
+        focus(id, name) { this.item(id, name).focus(); },
+        active() {
+          const a = document.activeElement;
+          const i = a && a.closest ? a.closest('.mat-tree__item') : null;
+          return i && a === i ? labelOf(i) : (a ? a.tagName.toLowerCase() + '.' + a.className : 'nothing');
+        },
+        mark(id, name, part) {
+          document.querySelectorAll('[data-e2e]').forEach(n => n.removeAttribute('data-e2e'));
+          const i = this.item(id, name);
+          (i.querySelector(':scope > .mat-tree__row ' + (part === 'row' ? '.mat-tree__label' : '.mat-tree__' + part))).setAttribute('data-e2e', 'x');
+        },
+        live(id) { return document.getElementById(id).nextElementSibling.textContent; },
+      };
+    });
+    const info = (page, id, name) => page.evaluate(([i, n]) => window.__tr.info(i, n), [id, name]);
+    const active = page => page.evaluate(() => window.__tr.active());
+    const focusItem = (page, id, name) => page.evaluate(([i, n]) => window.__tr.focus(i, n), [id, name]);
+    const press = async (page, ...keys) => { for (const k of keys) { await page.keyboard.press(k); } };
+    const clickPart = async (page, id, name, part) => { await page.evaluate(([i, n, p]) => window.__tr.mark(i, n, p), [id, name, part]); await page.click('[data-e2e="x"]'); };
+    const logOf = (page, type) => page.evaluate(t => window.__log.filter(l => l.type === t), type);
+    const FILES = 'tr-files', AREAS = 'tr-areas', LAZY = 'tr-lazy';
+    const fresh = async (options, url) => {
+      const r = await open(options, url);
+      await r.page.evaluate(() => { localStorage.removeItem('mat-tree'); });
+      await r.page.reload();
+      await r.page.waitForFunction(() => document.readyState === 'complete');
+      await r.page.evaluate(() => document.getElementById('tree').scrollIntoView());
+      await injectTree(r.page);
+      return r;
+    };
+
+    const { ctx, page } = await fresh(desktopOptions, '/Components#tree');
+
+    await check('the tree has the roles and the numbers of the ARIA tree pattern, with a name for every item', async () => {
+      expect(await page.getAttribute(`#${FILES}`, 'role'), 'tree', 'the role of the tree');
+      expect(await page.getAttribute(`#${FILES}`, 'aria-label'), 'Files', 'the name of the tree');
+      expect(await info(page, FILES, 'Documents'), { role: 'treeitem', level: 1, size: 3, pos: 1, expanded: 'true', selected: 'false', checked: null, hidden: false, tab: -1, busy: null, loading: false, lazy: false, names: ['Documents', '6'], shown: true, level0: '0', group: 'group' }, 'the first item');
+      const q2 = await info(page, FILES, 'Q2 report.pdf');
+      expect([q2.level, q2.size, q2.pos, q2.expanded, q2.selected, q2.level0], [4, 2, 2, null, 'true', '3'], 'a leaf on the fourth level: no aria-expanded, the one that was chosen in the markup');
+      expect((await info(page, FILES, 'Contracts')).expanded, 'false', 'a closed folder');
+      expect((await info(page, FILES, '2026')).expanded, 'true', 'data-expanded opens a folder');
+      expect((await info(page, FILES, 'Archive')).expanded, null, 'an item without children has no aria-expanded');
+      expect((await info(page, FILES, 'Archive')).names, ['Archive'], 'the name is the label');
+    });
+
+    await check('the whole tree is one tab stop, on the chosen item, and the buttons in the rows of the others are not in the tab order', async () => {
+      expect(await page.$$eval(`#${FILES} li[tabindex="0"]`, l => l.length), 1, 'items with tabindex 0');
+      expect((await info(page, FILES, 'Q2 report.pdf')).tab, 0, 'the chosen item has it');
+      expect(await page.$$eval(`#${LAZY} > li:nth-child(n+2) .mat-tree__actions button[tabindex="0"]`, b => b.length), 0, 'no action button of a row without the stop is in the tab order');
+      await page.focus('#tr-files-q');
+      await page.keyboard.press('Tab');
+      expect(await active(page), 'Q2 report.pdf', 'Tab from the field lands on the tree');
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => document.activeElement.textContent.trim()), 'Open all', 'the next Tab leaves the tree');
+      await page.keyboard.press('Shift+Tab');
+      expect(await active(page), 'Q2 report.pdf', 'Shift+Tab comes back to the same item');
+    });
+
+    await check('Up, Down, Left and Right walk the items that are shown, open and close folders and go to the parent and the first child', async () => {
+      await focusItem(page, FILES, 'Q2 report.pdf');
+      await press(page, 'ArrowDown');
+      expect(await active(page), '2025', 'Down');
+      await press(page, 'ArrowUp');
+      expect(await active(page), 'Q2 report.pdf', 'Up');
+      await press(page, 'ArrowLeft');
+      expect(await active(page), '2026', 'Left on a leaf goes to the parent');
+      await press(page, 'ArrowLeft');
+      expect((await info(page, FILES, '2026')).expanded, 'false', 'Left on an open folder closes it');
+      expect((await info(page, FILES, 'Q1 report.pdf')).shown, false, 'what is below it is not shown');
+      await press(page, 'ArrowDown');
+      expect(await active(page), '2025', 'Down skips the closed folder');
+      await press(page, 'ArrowUp', 'ArrowRight');
+      expect((await info(page, FILES, '2026')).expanded, 'true', 'Right on a closed folder opens it');
+      await press(page, 'ArrowRight');
+      expect(await active(page), 'Q1 report.pdf', 'Right on an open folder goes to its first child');
+      await press(page, 'Home');
+      expect(await active(page), 'Documents', 'Home');
+      await press(page, 'End');
+      expect(await active(page), 'Archive', 'End');
+      await press(page, 'ArrowDown');
+      expect(await active(page), 'Archive', 'Down at the end stays');
+    });
+
+    await check('* opens every folder of the level, and the first letters of a name go to the next item that begins with them', async () => {
+      await focusItem(page, FILES, 'Contracts');
+      await page.keyboard.press('*');
+      expect((await info(page, FILES, 'Contracts')).expanded, 'true', '* opened Contracts, a sibling of Reports');
+      await focusItem(page, FILES, 'Documents');
+      await page.keyboard.press('p');
+      expect(await active(page), 'Photos', 'p');
+      await page.waitForTimeout(800);
+      await page.keyboard.press('a');
+      expect(await active(page), 'Archive', 'a, after a pause: a new word');
+      await page.waitForTimeout(800);
+      await page.keyboard.press('n');
+      expect(await active(page), 'Notes.txt', 'n wraps around to the next one');
+      await page.waitForTimeout(800);
+      await page.keyboard.type('q2', { delay: 40 });
+      expect(await active(page), 'Q2 report.pdf', 'q2 typed together is one word');
+    });
+
+    await check('Enter and Space choose one item and send mat:tree-select with what is chosen', async () => {
+      await page.evaluate(() => { window.__log.length = 0; });
+      await focusItem(page, FILES, 'Notes.txt');
+      await press(page, 'Enter');
+      expect([(await info(page, FILES, 'Notes.txt')).selected, (await info(page, FILES, 'Q2 report.pdf')).selected], ['true', 'false'], 'Enter chose Notes and let go of Q2');
+      await focusItem(page, FILES, 'Q1 report.pdf');
+      await press(page, 'Space');
+      expect((await info(page, FILES, 'Q1 report.pdf')).selected, 'true', 'Space');
+      expect((await logOf(page, 'mat:tree-select')).map(l => l.values), [['Notes.txt'], ['Q1 report.pdf']], 'the events say what is chosen');
+      expect(await page.evaluate(() => MatUi.tree.get(document.getElementById('tr-files')).values), ['Q1 report.pdf'], 'MatUi.tree.get');
+      expect(await page.$$eval(`#${FILES} li[tabindex="0"]`, l => l.length), 1, 'still one tab stop');
+    });
+
+    await check('a click on the chevron opens and closes without choosing, a click on the row chooses, and the focus leaves a folder that closes over it', async () => {
+      await page.evaluate(() => { window.__log.length = 0; });
+      await clickPart(page, FILES, 'Reports', 'toggle');
+      expect((await info(page, FILES, 'Reports')).expanded, 'false', 'closed by the chevron');
+      expect((await info(page, FILES, 'Q1 report.pdf')).selected, 'true', 'the chosen item is as it was');
+      expect((await logOf(page, 'mat:tree-toggle')).map(l => [l.name, l.open]), [['Reports', false]], 'mat:tree-toggle');
+      await clickPart(page, FILES, 'Reports', 'toggle');
+      await focusItem(page, FILES, 'Q1 report.pdf');
+      await clickPart(page, FILES, 'Documents', 'toggle');
+      expect(await active(page), 'Documents', 'the focus was inside Documents and goes to it');
+      await clickPart(page, FILES, 'Documents', 'toggle');
+      await clickPart(page, FILES, 'Contracts', 'row');
+      expect((await info(page, FILES, 'Contracts')).selected, 'true', 'a click on the row chooses (a folder can be chosen)');
+      expect((await info(page, FILES, 'Contracts')).expanded, 'true', 'and does not open or close it');
+    });
+
+    await check('a chosen row is a tint behind the whole row with a stronger label and no bar at its side', async () => {
+      const s = await page.$eval(`#${FILES}`, tree => {
+        const sel = tree.querySelector('[aria-selected="true"] > .mat-tree__row');
+        const other = tree.querySelector('[aria-selected="false"] > .mat-tree__row');
+        const r = sel.getBoundingClientRect(), t = tree.getBoundingClientRect();
+        const cs = getComputedStyle(sel);
+        return {
+          bg: cs.backgroundColor, otherBg: getComputedStyle(other).backgroundColor, weight: getComputedStyle(sel.querySelector('.mat-tree__label')).fontWeight,
+          left: cs.borderLeftWidth, shadow: cs.boxShadow, full: Math.abs(r.width - t.width) < 2,
+        };
+      });
+      expectTrue(s.bg !== 'rgba(0, 0, 0, 0)' && s.bg !== s.otherBg, 'the chosen row has a tint: ' + s.bg + ' against ' + s.otherBg);
+      expect(+s.weight >= 600, true, 'a stronger label: ' + s.weight);
+      expect(s.left, '0px', 'no bar at the side');
+      expect(s.full, true, 'the tint reaches both edges of the tree');
+    });
+
+    await ctx.close();
+    const second = await fresh(desktopOptions, '/Components#tree');
+    const p2 = second.page;
+
+    await check('a filter hides what does not match, keeps and opens the folders above a match, counts the items that are shown and says the matches', async () => {
+      await p2.fill('#tr-files-q', 'report');
+      const names = ['Documents', 'Contracts', 'Reports', '2026', 'Q1 report.pdf', 'Q2 report.pdf', '2025', 'Annual report.pdf', 'Notes.txt', 'Photos', 'Archive'];
+      const shown = {};
+      for (const n of names) { shown[n] = (await info(p2, FILES, n)).shown; }
+      expect(shown, { Documents: true, Contracts: false, Reports: true, '2026': true, 'Q1 report.pdf': true, 'Q2 report.pdf': true, '2025': true, 'Annual report.pdf': true, 'Notes.txt': false, Photos: false, Archive: false }, 'what is shown');
+      expect((await info(p2, FILES, '2025')).expanded, 'true', 'the folder that holds a match is open');
+      const reports = await info(p2, FILES, 'Reports');
+      expect([reports.size, reports.pos], [1, 1], 'Reports is the only item shown in Documents');
+      expect(await p2.evaluate(() => window.__tr.live('tr-files')), '4 matches', 'the live region');
+      expect(await p2.evaluate(() => window.__tr.info('tr-files', 'Q1 report.pdf').tab !== undefined), true);
+      await p2.fill('#tr-files-q', 'lease');
+      expect(await p2.evaluate(() => window.__tr.live('tr-files')), '1 match', 'one match');
+      expect((await info(p2, FILES, 'Contracts')).expanded, 'true', 'Contracts holds it');
+      expect((await info(p2, FILES, '2025')).expanded, 'false', 'what held the first match is closed again');
+      await p2.fill('#tr-files-q', 'zzz');
+      expect(await p2.isVisible('#tr-files + span + .mat-tree__empty'), true, 'the text for no match');
+      expect(await p2.textContent('#tr-files + span + .mat-tree__empty'), 'No matches', 'its text');
+      expect(await p2.evaluate(() => window.__tr.live('tr-files')), 'No matches', 'the live region says it too');
+      await p2.fill('#tr-files-q', '');
+      expect((await info(p2, FILES, 'Contracts')).shown, true, 'all items are back');
+      expect([(await info(p2, FILES, 'Contracts')).expanded, (await info(p2, FILES, '2025')).expanded], ['false', 'false'], 'every folder is as it was before the filter');
+      expect(await p2.isVisible('#tr-files + span + .mat-tree__empty'), false, 'the text for no match is gone');
+      const events = await logOf(p2, 'mat:tree-filter');
+      expect(events.map(e => e.shown), [4, 1, 0, 0], 'mat:tree-filter');
+    });
+
+    await check('the texts that the script writes follow the language of the page', async () => {
+      await p2.evaluate(() => { document.documentElement.lang = 'de'; });
+      await p2.fill('#tr-files-q', 'report');
+      expect(await p2.evaluate(() => window.__tr.live('tr-files')), '4 Treffer', 'German');
+      await p2.fill('#tr-files-q', 'zzz');
+      expect(await p2.textContent('#tr-files + span + .mat-tree__empty'), 'No matches', 'the text of the page stays, once it is there');
+      await p2.fill('#tr-files-q', '');
+      await p2.evaluate(() => { document.documentElement.lang = 'en'; });
+    });
+
+    await check('what the user opened and closed is remembered per tree and item, and the tree is as drawn for what was never touched', async () => {
+      await clickPart(p2, FILES, 'Photos', 'toggle');
+      await clickPart(p2, FILES, 'Documents', 'toggle');
+      await p2.reload();
+      await p2.waitForFunction(() => document.readyState === 'complete');
+      await injectTree(p2);
+      expect([(await info(p2, FILES, 'Photos')).expanded, (await info(p2, FILES, 'Documents')).expanded], ['true', 'false'], 'Photos opened and Documents closed stay so');
+      expect((await info(p2, FILES, 'Reports')).expanded, 'true', 'Reports was not touched: as drawn');
+      expect(await p2.evaluate(() => Object.keys(JSON.parse(localStorage.getItem('mat-tree'))).sort()), ['matdesign:demo-files:Documents', 'matdesign:demo-files:Photos'], 'saved per tree key and item');
+      await p2.evaluate(() => { localStorage.removeItem('mat-tree'); });
+    });
+
+    await check('with several chosen a parent is checked, in between or unchecked by its items, and checking it checks them all', async () => {
+      await p2.reload();
+      await p2.waitForFunction(() => document.readyState === 'complete');
+      await injectTree(p2);
+      const states = async () => p2.evaluate(() => ['Ground floor', 'Kitchen', 'Living room', 'Hallway', 'First floor', 'Study', 'Outside'].map(n => window.__tr.info('tr-areas', n).checked));
+      expect(await states(), ['mixed', 'true', 'true', 'false', 'false', 'false', 'false'], 'as the markup says: two of three, and the folder in between');
+      const box = await p2.$eval('#tr-areas > li:first-child > .mat-tree__row', row => ({ on: getComputedStyle(row.querySelector('.mat-tree__check-on')).display, mixed: getComputedStyle(row.querySelector('.mat-tree__check-mixed')).display, bg: getComputedStyle(row.querySelector('.mat-tree__check')).backgroundColor }));
+      expect([box.on, box.mixed], ['none', 'block'], 'a dash, not a check, in the box in between');
+      await clickPart(p2, AREAS, 'Hallway', 'check');
+      expect((await states())[0], 'true', 'the third item makes the folder checked');
+      await clickPart(p2, AREAS, 'Ground floor', 'check');
+      expect(await states(), ['false', 'false', 'false', 'false', 'false', 'false', 'false'], 'a click on a checked folder unchecks all of it');
+      await clickPart(p2, AREAS, 'Ground floor', 'check');
+      expect(await states(), ['true', 'true', 'true', 'true', 'false', 'false', 'false'], 'and a click on an unchecked one checks all of it');
+      await focusItem(p2, AREAS, 'Study');
+      await press(p2, 'Space');
+      expect([(await info(p2, AREAS, 'Study')).checked, (await info(p2, AREAS, 'First floor')).checked], ['true', 'mixed'], 'Space ticks the item and the folder is in between');
+      await clickPart(p2, AREAS, 'Study', 'row');
+      expect([(await info(p2, AREAS, 'Study')).checked, (await info(p2, AREAS, 'First floor')).checked], ['false', 'false'], 'a click on the row ticks and unticks too');
+      expect(await p2.evaluate(() => MatUi.tree.get(document.getElementById('tr-areas')).values), ['Ground floor', 'Kitchen', 'Living room', 'Hallway'], 'MatUi.tree.get');
+      expect((await logOf(p2, 'mat:tree-select')).pop().values, ['Ground floor', 'Kitchen', 'Living room', 'Hallway'], 'mat:tree-select');
+      expect(await p2.evaluate(() => window.__tr.live('tr-areas')), '3 selected', 'the live region counts the items, not the folders');
+    });
+
+    await check('an item with data-lazy loads its children when it opens: a loading state, mat:tree-load, then the items with their level', async () => {
+      await p2.evaluate(() => { window.__log.length = 0; });
+      await clickPart(p2, LAZY, 'Tools', 'toggle');
+      const during = await info(p2, LAZY, 'Tools');
+      expect([during.loading, during.busy, during.expanded], [true, 'true', 'true'], 'loading');
+      expect(await p2.evaluate(() => getComputedStyle(document.querySelector('#tr-lazy > li:first-child > .mat-tree__row > .mat-tree__toggle'), '::after').animationName), 'mat-spin', 'a spinner in the place of the chevron');
+      expect((await logOf(p2, 'mat:tree-load')).map(l => [l.name, l.value]), [['Tools', 'tools']], 'mat:tree-load');
+      await p2.waitForFunction(() => window.__tr.item('tr-lazy', 'Hand tools'));
+      const after = await info(p2, LAZY, 'Tools');
+      expect([after.loading, after.busy, after.lazy, after.group], [false, null, false, 'group'], 'loaded');
+      const hand = await info(p2, LAZY, 'Hand tools');
+      expect([hand.level, hand.size, hand.pos, hand.lazy, hand.expanded, hand.level0], [2, 3, 1, true, 'false', '1'], 'a child that is lazy itself');
+      await clickPart(p2, LAZY, 'Hand tools', 'toggle');
+      await p2.waitForFunction(() => window.__tr.item('tr-lazy', 'Hammers'));
+      expect((await info(p2, LAZY, 'Hammers')).level, 3, 'one level deeper');
+      expect(await p2.$$eval('#tr-lazy li[tabindex="0"]', l => l.length), 1, 'still one tab stop');
+    });
+
+    await check('a load that fails closes the item and can be tried again; an answer without items makes it a leaf; the buttons of a row are in the tab order only for the row with the stop', async () => {
+      await p2.evaluate(() => {
+        window.__answer = null;
+        document.getElementById('tr-lazy').addEventListener('mat:tree-load', e => { e.stopPropagation(); MatUi.tree.setChildren(e.detail.item, window.__answer); });
+      });
+      await clickPart(p2, LAZY, 'Garden', 'toggle');
+      const failed = await info(p2, LAZY, 'Garden');
+      expect([failed.expanded, failed.lazy, failed.loading], ['false', true, false], 'closed again and still lazy');
+      expect(await p2.evaluate(() => window.__tr.live('tr-lazy')), 'Garden could not be loaded', 'a screen reader is told');
+      await p2.evaluate(() => { window.__answer = ''; });
+      await clickPart(p2, LAZY, 'Garden', 'toggle');
+      const empty = await info(p2, LAZY, 'Garden');
+      expect([empty.expanded, empty.lazy], [null, false], 'no children: a leaf');
+      expect(await p2.evaluate(() => window.__tr.live('tr-lazy')), 'Garden is empty', 'and it is said');
+      await focusItem(p2, LAZY, 'Tools');
+      expect(await p2.$$eval('#tr-lazy > li:first-child > .mat-tree__row .mat-tree__actions button', b => b.map(x => x.tabIndex)), [0, 0], 'the buttons of the row that has the stop');
+      expect(await p2.$$eval('#tr-lazy > li:nth-child(2) > .mat-tree__row .mat-tree__actions button', b => b.map(x => x.tabIndex)), [-1, -1], 'the buttons of another row');
+      await press(p2, 'Tab');
+      expect(await p2.evaluate(() => document.activeElement.getAttribute('aria-label')), 'Add to Tools', 'Tab goes into the actions of the row');
+      await press(p2, 'ArrowDown');
+      expect(await p2.evaluate(() => window.__tr.active() !== 'Hand tools'), true, 'the keys of the tree do not run on a button of the actions');
+    });
+
+    await check('a tree of links: Enter follows the link of the item, a click on the row opens a folder, and the current page is the chosen item', async () => {
+      expect((await info(p2, 'tr-nav', 'Installation')).selected, 'true', 'the current item');
+      await clickPart(p2, 'tr-nav', 'Settings', 'row');
+      expect((await info(p2, 'tr-nav', 'Settings')).expanded, 'true', 'data-tree-toggle="row" opens it');
+      expect(await p2.evaluate(() => document.querySelector('#tr-nav a').tabIndex), -1, 'the link is reached through the item');
+      await p2.evaluate(() => { window.__hits = 0; document.querySelector('#tr-nav a[href]').addEventListener('click', e => { e.preventDefault(); window.__hits += 1; }); });
+      await focusItem(p2, 'tr-nav', 'Installation');
+      await press(p2, 'Enter');
+      expect(await p2.evaluate(() => window.__hits), 1, 'Enter clicked the link');
+    });
+
+    await check('the API opens, closes and chooses, and a page can add trees later', async () => {
+      const r = await p2.evaluate(() => {
+        const t = MatUi.tree, el = document.getElementById('tr-files');
+        t.collapse(window.__tr.item('tr-files', 'Reports'));
+        const closed = window.__tr.info('tr-files', 'Reports').expanded;
+        t.expand(window.__tr.item('tr-files', 'Q1 report.pdf'));
+        const opened = window.__tr.info('tr-files', 'Reports').expanded;
+        t.select(window.__tr.item('tr-files', 'Archive'));
+        const chosen = t.get(el).values;
+        t.setAll(el, false);
+        const none = [...el.querySelectorAll('.mat-tree__item[aria-expanded="true"]')].length;
+        t.setAll(el, true);
+        const box = document.createElement('div');
+        box.innerHTML = '<ul class="mat-tree" id="tr-late" data-tree aria-label="Late"><li class="mat-tree__item"><div class="mat-tree__row"><span class="mat-tree__label">One</span></div></li></ul>';
+        document.body.appendChild(box);
+        MatUi.refresh(box);
+        return { closed, opened, chosen, none, late: document.getElementById('tr-late').getAttribute('role'), lateItem: box.querySelector('li').getAttribute('role') };
+      });
+      expect(r, { closed: 'false', opened: 'true', chosen: ['Archive'], none: 0, late: 'tree', lateItem: 'treeitem' }, 'what the API did');
+    });
+
+    await second.ctx.close();
+
+    const dark = await fresh({ ...desktopOptions, colorScheme: 'dark' }, '/Components#tree');
+    // the colours of the chosen row, of a row that is not, and of what is behind the tree, as the browser computes them
+    const surfaces = page => page.$eval('#' + FILES, tree => {
+      const backdrop = el => { for (let e = el; e; e = e.parentElement) { const c = getComputedStyle(e).backgroundColor; if (c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') { return c; } } return 'rgb(255, 255, 255)'; };
+      const sel = tree.querySelector('[aria-selected="true"] > .mat-tree__row'), other = tree.querySelector('[aria-selected="false"] > .mat-tree__row');
+      return {
+        label: getComputedStyle(sel.querySelector('.mat-tree__label')).color, other: getComputedStyle(other.querySelector('.mat-tree__label')).color,
+        selBg: getComputedStyle(sel).backgroundColor, bgOther: getComputedStyle(other).backgroundColor, under: backdrop(tree),
+      };
+    });
+    const alphaOf = text => { const n = (text.match(/-?\d*\.?\d+/g) || []).map(Number); return n.length > 3 ? n[3] : 1; };
+    const over = (top, base) => { const a = alphaOf(top), t = parseColour(top), b = parseColour(base); return `rgb(${[0, 1, 2].map(i => Math.round(t[i] * a + b[i] * (1 - a))).join(', ')})`; };
+    await check('in the dark theme the tree has its tint and its text keeps the contrast of AA on it (tokens only)', async () => {
+      const s = await surfaces(dark.page);
+      const c = contrastOf(s.label, over(s.selBg, s.under));
+      expectTrue(c >= 4.5, `the label on the chosen row is ${c.toFixed(2)}:1 (${s.label} on ${s.selBg} over ${s.under})`);
+      const o = contrastOf(s.other, s.under);
+      expectTrue(o >= 4.5, `the label on the surface is ${o.toFixed(2)}:1`);
+      expect(s.bgOther, 'rgba(0, 0, 0, 0)', 'a row that is not chosen has no fill');
+      expectTrue(alphaOf(s.selBg) > 0.05, 'the chosen row has a tint: ' + s.selBg);
+    });
+    await dark.ctx.close();
+
+    const phone = await fresh(phoneOptions, '/Components#tree');
+    const pp = phone.page;
+    await check('on a phone a row is 44 px high, the chevron can be hit, a long label wraps and nothing scrolls sideways', async () => {
+      await pp.evaluate(() => { window.__tr.item('tr-files', 'Notes.txt').querySelector('.mat-tree__label').textContent = 'A very long name for a note that goes on and on and on, notes-from-the-meeting-with-everybody-about-the-budget-of-next-year.txt'; });
+      const s = await pp.$eval('#tr-files', tree => {
+        const rows = [...tree.querySelectorAll('.mat-tree__row')].filter(r => r.getClientRects().length > 0);
+        const toggle = tree.querySelector('.mat-tree__toggle').getBoundingClientRect();
+        const notes = [...tree.querySelectorAll('.mat-tree__row')].find(r => r.textContent.includes('very long')).getBoundingClientRect();
+        return { heights: rows.map(r => Math.round(r.getBoundingClientRect().height)), toggleH: Math.round(toggle.height), toggleW: Math.round(toggle.width), notesH: Math.round(notes.height), overflow: tree.scrollWidth > tree.clientWidth, page: document.documentElement.scrollWidth > innerWidth };
+      });
+      expectTrue(s.heights.length >= 8 && s.heights.every(h => h >= 44), 'rows of at least 44 px: ' + s.heights.join(', '));
+      expectTrue(s.toggleH >= 44 && s.toggleW >= 28, `the chevron is ${s.toggleW} x ${s.toggleH} px`);
+      expectTrue(s.notesH > 44, 'the long label wraps over more lines: ' + s.notesH + ' px');
+      expect([s.overflow, s.page], [false, false], 'sideways scroll of the tree and of the page');
+      // the actions of a row are always there on a touch screen
+      const actions = await pp.$eval('#tr-lazy', t => getComputedStyle(t.querySelector('.mat-tree__actions')).opacity);
+      expect(actions, '1', 'the actions are shown without hover');
+    });
+    await check('every tree of the page fits a phone: the examples do not scroll sideways', async () => {
+      const w = await pp.evaluate(() => ['tr-files', 'tr-areas', 'tr-lazy', 'tr-nav'].map(id => { const t = document.getElementById(id); return t.scrollWidth <= t.clientWidth; }));
+      expect(w, [true, true, true, true], 'no tree is wider than its box');
+    });
+    await phone.ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {

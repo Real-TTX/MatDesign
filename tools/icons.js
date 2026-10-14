@@ -56,6 +56,8 @@ const extra = {
   // rating (FORM-22): the shapes besides the star; the script fills them with the accent
   'heart': "<path d='M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z'/>",
   'circle': "<circle cx='12' cy='12' r='9'/>",
+  // the open folder of the tree view (LIST-17); the closed one is `folder`
+  'folder-open': "<path d='m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2'/>",
 };
 
 const all = { ...base, ...extra };

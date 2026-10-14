@@ -1189,6 +1189,7 @@ public static class ComponentCatalog
         "alerts", "toasts", "dialogs", "popover", "tooltip", "spinner", "skeleton",
         "breakpoints", "grid-cols", "stack-row-grid",
         "u-spacing", "u-display", "u-flex", "u-text", "u-colour", "u-borders", "u-sizing",
+        "tree",
     ];
 
     /// <summary>Every component, by group and in reading order.</summary>
@@ -1204,6 +1205,7 @@ public static class ComponentCatalog
         .. GroupComponents.All,
         .. ListComponents.All,
         .. RatingComponents.All,
+        .. TreeComponents.All,
     ]);
 
     /// <summary>A component with the examples that other files add to it.</summary>

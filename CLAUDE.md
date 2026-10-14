@@ -72,7 +72,7 @@ src/MatDesign.Web          the site
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
   Pages/Studio/              Setup (the assistant of the first administrator), Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, IconLibrary (the optional icon library: sprite, catalogue, single icons, archive, served under /ui/iconlib/), Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
-                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, ListComponents, LayoutComponents, ScheduleComponents; CatalogSection = what a page shows),
+                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, ListComponents, LayoutComponents, ScheduleComponents, TreeComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
                              PatternCatalog, ShellSkeleton, SchemeDocs (the numbers and tokens of the colour schemes for the pages), AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
@@ -169,6 +169,14 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   `input`, `change`, then `mat:rating-change`; `data-clearable` clears on a click on the chosen value. `mat-rating--readonly` + `data-value` (+ `data-max`, `data-count`, `data-show-value`) is drawn by the script, `role="img"`, `aria-label` in words
   unless the author gave one. Shapes `mat-rating--heart` (icon `heart`) and `--dot` (icon `circle`), sizes `--sm` and `--lg`; the cell is as high as a control (`--mat-control-h`: 40 px, 44 on a touch screen). Texts in `RT_TEXT` (English and German, a test checks),
   `data-rt-<name>`. API `MatUi.rating.init/get/set`. Examples are written out by a helper in `RatingComponents.cs`.
+- Tree view (`LIST-17`): `ul.mat-tree[data-tree][aria-label]` of `li.mat-tree__item` = a row `.mat-tree__row` (`__icon`, `__label` (a span or a link), `__count`, `__actions`) and, in a parent, a `ul.mat-tree__group`; a folder icon is the pair
+  `.mat-tree__icon--folder` (closed, open) of which `aria-expanded` shows one. Markup is a nested list that is all open without the script; the script writes `role` tree/treeitem/group, `aria-level`/`setsize`/`posinset` (counted over the items
+  shown), `aria-expanded` (parents; **the CSS reads it, there is no open class**), `aria-selected` (one) or `aria-checked` true/false/mixed (`data-multiple`: ticking a parent ticks all, a parent follows its children; a visual `.mat-tree__check`,
+  not a native input), `aria-labelledby` (label and count), draws the toggle chevron and `--mat-tree-level` (the CSS turns it into the row's padding and the guide lines `::before`, one gradient stripe per ancestor). The focus is on the `li` (roving tabindex,
+  one Tab stop; the buttons of `__actions` are tabbable only in the row with the stop); keys are only handled when `e.target` is the item. A filter (`data-tree-filter`) hides with `hidden`, keeps and opens parents of a match and restores
+  what was open when cleared (`_matWas`); `data-lazy` fires `mat:tree-load`, `MatUi.tree.setChildren(item, html | null | '')`; `data-tree-key` remembers open/closed per app, tree and item (`mat-tree` in localStorage, lazy and `data-tree-fixed` items
+  are skipped). Texts `TR_TEXT` (English and German, a test checks; `data-tr-<name>` on `<html>`). The CSS part must stay **before** the schedule part of `matui.lists.css` (the schedule test reads to the end of the file). The site's demo server for
+  the lazy example is in `doc.js` (answers `mat:tree-load` of `#tr-lazy`); a page that answers itself stops the event.
 - Layout and utilities: mobile first with `sm` 600, `md` 900, `lg` 1200 px; no `!important`; values from the tokens; the grid spans by `grid-column-end`. An example in the catalogue uses
   toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.
