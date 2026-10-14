@@ -1,8 +1,12 @@
-/* The brand editor of the Studio (docs/STUDIO.md, "Brand"). It does three things while a value is typed, and nothing else:
+/* The editors of the brand and of the overrides of an app (docs/STUDIO.md, "Brand" and stage 12). The same script serves four kinds of pages, and does only these things while a value is typed:
    - keeps a colour picker and the text field next to it in step (a colour token has both);
-   - applies the unsaved values to the sample [data-brand-preview] through the CSSOM (style.setProperty): the page itself never changes and no markup carries a style;
-   - works out the contrast of the pairings that do not depend on the accent (the list of pairings comes from the server as data-pairings, the same list the checks use)
-     and fills the table and the summary. The server checks again on Check and on Save, with the accent of every app. */
+   - applies the unsaved values to the previews [data-brand-preview] through the CSSOM (style.setProperty): the page itself never changes and no markup carries a style.
+     A preview without data-prop-group is the sample of the brand page: it gets every token (the typed one, else the toolkit's own) in the mode it shows. A preview with data-prop-group="btn"
+     is the real control of the documentation: it gets the component properties of that group, and the tokens that were typed on the page (an app's overrides), and it follows the mode of the page;
+   - checks a component property against its type and limits (data-kind, data-min, data-max) and tells that a height under 44 px is for a mouse only. The preview does what the written CSS does: a touch
+     screen (no fine pointer) ignores a touch-target height under 44 px;
+   - works out the contrast of the pairings that do not depend on the accent (the list of pairings comes from the server as data-pairings, the same list the checks use) and fills the table and the summary.
+     The server checks again on Check and on Save, with the accent of every app. */
 (function () {
   'use strict';
 
@@ -11,10 +15,14 @@
 
   var pairings = JSON.parse(root.getAttribute('data-pairings') || '[]');
   var accent = JSON.parse(root.getAttribute('data-accent') || '{}');
-  var preview = root.querySelector('[data-brand-preview]');
+  var previews = [].slice.call(root.querySelectorAll('[data-brand-preview]'));
   var summary = root.querySelector('[data-brand-summary]');
   var mode = 'light';
-  var applied = [];
+  var applied = new Map();
+  var TOUCH_PX = 44;
+
+  // a pointer that can hit a small target: the same question the written CSS asks with (pointer: fine)
+  var finePointer = !window.matchMedia || window.matchMedia('(pointer: fine)').matches;
 
   // ---- colours -------------------------------------------------------------------------------------------------------------------------------
 
@@ -55,7 +63,7 @@
 
   var LENGTH = /^(-?\d*\.?\d+)(px|rem|em)$/;
   var NUMBER = /^\d*\.?\d+$/;
-  var DURATION = /^\d*\.?\d+(ms|s)$/;
+  var DURATION = /^(\d*\.?\d+)(ms|s)$/;
   var BEZIER = /^cubic-bezier\(\s*-?\d*\.?\d+\s*,\s*-?\d*\.?\d+\s*,\s*-?\d*\.?\d+\s*,\s*-?\d*\.?\d+\s*\)$/i;
   var EASINGS = ['ease', 'ease-in', 'ease-out', 'ease-in-out', 'linear'];
   var FONT = /^[A-Za-z0-9 ,.'"_-]+$/;
@@ -72,26 +80,78 @@
     }
   }
 
+  // a length in px (rem and em count 16 px), a duration in ms, a number as it is; null for anything else
+  function amount(kind, text) {
+    var m;
+    if (kind === 'length') {
+      if (text === '0') { return 0; }
+      m = LENGTH.exec(text);
+      return m ? parseFloat(m[1]) * (m[2] === 'px' ? 1 : 16) : null;
+    }
+    if (kind === 'duration') {
+      m = DURATION.exec(text);
+      return m ? parseFloat(m[1]) * (m[2] === 's' ? 1000 : 1) : null;
+    }
+    return kind === 'number' && NUMBER.test(text) ? parseFloat(text) : null;
+  }
+
+  function trimNumber(n) { return String(Math.round(n * 100) / 100); }
+
+  // what is wrong with a value of a component property that is a value of its kind: outside the least and the most it takes
+  function rangeProblem(row, text) {
+    var value = amount(row.kind, text);
+    if (value === null || (row.min === null && row.max === null)) { return ''; }
+    var unit = row.kind === 'length' ? ' px' : row.kind === 'duration' ? ' ms' : '';
+    if (row.min !== null && value < row.min) { return trimNumber(value) + unit + ' is below the least this property takes, ' + trimNumber(row.min) + unit + '.'; }
+    if (row.max !== null && value > row.max) { return trimNumber(value) + unit + ' is above the most this property takes, ' + trimNumber(row.max) + unit + '.'; }
+    return '';
+  }
+
   // ---- the rows -----------------------------------------------------------------------------------------------------------------------------------
 
-  var rows = [].slice.call(root.querySelectorAll('[data-brand-row]')).map(function (el) {
-    var row = { el: el, name: el.getAttribute('data-token'), kind: el.getAttribute('data-kind'), light: el.getAttribute('data-light'), dark: el.getAttribute('data-dark'), input: {}, picker: {} };
+  function number(el, name) { var v = el.getAttribute(name); return v === null || v === '' ? null : parseFloat(v); }
+
+  function readRow(el) {
+    var row = {
+      el: el, name: el.getAttribute('data-token') || el.getAttribute('data-prop'), kind: el.getAttribute('data-kind'),
+      light: el.getAttribute('data-light'), dark: el.getAttribute('data-dark'),
+      group: el.getAttribute('data-group'), min: number(el, 'data-min'), max: number(el, 'data-max'), touch: el.getAttribute('data-touch') === 'true',
+      input: {}, picker: {}
+    };
     ['light', 'dark'].forEach(function (m) {
       row.input[m] = el.querySelector('[data-brand-input="' + m + '"]');
       row.picker[m] = el.querySelector('[data-brand-picker="' + m + '"]');
     });
+    if (el.hasAttribute('data-prop-row')) { row.input.light = el.querySelector('[data-prop-input]'); }
     return row;
-  });
+  }
+
+  // the tokens that shape the page (the preview gets them), the tokens inside a colour scheme (only kept in order) and the properties of components
+  var rows = [].slice.call(root.querySelectorAll('[data-brand-row]')).map(readRow);
+  var schemeRows = [].slice.call(root.querySelectorAll('[data-brand-scheme-row]')).map(readRow);
+  var propRows = [].slice.call(root.querySelectorAll('[data-prop-row]')).map(readRow);
 
   function defaultOf(row, m) { return m === 'dark' && row.dark ? row.dark : row.light; }
+
+  function typedOf(row, m) { return (m === 'dark' && row.input.dark ? row.input.dark : row.input.light).value.trim(); }
 
   // what a mode shows: the typed value when it is plausible, else the toolkit's own; a token without a dark value has the light one in both
   function effective(m) {
     var values = {};
     rows.forEach(function (row) {
-      var typed = (m === 'dark' && row.input.dark ? row.input.dark : row.input.light).value.trim();
+      var typed = typedOf(row, m);
       var base = m === 'dark' && row.dark ? row.dark : row.light;
       values[row.name] = typed && plausible(row.kind, typed) ? typed : base;
+    });
+    return values;
+  }
+
+  // only what was typed and could be a value (the tokens of an app: the rest of the page is the brand's)
+  function typedValues(m) {
+    var values = {};
+    rows.forEach(function (row) {
+      var typed = typedOf(row, m);
+      if (typed && plausible(row.kind, typed)) { values[row.name] = typed; }
     });
     return values;
   }
@@ -103,46 +163,84 @@
     if (c) { picker.value = toHex(c); }
   }
 
-  // A message that the server wrote stays until the field is edited; a message of this script goes when the value is plausible.
-  function validate(row, m, edited) {
-    var input = row.input[m];
-    if (!input) { return; }
+  // the mark and the message of a field: the server's message stays until the field is edited; a message of this script goes when the value is fine
+  function mark(row, input, message, edited) {
     var field = input.closest('.mat-field');
     var error = field && field.querySelector('.mat-error');
-    var text = input.value.trim();
-    var bad = text !== '' && !plausible(row.kind, text);
     if (edited && field) {
       field.classList.remove('is-invalid');
       if (error) { error.textContent = ''; }
     }
     // a custom validity keeps the toolkit's own handler (it clears a field that checks out) from clearing the mark, and stops a submit with the message
-    input.setCustomValidity(bad ? 'This is not a value of this token\'s kind.' : '');
-    if (bad) {
+    input.setCustomValidity(message);
+    if (message) {
       input.setAttribute('aria-invalid', 'true');
       if (field) { field.classList.add('is-invalid'); }
-      if (error) { error.textContent = 'This is not a value of this token\'s kind.'; }
+      if (error) { error.textContent = message; }
     } else if (edited) {
       input.removeAttribute('aria-invalid');
     }
   }
 
-  // ---- the preview ---------------------------------------------------------------------------------------------------------------------------
+  function validate(row, m, edited) {
+    var input = row.input[m];
+    if (!input) { return; }
+    var text = input.value.trim();
+    var message = '';
+    if (text !== '' && !plausible(row.kind, text)) { message = 'This is not a value of this token\'s kind.'; }
+    else if (text !== '' && row.el.hasAttribute('data-prop-row')) { message = rangeProblem(row, text); }
+    mark(row, input, message, edited);
 
-  function setOnPreview(name, value) {
+    // a touch-target height under 44 px: valid, and for a mouse only (the written CSS puts it inside (pointer: fine))
+    var note = row.el.querySelector('[data-prop-note]');
+    if (note) {
+      var px = text && !message ? amount(row.kind, text) : null;
+      note.hidden = !(row.touch && px !== null && px < TOUCH_PX);
+    }
+  }
+
+  // ---- the previews ---------------------------------------------------------------------------------------------------------------------------
+
+  function setOn(preview, name, value) {
     preview.style.setProperty(name, value);
-    applied.push(name);
+    var list = applied.get(preview) || [];
+    list.push(name);
+    applied.set(preview, list);
   }
 
-  function applyPreview() {
-    if (!preview) { return; }
-    applied.forEach(function (name) { preview.style.removeProperty(name); });
-    applied = [];
-    var derived = accent[mode] || {};
-    Object.keys(derived).forEach(function (name) { setOnPreview(name, derived[name]); });
-    var values = effective(mode);
-    Object.keys(values).forEach(function (name) { setOnPreview(name, values[name]); });
-    setOnPreview('color-scheme', mode);
+  function clear(preview) {
+    (applied.get(preview) || []).forEach(function (name) { preview.style.removeProperty(name); });
+    applied.set(preview, []);
   }
+
+  // the properties of one component group: what was typed, a value of the kind, within the limits; a touch target under 44 px only where a mouse is
+  function applyProperties(preview, group) {
+    propRows.forEach(function (row) {
+      if (row.group !== group) { return; }
+      var typed = row.input.light.value.trim();
+      if (!typed || !plausible(row.kind, typed) || rangeProblem(row, typed)) { return; }
+      if (row.touch && !finePointer && amount(row.kind, typed) < TOUCH_PX) { return; }
+      setOn(preview, row.name, typed);
+    });
+  }
+
+  function applyPreview(preview) {
+    clear(preview);
+    var group = preview.getAttribute('data-prop-group');
+    if (group) {
+      var typed = typedValues('light');
+      Object.keys(typed).forEach(function (name) { setOn(preview, name, typed[name]); });
+      applyProperties(preview, group);
+      return;
+    }
+    var derived = accent[mode] || {};
+    Object.keys(derived).forEach(function (name) { setOn(preview, name, derived[name]); });
+    var values = effective(mode);
+    Object.keys(values).forEach(function (name) { setOn(preview, name, values[name]); });
+    setOn(preview, 'color-scheme', mode);
+  }
+
+  function applyPreviews() { previews.forEach(applyPreview); }
 
   // ---- contrast ----------------------------------------------------------------------------------------------------------------------------------
 
@@ -160,6 +258,7 @@
   }
 
   function updateContrast() {
+    if (pairings.length === 0 || !root.querySelector('[data-brand-contrast]')) { return; }
     var failing = [];
     ['light', 'dark'].forEach(function (m) {
       var values = effective(m);
@@ -199,17 +298,17 @@
   }
 
   function update() {
-    applyPreview();
+    applyPreviews();
     updateContrast();
   }
 
   // ---- events ------------------------------------------------------------------------------------------------------------------------------------
 
-  rows.forEach(function (row) {
+  function wireTokens(row, onChange) {
     ['light', 'dark'].forEach(function (m) {
       var input = row.input[m], picker = row.picker[m];
       if (!input) { return; }
-      input.addEventListener('input', function () { syncPicker(row, m); validate(row, m, true); update(); });
+      input.addEventListener('input', function () { syncPicker(row, m); validate(row, m, true); onChange(); });
       if (picker) {
         picker.addEventListener('input', function () {
           var current = parseColour(input.value.trim() || defaultOf(row, m));
@@ -217,7 +316,7 @@
           var c = parseColour(picker.value);
           input.value = alpha < 1 ? 'rgba(' + c.r + ', ' + c.g + ', ' + c.b + ', ' + alpha + ')' : picker.value;
           validate(row, m, true);
-          update();
+          onChange();
         });
       }
       syncPicker(row, m);
@@ -229,8 +328,20 @@
         ['light', 'dark'].forEach(function (m) {
           if (row.input[m]) { row.input[m].value = ''; validate(row, m, true); syncPicker(row, m); }
         });
-        update();
+        onChange();
       });
+    }
+  }
+
+  rows.forEach(function (row) { wireTokens(row, update); });
+  schemeRows.forEach(function (row) { wireTokens(row, function () {}); });
+
+  propRows.forEach(function (row) {
+    var input = row.input.light;
+    input.addEventListener('input', function () { validate(row, 'light', true); applyPreviews(); });
+    var reset = row.el.querySelector('[data-prop-reset]');
+    if (reset) {
+      reset.addEventListener('click', function () { input.value = ''; validate(row, 'light', true); applyPreviews(); });
     }
   });
 
@@ -238,17 +349,18 @@
     button.addEventListener('click', function () {
       mode = button.getAttribute('data-brand-mode');
       [].slice.call(root.querySelectorAll('[data-brand-mode]')).forEach(function (b) { b.setAttribute('aria-pressed', b === button ? 'true' : 'false'); });
-      applyPreview();
+      applyPreviews();
     });
   });
 
-  // the preview starts in the mode the page is in
+  // the preview of the brand page starts in the mode the page is in
   var theme = document.documentElement.getAttribute('data-theme');
   if (theme === 'dark' || (!theme && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     mode = 'dark';
     [].slice.call(root.querySelectorAll('[data-brand-mode]')).forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-brand-mode') === 'dark' ? 'true' : 'false'); });
   }
 
-  rows.forEach(function (row) { ['light', 'dark'].forEach(function (m) { validate(row, m); }); });
+  rows.concat(schemeRows).forEach(function (row) { ['light', 'dark'].forEach(function (m) { validate(row, m); }); });
+  propRows.forEach(function (row) { validate(row, 'light'); });
   update();
 })();

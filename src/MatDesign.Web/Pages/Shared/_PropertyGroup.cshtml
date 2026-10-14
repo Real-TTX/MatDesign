@@ -1,0 +1,68 @@
+@model PropertyGroupEditor
+@using MatDesign.Core
+@using MatDesign.Core.Studio
+@*
+    One component group of the property editor: a table of its properties (name, description and limits, the default, an input of the type, a reset) and, beside it (above it on a narrow page),
+    the real control of the documentation with a live preview. The script (brand.js) sets the typed values on the preview through the CSSOM. Used for the brand and for the overrides of an app.
+*@
+@{
+    var group = Model.Group;
+    var form = Model.FormId is null ? null : Model.FormId;
+}
+<div class="doc-comp@(Model.Stacked ? " doc-comp--stacked" : string.Empty)">
+    <div class="doc-comp__table">
+        <div class="mat-table-wrap">
+            <table class="mat-table doc-comp-table">
+                <caption class="mat-sr-only">Properties of @group.Component.Title</caption>
+                <thead><tr><th scope="col">Property</th><th scope="col">Value and default</th><th scope="col"><span class="mat-sr-only">Reset</span></th></tr></thead>
+                <tbody>
+                    @foreach (var property in group.Properties)
+                    {
+                        var token = property.Token;
+                        var id = Model.IdOf(property);
+                        var fieldName = Model.FieldOf(property);
+                        <tr data-prop-row data-prop="@property.Name" data-group="@group.Component.Id" data-kind="@token.Kind.ToString().ToLowerInvariant()" data-min="@token.Min" data-max="@token.Max" data-touch="@(property.Touch ? "true" : null)">
+                            <td data-label="Property">
+                                <div class="mat-table__name">
+                                    <span>
+                                        <code>@property.Name</code>
+                                        <small>@property.Property.Description</small>
+                                        <small class="mat-muted">@token.Hint</small>
+                                    </span>
+                                </div>
+                            </td>
+                            <td data-label="Value">
+                                <div class="mat-field@(Model.ProblemFor(fieldName) is null ? string.Empty : " is-invalid")">
+                                    <input class="mat-input mat-mono" id="@id" name="@(Model.Prefix):@property.Name" form="@form" value="@Model.ValueOf(property)" placeholder="@property.Resolved" maxlength="@BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-prop-input aria-label="Value of @property.Name" />
+                                    <span class="mat-error" aria-live="polite">@Model.ProblemFor(fieldName)</span>
+                                    <span class="mat-hint">Default <code>@property.Resolved</code>@if (property.FallsBackToToken) { <text> (<span class="mat-mono">@property.Property.Fallback</span>)</text> }</span>
+                                    @if (property.Touch)
+                                    {
+                                        <span class="mat-hint" data-prop-note hidden>Under 44 px: for a mouse only. A touch screen keeps 44 px.</span>
+                                    }
+                                </div>
+                            </td>
+                            <td data-label="Reset" class="mat-table__cell-actions">
+                                <div class="mat-table__actions">
+                                    <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" data-prop-reset aria-label="Reset @property.Name to the default" data-tip="Reset">@Ui.Icon("restore")</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="doc-comp__preview">
+        <h4 class="doc-comp__title">@(group.PreviewTitle.Length > 0 ? "Preview: " + group.PreviewTitle : "Preview")</h4>
+        @if (group.PreviewHtml is { } html)
+        {
+            <div class="doc-example__live@(group.Frame is null ? string.Empty : " doc-example__live--" + group.Frame)" data-brand-preview data-prop-group="@group.Component.Id" @(Model.AppId is null ? null : Html.Raw("data-app=\"" + Model.AppId + "\"")) inert="@(group.Frame is "dialog" or "toast" or "popup")">@Html.Raw(html)</div>
+        }
+        else
+        {
+            <p class="mat-muted">The example of the documentation that showed this control is gone, so there is no preview. The values are still checked and saved.</p>
+        }
+    </div>
+</div>

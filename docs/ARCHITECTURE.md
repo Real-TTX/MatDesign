@@ -229,7 +229,8 @@ padding, a height, a border width, a gap, a type size or weight; button, field, 
   of the type. A property that is used with two defaults (`--mat-btn-radius` is `--mat-radius-sm` for a small button) says the first in its declaration; the small button follows the same property, so one value squares every size.
 - **Set where it should apply.** Custom properties inherit, so `:root` sets one for the app, `[data-app]` for one app and an element for what is inside it: the same three places as the tokens, no class to override.
 - **A height is a floor.** `--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-nav-item-height` and `--mat-menu-item-height` fall back to `--mat-control-h`, which the tokens make 44 px under
-  `(pointer: coarse)` (`MOBILE-04`); a brand that wants less sets it for `(pointer: fine)` only. The editor of stage 12 will refuse a value below the floor for a touch screen.
+  `(pointer: coarse)` (`MOBILE-04`); a brand that wants less sets it for `(pointer: fine)` only. The editor of stage 12 does exactly that: a value under 44 px is written inside `@media (pointer: fine)` (so a touch screen never sees it and keeps the 44 px of the control height), a value under 32 px is refused, and a browser
+  check with a touch-emulating context holds that the button, field, menu item, tab and menu item of the shell stay 44 px high. The limits of every property are in `ComponentTokens` (docs/STUDIO.md, "Components, apps and schemes").
 - **No colour, no shadow.** A shape is not a look: colours stay the tokens' business (`COLOR-01`) and the flat look does not get a switch to turn it off (`SPACE-03`, `COLOR-08`). The type `colour` exists in the format for
   a later property and is not used.
 - **Declared in the CSS, one line above the rule that uses it**: `/* @prop btn | --mat-btn-radius | length | var(--mat-radius) | Corner radius of every button. */` (component, name, type, fallback, description).

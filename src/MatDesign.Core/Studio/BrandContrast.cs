@@ -19,7 +19,8 @@ public sealed record BrandContrastResult(string Scheme, string Mode, string Name
 
 /// <summary>
 /// The contrast checks of the toolkit (<see cref="SchemeSurfaces.Checks()"/>, <see cref="AccentReport.Checks(SchemeSurfaces)"/>) run on the surfaces of a brand: the toolkit's own tokens with the brand's
-/// values over them, in light and in dark, in the standard look and in every colour scheme, with the accent of every app. This is what <c>COLOR-11</c> asks for before a brand is saved or released.
+/// values over them, in light and in dark, in the standard look and in every colour scheme (with what the brand sets inside that scheme over the scheme's own values), with the accent of every
+/// app. This is what <c>COLOR-11</c> asks for before a brand is saved or released.
 /// </summary>
 public static class BrandContrast
 {
@@ -32,7 +33,8 @@ public static class BrandContrast
         var results = new List<BrandContrastResult>();
         foreach (var scheme in Schemes())
         {
-            foreach (var surfaces in SchemeSurfaces.Modes(tokens, schemes, scheme, brand?.Values(false), brand?.Values(true)))
+            var inScheme = scheme is null ? null : brand?.SchemeFor(scheme);
+            foreach (var surfaces in SchemeSurfaces.Modes(tokens, schemes, scheme, brand?.Values(false), brand?.Values(true), inScheme?.Values(false), inScheme?.Values(true)))
             {
                 foreach (var pairing in SchemeSurfaces.Pairings)
                 {

@@ -1,0 +1,104 @@
+@page "/Studio/Brand/Components"
+@model MatDesign.Web.Pages.Studio.BrandComponentsModel
+@inject StudioHistory History
+@using MatDesign.Core
+@using MatDesign.Core.Studio
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "Brand: components";
+    ViewData["PageSub"] = "The shape of single controls: the radius of a button, the padding of a card, the width of a dialog. Each property has a type and limits; unset, a control uses the default shown, so nothing changes until you set one.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Brand", "/Studio/Brand"), ("Components", null));
+    ViewData["Width"] = "wide";
+    ViewData["IndexDialog"] = "components-index";
+    ViewData["IndexLabel"] = "On this page";
+}
+
+<partial name="_BrandTabs" model="@("components")" />
+
+@* The inputs sit in the tables beside their previews, so they are tied to the form by its id: a control of a preview is never part of the form, and Enter in a field of a preview cannot save the editor. *@
+<form id="components-form" class="mat-form" method="post" action="/Studio/Brand/Components" novalidate>
+    @Html.AntiForgeryToken()
+
+    <div class="mat-alert mat-alert--danger" role="alert" data-validation-summary hidden="@(Model.Problems.Count == 0)">
+        @Ui.Icon("x-circle")
+        <div class="mat-alert__body">
+            <strong>Please check the properties.</strong>
+            <ul class="mat-alert__list">
+                @foreach (var problem in Model.Problems)
+                {
+                    <li><a href="@BrandComponentsModel.TargetOf(problem.Field)">@(problem.Field.Contains(':') ? problem.Field.Replace(":", " ") + ": " : string.Empty)@problem.Message</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+    @if (Model.Checked && Model.Problems.Count == 0)
+    {
+        <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>All checks pass.</strong> Nothing was saved yet.</div></div>
+    }
+</form>
+
+<div class="doc-brand-comps" data-brand-editor>
+    <section class="mat-section" aria-labelledby="how-title">
+        <div class="mat-section__head">
+            <h2 id="how-title">@Model.Count properties in @Model.Groups.Count components</h2>
+            <p class="mat-section__lead">
+                A property changes the shape of one kind of control for every app (<a href="/Rules/Detail?id=SPACE-06">SPACE-06</a>): never a colour and never a shadow. The grey value is what the control uses today; leave a field empty to keep it.
+                What you type shows in the control beside it at once, and the brand saves it with its history, in <code>matui.css</code>, in every release and in the archive. An app can set its own on top of this, on its page.
+            </p>
+            <p class="mat-section__lead">
+                <strong>Touch targets.</strong> The height of a button, a field, a tab, an item of the menu and an item of the context menu is a floor: on a touch screen a control is at least 44 px high (<a href="/Rules/Detail?id=MOBILE-04">MOBILE-04</a>).
+                A value of 44 px or more applies everywhere; a value below 44 px (not below 32 px) is written for a mouse only, inside <code>@@media (pointer: fine)</code>, so a touch screen keeps the 44 px. The preview here follows your pointer, so a phone shows the 44 px.
+            </p>
+        </div>
+    </section>
+
+    @foreach (var group in Model.Groups)
+    {
+        var groupId = "group-" + group.Component.Id;
+        var editor = new PropertyGroupEditor(group, Model.ValueOf, Model.ProblemFor, "component", "components-form");
+        <section class="mat-card" aria-labelledby="@groupId" id="@("component-group-" + group.Component.Id)">
+            <div class="mat-card__head">
+                <h3 class="mat-card__title" id="@groupId">@group.Component.Title</h3>
+                <span class="mat-muted">@group.Properties.Count @(group.Properties.Count == 1 ? "property" : "properties")</span>
+            </div>
+            <div class="mat-card__body">
+                <partial name="_PropertyGroup" model="editor" />
+            </div>
+        </section>
+    }
+
+    <div class="mat-btn-row">
+        <button type="submit" class="mat-btn mat-btn--primary" form="components-form">@Ui.Icon("save")<span>Save</span></button>
+        <button type="submit" class="mat-btn mat-btn--secondary" form="components-form" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        <a class="mat-btn mat-btn--secondary" href="/Studio">@Ui.Icon("back")<span>Back</span></a>
+        @if (History.HasHistory(Brand.Kind, Brand.ItemId))
+        {
+            <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl(Brand.Kind, Brand.ItemId)">@Ui.Icon("restore")<span>History</span></a>
+        }
+    </div>
+</div>
+
+<dialog class="mat-dialog mat-dialog--sm" id="components-index" aria-labelledby="components-index-title">
+    <div class="mat-dialog__form">
+        <div class="mat-dialog__head">
+            @Ui.Icon("list")
+            <h2 class="mat-dialog__title" id="components-index-title">On this page</h2>
+            <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">@Ui.Icon("x")</button>
+        </div>
+        <div class="mat-dialog__body">
+            <nav class="mat-toc" aria-label="On this page">
+                <ul class="mat-toc__list">
+                    <li><a class="mat-toc__link" href="#how-title">About the properties</a></li>
+                    @foreach (var group in Model.Groups)
+                    {
+                        <li><a class="mat-toc__link" href="#component-group-@group.Component.Id">@group.Component.Title</a></li>
+                    }
+                </ul>
+            </nav>
+        </div>
+    </div>
+</dialog>
+
+@section Scripts {
+    <script src="/js/brand.js"></script>
+}
