@@ -49,6 +49,14 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
         _studio.Store.Save("components", "qa-pages", new ComponentDoc("qa-pages", "QA pages", "Content", "toggle", "A component for the page tests.", ["BUTTON-01"],
             [new ComponentExample("Pill", """<span class="mat-pill">x</span>""")], []), "admin", "Created");
         _studio.Store.Save("brand", "brand", MatDesign.Core.Studio.Brand.BuiltIn with { Company = "Acme", Light = new Dictionary<string, string> { ["--mat-radius"] = "8px" } }, "admin", "Created");
+        // the assets of the brand (stage 13): a logo with a dark variant, a favicon and a font, so that the page and the shell are drawn with files
+        var assetStore = _studio.Factory.Services.GetRequiredService<AssetFiles>().Store;
+        var svg = AssetFixtures.Bytes(AssetFixtures.GoodSvg());
+        var darkSvg = AssetFixtures.Bytes(AssetFixtures.GoodSvg(inner: "<rect width=\"2\" height=\"2\"/>"));
+        var font = AssetFixtures.Woff2();
+        _studio.Store.Save("assets", "assets", new MatDesign.Core.Studio.BrandAssets(
+            Logo: new(assetStore.Put(svg, ".svg"), 64, 64, svg.Length), LogoDark: new(assetStore.Put(darkSvg, ".svg"), 64, 64, darkSvg.Length), LogoAlt: "Acme",
+            Favicon: new(assetStore.Put(svg, ".svg"), 64, 64, svg.Length), Fonts: [new("Acme Sans", 400, "normal", assetStore.Put(font, ".woff2"), font.Length)]), "admin", "Created");
         _studio.Design.Reload();
         Assert.True(_studio.Releases.Execute("0.1.0", "For the page tests.", "admin").Succeeded);
         _studio.Factory.Services.GetRequiredService<VersionTracker>().Set("matmail", "0.1.0", "A note.", "admin");
@@ -90,6 +98,8 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
         yield return "/Studio/History?kind=brand&id=brand";
         yield return "/Studio/Releases/WhiteLabel";
         yield return "/Studio/History?kind=whitelabel&id=whitelabel";
+        yield return "/Studio/Brand/Assets";
+        yield return "/Studio/History?kind=assets&id=assets";
     }
 
     [Fact]

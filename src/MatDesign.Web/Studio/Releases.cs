@@ -55,12 +55,12 @@ public sealed record ReleaseManifest(
 /// (the release is stored under its version and served) → <c>Notify</c> (the published files are read back and checked, and the addresses an app takes the release from are named). A stage that
 /// fails stops the run and the later stages are skipped; nothing is published unless Publish ran. A release is never changed or deleted by the site: apps may depend on it.
 /// </summary>
-public sealed partial class ReleaseService(StudioService studio, DesignData design, DesignChecks checks, ToolkitFiles toolkit, IconLibrary iconLibrary)
+public sealed partial class ReleaseService(StudioService studio, DesignData design, DesignChecks checks, ToolkitFiles toolkit, IconLibrary iconLibrary, AssetFiles assetFiles)
 {
     public static readonly IReadOnlyList<string> StageNames = ["Check", "Version", "Build", "Publish", "Notify"];
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
-    private static readonly string[] ToolkitKinds = ["apps", "rules", "components", Brand.Kind, Tenant.Kind];
+    private static readonly string[] ToolkitKinds = ["apps", "rules", "components", Brand.Kind, Tenant.Kind, BrandAssets.Kind];
 
     private readonly object _running = new();
 
@@ -208,6 +208,10 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
             ".zip" => "application/zip",
             ".txt" => "text/plain; charset=utf-8",
             ".md" => "text/markdown; charset=utf-8",
+            ".png" => "image/png",
+            ".ico" => "image/x-icon",
+            ".woff2" => "font/woff2",
+            ".woff" => "font/woff",
             _ => null,
         };
         return type is null ? null : (path, type);
@@ -332,6 +336,14 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
                     Write(file.Path, file.Bytes);
                 }
 
+                // the files of the brand (IDENT-08), written as they are (bytes, never renamed by a white label build): logo, word mark, favicon, app icon and fonts, under brand/ (the @font-face rules of matui.css are relative to it), with their hashes in the manifest
+                var brandFiles = assetFiles.Files();
+                foreach (var file in brandFiles)
+                {
+                    Write($"{BrandAssets.Folder}/{file.Name}", file.Bytes);
+                }
+
+                log.Add(brandFiles.Count == 0 ? "No brand assets saved: nothing under brand/." : $"Brand assets: {brandFiles.Count} file(s) under brand/ ({design.AssetsOrEmpty.Faces.Count} font face(s)).");
                 return true;
             });
 
@@ -456,26 +468,45 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
     public WhiteLabelBuildResult TrialBuild(WhiteLabelSetting setting) => WhiteLabelBuild.Apply(AssembleFiles(SuggestNext()), setting, toolkit.Hash);
 
     /// <summary>The design data of this moment as JSON: what an app or a tool can read without the site.</summary>
-    private string DesignJson() => JsonSerializer.Serialize(new
+    private string DesignJson()
     {
-        tenant = new { design.Tenant.Company, design.Tenant.ShortName, design.Tenant.SiteName, design.Tenant.Tagline, template = design.Tenant.Template },
-        brand = new
+        var data = new Dictionary<string, object>
         {
-            design.Brand.Company, design.Brand.ShortName, design.Brand.Tagline,
-            light = design.Brand.Values(false), dark = design.Brand.Values(true),
-            components = design.Brand.ComponentValues,
-            schemes = (design.Brand.Schemes ?? new Dictionary<string, SchemeValues>()).Where(s => s.Value.HasValues).ToDictionary(s => s.Key, s => new { light = s.Value.Values(false), dark = s.Value.Values(true) }),
-        },
-        apps = design.Apps.Select(a => new
+            ["tenant"] = new { design.Tenant.Company, design.Tenant.ShortName, design.Tenant.SiteName, design.Tenant.Tagline, template = design.Tenant.Template },
+            ["brand"] = new
+            {
+                design.Brand.Company, design.Brand.ShortName, design.Brand.Tagline,
+                light = design.Brand.Values(false), dark = design.Brand.Values(true),
+                components = design.Brand.ComponentValues,
+                schemes = (design.Brand.Schemes ?? new Dictionary<string, SchemeValues>()).Where(s => s.Value.HasValues).ToDictionary(s => s.Key, s => new { light = s.Value.Values(false), dark = s.Value.Values(true) }),
+            },
+            ["apps"] = design.Apps.Select(a => new
+            {
+                a.Id, a.Name, a.Tagline, a.Category, a.Accent, onAccent = a.OnAccent ?? "#ffffff", a.AccentText, a.Glyph, a.Port,
+                overrides = a.HasOverrides ? new { light = a.Tokens?.Values(false), dark = a.Tokens?.Values(true), properties = a.Properties } : null,
+            }),
+            ["rules"] = design.Rules.Select(r => new { r.Id, r.Area, r.Title, r.Statement, level = r.Level.ToString(), r.Source, r.Why, r.Do, r.Dont, r.Check }),
+            ["components"] = design.Components.Select(c => new
+            {
+                c.Id, c.Name, c.Group, c.Summary, c.Rules, c.Behaviour,
+                examples = c.Examples.Select(e => new { e.Title, e.Html, e.Note, e.Js, e.Live, e.Frame }),
+            }),
+        };
+
+        // the brand's assets (stage 13): only when there are some, so a release without them has the design.json it always had. Files are named as they lie in the release, under brand/.
+        if (design.Assets is { IsEmpty: false } assets)
         {
-            a.Id, a.Name, a.Tagline, a.Category, a.Accent, onAccent = a.OnAccent ?? "#ffffff", a.AccentText, a.Glyph, a.Port,
-            overrides = a.HasOverrides ? new { light = a.Tokens?.Values(false), dark = a.Tokens?.Values(true), properties = a.Properties } : null,
-        }),
-        rules = design.Rules.Select(r => new { r.Id, r.Area, r.Title, r.Statement, level = r.Level.ToString(), r.Source, r.Why, r.Do, r.Dont, r.Check }),
-        components = design.Components.Select(c => new
-        {
-            c.Id, c.Name, c.Group, c.Summary, c.Rules, c.Behaviour,
-            examples = c.Examples.Select(e => new { e.Title, e.Html, e.Note, e.Js, e.Live, e.Frame }),
-        }),
-    }, Json);
+            string? Public(AssetFile? file, string slot) => file is null ? null : $"{BrandAssets.Folder}/{BrandAssets.PublicName(slot, file)}";
+            data["assets"] = new
+            {
+                logo = assets.Logo is null ? null : new { file = Public(assets.Logo, "logo"), dark = Public(assets.LogoDark, "logo-dark"), alt = assets.LogoAlt, assets.Logo.Width, assets.Logo.Height },
+                wordmark = assets.Wordmark is null ? null : new { file = Public(assets.Wordmark, "wordmark"), dark = Public(assets.WordmarkDark, "wordmark-dark"), alt = assets.WordmarkAlt, assets.Wordmark.Width, assets.Wordmark.Height },
+                favicon = Public(assets.Favicon, "favicon"),
+                appIcon = Public(assets.AppIcon, "app-icon"),
+                fonts = assets.Faces.Select(f => new { f.Family, f.Weight, f.Style, file = $"{BrandAssets.Folder}/{BrandAssets.PublicName(f)}" }),
+            };
+        }
+
+        return JsonSerializer.Serialize(data, Json);
+    }
 }

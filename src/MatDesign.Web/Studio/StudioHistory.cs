@@ -15,13 +15,13 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
     /// <summary>The kinds that have a history page.</summary>
-    public static readonly IReadOnlyList<string> Kinds = ["apps", "rules", "components", Brand.Kind, Tenant.Kind, WhiteLabelSetting.Kind];
+    public static readonly IReadOnlyList<string> Kinds = ["apps", "rules", "components", Brand.Kind, Tenant.Kind, WhiteLabelSetting.Kind, BrandAssets.Kind];
 
     public static bool IsKind(string? kind) => kind is not null && Kinds.Contains(kind);
 
-    public static string Singular(string kind) => kind switch { "apps" => "App", "rules" => "Rule", Brand.Kind => "Brand", Tenant.Kind => "Company", WhiteLabelSetting.Kind => "White label setting", _ => "Component" };
+    public static string Singular(string kind) => kind switch { "apps" => "App", "rules" => "Rule", Brand.Kind => "Brand", Tenant.Kind => "Company", WhiteLabelSetting.Kind => "White label setting", BrandAssets.Kind => "Brand assets", _ => "Component" };
 
-    public static string Plural(string kind) => kind switch { "apps" => "Apps", "rules" => "Rules", Brand.Kind => "Brand", Tenant.Kind => "Company", WhiteLabelSetting.Kind => "White label", _ => "Components" };
+    public static string Plural(string kind) => kind switch { "apps" => "Apps", "rules" => "Rules", Brand.Kind => "Brand", Tenant.Kind => "Company", WhiteLabelSetting.Kind => "White label", BrandAssets.Kind => "Brand/Assets", _ => "Components" };
 
     /// <summary>The list page of a kind in the Studio.</summary>
     public static string ListUrl(string kind) => kind == WhiteLabelSetting.Kind ? WhiteLabelUrl : $"/Studio/{Plural(kind)}";
@@ -30,7 +30,7 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
     public const string WhiteLabelUrl = "/Studio/Releases/WhiteLabel";
 
     public static string EditUrl(string kind, string id)
-        => kind == Brand.Kind ? "/Studio/Brand" : kind == Tenant.Kind ? "/Studio/Company" : kind == WhiteLabelSetting.Kind ? WhiteLabelUrl : $"/Studio/{Plural(kind)}/Edit?id={Uri.EscapeDataString(id)}";
+        => kind == Brand.Kind ? "/Studio/Brand" : kind == Tenant.Kind ? "/Studio/Company" : kind == WhiteLabelSetting.Kind ? WhiteLabelUrl : kind == BrandAssets.Kind ? "/Studio/Brand/Assets" : $"/Studio/{Plural(kind)}/Edit?id={Uri.EscapeDataString(id)}";
 
     public static string HistoryUrl(string kind, string id) => $"/Studio/History?kind={kind}&id={Uri.EscapeDataString(id)}";
 
@@ -43,6 +43,7 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
         Brand.Kind => id == Brand.ItemId ? design.Brand.Company : null,
         Tenant.Kind => id == Tenant.ItemId ? design.Tenant.Company : null,
         WhiteLabelSetting.Kind => id == WhiteLabelSetting.ItemId ? "White label" : null,
+        BrandAssets.Kind => id == BrandAssets.ItemId ? "Brand assets" : null,
         _ => null,
     } ?? id;
 
@@ -55,6 +56,7 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
         Brand.Kind => id == Brand.ItemId,
         Tenant.Kind => id == Tenant.ItemId,
         WhiteLabelSetting.Kind => id == WhiteLabelSetting.ItemId,
+        BrandAssets.Kind => id == BrandAssets.ItemId,
         _ => false,
     };
 
@@ -87,6 +89,7 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
                 Brand.Kind => CheckBrand(revision.Data),
                 Tenant.Kind => CheckTenant(revision.Data),
                 WhiteLabelSetting.Kind => CheckWhiteLabel(revision.Data),
+                BrandAssets.Kind => CheckAssets(revision.Data),
                 _ => [new("Kind", "Unknown kind of item.")],
             };
         }
@@ -126,6 +129,15 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
     /// <summary>The company of an old revision must be one the Company page would save today (names, template, and for the blank template an accent that reaches AA).</summary>
     private static IReadOnlyList<Problem> CheckTenant(JsonElement data)
         => TenantValidator.Validate(TenantValidator.Normalize(data.Deserialize<Tenant>(Options)!));
+    /// <summary>
+    /// An old revision of the assets is restored only when every file it refers to is still on the volume (files are never deleted, so this is normally so), still has the hash in its name and
+    /// would pass the checks of a save today.
+    /// </summary>
+    private IReadOnlyList<Problem> CheckAssets(JsonElement data)
+    {
+        var assets = BrandAssetValidator.Normalize(data.Deserialize<BrandAssets>(Options)!);
+        return BrandAssetValidator.ValidateFiles(assets, toolkit.Assets.Store.Read, toolkit.ReservedFamilies);
+    }
 
     /// <summary>Appends a copy of the revision as the newest one and reads the items again. <see cref="CanRestore"/> must have said yes.</summary>
     public Revision Restore(string kind, string id, int number)

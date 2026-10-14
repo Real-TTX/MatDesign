@@ -26,6 +26,7 @@ public static class StudioFormat
         "usage" => "Version",
         "brand" => "Brand",
         "whitelabel" => "White label",
+        "assets" => "Brand assets",
         _ => char.ToUpperInvariant(kind[0]) + kind[1..],
     };
 }

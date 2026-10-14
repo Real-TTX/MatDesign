@@ -45,14 +45,16 @@ public sealed partial class ToolkitFiles
     private readonly string _bootTemplate;
     private readonly IFileProvider _files;
     private readonly DesignData _design;
+    private readonly AssetFiles _assets;
     private readonly Dictionary<string, string> _css = new(StringComparer.OrdinalIgnoreCase);
     private readonly object _gate = new();
     private State _state;
 
-    public ToolkitFiles(IWebHostEnvironment env, DesignData design)
+    public ToolkitFiles(IWebHostEnvironment env, DesignData design, AssetFiles assets)
     {
         _files = env.WebRootFileProvider;
         _design = design;
+        _assets = assets;
         foreach (var part in CssParts)
         {
             _css[part] = Read($"css/{part}");
@@ -69,6 +71,7 @@ public sealed partial class ToolkitFiles
         Properties = ComponentProperties.Parse(CssParts.Select(part => _css[part]));
         EditableTokens = BrandTokens.Editable(Tokens);
         EditableProperties = ComponentTokens.Editable(Properties, Tokens);
+        ReservedFamilies = Tokens.Where(t => t.Name is "--mat-font" or "--mat-mono").SelectMany(t => BrandAssetValidator.FamiliesIn(t.Light)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         Facts = new MarkupFacts(MarkupChecks.ClassesIn(CssParts.Select(part => _css[part])), IconNames.ToHashSet());
         _state = Build(design.Version);
     }
@@ -100,8 +103,8 @@ public sealed partial class ToolkitFiles
 
     private State Build(long version)
     {
-        // the order of the cascade: the toolkit's defaults, the site's own look, the colours of the apps, the brand (tokens, component properties, colour schemes), then what each app sets for itself
-        var appsCss = _css[AppsPart] + SiteOverlay(_design) + AppsOverlay(_design.StudioApps) + BrandOverlay(_design.StudioBrand, EditableTokens, EditableProperties, Schemes) + AppOverridesOverlay(_design.StudioApps, EditableTokens, EditableProperties);
+        // the order of the cascade: the toolkit's defaults, the site's own look, the colours of the apps, the brand (tokens, component properties, colour schemes), the fonts of the brand, then what each app sets for itself
+        var appsCss = _css[AppsPart] + SiteOverlay(_design) + AppsOverlay(_design.StudioApps) + BrandOverlay(_design.StudioBrand, EditableTokens, EditableProperties, Schemes) + AssetsOverlay(_design.Assets) + AppOverridesOverlay(_design.StudioApps, EditableTokens, EditableProperties);
         string Part(string name) => name == AppsPart ? appsCss : _css[name];
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Concat(CssParts.Select(Part)) + Script + BootScript + Sprite)))[..10].ToLowerInvariant();
         // the first line names the version of the toolkit first (what an app compares), then the build of the site that made the file
@@ -280,6 +283,38 @@ public sealed partial class ToolkitFiles
     /// <summary>The tokens a brand may set, with kind and limits: what the brand editor lists.</summary>
     public IReadOnlyList<BrandToken> EditableTokens { get; }
 
+    /// <summary>The font families the toolkit's own stacks (<c>--mat-font</c>, <c>--mat-mono</c>) name: a brand's font may not take the name of one of them.</summary>
+    public IReadOnlyList<string> ReservedFamilies { get; }
+
+    /// <summary>The files of the brand: logo, word mark, favicon, app icon and the font files, served below <c>/ui/brand/</c>.</summary>
+    public AssetFiles Assets => _assets;
+
+    /// <summary>
+    /// The fonts of the brand (stage 13, <c>IDENT-08</c>) as <c>@font-face</c> rules, written after the brand's tokens in the apps part: <c>font-display: swap</c>, and a <c>src</c> that is
+    /// <c>brand/fonts/&lt;name&gt;</c> <b>relative to the stylesheet</b>, so the files lie below the place <c>matui.css</c> is served from (<c>/ui/</c>, <c>/releases/&lt;version&gt;/</c>, the app's own folder).
+    /// Only faces that pass <see cref="BrandAssetValidator.IsSafe"/> are written, and a brand without fonts writes nothing.
+    /// </summary>
+    public static string AssetsOverlay(BrandAssets? assets)
+    {
+        if (assets is null || assets.Faces.Count == 0 || !BrandAssetValidator.IsSafe(assets))
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder("\n/* Fonts of the brand (IDENT-08): files of its own volume, brand/fonts/, relative to this stylesheet. */\n");
+        foreach (var face in assets.Faces)
+        {
+            var format = BrandAssets.Extension(face.File) == ".woff2" ? "woff2" : "woff";
+            sb.Append("@font-face { font-family: \"").Append(face.Family).Append("\"; font-style: ").Append(face.Style).Append("; font-weight: ").Append(face.Weight.ToString(System.Globalization.CultureInfo.InvariantCulture))
+                .Append("; font-display: swap; src: url(\"").Append(BrandAssets.Folder).Append('/').Append(BrandAssets.PublicName(face)).Append("\") format(\"").Append(format).Append("\"); }\n");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>The apps part as a file of its own, loaded from <c>css/</c>: the font files lie one level up (<c>../brand/fonts/...</c>), where the bundle has <c>brand/fonts/...</c>.</summary>
+    private static string PartCss(string appsCss) => appsCss.Replace("url(\"brand/fonts/", "url(\"../brand/fonts/", StringComparison.Ordinal);
+
     /// <summary>The documented component properties the Studio may set, with kind, limits, whether they are touch targets and what each is today.</summary>
     public IReadOnlyList<PropertyToken> EditableProperties { get; }
 
@@ -313,14 +348,21 @@ public sealed partial class ToolkitFiles
     public ToolkitManifest Manifest()
     {
         var state = Current;
-        return ManifestOf(AppVersion.MatUi, state.Hash, [
+        var manifest = ManifestOf(AppVersion.MatUi, state.Hash, [
             ("matui.css", "/ui/matui.css", state.CssBundle),
             ("matui.js", "/ui/matui.js", Script),
             ("matui.boot.js", "/ui/matui.boot.js", BootScript),
             ("matui-icons.svg", "/ui/matui-icons.svg", Sprite),
-            .. CssParts.Select(p => ($"css/{p}", $"/ui/css/{p}", p == AppsPart ? state.AppsCss : _css[p])),
+            .. CssParts.Select(p => ($"css/{p}", $"/ui/css/{p}", p == AppsPart ? PartCss(state.AppsCss) : _css[p])),
         ], "/ui/CHANGELOG.md");
+        return WithBrandFiles(manifest, name => $"/ui/{BrandAssets.Folder}/{name}");
     }
+
+    /// <summary>The manifest with the files of the brand (logo, favicon, fonts ...) after the toolkit's own, each with its SHA-256; unchanged when the brand has none.</summary>
+    private ToolkitManifest WithBrandFiles(ToolkitManifest manifest, Func<string, string> url)
+        => _assets.Files() is { Count: > 0 } files
+            ? manifest with { Files = [.. manifest.Files, .. files.Select(f => new ToolkitManifestFile($"{BrandAssets.Folder}/{f.Name}", url(f.Name), f.Bytes.Length, f.Sha256))] }
+            : manifest;
 
     private static ToolkitManifest ManifestOf(string version, string hash, IEnumerable<(string Name, string Url, string Content)> files, string changelog)
         => new("MatUi", version, AppVersion.Current, hash, changelog,
@@ -364,7 +406,7 @@ public sealed partial class ToolkitFiles
 
     public string TokensCss => _css["matui.tokens.css"];
 
-    public string? Css(string name) => name.Equals(AppsPart, StringComparison.OrdinalIgnoreCase) ? Current.AppsCss : _css.GetValueOrDefault(name);
+    public string? Css(string name) => name.Equals(AppsPart, StringComparison.OrdinalIgnoreCase) ? PartCss(Current.AppsCss) : _css.GetValueOrDefault(name);
 
     public IReadOnlyList<ToolkitFile> Files()
     {
@@ -375,7 +417,8 @@ public sealed partial class ToolkitFiles
             new("matui.js", "/ui/matui.js", "Behaviour: theme button, menu drawer, context menus, dialogs, dependent fields, tabs, toasts.", Encoding.UTF8.GetByteCount(Script)),
             new("matui.boot.js", "/ui/matui.boot.js", "Tiny script for <head>: applies the saved theme before the first paint.", Encoding.UTF8.GetByteCount(BootScript)),
             new("matui-icons.svg", "/ui/matui-icons.svg", $"The icon sprite ({IconNames.Count} icons), to be placed inline in the page.", Encoding.UTF8.GetByteCount(Sprite)),
-            .. CssParts.Select(p => new ToolkitFile(p, $"/ui/css/{p}", "A part of the bundle, for apps that load them one by one.", Encoding.UTF8.GetByteCount(p == AppsPart ? state.AppsCss : _css[p]))),
+            .. CssParts.Select(p => new ToolkitFile(p, $"/ui/css/{p}", "A part of the bundle, for apps that load them one by one.", Encoding.UTF8.GetByteCount(p == AppsPart ? PartCss(state.AppsCss) : _css[p]))),
+            .. _assets.Files().Select(f => new ToolkitFile($"{BrandAssets.Folder}/{f.Name}", $"/ui/{BrandAssets.Folder}/{f.Name}", f.Slot == "font" ? "A font of the brand: the @font-face rules in matui.css point to it." : "A file of the brand (IDENT-08).", f.Bytes.Length)),
         ];
     }
 
@@ -383,10 +426,13 @@ public sealed partial class ToolkitFiles
     {
         // the files, then the manifest that lists them with their hashes, then the README: an app that copies the archive keeps what it needs to check its copy later
         var files = new List<(string Name, string Content)> { ("matui.css", bundle), ("matui.js", script), ("matui.boot.js", boot), ("matui-icons.svg", Sprite) };
-        files.AddRange(CssParts.Select(part => ($"css/{part}", part == AppsPart ? appsCss : _css[part])));
+        files.AddRange(CssParts.Select(part => ($"css/{part}", part == AppsPart ? PartCss(appsCss) : _css[part])));
         files.Add(("CHANGELOG.md", Changelog.LoadText()));
-        files.Add(("matui.manifest.json", JsonSerializer.Serialize(ManifestOf(version, hash, files.Select(f => (f.Name, f.Name, f.Content)), "CHANGELOG.md"), ManifestJson)));
-        files.Add(("README.txt", Readme(hash, version)));
+        // the files of the brand (binary: a logo, a favicon, fonts) go in under brand/, with their hashes in the manifest; a brand without any adds nothing
+        var brand = _assets.Files();
+        var manifest = WithBrandFiles(ManifestOf(version, hash, files.Select(f => (f.Name, f.Name, f.Content)), "CHANGELOG.md"), name => $"{BrandAssets.Folder}/{name}");
+        files.Add(("matui.manifest.json", JsonSerializer.Serialize(manifest, ManifestJson)));
+        files.Add(("README.txt", Readme(hash, version) + (brand.Count == 0 ? string.Empty : BrandReadme(brand))));
 
         using var stream = new MemoryStream();
         using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
@@ -397,10 +443,26 @@ public sealed partial class ToolkitFiles
                 using var writer = new StreamWriter(entry.Open(), new UTF8Encoding(false));
                 writer.Write(content);
             }
+
+            foreach (var file in brand)
+            {
+                var entry = zip.CreateEntry($"matui/{BrandAssets.Folder}/{file.Name}", CompressionLevel.Optimal);
+                using var data = entry.Open();
+                data.Write(file.Bytes);
+            }
         }
 
         return stream.ToArray();
     }
+
+    /// <summary>What the README of an archive that carries a brand's files adds: where the files go, and how the fonts are found.</summary>
+    private static string BrandReadme(IReadOnlyList<BrandFile> brand) => string.Join('\n',
+        string.Empty,
+        $"The brand (IDENT-08): {brand.Count} file(s) of the company in brand/ (logo, word mark, favicon, app icon, fonts), each with its SHA-256 in matui.manifest.json.",
+        "  Copy brand/ next to matui.css, so that it is served as /brand/... when matui.css is /matui.css. The @font-face rules in matui.css (font-display: swap) point to brand/fonts/<name>, relative to the stylesheet;",
+        "  an app that loads the parts from css/ keeps css/ and brand/ side by side (css/matui.apps.css points to ../brand/fonts/<name>). Use the logo and the favicon from brand/ with the alt text of the brand (design.json of a release).",
+        "  A font family is used by name in a token of the brand (--mat-font: \"Name\", system-ui, sans-serif). Nothing is loaded from another site.",
+        string.Empty);
 
     private string Readme(string hash, string version) => string.Join('\n',
         $"MatUi {version} ({hash})",

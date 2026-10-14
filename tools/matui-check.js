@@ -142,6 +142,11 @@ function describe(file, stem, kind, product) {
         const listed = JSON.parse(manifest.text).files || [];
         for (const entry of listed) {
           const target = path.join(dir, entry.name);
+          // the files of a brand (brand/: logo, favicon, fonts) are binary and optional for an app: hashed as bytes, and not missed when an app does not copy them
+          if (entry.name.startsWith('brand/')) {
+            if (fs.existsSync(target) && crypto.createHash('sha256').update(fs.readFileSync(target)).digest('hex') !== entry.sha256) { copy.modified.push(entry.name); }
+            continue;
+          }
           if (!fs.existsSync(target)) { copy.problems.push(`${entry.name} is in the manifest and not in the folder.`); continue; }
           // the same file with the line ends of the app's repository (git on Windows) or a byte order mark is not a change
           const content = fs.readFileSync(target, 'utf8');

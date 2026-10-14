@@ -5901,7 +5901,7 @@ function seenAt(page, selector) {
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
         const names = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').evaluateAll(els => els.map(e => { const c = e.cloneNode(true); c.querySelectorAll('.mat-nav__badge').forEach(b => b.remove()); return c.textContent.trim(); }));
-        expect(names, ['Overview', 'Apps', 'Company', 'Brand', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'White label', 'Versions'], 'items of the Studio menu');
+        expect(names, ['Overview', 'Apps', 'Company', 'Brand', 'Logo and fonts', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'White label', 'Versions'], 'items of the Studio menu');
       });
       await check('choosing the Studio in the switcher loads its overview (a start page); the other menus swap the items', async () => {
         await page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
@@ -7988,6 +7988,21 @@ function seenAt(page, selector) {
     const { ctx, page } = await open(desktopOptions, '/Studio/Login');
     if (await page.locator('input[type="password"]').count() === 0) {
       console.log('  --    the Studio is off on this site (no data directory): the company checks are skipped');
+  }
+
+  // ---------------------------------------------------------------------------------------------------- brand assets (IDENT-08, stage 13)
+  // Logo, favicon and fonts go through the real form of the Studio (files made in brand-asset-files.js, nothing binary in the repository): a hostile SVG and a program with a picture's name
+  // are refused, the shell shows the logo and the favicon link, the font is really drawn, a restore brings an old state back. It needs the administrator like the Studio blocks above.
+  // Everything is taken away again at the end. With ASSETS_SHOTS=<folder> it also writes screenshots there.
+  console.log('\nBrand assets');
+  {
+    const fixtures = require('./brand-asset-files');
+    const name = process.env.STUDIO_NAME || 'admin';
+    const password = process.env.STUDIO_PASSWORD || 'studio-dev';
+    const shots = process.env.ASSETS_SHOTS || '';
+    const { ctx, page } = await open(desktopOptions, '/Studio/Login');
+    if (await page.locator('input[type="password"]').count() === 0) {
+      console.log('  --    the Studio is off on this site (no data directory): the brand asset checks are skipped');
       await ctx.close();
     } else {
       await page.fill('#Name', name);
@@ -8043,6 +8058,247 @@ function seenAt(page, selector) {
         expectTrue(apps.length > 5, 'the apps after Cancel: ' + apps.length);
       });
       await ctx.close();
+  }
+
+      const family = 'E2E Sans';
+      const goAssets = () => page.goto(BASE + '/Studio/Brand/Assets', { waitUntil: 'networkidle' });
+      // the content scrolls inside the page, so a tall window is what shows all of it
+      const shot = async (file, target) => { if (!shots) { return; } if (target) { await target.screenshot({ path: shots + '/' + file }); return; } await page.setViewportSize({ width: 1360, height: 3200 }); await page.screenshot({ path: shots + '/' + file }); await page.setViewportSize({ width: 1360, height: 900 }); };
+      const submit = async (slot) => { await page.click(`#asset-${slot} form .mat-btn--primary`); await page.waitForLoadState('networkidle'); };
+      const upload = async (slot, file, alt) => {
+        await page.setInputFiles('#file-' + slot, file);
+        if (alt !== undefined) { await page.fill('#alt-' + slot, alt); }
+        await submit(slot);
+      };
+      const message = () => page.textContent('[data-validation-summary]');
+      const css = async () => (await page.request.get(BASE + '/ui/matui.css')).text();
+      const confirm = async () => { await page.click('dialog[open] button[value="ok"]'); await page.waitForSelector('.mat-toast'); };
+      const shellLogo = () => page.evaluate(() => { const i = document.querySelector('.mat-nav__brand img.mat-brandmark'); return i ? { src: i.getAttribute('src'), alt: i.alt, loaded: i.complete && i.naturalWidth > 0 } : null; });
+      const faviconLink = () => page.evaluate(() => { const l = document.querySelector('link[rel="icon"]'); return { href: l.getAttribute('href'), type: l.getAttribute('type') }; });
+      const takeAllAway = async () => {
+        await goAssets();
+        if (await page.locator('button:has-text("Remove all")').count() > 0) {
+          await page.click('button:has-text("Remove all")');
+          await confirm();
+        }
+      };
+
+      await takeAllAway();
+      await check('the page has the shell, one h1, a card for every slot, a label for every control and the menu item is the current one', async () => {
+        await goAssets();
+        expect(await page.locator('main h1').count(), 1, 'h1');
+        expect(await page.textContent('main h1'), 'Logo and fonts', 'the title');
+        expect(await page.locator('a.mat-nav__item.is-active[href="/Studio/Brand/Assets"]').count(), 1, 'the menu item');
+        for (const slot of ['logo', 'wordmark', 'favicon', 'app-icon']) { expect(await page.locator('#asset-' + slot).count(), 1, 'the card ' + slot); }
+        expect(await page.locator('#asset-logo-dark').count(), 0, 'a dark variant is offered once there is a logo');
+        const unnamed = await page.evaluate(() => [...document.querySelectorAll('main input:not([type="hidden"]), main select, main textarea')].filter(el => !(el.labels && el.labels.length) && !el.getAttribute('aria-label')).map(el => el.id || el.name));
+        expect(unnamed, [], 'controls without a label');
+        expect(await page.locator('[style]').count(), 0, 'inline styles');
+        expect(await page.locator('.mat-upload .mat-upload__zone').count() >= 5, true, 'the file upload of the toolkit');
+        expect(await page.getAttribute('#asset-logo form', 'enctype'), 'multipart/form-data', 'the form');
+      });
+      await check('a PNG that is not a picture and a program called logo.png are refused, with the reason, and nothing is saved', async () => {
+        await upload('logo', { name: 'logo.png', mimeType: 'image/png', buffer: fixtures.exe() }, 'Acme');
+        expectTrue((await message()).includes('not a file a brand may use'), 'the message: ' + (await message()).trim().slice(0, 200));
+        expectTrue((await page.textContent('#file-logo-error')).includes('name of the file'), 'at the field');
+        expect(await page.locator('#asset-logo .doc-asset__head .mat-pill--ok').count(), 0, 'nothing is set');
+      });
+      await check('hostile SVGs are refused: a handler, a script, a reference to another site, an entity bomb', async () => {
+        for (const [file, why] of [['onload', 'event handler'], ['script', '<script>'], ['external', 'leads out of the document'], ['bomb', 'DTD']]) {
+          await upload('logo', { name: 'logo.svg', mimeType: 'image/svg+xml', buffer: fixtures.svg[file] }, 'Acme');
+          expectTrue((await message()).includes(why), `${file}: ${(await message()).trim().slice(0, 200)}`);
+        }
+        expect(await shellLogo(), null, 'no logo in the shell');
+        expect((await page.request.get(BASE + '/ui/brand/logo-0000000000.svg')).status(), 404, 'nothing is served');
+      });
+      await check('a logo needs alt text: without it the upload is refused', async () => {
+        await page.setInputFiles('#file-logo', { name: 'acme.svg', mimeType: 'image/svg+xml', buffer: fixtures.svg.mark() });
+        await page.fill('#alt-logo', '');
+        await page.click('#asset-logo form .mat-btn--primary');
+        // the form of the toolkit stops it at the field before anything is sent
+        expectTrue((await page.textContent('#asset-logo .mat-field:has(#alt-logo) .mat-error')).length > 0, 'the message at the field');
+        expect(await page.locator('#asset-logo .doc-asset__head .mat-pill--ok').count(), 0, 'nothing is set');
+      });
+      await check('a logo is uploaded through the form; the shell shows it with its alt text instead of the glyph tile, and the preview shows it on a light and a dark surface', async () => {
+        await upload('logo', { name: 'acme-logo.svg', mimeType: 'image/svg+xml', buffer: fixtures.svg.mark() }, 'Acme Anvils');
+        await page.waitForSelector('.mat-toast');
+        expect(await page.locator('#asset-logo .doc-asset__head .mat-pill').first().textContent(), 'Set', 'the state');
+        const logo = await shellLogo();
+        expectTrue(logo && logo.src.startsWith('/ui/brand/logo-') && logo.src.endsWith('.svg'), 'the logo of the shell: ' + JSON.stringify(logo));
+        expect(logo.alt, 'Acme Anvils', 'the alt text');
+        expect(logo.loaded, true, 'the image is drawn');
+        expect(await page.locator('.mat-nav__brand .mat-logo').count(), 0, 'the glyph tile is gone from the menu');
+        const stages = await page.evaluate(() => [...document.querySelectorAll('#asset-logo .doc-asset__stage img')].map(i => ({ ok: i.complete && i.naturalWidth > 0, scheme: getComputedStyle(i.parentElement).colorScheme, bg: getComputedStyle(i.parentElement).backgroundColor })));
+        expect(stages.map(s => s.ok), [true, true], 'both previews are drawn');
+        expect(stages.map(s => s.scheme), ['light', 'dark'], 'the surfaces');
+        expectTrue(stages[0].bg !== stages[1].bg, 'the two surfaces differ: ' + JSON.stringify(stages));
+        const checks = await page.locator('#asset-logo .doc-asset__checks li').allTextContents();
+        expectTrue(checks.length >= 4 && checks.every(t => t.includes('Passes')), 'the checks: ' + checks.join(' | '));
+        await shot('assets-light.png');
+      });
+      await check('the served logo has the headers of a brand file: its type, no sniffing, a policy that forbids everything, cached for good', async () => {
+        const src = (await shellLogo()).src;
+        const r = await page.request.get(BASE + src);
+        expect(r.status(), 200, 'status');
+        const h = r.headers();
+        expect(h['content-type'], 'image/svg+xml', 'type');
+        expect(h['x-content-type-options'], 'nosniff', 'sniffing');
+        expect(h['content-security-policy'], "default-src 'none'; style-src 'none'", 'policy');
+        expect(h['cache-control'], 'public, max-age=31536000, immutable', 'cache');
+      });
+      await check('a dark variant is a second image: the theme shows one of the two, with no flash and no inline style', async () => {
+        await page.setInputFiles('#file-logo-dark', { name: 'acme-logo-dark.svg', mimeType: 'image/svg+xml', buffer: fixtures.svg.mark('#f4a6c3') });
+        await page.click('#asset-logo-dark form .mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        expect(await page.locator('.mat-nav__brand img.mat-brandmark').count(), 2, 'two images');
+        const shown = () => page.evaluate(() => [...document.querySelectorAll('.mat-nav__brand img.mat-brandmark')].map(i => ({ cls: i.className.replace('mat-brandmark ', ''), shown: getComputedStyle(i).display !== 'none' })));
+        expect(await shown(), [{ cls: 'mat-brandmark--light', shown: true }, { cls: 'mat-brandmark--dark', shown: false }], 'light');
+        await page.evaluate(() => MatUi.theme.set('dark'));
+        expect(await shown(), [{ cls: 'mat-brandmark--light', shown: false }, { cls: 'mat-brandmark--dark', shown: true }], 'dark by the button');
+        await page.evaluate(() => MatUi.theme.set('system'));
+        await page.emulateMedia({ colorScheme: 'dark' });
+        expect(await shown(), [{ cls: 'mat-brandmark--light', shown: false }, { cls: 'mat-brandmark--dark', shown: true }], 'dark by the system');
+        await page.emulateMedia({ colorScheme: 'light' });
+        expect(await page.locator('.mat-nav__brand [style]').count(), 0, 'inline styles in the header of the menu');
+        await shot('shell-logo.png', page.locator('.mat-nav__brand'));
+        await page.emulateMedia({ colorScheme: null });
+      });
+      await check('a favicon and an app icon are used by the head of every page, and the files are served with their type', async () => {
+        await upload('favicon', { name: 'favicon.png', mimeType: 'image/png', buffer: fixtures.png(32, 32) });
+        await upload('app-icon', { name: 'icon.png', mimeType: 'image/png', buffer: fixtures.png(512, 512, [180, 35, 95]) });
+        await page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
+        const icon = await faviconLink();
+        expectTrue(icon.href.startsWith('/ui/brand/favicon-') && icon.href.endsWith('.png') && icon.type === 'image/png', 'the favicon link: ' + JSON.stringify(icon));
+        const apple = await page.evaluate(() => document.querySelector('link[rel="apple-touch-icon"]')?.getAttribute('href'));
+        expectTrue(apple && apple.startsWith('/ui/brand/app-icon-'), 'the app icon link: ' + apple);
+        for (const url of [icon.href, apple]) {
+          const r = await page.request.get(BASE + url);
+          expect([r.status(), r.headers()['content-type']], [200, 'image/png'], url);
+        }
+      });
+      await check('a font that is not a font is refused, and so is a family the toolkit already uses', async () => {
+        await goAssets();
+        await page.fill('#font-family', 'Fake Sans');
+        await page.setInputFiles('#font-file', { name: 'fake.woff2', mimeType: 'font/woff2', buffer: fixtures.exe() });
+        await page.click('form[action*="AddFont"] .mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await message()).includes('not a file a brand may use'), 'not a font: ' + (await message()).trim().slice(0, 160));
+        await page.fill('#font-family', 'Roboto');
+        await page.setInputFiles('#font-file', { name: 'roboto.woff', mimeType: 'font/woff', buffer: fixtures.woff(family) });
+        await page.click('form[action*="AddFont"] .mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await message()).includes('already name'), 'a toolkit family: ' + (await message()).trim().slice(0, 160));
+      });
+      await check('a font is added through the form and really drawn: the specimen loads it, the stylesheet declares it, the browser has it', async () => {
+        await goAssets();
+        await page.fill('#font-family', family);
+        await page.setInputFiles('#font-file', { name: 'e2e-sans.woff', mimeType: 'font/woff', buffer: fixtures.woff(family) });
+        await page.click('form[action*="AddFont"] .mat-btn--primary');
+        await page.waitForSelector('.mat-toast');
+        expect(await page.locator('.doc-assets__faces tbody tr').count(), 1, 'a face in the table');
+        await page.waitForFunction(() => document.querySelector('[data-specimen]').getAttribute('data-font-state') === 'loaded');
+        expect(await page.textContent('[data-specimen-state]'), 'Loaded', 'the state of the specimen');
+        const specimen = await page.evaluate(() => { const s = document.querySelector('[data-specimen]'); return { family: getComputedStyle(s).fontFamily, width: s.getBoundingClientRect().width }; });
+        expectTrue(specimen.family.replace(/"/g, '').startsWith('mat-specimen-1'), 'the family of the specimen: ' + specimen.family);
+        const text = await css();
+        expectTrue(text.includes(`@font-face { font-family: "${family}"; font-style: normal; font-weight: 400; font-display: swap; src: url("brand/fonts/e2e-sans-400-normal-`), '@font-face in matui.css');
+        const loaded = await page.evaluate(async (f) => { const faces = await document.fonts.load(`400 16px "${f}"`); return { faces: faces.length, status: faces[0] && faces[0].status, check: document.fonts.check(`400 16px "${f}"`) }; }, family);
+        expect(loaded, { faces: 1, status: 'loaded', check: true }, 'the font of the stylesheet');
+        const file = await page.evaluate(() => document.querySelector('.doc-assets__faces a').getAttribute('href'));
+        const r = await page.request.get(BASE + file);
+        expect([r.status(), r.headers()['content-type']], [200, 'font/woff'], 'the file');
+        expect(r.headers()['cache-control'], 'public, max-age=31536000, immutable', 'cache');
+        const stack = await page.textContent('.doc-assets__stack code');
+        expect(stack, `"${family}", system-ui, sans-serif`, 'the font stack to use in the brand editor');
+      });
+      await check('the family is chosen in the brand editor and the site is set in it: the text is as wide as the font says', async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        await page.fill('#light-mat-font', `"${family}", system-ui, sans-serif`);
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForSelector('.mat-toast');
+        await goAssets();
+        const used = await page.evaluate(async (f) => {
+          await document.fonts.load(`400 15px "${f}"`);
+          const s = document.createElement('span');
+          s.textContent = 'iiii';
+          s.style.cssText = 'position:absolute;display:inline-block;white-space:nowrap';
+          document.querySelector('main').appendChild(s);
+          const out = { family: getComputedStyle(s).fontFamily, size: parseFloat(getComputedStyle(s).fontSize), width: s.getBoundingClientRect().width };
+          s.remove();
+          return out;
+        }, family);
+        expectTrue(used.family.replace(/"/g, '').startsWith(family), 'the font family of the page: ' + used.family);
+        // every character of the test font is a block 0.7 em wide: four of them
+        expectTrue(Math.abs(used.width - 4 * 0.7 * used.size) < 1.5, `four characters are ${used.width} px wide at ${used.size} px, a block font makes ${4 * 0.7 * used.size}`);
+        await shot('assets-all-light.png');
+        await page.evaluate(() => MatUi.theme.set('dark'));
+        await shot('assets-all-dark.png');
+        if (shots) { await page.evaluate(() => MatUi.theme.set('light')); await page.setViewportSize({ width: 390, height: 7600 }); await page.screenshot({ path: shots + '/assets-all-phone.png' }); await page.setViewportSize({ width: 1360, height: 900 }); }
+        await page.evaluate(() => MatUi.theme.set('system'));
+      });
+      await check('the checks of the Studio pass with the files, and the assets are in the activity list and the history', async () => {
+        await page.goto(BASE + '/Studio/Checks', { waitUntil: 'networkidle' });
+        expectTrue((await page.textContent('main')).includes('The files of the brand are valid'), 'the check is listed');
+        expect(await page.locator('.mat-pill--error').count(), 0, 'failing checks');
+        await page.goto(BASE + '/Studio/Activity?kind=assets', { waitUntil: 'networkidle' });
+        expectTrue((await page.textContent('main')).includes('Brand assets'), 'the kind in the activity list');
+      });
+      await check('the history restores an old state: back to the logo alone, the glyph favicon and no font, and the files stay', async () => {
+        await page.goto(BASE + '/Studio/History?kind=assets&id=assets', { waitUntil: 'networkidle' });
+        const numbers = (await page.locator('section[aria-labelledby="revisions-title"] tbody tr td:first-child .doc-rule-id').allTextContents()).map(Number).sort((a, b) => b - a);
+        // the saves of this run: logo, dark logo, favicon, app icon, font: the fifth newest is the state with the logo only
+        expectTrue(numbers.length >= 5, 'revisions: ' + numbers);
+        await page.click(`button[aria-label="Restore revision ${numbers[4]}"]`);
+        await confirm();
+        await page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
+        expect((await faviconLink()).href, '/favicon.svg', 'the favicon is the default again');
+        expect(await page.locator('.mat-nav__brand img.mat-brandmark').count(), 1, 'the logo alone (no dark variant)');
+        expectTrue(!(await css()).includes('@font-face'), 'no font in matui.css');
+        const old = (await shellLogo()).src;
+        expect((await page.request.get(BASE + old)).status(), 200, 'the logo is served');
+        await goAssets();
+        expect(await page.locator('.doc-assets__faces').count(), 0, 'no font in the table');
+      });
+      await ctx.close();
+
+      const phone = await open(phoneOptions, '/Studio/Login');
+      await phone.page.fill('#Name', name);
+      await phone.page.fill('#Password', password);
+      await phone.page.click('.mat-auth__card button[type="submit"]');
+      await phone.page.waitForURL('**/Studio**');
+      await check('on a phone the assets page does not scroll sideways, the previews stack and the buttons and fields are 44 px high', async () => {
+        await phone.page.goto(BASE + '/Studio/Brand/Assets', { waitUntil: 'networkidle' });
+        const size = await phone.page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+        expectTrue(size.page <= size.window, `the page is ${size.page} px wide in a window of ${size.window} px`);
+        const targets = await phone.page.evaluate(() => [...document.querySelectorAll('#asset-logo form .mat-btn, #asset-logo form input.mat-input, #asset-favicon form .mat-btn')].map(e => Math.round(e.getBoundingClientRect().height)));
+        expectTrue(targets.length >= 3 && targets.every(h => h >= 43), 'the heights: ' + targets);
+        const stages = await phone.page.evaluate(() => [...document.querySelectorAll('#asset-logo .doc-asset__stage')].map(s => { const r = s.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width) }; }));
+        expectTrue(stages.length === 2 && stages[1].y > stages[0].y && stages[0].w <= 390, 'the stages stack: ' + JSON.stringify(stages));
+        if (shots) { await phone.page.setViewportSize({ width: 390, height: 6500 }); await phone.page.screenshot({ path: shots + '/assets-phone.png' }); await phone.page.setViewportSize({ width: 390, height: 844 }); }
+      });
+      await phone.ctx.close();
+
+      const clean = await open(desktopOptions, '/Studio/Login');
+      await clean.page.fill('#Name', name);
+      await clean.page.fill('#Password', password);
+      await clean.page.click('.mat-auth__card button[type="submit"]');
+      await clean.page.waitForURL('**/Studio**');
+      await check('everything is taken away again: the glyph logo, the favicon of the site and the stylesheet are what they were', async () => {
+        await clean.page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        await clean.page.fill('#light-mat-font', '');
+        await clean.page.click('.mat-btn-row button.mat-btn--primary');
+        await clean.page.waitForSelector('.mat-toast');
+        await clean.page.goto(BASE + '/Studio/Brand/Assets', { waitUntil: 'networkidle' });
+        await clean.page.click('button:has-text("Remove all")');
+        await clean.page.click('dialog[open] button[value="ok"]');
+        await clean.page.waitForSelector('.mat-toast');
+        await clean.page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
+        expect(await clean.page.locator('.mat-nav__brand .mat-logo').count(), 1, 'the glyph tile');
+        expect(await clean.page.locator('.mat-brandmark').count(), 0, 'no brand image');
+        expect(await clean.page.evaluate(() => document.querySelector('link[rel="icon"]').getAttribute('href')), '/favicon.svg', 'the favicon');
+        expectTrue(!(await (await clean.page.request.get(BASE + '/ui/matui.css')).text()).includes('@font-face'), 'no @font-face');
+      });
+      await clean.ctx.close();
     }
   }
 

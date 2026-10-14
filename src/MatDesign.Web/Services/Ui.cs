@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
 using MatDesign.Core;
+using MatDesign.Core.Studio;
 using Microsoft.AspNetCore.Html;
 
 namespace MatDesign.Web.Services;
@@ -29,6 +30,34 @@ public static partial class Ui
         => new HtmlString(
             $"<span class=\"mat-logo mat-logo--{size}\" data-app=\"{WebUtility.HtmlEncode(app.Id)}\" role=\"img\" aria-label=\"{WebUtility.HtmlEncode(app.Name)}\">" +
             $"<svg class=\"mat-icon\" aria-hidden=\"true\" focusable=\"false\"><use href=\"#mat-i-{app.Glyph}\"></use></svg></span>");
+
+    /// <summary>The address a file of the brand is served from on this site.</summary>
+    public static string BrandUrl(string publicName) => $"/ui/{BrandAssets.Folder}/{publicName}";
+
+    /// <summary>
+    /// An image of the brand (<c>IDENT-08</c>): the logo or the word mark as a picture from the brand's own files, <paramref name="height"/> px tall, with its alt text. With a variant for dark surfaces
+    /// there are two images and the theme shows one of them (<c>mat-brandmark--light</c> / <c>--dark</c>, no inline style, no script, nothing flashes); without one the single image is shown in both.
+    /// </summary>
+    public static IHtmlContent BrandImage(string slot, AssetFile light, AssetFile? dark, string alt, int height, string extraClass = "")
+    {
+        string Image(string imageSlot, AssetFile file, string theme)
+        {
+            var width = file.Height > 0 && file.Width > 0 ? Math.Max(1, (int)Math.Round((double)height * file.Width / file.Height)) : 0;
+            var classes = string.Join(' ', new[] { "mat-brandmark", theme, extraClass }.Where(c => c.Length > 0));
+            return $"<img class=\"{classes}\" src=\"{WebUtility.HtmlEncode(BrandUrl(BrandAssets.PublicName(imageSlot, file)))}\" alt=\"{WebUtility.HtmlEncode(alt)}\"{(width > 0 ? $" width=\"{width.ToString(CultureInfo.InvariantCulture)}\"" : string.Empty)} height=\"{height.ToString(CultureInfo.InvariantCulture)}\" />";
+        }
+
+        return new HtmlString(dark is null ? Image(slot, light, string.Empty) : Image(slot, light, "mat-brandmark--light") + Image(slot + "-dark", dark, "mat-brandmark--dark"));
+    }
+
+    /// <summary>The type of a favicon from its extension, for the <c>type</c> of its link.</summary>
+    public static string FaviconType(AssetFile file) => BrandAssets.ContentTypeOf(file.File) ?? "image/svg+xml";
+
+    /// <summary>The link of the app icon of the brand (<c>apple-touch-icon</c>), or nothing: written straight after the favicon link, so a page without one is exactly what it was.</summary>
+    public static IHtmlContent AppIconLink(BrandAssets? assets)
+        => assets?.AppIcon is { } icon
+            ? new HtmlString($"\n    <link rel=\"apple-touch-icon\" href=\"{WebUtility.HtmlEncode(BrandUrl(BrandAssets.PublicName("app-icon", icon)))}\" />")
+            : HtmlString.Empty;
 
     /// <summary>Plain text with `code` spans: the text is encoded, a pair of backticks becomes a code element.</summary>
     public static IHtmlContent Inline(string text)

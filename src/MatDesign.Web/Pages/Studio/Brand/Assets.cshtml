@@ -1,0 +1,214 @@
+@page "/Studio/Brand/Assets"
+@model MatDesign.Web.Pages.StudioBrandAssets.AssetsModel
+@namespace MatDesign.Web.Pages.StudioBrandAssets
+@inject MatDesign.Web.Studio.StudioHistory History
+@using MatDesign.Core.Studio
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "Logo and fonts";
+    ViewData["PageSub"] = Model.Source == ItemSource.BuiltIn
+        ? "The brand has no files yet: the site shows the logo tile of its app and the system fonts. Upload a logo, a favicon and fonts, and they replace them here, in every release and in the archive."
+        : "The files of the brand, kept in the volume under their SHA-256 and checked by what is inside them. They are served from this site, written into every release under brand/ and never loaded from another site.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Brand", "/Studio/Brand"), ("Logo and fonts", null));
+    ViewData["Width"] = "wide";
+    ViewData["IndexDialog"] = "assets-index";
+    ViewData["IndexLabel"] = "On this page";
+    var current = Model.Current;
+}
+
+<div class="doc-assets">
+    @if (Model.Errors.Count > 0)
+    {
+        <div class="mat-alert mat-alert--danger" role="alert" data-validation-summary>
+            @Ui.Icon("x-circle")
+            <div class="mat-alert__body">
+                <strong>The file was not saved.</strong>
+                <ul class="mat-alert__list">
+                    @foreach (var (slot, message) in Model.Errors)
+                    {
+                        <li><a href="#@(slot == "fonts" ? "fonts-title" : "asset-" + slot)">@message</a></li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+
+    <section class="mat-section" aria-labelledby="rules-title">
+        <div class="mat-section__head">
+            <h2 id="rules-title">What is accepted</h2>
+            <p class="mat-section__lead">
+                A file is judged by its content: the first bytes of a PNG, an ICO, a WOFF2 or a WOFF, or an SVG that is read as XML. The name of the file and the type your browser reports do not count.
+                An SVG may use only a list of plain shapes: no script, no foreignObject, no style element, no event handler, nothing that points outside the file, no data or javascript address and no entity (a file that has one is refused with the reason).
+                Limits: SVG 100 KB, PNG 500 KB (2048 px at most), ICO 200 KB, a font 400 KB, at most 12 font faces in 3 families, @Model.Budget together. A logo may be wide (up to 8 to 1).
+                A file is stored once under its SHA-256 and never overwritten or deleted, so every revision in the history can be restored.
+            </p>
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="logo-card-title">
+        <div class="mat-card__head">@Ui.Icon("image")<h2 class="mat-card__title" id="logo-card-title">Logo</h2></div>
+        <div class="mat-card__body doc-assets__slots">
+            <partial name="_AssetSlot" model='Model.View("logo")' />
+            @if (current.Logo is not null)
+            {
+                <partial name="_AssetSlot" model='Model.View("logo-dark")' />
+            }
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="word-card-title">
+        <div class="mat-card__head">@Ui.Icon("type")<h2 class="mat-card__title" id="word-card-title">Word mark</h2></div>
+        <div class="mat-card__body doc-assets__slots">
+            <partial name="_AssetSlot" model='Model.View("wordmark")' />
+            @if (current.Wordmark is not null)
+            {
+                <partial name="_AssetSlot" model='Model.View("wordmark-dark")' />
+            }
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="icons-card-title">
+        <div class="mat-card__head">@Ui.Icon("star")<h2 class="mat-card__title" id="icons-card-title">Favicon and app icon</h2></div>
+        <div class="mat-card__body doc-assets__slots">
+            <partial name="_AssetSlot" model='Model.View("favicon")' />
+            <partial name="_AssetSlot" model='Model.View("app-icon")' />
+        </div>
+    </section>
+
+    <section class="mat-card" aria-labelledby="fonts-title" id="fonts">
+        <div class="mat-card__head">@Ui.Icon("type")<h2 class="mat-card__title" id="fonts-title">Fonts</h2><span class="mat-muted">@StudioFormat.Count(Model.Faces.Count, "face") of @StudioFormat.Count(Model.Families.Count(), "family")</span></div>
+        <div class="mat-card__body doc-assets__slots">
+            <p class="mat-muted">
+                Font files are WOFF2 or WOFF, served from this site and written into the stylesheet as @@font-face rules with <code>font-display: swap</code>.
+                A family has one file for each weight and style. The family names must be letters, digits, spaces and dashes, not a generic family and not one the toolkit's own stacks already use (@string.Join(", ", Model.Reserved.Take(6)) and so on).
+            </p>
+            @if (Model.Faces.Count > 0)
+            {
+                <div class="mat-table-wrap">
+                    <table class="mat-table doc-assets__faces">
+                        <caption class="mat-sr-only">The font faces of the brand</caption>
+                        <thead><tr><th scope="col">Family</th><th scope="col">Weight</th><th scope="col">Style</th><th scope="col">File</th><th scope="col">Check</th><th scope="col">Specimen</th><th scope="col"><span class="mat-sr-only">Remove</span></th></tr></thead>
+                        <tbody>
+                            @foreach (var face in Model.Faces)
+                            {
+                                var checks = Model.FaceChecks(face);
+                                <tr>
+                                    <td data-label="Family"><strong>@face.Family</strong></td>
+                                    <td data-label="Weight" class="mat-num">@face.Weight</td>
+                                    <td data-label="Style">@face.Style</td>
+                                    <td data-label="File"><a href="@Model.FaceUrl(face)"><code>@BrandAssets.PublicName(face).Replace("fonts/", string.Empty, StringComparison.Ordinal)</code></a></td>
+                                    <td data-label="Check">
+                                        @foreach (var check in checks)
+                                        {
+                                            <span class="mat-pill @(check.Ok ? "mat-pill--ok" : "mat-pill--error")">@(check.Ok ? "Passes" : "Fails")</span> <small>@check.Text</small>
+                                        }
+                                    </td>
+                                    <td data-label="Specimen">
+                                        <span class="doc-assets__specimen" data-specimen data-src="@Model.FaceUrl(face)" data-weight="@face.Weight" data-style="@face.Style" lang="en">Hamburgefonstiv 0123</span>
+                                        <small class="mat-muted" data-specimen-state role="status">Loading ...</small>
+                                    </td>
+                                    <td data-label="Remove" class="mat-table__cell-actions">
+                                        <form method="post" action="/Studio/Brand/Assets?handler=RemoveFont" class="mat-table__actions">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="family" value="@face.Family" />
+                                            <input type="hidden" name="weight" value="@face.Weight" />
+                                            <input type="hidden" name="style" value="@face.Style" />
+                                            <button type="submit" class="mat-btn mat-btn--ghost mat-btn--icon" aria-label="Remove @face.Family @face.Weight @face.Style" data-tip="Remove" data-confirm="Remove the face @face.Family @face.Weight @face.Style? The file stays on the volume and the history can bring it back." data-confirm-ok="Remove">@Ui.Icon("trash")</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <p class="mat-muted">
+                    To use a family on the site, name it in the brand editor, in the font stack of <code>--mat-font</code> or <code>--mat-mono</code>, and end the stack with a generic family:
+                    @foreach (var (family, stack) in Model.Families)
+                    {
+                        <span class="doc-assets__stack"><code>@stack</code></span>
+                    }
+                </p>
+            }
+
+            <h3 class="doc-asset__title" id="add-font-title">Add a font face</h3>
+            <form class="mat-form" method="post" action="/Studio/Brand/Assets?handler=AddFont" enctype="multipart/form-data" novalidate aria-labelledby="add-font-title">
+                @Html.AntiForgeryToken()
+                <div class="mat-form__grid">
+                    <div class="mat-field@(Model.Errors.ContainsKey("fonts") ? " is-invalid" : string.Empty)">
+                        <label class="mat-label" for="font-family">Family <span class="mat-req" aria-hidden="true">*</span></label>
+                        <input class="mat-input" id="font-family" name="family" value="@Model.TypedFont" maxlength="40" required autocomplete="off" spellcheck="false" data-msg-required="Please name the family." />
+                        <span class="mat-hint">For example Acme Sans. Letters, digits, spaces and dashes.</span>
+                    </div>
+                    <div class="mat-field">
+                        <label class="mat-label" for="font-weight">Weight</label>
+                        <select class="mat-select" id="font-weight" name="weight">
+                            @foreach (var weight in new[] { 100, 200, 300, 400, 500, 600, 700, 800, 900 })
+                            {
+                                <option value="@weight" selected="@(weight == 400)">@weight</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mat-field">
+                        <label class="mat-label" for="font-style">Style</label>
+                        <select class="mat-select" id="font-style" name="style">
+                            <option value="normal" selected>Normal</option>
+                            <option value="italic">Italic</option>
+                        </select>
+                    </div>
+                    <div class="mat-field mat-field--full@(Model.Errors.ContainsKey("fonts") ? " is-invalid" : string.Empty)">
+                        <label class="mat-label" for="font-file">Font file <span class="mat-req" aria-hidden="true">*</span></label>
+                        <div class="mat-upload" data-upload data-max-size="400KB">
+                            <input class="mat-upload__input" type="file" id="font-file" name="file" accept=".woff2,.woff,font/woff2,font/woff" required data-msg-required="Please choose a font file." aria-describedby="font-file-hint font-file-error" />
+                        </div>
+                        <span class="mat-hint" id="font-file-hint">WOFF2 or WOFF, 400 KB at most. Judged by what is inside it.</span>
+                        <span class="mat-error" id="font-file-error" aria-live="polite">@(Model.Errors.GetValueOrDefault("fonts"))</span>
+                    </div>
+                </div>
+                <div class="mat-btn-row">
+                    <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("plus")<span>Add the face</span></button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <div class="mat-btn-row">
+        <a class="mat-btn mat-btn--secondary" href="/Studio/Brand">@Ui.Icon("back")<span>Back to the brand</span></a>
+        @if (Model.HasHistory)
+        {
+            <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl(BrandAssets.Kind, BrandAssets.ItemId)">@Ui.Icon("restore")<span>History</span></a>
+        }
+        @if (Model.Source != ItemSource.BuiltIn)
+        {
+            <span class="mat-btn-row__spacer"></span>
+            <form method="post" action="/Studio/Brand/Assets?handler=Reset">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="mat-btn mat-btn--danger" data-confirm="Take every file away from the brand? The logo, the favicon and the fonts leave the site and the releases to come; the files and the history stay." data-confirm-ok="Remove all">@Ui.Icon("restore")<span>Remove all</span></button>
+            </form>
+        }
+    </div>
+</div>
+
+<dialog class="mat-dialog mat-dialog--sm" id="assets-index" aria-labelledby="assets-index-title">
+    <div class="mat-dialog__form">
+        <div class="mat-dialog__head">
+            @Ui.Icon("list")
+            <h2 class="mat-dialog__title" id="assets-index-title">On this page</h2>
+            <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">@Ui.Icon("x")</button>
+        </div>
+        <div class="mat-dialog__body">
+            <nav class="mat-toc" aria-label="On this page">
+                <ul class="mat-toc__list">
+                    <li><a class="mat-toc__link" href="#rules-title">What is accepted</a></li>
+                    <li><a class="mat-toc__link" href="#logo-card-title">Logo</a></li>
+                    <li><a class="mat-toc__link" href="#word-card-title">Word mark</a></li>
+                    <li><a class="mat-toc__link" href="#icons-card-title">Favicon and app icon</a></li>
+                    <li><a class="mat-toc__link" href="#fonts-title">Fonts</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</dialog>
+
+@section Scripts {
+    <script src="/js/brand-assets.js"></script>
+}

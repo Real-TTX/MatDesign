@@ -40,11 +40,13 @@ public sealed class DesignData
     private readonly object _gate = new();
     private Snapshot _snapshot;
     private long _version;
+    private BrandAssets? _assets;
 
     public DesignData(StudioService studio)
     {
         _studio = studio;
         _snapshot = Load();
+        _assets = LoadAssets();
     }
 
     private sealed record Kind<T>(IReadOnlyList<T> All, IReadOnlyList<T> Items, IReadOnlyDictionary<string, ItemSource> Sources);
@@ -143,6 +145,14 @@ public sealed class DesignData
     /// <summary>Built in until the Studio saves a brand, changed after that (resetting brings the built-in brand back).</summary>
     public ItemSource BrandSource => _snapshot.Brand is null ? ItemSource.BuiltIn : ItemSource.Changed;
 
+    // ---- brand assets (stage 13): logo, word mark, favicon, app icon and fonts, as files on the volume
+
+    /// <summary>The assets of the brand as the Studio saved them (the files they refer to are on the volume); null while nothing was saved, or after a reset. The site, the bundle and the releases read this.</summary>
+    public BrandAssets? Assets => _assets;
+
+    /// <summary>The assets, never null: a brand without any is empty (nothing is written, nothing on the site changes).</summary>
+    public BrandAssets AssetsOrEmpty => _assets ?? new BrandAssets();
+
     /// <summary>What the menu counts: the apps (for the palette), the rules and the components of the components page.</summary>
     public NavFacts NavFacts => new(Apps, Rules.Count, ComponentsIn(ComponentCatalog.Sections[0]).Count(), Audit: Template.OffersAudit);
 
@@ -152,6 +162,7 @@ public sealed class DesignData
         lock (_gate)
         {
             _snapshot = Load();
+            _assets = LoadAssets();
             Interlocked.Increment(ref _version);
         }
     }
@@ -234,6 +245,9 @@ public sealed class DesignData
 
         return _studio.TenantDefault is { } fromEnvironment ? (fromEnvironment, TenantOrigin.Environment) : (Tenant.Demo, TenantOrigin.Default);
     }
+    /// <summary>The one item of the assets, when it can be read and is safe (a file edited by hand into something else is left out, and the volume check says so).</summary>
+    private BrandAssets? LoadAssets()
+        => Items<BrandAssets>(BrandAssets.Kind, BrandAssetValidator.Normalize, BrandAssetValidator.IsSafe, _ => BrandAssets.ItemId).FirstOrDefault();
 
     private Snapshot Load()
     {

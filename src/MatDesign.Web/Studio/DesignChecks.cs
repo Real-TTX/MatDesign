@@ -117,6 +117,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
             Brand.Kind => finding.Id == Brand.ItemId,
             WhiteLabelSetting.Kind => finding.Id == WhiteLabelSetting.ItemId,
             Tenant.Kind => finding.Id == Tenant.ItemId,
+            BrandAssets.Kind => finding.Id == BrandAssets.ItemId,
             _ => design.Component(finding.Id) is not null,
         };
         if (exists)
@@ -145,6 +146,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
         new("menu", "Site", "The menus are well formed", "Every menu has at most one level of submenus, its ids are unique, and so are its addresses.", Menus),
         new("volume", "Studio", "Nothing on the volume is left out", "Every item the Studio saved is read back by the site; an item that was edited by hand into something unsafe or wrong is not, and is reported here.", Volume),
         new("whitelabel", "Release", "The white label setting builds", "The prefix and the name of the white label setting pass what a save holds them to, and a trial build with them (the renamer and the checks of the toolkit on the renamed copy) finds nothing: a release with a setting that fails is refused (CODE-09).", WhiteLabelBuilds),
+        new("assets", "Brand", "The files of the brand are valid", "Every file of the brand (logo, word mark, favicon, app icon, fonts) is on the volume, still has the hash in its name, is still the type and the size its slot allows (judged by its content, an SVG by an allowlist), the alt texts are there, the fonts are named by families the toolkit does not use, and the files together are within the budget (IDENT-08).", AssetsValid),
     ];
 
     private static IEnumerable<Finding> WhiteLabelBuilds(CheckContext c)
@@ -218,6 +220,19 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
         foreach (var problem in BrandValidator.Validate(brand, c.Toolkit.Tokens, c.Toolkit.Schemes, c.Design.Apps, c.Toolkit.EditableProperties))
         {
             yield return new Finding("brand", Severity.Error, $"{problem.Field}: {problem.Message}", Brand.Kind, Brand.ItemId);
+        }
+    }
+
+    private static IEnumerable<Finding> AssetsValid(CheckContext c)
+    {
+        if (c.Design.Assets is not { } assets)
+        {
+            yield break;
+        }
+
+        foreach (var problem in BrandAssetValidator.ValidateFiles(BrandAssetValidator.Normalize(assets), c.Toolkit.Assets.Store.Read, c.Toolkit.ReservedFamilies))
+        {
+            yield return new Finding("assets", Severity.Error, $"{problem.Field}: {problem.Message}", BrandAssets.Kind, BrandAssets.ItemId);
         }
     }
 
@@ -421,6 +436,11 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
         if (c.Studio.Store.List(Brand.Kind).Any(i => i.Id == Brand.ItemId) && c.Design.StudioBrand is null)
         {
             yield return new Finding("volume", Severity.Error, "The brand on the volume is left out: it is not a valid brand (a name that is empty or too long, a token name or a value that is not safe to write into a stylesheet).", Brand.Kind, Brand.ItemId);
+        }
+
+        if (c.Studio.Store.Current(BrandAssets.Kind, BrandAssets.ItemId) is { Deleted: false } && c.Design.Assets is null)
+        {
+            yield return new Finding("volume", Severity.Error, "The brand assets on the volume are left out: a file name, a family name, a weight or a style in them is not of the shape it must be.", BrandAssets.Kind, BrandAssets.ItemId);
         }
     }
 }

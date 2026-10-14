@@ -98,6 +98,10 @@ public static class RuleBook
         new("IDENT-07", "IDENT", "The tab title",
             "The browser title is `Page title · App name`. A detail page puts the entity first (`Invoice 2026-04 · Documents · MatPaper`).",
             RuleLevel.Should, MatPaper),
+        new("IDENT-08", "IDENT", "The files of a brand are its own, checked by content, with alt text",
+            "A brand's logo, word mark, favicon, app icon and fonts are files of its own: they live in its volume under their SHA-256, are served from its own site, are written into every release under `brand/` and are never loaded from another site (CODE-03). A file is accepted by what is inside it (a PNG, an ICO, a WOFF2, a WOFF, or an SVG that parses as XML), never by its name or the type a browser reports, within limits: SVG 100 KB, PNG 500 KB and 2048 px, ICO 200 KB, a font 400 KB, at most 12 faces in 3 families. An SVG is read against a list of allowed elements and attributes: no script, foreignObject, style element, event handler, entity, `javascript:` or `data:` address, and no reference that leaves the file. A logo and a word mark always have an alt text (A11Y-03), and may have a variant for dark surfaces. A font family has a name of its own (not a generic family, not one the toolkit's stacks use) and is declared with `font-display: swap`. Files are never overwritten or deleted, so every revision of the brand can be restored; a brand without assets writes nothing.",
+            RuleLevel.Must, Owner, Why: "An uploaded file is the one place where a stranger's bytes enter the site: an SVG can carry a script, anything can be named like a picture. Content, an allowlist and immutable files keep a brand from endangering the site and every release self-contained (docs/PRODUCT.md, decided by the owner on 2026-10-14).",
+            Do: "<img class=\"mat-brandmark\" src=\"/ui/brand/logo-1a2b3c4d5e.svg\" alt=\"Acme\">, @font-face { font-display: swap; src: url(\"brand/fonts/acme-400-normal-1a2b3c4d5e.woff2\") format(\"woff2\"); }", Dont: "a logo or a font loaded from a CDN, an SVG with a script or an onload, a file trusted because of its name, a logo without alt text, a file replaced under the same name", Check: "Test (validator, store, serving, release) and browser"),
 
         // stage 14 of docs/PRODUCT.md (demo data and templates)
         new("IDENT-09", "IDENT", "A program names its surfaces after its company",
@@ -392,7 +396,7 @@ public static class RuleBook
 
         // --------------------------------------------------------------------------------------------------- TYPE
         new("TYPE-01", "TYPE", "System fonts",
-            "Apps use the system font stack and the system mono stack. No web fonts: apps must work offline and as a PWA.",
+            "Apps use the system font stack and the system mono stack. No web fonts from another site: apps must work offline and as a PWA. The toolkit itself ships no font file; the only exception is the font files of a company's own brand (IDENT-08), which lie in its own volume and its releases, are copied with the app and are declared with `font-display: swap`.",
             RuleLevel.Must, MatSplit, Check: "Test (toolkit CSS)"),
         new("TYPE-02", "TYPE", "The scale",
             "Type sizes come from the scale (12, 13, 15, 17, 20, 26, 34 px). Body text is 15 px, table text 13 px, the page title 26 px.",

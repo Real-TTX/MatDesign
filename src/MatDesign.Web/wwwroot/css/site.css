@@ -344,3 +344,25 @@ ol.doc-changes > li { list-style: decimal; }
 .doc-example__live--popup .mat-menu { position: static; max-height: none; }
 /* the overrides of an app sit in a card of their own below the colours */
 .doc-overrides .doc-comp + .doc-comp { margin-top: var(--mat-space-6); padding-top: var(--mat-space-6); border-top: 1px solid var(--mat-border); }
+
+/* ---- Brand assets (stage 13, /Studio/Brand/Assets): a card for each slot with a preview on a light and on a dark surface. The surfaces are the browser's own Canvas colour under
+   color-scheme light and dark, so no literal colour is needed and the preview shows what a light and a dark page do to the file, whatever theme the Studio is in. ---- */
+.doc-assets { display: grid; gap: var(--mat-space-5); }
+.doc-assets__slots { display: grid; gap: var(--mat-space-6); }
+.doc-asset { display: grid; gap: var(--mat-space-3); align-content: start; }
+.doc-asset + .doc-asset { border-top: 1px solid var(--mat-border); padding-top: var(--mat-space-5); }
+.doc-asset__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-3); }
+.doc-asset__title { margin: 0; font-size: var(--mat-fs-lg); line-height: var(--mat-lh-tight); }
+.doc-asset__stages { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: var(--mat-space-3); }
+.doc-asset__stage { margin: 0; display: grid; justify-items: center; align-content: center; gap: var(--mat-space-3); min-height: 9rem; padding: var(--mat-space-4); border: 1px solid var(--mat-border); border-radius: var(--mat-radius); background: Canvas; color: CanvasText; }
+.doc-asset__stage--light { color-scheme: light; }
+.doc-asset__stage--dark { color-scheme: dark; }
+.doc-asset__stage figcaption { font-size: var(--mat-fs-xs); color: CanvasText; }
+.doc-asset__image { display: block; max-width: 100%; object-fit: contain; }
+.doc-asset__image:not(.doc-asset__image--icon) { height: 6rem; width: auto; }
+.doc-asset__facts { gap: var(--mat-space-2) var(--mat-space-5); }
+.doc-asset__checks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--mat-space-2); }
+.doc-asset__checks li { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--mat-space-2); }
+.doc-assets__faces td { vertical-align: top; }
+.doc-assets__specimen { display: block; font-size: var(--mat-fs-xl); line-height: var(--mat-lh-tight); overflow-wrap: anywhere; }
+.doc-assets__stack { display: inline-block; margin-right: var(--mat-space-3); }

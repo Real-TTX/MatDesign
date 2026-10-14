@@ -331,7 +331,7 @@ Do the same in an app's own CSS (the example above). `(pointer: fine)` is the de
 - **Inline styles and inline scripts:** none (`CODE-02`). A width that is data goes into a class or is set by the script (`data-value` on `mat-meter`).
 - **Decoration:** gradients, glow around buttons, blur behind bars, cards that lift, tinted icon tiles next to titles and upper-case spaced labels go too (`COLOR-06`, `SPACE-02`,
   `SPACE-03`, `SHELL-09`). The toolkit is flat on purpose; an app that keeps its own decoration next to it looks like two designs.
-- **Fonts:** the system stack, no web font (`TYPE-01`). **Icons:** the sprite, no icon font, no emoji (`ICON-01`).
+- **Fonts:** the system stack, no web font from another site (`TYPE-01`); the only exception are the font files of the company's own brand (6b, `IDENT-08`). **Icons:** the sprite, no icon font, no emoji (`ICON-01`).
 - **Classes:** the toolkit's `mat-*` for what it ships; the app's own classes keep the app's prefix (`CODE-02`, `CODE-04`).
 
 ## 6a. Keep up with the releases
@@ -352,6 +352,18 @@ the attributes `data-acme-...`, the events `acme:theme`, the keys of the storage
 that archive uses the prefix of the archive everywhere this document says `mat-`, `--mat-`, `data-mat-` or `MatUi`, and its own classes carry the app's prefix as before (`CODE-02`): a company that white-labels the toolkit and an app that
 copies the original must not share a page. Update by copying all the files of the archive again, never by renaming in the app: the next release has the same names. `node tools/matui-check.js <folder of the app>` reads the product and the file names from
 `<name>.manifest.json`, so it checks such a copy like any other (it names the product); a copy without a manifest is looked for under the names of MatUi itself. The version is the same number as the toolkit's: the manifest names the product.
+## 6c. The files of a brand: logo, favicon and fonts (`IDENT-08`)
+
+If the company that runs MatDesign has uploaded a logo, a favicon or fonts in the Studio (**Logo and fonts**), a release carries them in a folder `brand/` (and so does the archive `matui-<version>.zip`, under `matui/brand/`), each with its SHA-256 in `manifest.json` / `matui.manifest.json`.
+Without them the folder does not exist and nothing below applies. They are files of the company, copied with the app like the toolkit and never loaded from another site (`CODE-03`).
+
+- **Copy `brand/` next to `matui.css`.** The `@font-face` rules at the end of `matui.css` (`font-display: swap`) point to `brand/fonts/<name>`, **relative to the stylesheet**: when the app serves `matui.css` as `/matui.css`, the fonts are `/brand/fonts/<name>`. An app that loads the parts one by one
+  keeps `css/` and `brand/` side by side (`css/matui.apps.css` points to `../brand/fonts/<name>`). Copy the whole folder and the whole archive together; the names carry the first ten digits of the hash, so a new logo is a new name and a browser never keeps an old one.
+- **A font is used by name in a token of the brand.** The families are in `design.json` (`assets.fonts`) and on the Studio page; the brand sets `--mat-font` or `--mat-mono` to a stack that names the family and ends in a generic one (`"Acme Sans", system-ui, sans-serif`), and `matui.css` already has it.
+- **The logo and the favicon** are `design.json` → `assets.logo` (`file`, an optional `dark` variant, `alt`, `width`, `height`), `assets.wordmark`, `assets.favicon` and `assets.appIcon`. Show the logo with its alt text and, with a variant for dark surfaces, as two images the theme toggles
+  (`<img class="mat-brandmark mat-brandmark--light" ...><img class="mat-brandmark mat-brandmark--dark" ...>`; `matui.css` has the rules for both the explicit theme and the system); put the favicon in `<link rel="icon" type="image/svg+xml|image/png|image/x-icon" href="/brand/favicon-...">` and the app icon in `<link rel="apple-touch-icon">`.
+  Never write the alt text into the app by hand when it can come from `design.json`.
+- **Check the copy:** the SHA-256 of each file is in the manifest; `node tools/matui-check.js <folder of the app>` lists a file that was changed.
 
 ## 7. Check it
 
