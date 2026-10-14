@@ -58,7 +58,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
     public static readonly IReadOnlyList<string> StageNames = ["Check", "Version", "Build", "Publish", "Notify"];
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
-    private static readonly string[] ToolkitKinds = ["apps", "rules", "components"];
+    private static readonly string[] ToolkitKinds = ["apps", "rules", "components", Brand.Kind];
 
     private readonly object _running = new();
 
@@ -401,6 +401,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
     /// <summary>The design data of this moment as JSON: what an app or a tool can read without the site.</summary>
     private string DesignJson() => JsonSerializer.Serialize(new
     {
+        brand = new { design.Brand.Company, design.Brand.ShortName, design.Brand.Tagline, light = design.Brand.Values(false), dark = design.Brand.Values(true) },
         apps = design.Apps.Select(a => new { a.Id, a.Name, a.Tagline, a.Category, a.Accent, onAccent = a.OnAccent ?? "#ffffff", a.AccentText, a.Glyph, a.Port }),
         rules = design.Rules.Select(r => new { r.Id, r.Area, r.Title, r.Statement, level = r.Level.ToString(), r.Source, r.Why, r.Do, r.Dont, r.Check }),
         components = design.Components.Select(c => new

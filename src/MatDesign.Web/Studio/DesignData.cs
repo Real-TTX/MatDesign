@@ -40,7 +40,7 @@ public sealed class DesignData
 
     private sealed record Kind<T>(IReadOnlyList<T> All, IReadOnlyList<T> Items, IReadOnlyDictionary<string, ItemSource> Sources);
 
-    private sealed record Snapshot(Kind<MatApp> Apps, Kind<Rule> Rules, Kind<ComponentDoc> Components);
+    private sealed record Snapshot(Kind<MatApp> Apps, Kind<Rule> Rules, Kind<ComponentDoc> Components, Brand? Brand);
 
     /// <summary>A number that grows with every change made in the Studio.</summary>
     public long Version => Interlocked.Read(ref _version);
@@ -91,6 +91,17 @@ public sealed class DesignData
         => Components.Where(c => ComponentSourceOf(c.Id) != ItemSource.BuiltIn && c.Rules.Contains(ruleId, StringComparer.OrdinalIgnoreCase)).Select(c => c.Name).ToList();
 
     public ItemSource ComponentSourceOf(string id) => _snapshot.Components.Sources.GetValueOrDefault(id.ToLowerInvariant(), ItemSource.BuiltIn);
+
+    // ---- brand
+
+    /// <summary>The brand of the company: what the Studio saved, or the built-in brand (the demo data of the Mat family, no token changed).</summary>
+    public Brand Brand => _snapshot.Brand ?? Brand.BuiltIn;
+
+    /// <summary>The brand as the Studio saved it; null while it has never been saved (or was reset).</summary>
+    public Brand? StudioBrand => _snapshot.Brand;
+
+    /// <summary>Built in until the Studio saves a brand, changed after that (resetting brings the built-in brand back).</summary>
+    public ItemSource BrandSource => _snapshot.Brand is null ? ItemSource.BuiltIn : ItemSource.Changed;
 
     /// <summary>What the menu counts: the apps (for the palette), the rules and the components of the components page.</summary>
     public NavFacts NavFacts => new(Apps, Rules.Count, ComponentsIn(ComponentCatalog.Sections[0]).Count());
@@ -165,6 +176,7 @@ public sealed class DesignData
             (all, added) => all.FindLastIndex(r => r.Area == added.Area) is var last and >= 0 ? last + 1 : all.Count);
         var components = Merge(ComponentCatalog.All, Items<ComponentDoc>("components", ComponentValidator.Normalize, ComponentValidator.IsSafe, c => c.Id), c => c.Id, StringComparison.Ordinal,
             (all, added) => all.FindLastIndex(c => c.Group == added.Group) is var last and >= 0 ? last + 1 : all.Count);
-        return new Snapshot(apps, rules, components);
+        var brand = Items<Brand>(Brand.Kind, b => b with { Light = b.Light ?? new Dictionary<string, string>(), Dark = b.Dark ?? new Dictionary<string, string>() }, BrandValidator.IsSafe, _ => Brand.ItemId).FirstOrDefault();
+        return new Snapshot(apps, rules, components, brand);
     }
 }

@@ -187,6 +187,7 @@ public static class Navigation
         new("Maintain",
         [
             new("Apps", "/Studio/Apps", "apps"),
+            new("Brand", "/Studio/Brand", "palette"),
             new("Rules", "/Studio/Rules", "book"),
             new("Components", "/Studio/Components", "toggle"),
             new("Activity", "/Studio/Activity", "activity"),

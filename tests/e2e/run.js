@@ -5863,7 +5863,7 @@ function seenAt(page, selector) {
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
         const names = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').evaluateAll(els => els.map(e => { const c = e.cloneNode(true); c.querySelectorAll('.mat-nav__badge').forEach(b => b.remove()); return c.textContent.trim(); }));
-        expect(names, ['Overview', 'Apps', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'Versions'], 'items of the Studio menu');
+        expect(names, ['Overview', 'Apps', 'Brand', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'Versions'], 'items of the Studio menu');
       });
       await check('choosing the Studio in the switcher loads its overview (a start page); the other menus swap the items', async () => {
         await page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
@@ -6307,6 +6307,202 @@ function seenAt(page, selector) {
       expect(s.sideways, false, 'sideways scroll');
     });
     await phone.ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- the brand editor of the Studio (COLOR-11)
+  // It needs the administrator like the Studio block above (STUDIO_NAME / STUDIO_PASSWORD). The brand is reset at the end, so the files of the site are what they were.
+  console.log('\nBrand editor');
+  {
+    const name = process.env.STUDIO_NAME || 'admin';
+    const password = process.env.STUDIO_PASSWORD || 'studio-dev';
+    const { ctx, page } = await open(desktopOptions, '/Studio/Login');
+    if (await page.locator('input[type="password"]').count() === 0) {
+      console.log('  --    the Studio is off on this site (no data directory): the brand checks are skipped');
+      await ctx.close();
+    } else {
+      await page.fill('#Name', name);
+      await page.fill('#Password', password);
+      await page.click('.mat-auth__card button[type="submit"]');
+      await page.waitForURL('**/Studio**');
+      const css = async () => (await page.request.get(BASE + '/ui/matui.css')).text();
+      const preview = (prop) => page.evaluate((p) => getComputedStyle(document.querySelector('[data-brand-preview]')).getPropertyValue(p).trim(), prop);
+      const setValue = async (id, value) => { await page.fill('#' + id, value); };
+      const save = async () => { await page.click('.mat-btn-row button.mat-btn--primary'); await page.waitForLoadState('networkidle'); };
+
+      await check('the brand page has the shell, one h1, a row for every token in its group, a picker for a colour and the preview beside the form', async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        expect(await page.locator('main h1').count(), 1, 'h1');
+        expect(await page.textContent('main h1'), 'Brand', 'the title');
+        expect(await page.locator('a.mat-nav__item.is-active[href="/Studio/Brand"]').count(), 1, 'the menu item');
+        const rows = await page.locator('[data-brand-row]').count();
+        expectTrue(rows > 60, 'rows: ' + rows);
+        expect(await page.locator('#light-mat-bg-picker').count(), 1, 'a colour has a picker');
+        expect(await page.locator('#light-mat-radius-picker').count(), 0, 'a length has none');
+        expect(await page.locator('form [data-brand-preview]').count(), 0, 'the preview is not in the form');
+        const sizes = await page.evaluate(() => ({ form: document.querySelector('.doc-brand__main').getBoundingClientRect().right, side: document.querySelector('.doc-brand__side').getBoundingClientRect().left }));
+        expectTrue(sizes.side >= sizes.form, 'the preview is beside the form on a wide window');
+        expectTrue((await page.locator('[data-brand-summary]').textContent()).includes('Passes'), 'the summary of the toolkit own values');
+      });
+      await check('a value typed in a field is on the preview at once: a radius, a font size, a font stack', async () => {
+        const before = await page.evaluate(() => getComputedStyle(document.querySelector('[data-brand-preview] .mat-btn--primary')).borderTopLeftRadius);
+        expect(before, '6px', 'the radius of the toolkit');
+        await setValue('light-mat-radius', '14px');
+        expect(await preview('--mat-radius'), '14px', 'the property on the preview');
+        expect(await page.evaluate(() => getComputedStyle(document.querySelector('[data-brand-preview] .mat-btn--primary')).borderTopLeftRadius), '14px', 'a button of the preview');
+        expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mat-radius').trim()), '6px', 'the page itself did not change');
+        await setValue('light-mat-fs-md', '1.125rem');
+        expect(await page.evaluate(() => getComputedStyle(document.querySelector('.doc-brand-preview__text')).fontSize), '18px', 'the body text of the preview');
+        await setValue('light-mat-font', 'Georgia, serif');
+        expectTrue((await page.evaluate(() => getComputedStyle(document.querySelector('.doc-brand-preview__text')).fontFamily)).startsWith('Georgia'), 'the font');
+      });
+      await check('a colour: the picker and the field stay in step, the preview wears it, and nothing in the preview has a style attribute in the markup', async () => {
+        await setValue('light-mat-bg', '#ffeecc');
+        expect(await page.inputValue('#light-mat-bg-picker'), '#ffeecc', 'the picker follows the field');
+        expect(await page.evaluate(() => getComputedStyle(document.querySelector('[data-brand-preview]')).backgroundColor), 'rgb(255, 238, 204)', 'the background of the preview');
+        await page.fill('#light-mat-bg-picker', '#cceeff');
+        expect(await page.inputValue('#light-mat-bg'), '#cceeff', 'the field follows the picker');
+        // an alpha is kept when the colour is changed with the picker
+        await setValue('light-mat-border', 'rgba(10, 20, 30, 0.4)');
+        await page.fill('#light-mat-border-picker', '#336699');
+        expect(await page.inputValue('#light-mat-border'), 'rgba(51, 102, 153, 0.4)', 'the alpha stays');
+        const styled = await page.evaluate(() => document.querySelectorAll('[data-brand-preview] [style]').length);
+        expectTrue(styled === 0, 'a descendant of the preview has a style attribute');
+      });
+      await check('the contrast is worked out while typing: a text colour under AA fails and says so, a good one passes again', async () => {
+        await setValue('light-mat-text', '#cccccc');
+        await page.waitForFunction(() => document.querySelector('[data-brand-summary]').textContent.includes('below AA'));
+        const row = page.locator('[data-pairing="0"] [data-brand-result="light"]');
+        expectTrue((await row.textContent()).includes('Fails'), 'the first pairing: ' + await row.textContent());
+        expectTrue((await page.textContent('[data-brand-summary]')).includes('Text on the page'), 'the summary names the pairing');
+        // the same pairing in dark is not affected by the light value
+        expectTrue((await page.locator('[data-pairing="0"] [data-brand-result="dark"]').textContent()).includes('Passes'), 'dark');
+        await setValue('light-mat-text', '#111111');
+        await setValue('light-mat-bg', '#ffffff');
+        await page.waitForFunction(() => document.querySelector('[data-brand-summary]').textContent.includes('Passes'));
+      });
+      await check('the dark button shows the dark values on the preview, and a value that is not of its kind is marked and ignored', async () => {
+        await page.click('[data-brand-mode="dark"]');
+        expect(await page.getAttribute('[data-brand-mode="dark"]', 'aria-pressed'), 'true', 'pressed');
+        expect(await page.evaluate(() => getComputedStyle(document.querySelector('[data-brand-preview]')).backgroundColor), 'rgb(21, 21, 20)', 'the dark page of the toolkit');
+        await setValue('dark-mat-bg', '#000000');
+        expect(await page.evaluate(() => getComputedStyle(document.querySelector('[data-brand-preview]')).backgroundColor), 'rgb(0, 0, 0)', 'the dark value');
+        await page.click('[data-brand-mode="light"]');
+        expect(await page.evaluate(() => getComputedStyle(document.querySelector('[data-brand-preview]')).backgroundColor), 'rgb(255, 255, 255)', 'back to light');
+        await setValue('light-mat-radius', 'big');
+        expect(await page.getAttribute('#light-mat-radius', 'aria-invalid'), 'true', 'marked');
+        expect(await preview('--mat-radius'), '6px', 'not applied: the toolkit value stays');
+        await setValue('light-mat-radius', '14px');
+        expect(await page.getAttribute('#light-mat-radius', 'aria-invalid'), null, 'cleared');
+      });
+      await check('the reset button of a token empties its fields and the preview goes back', async () => {
+        await page.click('[data-brand-row][data-token="--mat-radius"] [data-brand-reset]');
+        expect(await page.inputValue('#light-mat-radius'), '', 'the field');
+        expect(await preview('--mat-radius'), '6px', 'the preview');
+      });
+      await check('a field and a button are reached with the keyboard, and Enter in the preview does not submit the editor', async () => {
+        await page.focus('#light-mat-radius');
+        await page.keyboard.type('10px');
+        expect(await preview('--mat-radius'), '10px', 'typed');
+        await page.keyboard.press('Tab');
+        expectTrue(await page.evaluate(() => document.activeElement.hasAttribute('data-brand-reset')), 'Tab leads on to the reset button');
+        await page.focus('#bp-name');
+        await page.keyboard.press('Enter');
+        expectTrue(page.url().endsWith('/Studio/Brand'), 'the editor was submitted: ' + page.url());
+        await page.click('[data-brand-row][data-token="--mat-radius"] [data-brand-reset]');
+      });
+      await check('a failing contrast is refused on save with the numbers, at the page, and nothing reaches matui.css', async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        await setValue('light-mat-text', '#c8c8c8');
+        await save();
+        expectTrue(page.url().endsWith('/Studio/Brand'), 'url ' + page.url());
+        const alert = await page.textContent('[data-validation-summary]');
+        expectTrue(alert.includes('Please check the brand.') && alert.includes('Text on the page (light)') && alert.includes(':1, needs 4.50:1'), 'the message: ' + alert.trim().slice(0, 200));
+        expect(await page.inputValue('#light-mat-text'), '#c8c8c8', 'the form keeps what was typed');
+        expectTrue(!(await css()).includes('#c8c8c8'), 'the colour is in matui.css');
+      });
+      await check('a radius over 24 px is refused at its field, with the reason', async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        await setValue('light-mat-radius', '40px');
+        await save();
+        const field = await page.locator('.mat-field.is-invalid:has(#light-mat-radius) .mat-error').textContent();
+        expectTrue(field.includes('above the most'), 'the message: ' + field);
+        expectTrue(!(await css()).includes('--mat-radius: 40px'), 'in matui.css');
+      });
+      await check('a good brand is saved, shows a toast, and reaches /ui/matui.css: light on :root, dark twice and identical', async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        await setValue('Input_Company', 'Acme Anvils');
+        await setValue('light-mat-radius', '12px');
+        await setValue('light-mat-bg', '#fafaf7');
+        await setValue('dark-mat-bg', '#0c0c0b');
+        await save();
+        await page.waitForSelector('.mat-toast');
+        expectTrue((await page.textContent('.mat-toast')).includes('The brand was saved.'), 'the toast');
+        expect(await page.inputValue('#Input_Company'), 'Acme Anvils', 'the company');
+        expect(await page.inputValue('#light-mat-radius'), '12px', 'the saved radius');
+        const text = await css();
+        expectTrue(text.includes(':root {\n  --mat-bg: #fafaf7;\n  --mat-radius: 12px;\n}'), 'light block');
+        const dark = ':root[data-theme="dark"] {\n  --mat-bg: #0c0c0b;\n}';
+        const system = '@media (prefers-color-scheme: dark) {\n  :root:not([data-theme="light"]):not([data-theme="dark"]) {\n    --mat-bg: #0c0c0b;\n  }\n}';
+        expectTrue(text.includes(dark), 'dark block');
+        expectTrue(text.includes(system), 'system dark block');
+      });
+      await check('the site wears the brand: the radius of a button on a page of the Studio is the brand radius', async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        expect(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--mat-radius').trim()), '12px', 'the token');
+        expect(await page.evaluate(() => getComputedStyle(document.querySelector('.mat-btn--primary')).borderTopLeftRadius), '12px', 'a button');
+      });
+      await check('the history of the brand lists the revisions and a restore of the first brings the first values back', async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        await setValue('light-mat-radius', '16px');
+        await save();
+        await page.click('a.mat-btn:has-text("History")');
+        await page.waitForURL('**/Studio/History**');
+        // the volume may hold revisions of earlier runs: the two newest are the ones of this check
+        const numbers = (await page.locator('section[aria-labelledby="revisions-title"] tbody tr td:first-child .doc-rule-id').allTextContents()).map(Number).sort((a, b) => b - a);
+        expectTrue(numbers.length >= 2, 'revisions: ' + numbers);
+        const diff = await page.textContent('section[aria-labelledby="changes-title"] .mat-table-wrap');
+        expectTrue(diff.includes('light.--mat-radius') && diff.includes('12px') && diff.includes('16px'), 'the diff: ' + diff.trim().slice(0, 200));
+        await page.click(`button[aria-label="Restore revision ${numbers[1]}"]`);
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForSelector('.mat-toast');
+        expect(await page.locator('section[aria-labelledby="revisions-title"] tbody tr').count(), numbers.length + 1, 'revisions after the restore');
+        const text = await css();
+        expectTrue(text.includes('--mat-radius: 12px;') && !text.includes('--mat-radius: 16px;'), 'the restored radius in matui.css');
+      });
+      await check('Reset to built-in asks first and takes the brand out of matui.css again', async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        await page.click('.mat-btn--danger[data-confirm]');
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForSelector('.mat-toast');
+        expectTrue(!(await css()).includes('Brand set in the Studio'), 'the brand is still in matui.css');
+        expect(await page.inputValue('#Input_Company'), 'Mat', 'the built-in company');
+      });
+      await ctx.close();
+
+      const phone = await open(phoneOptions, '/Studio/Login');
+      await phone.page.fill('#Name', name);
+      await phone.page.fill('#Password', password);
+      await phone.page.click('.mat-auth__card button[type="submit"]');
+      await phone.page.waitForURL('**/Studio**');
+      await check('on a phone the brand page does not scroll sideways, its rows are cards with their labels and the inputs are 44 px high', async () => {
+        await phone.page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        const size = await phone.page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+        expectTrue(size.page <= size.window, `the page is ${size.page} px wide in a window of ${size.window} px`);
+        const row = await phone.page.evaluate(() => {
+          const tr = document.querySelector('[data-brand-row]');
+          const input = tr.querySelector('input.mat-input');
+          const picker = tr.querySelector('input[type="color"]');
+          return { display: getComputedStyle(tr).display, label: getComputedStyle(tr.querySelector('td:nth-child(3)'), '::before').content, inputH: input.getBoundingClientRect().height, pickerH: picker.getBoundingClientRect().height };
+        });
+        expect(row.display, 'block', 'a row is a card');
+        expect(row.label, '"Light"', 'the label of a cell');
+        expectTrue(row.inputH >= 43.5 && row.pickerH >= 43.5, `targets: ${row.inputH} and ${row.pickerH} px`);
+        await phone.page.fill('#light-mat-radius', '14px');
+        const radius = await phone.page.evaluate(() => getComputedStyle(document.querySelector('[data-brand-preview]')).getPropertyValue('--mat-radius').trim());
+        expect(radius, '14px', 'the preview on a phone');
+      });
+      await phone.ctx.close();
+    }
   }
 
   // ---------------------------------------------------------------------------------------------------- the end

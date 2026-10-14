@@ -40,6 +40,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 - Number stepper: `mat-stepper` with `data-stepper` (`FORM-20`).
 - Slider and range slider with two thumbs: `mat-slider` with `data-slider` (`FORM-17`).
 - Code input: `mat-otp` with `data-otp`, for one-time codes and PINs (`FORM-19`).
+- A brand in `matui.css` (`COLOR-11`): the tokens a company sets in the MatDesign Studio (colours, radii, spacing, sizes, fonts, line heights, motion) are written after everything else in the apps part, light on `:root` and the dark set twice and identical (`:root[data-theme="dark"]` and `prefers-color-scheme: dark`), within limits (touch targets of 44 px, a body text of 14 px or more, a line height of 1.2 to 2, radii of 0 to 24 px) and checked for AA before they are saved or released. A brand that sets nothing writes nothing, so `matui.css` is byte-identical to before: nothing to do for an app but copy the files.
 
 ### Changed
 
