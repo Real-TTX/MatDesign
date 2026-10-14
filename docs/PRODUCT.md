@@ -20,6 +20,8 @@ branding, its own CI/CD for it and its own toolkit**. Mat is the first company t
   the only thing the program knows.
 - **The demo data are the current data.** The Mat apps, accents, rules and component documentation as they are now become the demo template that a new company can
   start from, look at and change. Nothing of it is thrown away or rewritten for the product; a new company's own data replaces it, or is built on top of it.
+- **A company has a brand and many apps.** The brand holds the values for the whole company; each app inherits them and may override single values (its own accent, for
+  instance). The order is: the toolkit's defaults, then the brand, then the app (`[data-app]`), then a colour scheme the user chose.
 - **The Studio edits data, never free CSS.** A brand is a set of values for tokens that the toolkit documents, each with a type and limits, checked on save. The files of
   the toolkit stay reviewed and tested in the repository (docs/STUDIO.md, "What it does not do").
 - **The mechanics are shared, the look is data.** Controls, scripts and tests are the same for everybody; what differs is the tokens, the assets and the names.
