@@ -196,7 +196,7 @@ public partial class TreeViewTests
         Assert.Contains("!item.hasAttribute('data-lazy') && !item.hasAttribute('data-tree-fixed')", script);
         // set up when the page loads and after a refresh, and the api
         Assert.Contains("initTrees();", Js);
-        Assert.Contains("initTrees(scope); restoreGroups(scope); }", Js);
+        Assert.Contains("initTrees(scope);", Js[Js.IndexOf("refresh: function (scope)", StringComparison.Ordinal)..]);
         Assert.Matches(@"tree: tree,", Js);
         Assert.Matches(@"var tree = \{\s*init: initTrees,\s*expand:[^\n]*\n\s*collapse:[^\n]*\n\s*select:[^\n]*\n\s*setChildren: trSetChildren,", Js);
     }

@@ -42,7 +42,9 @@ public partial class RatingTests
     {
         var start = Js.IndexOf("var RT_TEXT", StringComparison.Ordinal);
         Assert.True(start > 0, "the rating section of the script was not found");
-        var end = Js.IndexOf("// a meter is filled by data", start, StringComparison.Ordinal);
+        // to the heading of the next section (other controls follow it in the file)
+        var end = Js.IndexOf("\n  // ------", start, StringComparison.Ordinal);
+        Assert.True(end > start, "the end of the rating section of the script was not found");
         return Js[start..end];
     }
 

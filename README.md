@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **122 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **126 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -53,12 +53,12 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   so an app that sets none sees no change; the list, with types and defaults, is read from the CSS
 
 **The documentation**
-- **66 components with 201 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
+- **68 components with 236 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
   it uses and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined
 - **Layout** (twelve columns, breakpoints) and **utility classes**, the **page patterns**, the **foundations**
-  (colour, type, space, motion, 110 icons)
+  (colour, type, space, motion, 112 icons)
 - A **builder** that checks an accent colour, a **palette check** for the 22 apps and an **audit** of how close
   each app is to the rules
 
