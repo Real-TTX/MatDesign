@@ -431,3 +431,61 @@ input[type="file"].mat-input { padding: 6px; }
   .mat-slider__fill { background: Highlight; }
   .mat-slider__track, .mat-slider__bubble { border: 1px solid CanvasText; }
 }
+
+/* ---- Rating (FORM-22): stars, hearts or dots to choose a value, or to show an average ----
+   Interactive: <fieldset class="mat-field mat-fieldset mat-rating" data-rating> with a native radio and its label per value, so a form posts it and, without the
+   script, it is a row of radio buttons with their labels. The script marks it is-ready, which makes the radios and labels invisible (not hidden: they keep the focus,
+   the keyboard and the screen reader) and draws the shapes over them. Read-only: .mat-rating--readonly with data-value, which the script draws.
+   The shapes are two layers of the same row: the outline of every shape, and over it the filled shapes, clipped to --mat-rating-fill (a share of the whole row, which
+   the script writes: 70% is three and a half of five). Every cell has the same width, so the share is exact; half of a cell is the middle of its shape.
+   --mat-rating-max is the number of shapes. Sizes mat-rating--sm and --lg; the shape is mat-rating--heart or --dot (the star is the default). */
+.mat-rating { --mat-rating-icon: 22px; --mat-rating-h: var(--mat-control-h); --mat-rating-w: var(--mat-rating-h); --mat-rating-fill: 0%; --mat-rating-max: 5; position: relative; min-width: 0; }
+.mat-rating--sm { --mat-rating-icon: 16px; --mat-rating-h: var(--mat-control-h-sm); }
+.mat-rating--lg { --mat-rating-icon: 30px; --mat-rating-h: var(--mat-control-h-lg); }
+/* what is only shown is as high as its shape (a small gap around it), not as high as a control */
+.mat-rating--readonly { --mat-rating-h: calc(var(--mat-rating-icon) + 4px); --mat-rating-w: var(--mat-rating-h); }
+.mat-rating--readonly.mat-rating--sm { --mat-rating-icon: 14px; }
+
+/* Without the script: the radio buttons of the browser in a row, each with its label */
+fieldset.mat-rating:not(.is-ready) { display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--mat-space-1) var(--mat-space-4); }
+fieldset.mat-rating:not(.is-ready) > .mat-hint, fieldset.mat-rating:not(.is-ready) > .mat-error { flex: 0 0 100%; }
+.mat-rating__input { margin: 0 var(--mat-space-1) 0 0; accent-color: var(--mat-accent); }
+.mat-rating__label { font-size: var(--mat-fs-sm); color: var(--mat-text); }
+
+/* With the script: the radios and their labels are invisible and stay where they are */
+.mat-rating.is-ready > .mat-rating__input, .mat-rating.is-ready > .mat-rating__label {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; opacity: 0;
+}
+
+.mat-rating__body, .mat-rating--readonly { display: inline-flex; align-items: center; gap: var(--mat-space-2); max-width: 100%; vertical-align: middle; }
+.mat-rating__stars { position: relative; display: inline-block; max-width: 100%; line-height: 0; touch-action: manipulation; border-radius: var(--mat-radius); }
+.mat-rating.is-ready:not(.mat-rating--readonly) .mat-rating__stars { cursor: pointer; }
+/* the first shape lines up with the label above it, not with the edge of its target */
+.mat-rating__stars { margin-inline-start: calc((var(--mat-rating-w) - var(--mat-rating-icon)) / -2); }
+.mat-rating__layer { display: grid; grid-template-columns: repeat(var(--mat-rating-max), minmax(0, var(--mat-rating-w))); }
+.mat-rating__layer--empty { color: var(--mat-text-muted); }
+.mat-rating__layer--fill { position: absolute; inset: 0; clip-path: inset(0 calc(100% - var(--mat-rating-fill)) 0 0); pointer-events: none; color: var(--mat-accent); }
+.mat-rating__cell { display: flex; align-items: center; justify-content: center; height: var(--mat-rating-h); min-width: 0; }
+.mat-rating__icon { width: var(--mat-rating-icon); height: var(--mat-rating-icon); stroke-width: 1.75; vertical-align: top; }
+.mat-rating__layer--fill .mat-rating__icon { fill: currentColor; }
+/* a heart and a dot fill their square more than a star does: drawn a little smaller they look as large */
+.mat-rating--heart .mat-rating__icon { width: calc(var(--mat-rating-icon) * .9); height: calc(var(--mat-rating-icon) * .9); }
+.mat-rating--dot .mat-rating__icon { width: calc(var(--mat-rating-icon) * .8); height: calc(var(--mat-rating-icon) * .8); }
+
+.mat-rating__value { min-width: 3ch; white-space: nowrap; font-size: var(--mat-fs-sm); font-weight: 600; font-variant-numeric: tabular-nums; color: var(--mat-text); }
+.mat-rating__count { font-size: var(--mat-fs-sm); color: var(--mat-text-muted); font-variant-numeric: tabular-nums; }
+.mat-rating--lg .mat-rating__value, .mat-rating--lg .mat-rating__count { font-size: var(--mat-fs-md); }
+.mat-rating--readonly .mat-rating__value { min-width: 0; }
+
+/* The keyboard focus is on a radio, which is invisible: the ring is drawn around the shapes */
+.mat-rating:has(.mat-rating__input:focus-visible) .mat-rating__stars { box-shadow: var(--mat-focus-ring); }
+/* An error at the field: the empty shapes take the colour of the error (the message says what is wrong) */
+.mat-field.is-invalid .mat-rating__layer--empty { color: var(--mat-danger); }
+/* Disabled (a fieldset can disable the radios): dimmed, and the pointer does nothing */
+.mat-rating:disabled .mat-rating__stars { opacity: .5; cursor: not-allowed; }
+.mat-rating:disabled .mat-rating__value, .mat-rating:disabled .mat-rating__count { color: var(--mat-text-muted); }
+
+@media (forced-colors: active) {
+  .mat-rating__layer--fill { color: Highlight; }
+  .mat-rating__layer--empty { color: CanvasText; }
+}

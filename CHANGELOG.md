@@ -40,6 +40,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 - Number stepper: `mat-stepper` with `data-stepper` (`FORM-20`).
 - Slider and range slider with two thumbs: `mat-slider` with `data-slider` (`FORM-17`).
 - Code input: `mat-otp` with `data-otp`, for one-time codes and PINs (`FORM-19`).
+- Rating: `mat-rating` with `data-rating`, stars (or `mat-rating--heart`, `mat-rating--dot`) to give a value, a group of native radio buttons in a fieldset that the script draws as shapes, with a preview under the pointer, half steps (twice the radios), `data-clearable`, `data-show-value`, the sizes `--sm` and `--lg` and the event `mat:rating-change`; and, with `mat-rating--readonly` and `data-value`, an average that is shown, partly filled, with `data-count` and a label in words (`FORM-22`). `MatUi.rating.get/set/init`, texts `data-rt-<name>` on `<html>`. Two new icons in the sprite, `heart` and `circle`. Nothing to do for an app that does not use it but copy the files.
 
 ### Changed
 

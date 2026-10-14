@@ -6309,6 +6309,252 @@ function seenAt(page, selector) {
     await phone.ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- rating (FORM-22)
+  console.log('\nRating');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#rating');
+    await page.evaluate(() => document.getElementById('rating').scrollIntoView());
+    const group = id => `fieldset.mat-rating:has(#${id})`;
+    // where the pointer goes to be on a place of the row: a fraction (0 to 1) of the width of the shapes, in the middle of their height
+    const spot = async (id, fraction) => {
+      await page.locator(`${group(id)} .mat-rating__stars`).scrollIntoViewIfNeeded();
+      const b = await page.locator(`${group(id)} .mat-rating__stars`).boundingBox();
+      return { x: b.x + b.width * fraction, y: b.y + b.height / 2 };
+    };
+    const state = id => page.evaluate(sel => {
+      const g = document.querySelector(sel);
+      const on = g.querySelector('.mat-rating__input:checked');
+      const v = g.querySelector('.mat-rating__value');
+      return { checked: on ? on.id : null, fill: g.style.getPropertyValue('--mat-rating-fill'), text: v ? v.textContent : null, previewing: g.classList.contains('is-previewing') };
+    }, group(id));
+    await page.evaluate(() => {
+      window.__rt = [];
+      document.addEventListener('mat:rating-change', e => window.__rt.push({ id: e.target.querySelector('.mat-rating__input').name, value: e.detail.value, same: e.detail.rating === e.target }));
+    });
+    const events = () => page.evaluate(() => window.__rt);
+
+    await check('every rating is wired: the radios are invisible but stay in place and focusable, the shapes are drawn, a display has role img and a label in words', async () => {
+      expect(await page.locator('.mat-rating.is-ready').count(), 17, 'ratings that were wired');
+      const radio = await page.evaluate(() => {
+        const i = document.getElementById('rt-support-3'), r = i.getBoundingClientRect(), s = getComputedStyle(i);
+        i.focus();
+        return { w: Math.round(r.width), h: Math.round(r.height), display: s.display, focused: document.activeElement === i };
+      });
+      expectTrue(radio.w <= 2 && radio.h <= 2, 'the radio is one pixel');
+      expect(radio.display === 'none', false, 'display none');
+      expect(radio.focused, true, 'a radio that cannot be focused');
+      expect(await page.locator('#rating .mat-rating:not(.mat-rating--readonly) .mat-rating__stars').count(), 8, 'rows of shapes');
+      expect(await page.locator('#rating .mat-rating--readonly[role="img"]').count(), 9, 'displays with role img');
+      expect(await page.getAttribute('#rating .mat-rating:not(.mat-rating--readonly) .mat-rating__stars', 'aria-hidden'), 'true', 'the shapes are hidden from a screen reader');
+      expect(await page.locator(`${group('rt-support-1')} .mat-rating__cell`).count(), 10, 'five cells in each of the two layers');
+    });
+
+    await check('the pointer previews the value it is on, with the text beside the shapes, and the preview goes when it leaves', async () => {
+      const at = await spot('rt-support-1', 0.7);
+      await page.mouse.move(at.x, at.y);
+      expect(await state('rt-support-1'), { checked: null, fill: '80%', text: '4', previewing: true }, 'hovering the fourth star');
+      const edge = await spot('rt-support-1', 0.02);
+      await page.mouse.move(edge.x, edge.y);
+      expect((await state('rt-support-1')).fill, '20%', 'the first star at its left edge');
+      await page.mouse.move(5, 5);
+      expect(await state('rt-support-1'), { checked: null, fill: '0%', text: 'Not rated', previewing: false }, 'after leaving');
+      expect((await events()).length, 0, 'a preview is not a choice');
+    });
+
+    await check('a click chooses the value, checks the radio, and tells the page', async () => {
+      const at = await spot('rt-support-1', 0.3);
+      await page.mouse.click(at.x, at.y);
+      await page.mouse.move(5, 5);
+      expect(await state('rt-support-1'), { checked: 'rt-support-2', fill: '40%', text: '2', previewing: false }, 'after a click on the second star');
+      expect(await events(), [{ id: 'support', value: 2, same: true }], 'mat:rating-change');
+      // a click on the chosen one does not clear it where nothing may be cleared
+      await page.mouse.click(at.x, at.y);
+      expect((await state('rt-support-1')).checked, 'rt-support-2', 'not clearable');
+      expect((await events()).length, 1, 'no second event');
+    });
+
+    await check('the arrow keys move and choose like radios, the ring is around the shapes, Tab leaves on one stop', async () => {
+      await page.focus('#rt-support-2');
+      await page.keyboard.press('ArrowRight');
+      expect(await state('rt-support-1'), { checked: 'rt-support-3', fill: '60%', text: '3', previewing: false }, 'ArrowRight');
+      await page.keyboard.press('ArrowLeft');
+      await page.keyboard.press('ArrowLeft');
+      expect((await state('rt-support-1')).checked, 'rt-support-1', 'ArrowLeft twice');
+      expect((await events()).slice(-1)[0], { id: 'support', value: 1, same: true }, 'the last event');
+      const ring = await page.evaluate(() => getComputedStyle(document.querySelector('fieldset.mat-rating:has(#rt-support-1) .mat-rating__stars')).boxShadow);
+      expectTrue(ring && ring !== 'none', 'no focus ring around the shapes');
+      // five radios are one stop of the Tab key
+      await page.keyboard.press('Tab');
+      expect(await page.evaluate(() => !!document.activeElement.closest('fieldset.mat-rating:has(#rt-support-1)')), false, 'Tab leaves the group after one stop');
+      await page.keyboard.press('Shift+Tab');
+      expect(await page.evaluate(() => document.activeElement.id), 'rt-support-1', 'Shift+Tab comes back to the chosen radio');
+    });
+
+    await check('with data-clearable a click on the chosen value clears it (to the radio "no rating"), the keys reach it too', async () => {
+      expect((await state('rt-overall-1')).checked, 'rt-overall-3', 'it starts at 3');
+      const at = await spot('rt-overall-1', 0.5);
+      await page.mouse.click(at.x, at.y);
+      await page.mouse.move(5, 5);
+      expect(await state('rt-overall-1'), { checked: 'rt-overall-0', fill: '0%', text: 'Not rated', previewing: false }, 'cleared');
+      expect((await events()).slice(-1)[0], { id: 'overall', value: 0, same: true }, 'the event of the clearing');
+      await page.mouse.click(at.x, at.y);
+      await page.mouse.move(5, 5);
+      expect((await state('rt-overall-1')).checked, 'rt-overall-3', 'chosen again');
+    });
+
+    await check('half steps: the left half of a shape is the half value, the right half the whole one', async () => {
+      expect(await state('rt-taste-1'), { checked: 'rt-taste-3_5', fill: '70%', text: '3.5', previewing: false }, 'it starts at 3.5');
+      const left = await spot('rt-taste-1', 1.25 / 5);
+      await page.mouse.move(left.x, left.y);
+      expect((await state('rt-taste-1')).text, '1.5', 'preview of the left half of the second star');
+      await page.mouse.click(left.x, left.y);
+      expect(await state('rt-taste-1'), { checked: 'rt-taste-1_5', fill: '30%', text: '1.5', previewing: false }, 'chosen');
+      const right = await spot('rt-taste-1', 1.75 / 5);
+      await page.mouse.click(right.x, right.y);
+      await page.mouse.move(5, 5);
+      expect(await state('rt-taste-1'), { checked: 'rt-taste-2', fill: '40%', text: '2', previewing: false }, 'the right half');
+      await page.focus('#rt-taste-2');
+      await page.keyboard.press('ArrowRight');
+      expect((await state('rt-taste-1')).checked, 'rt-taste-2_5', 'a key moves by a half');
+    });
+
+    await check('the filled part is the share of the row: the shapes it covers are the ones of the value, in the accent', async () => {
+      const r = await page.evaluate(() => {
+        const g = document.querySelector('fieldset.mat-rating:has(#rt-support-1)');
+        const fill = g.querySelector('.mat-rating__layer--fill'), empty = g.querySelector('.mat-rating__layer--empty');
+        const st = g.querySelector('.mat-rating__stars').getBoundingClientRect(), f = fill.getBoundingClientRect(), e = empty.getBoundingClientRect();
+        return { sameBox: Math.abs(f.width - e.width) < 1 && Math.abs(f.left - e.left) < 1, boxWidth: Math.round(st.width), cell: Math.round(g.querySelector('.mat-rating__cell').getBoundingClientRect().width), fillColour: getComputedStyle(fill).color, emptyFill: getComputedStyle(empty.querySelector('svg')).fill, filledFill: getComputedStyle(fill.querySelector('svg')).fill };
+      });
+      expect(r.sameBox, true, 'both layers cover the same box');
+      expect(r.boxWidth, r.cell * 5, 'five equal cells');
+      expect(r.fillColour, (await accentOf(page)).accent, 'the filled shapes are the accent');
+      expect(r.emptyFill, 'none', 'an empty shape is an outline');
+      expect(r.filledFill !== 'none', true, 'a filled shape is filled');
+    });
+
+    await check('a display is partly filled by its value, says it in words (with the count) and writes the number beside it', async () => {
+      const d = await page.evaluate(() => Array.from(document.querySelectorAll('#rating .mat-rating--readonly')).map(e => ({
+        fill: e.style.getPropertyValue('--mat-rating-fill'), label: e.getAttribute('aria-label'), value: (e.querySelector('.mat-rating__value') || {}).textContent || null, count: (e.querySelector('.mat-rating__count') || {}).textContent || null,
+      })));
+      expect(d[0], { fill: '90%', label: 'Rated 4.5 out of 5, 128 ratings', value: '4.5', count: '(128)' }, 'the average');
+      expect(d[1], { fill: '74%', label: 'Rated 3.7 out of 5, 1,284 ratings', value: '3.7', count: '(1,284)' }, 'a value that is not a half');
+      expect(d[2].label, 'Rated 5 out of 5, 1 rating', 'one rating');
+      expect(d[3], { fill: '0%', label: 'Not rated', value: 'Not rated', count: null }, 'no value');
+      expect(d[4], { fill: '70%', label: 'Rated 3.5 out of 5', value: null, count: null }, 'hearts without a number');
+      expect(d[5].fill, '70%', 'seven of ten');
+      expect(d[5].label, 'Rated 7 out of 10', 'ten dots');
+      // a display is not interactive
+      expect(await page.locator('#rating .mat-rating--readonly input').count(), 0, 'radios in a display');
+    });
+
+    await check('a group that a fieldset disables ignores the pointer', async () => {
+      const before = await state('rt-closed-1');
+      const at = await spot('rt-closed-1', 0.9);
+      await page.mouse.move(at.x, at.y);
+      expect((await state('rt-closed-1')).previewing, false, 'no preview');
+      await page.mouse.click(at.x, at.y);
+      expect(await state('rt-closed-1'), before, 'no choice');
+      expect(await page.evaluate(() => getComputedStyle(document.querySelector('fieldset.mat-rating:has(#rt-closed-1) .mat-rating__stars')).opacity), '0.5', 'dimmed');
+    });
+
+    await check('in a form: required with the message at the field, the chosen value is posted, the message goes with a choice', async () => {
+      await page.evaluate(() => {
+        const f = document.querySelector('form:has(#rt-req-1)');
+        window.__rtSent = [];
+        f.addEventListener('submit', e => { const sent = !e.defaultPrevented; e.preventDefault(); if (sent) { window.__rtSent.push(new FormData(f).get('rating')); } });
+      });
+      await page.click('form:has(#rt-req-1) button[type="submit"]');
+      expect(await page.evaluate(() => window.__rtSent), [], 'nothing is sent without a rating');
+      expect(await page.textContent('form:has(#rt-req-1) .mat-error'), 'Please choose a rating.', 'the message');
+      expect(await page.evaluate(() => document.querySelector('fieldset:has(#rt-req-1)').classList.contains('is-invalid')), true, 'the field is marked');
+      expect(await page.evaluate(() => document.activeElement.name), 'rating', 'the focus is in the group');
+      const empty = await page.evaluate(() => getComputedStyle(document.querySelector('fieldset:has(#rt-req-1) .mat-rating__layer--empty')).color);
+      expect(contrastOf(empty, 'rgb(255, 255, 255)') > 1.5, true, 'the empty shapes have a colour of their own');
+      const at = await spot('rt-req-1', 0.7);
+      await page.mouse.click(at.x, at.y);
+      expect(await page.textContent('form:has(#rt-req-1) .mat-error'), '', 'the message goes with the choice');
+      await page.click('form:has(#rt-req-1) button[type="submit"]');
+      expect(await page.evaluate(() => window.__rtSent), ['4'], 'the value that is posted');
+    });
+
+    await check('a form that is reset puts the shapes back', async () => {
+      await page.evaluate(() => {
+        const f = document.querySelector('form:has(#rt-req-1)');
+        f.reset();
+      });
+      await page.waitForTimeout(100);
+      expect(await state('rt-req-1'), { checked: null, fill: '0%', text: 'Not rated', previewing: false }, 'after the reset');
+    });
+
+    await check('the API reads and sets a value, a display is redrawn, new ratings are wired by refresh and the texts follow the language of the page', async () => {
+      const r = await page.evaluate(() => {
+        const taste = document.querySelector('fieldset:has(#rt-taste-1)');
+        const out = {};
+        out.set = MatUi.rating.set(taste, 4.5);
+        out.get = MatUi.rating.get(taste);
+        out.checked = taste.querySelector('input:checked').id;
+        out.cleared = MatUi.rating.set(taste, 0);
+        out.after = MatUi.rating.get(taste);
+        const shown = document.querySelector('#rating .mat-rating--readonly');
+        MatUi.rating.set(shown, 2);
+        out.shown = [shown.style.getPropertyValue('--mat-rating-fill'), shown.getAttribute('aria-label')];
+        document.documentElement.lang = 'de';
+        const host = document.createElement('div');
+        host.innerHTML = '<span class="mat-rating mat-rating--readonly" data-rating data-value="4.5" data-count="2" data-show-value>4.5</span><span class="mat-rating mat-rating--readonly" data-rating data-value="3" aria-label="Eigener Text">3</span>';
+        document.body.appendChild(host);
+        MatUi.refresh(host);
+        out.de = [host.children[0].getAttribute('aria-label'), host.children[0].querySelector('.mat-rating__value').textContent, host.children[1].getAttribute('aria-label')];
+        document.documentElement.lang = 'en';
+        host.remove();
+        return out;
+      });
+      expect(r.set, 4.5, 'set returns the value');
+      expect(r.get, 4.5, 'get');
+      expect(r.checked, 'rt-taste-4_5', 'the radio');
+      expect(r.cleared, 0, 'a clear');
+      expect(r.after, 0, 'get after');
+      expect(r.shown, ['40%', 'Rated 2 out of 5, 128 ratings'], 'a display is redrawn');
+      expect(r.de, ['Bewertet mit 4,5 von 5, 2 Bewertungen', '4,5', 'Eigener Text'], 'German, and a label of the author');
+    });
+
+    await check('no horizontal scroll on the page and the shapes sit in the dark theme as they do in the light one', async () => {
+      await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+      const dark = await page.evaluate(() => getComputedStyle(document.querySelector('fieldset.mat-rating:has(#rt-support-1) .mat-rating__layer--fill')).color);
+      await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
+      const light = await page.evaluate(() => getComputedStyle(document.querySelector('fieldset.mat-rating:has(#rt-support-1) .mat-rating__layer--fill')).color);
+      expectTrue(dark !== light, 'the accent has a dark value');
+      await page.evaluate(() => document.documentElement.removeAttribute('data-theme'));
+    });
+    await ctx.close();
+
+    const phone = await open(phoneOptions, '/Components#rating');
+    const pg = phone.page;
+    await pg.evaluate(() => document.getElementById('rating').scrollIntoView());
+    await check('on a phone: the targets are 44 px (36 px small), ten dots fit the screen, nothing scrolls sideways', async () => {
+      const m = await pg.evaluate(() => {
+        const h = id => Math.round(document.querySelector(`fieldset.mat-rating:has(#${id}) .mat-rating__cell`).getBoundingClientRect().height);
+        const nps = document.querySelector('fieldset.mat-rating:has(#rt-nps-1) .mat-rating__stars').getBoundingClientRect();
+        const cell = document.querySelector('fieldset.mat-rating:has(#rt-nps-1) .mat-rating__cell').getBoundingClientRect();
+        return { md: h('rt-support-1'), sm: h('rt-nps-1'), lg: h('rt-heart-1'), npsRight: Math.round(nps.right), npsCell: Math.round(cell.width), width: innerWidth, sideways: document.documentElement.scrollWidth > innerWidth };
+      });
+      expectTrue(m.md >= 44, `targets are ${m.md} px high`);
+      expectTrue(m.sm >= 36, `small targets are ${m.sm} px high`);
+      expectTrue(m.lg >= 44, `large targets are ${m.lg} px high`);
+      expectTrue(m.npsRight <= m.width, 'ten dots run over the edge');
+      expect(m.sideways, false, 'sideways scroll');
+    });
+    await check('a tap chooses the value and shows no preview (a touch has no hover)', async () => {
+      const b = await pg.locator('fieldset.mat-rating:has(#rt-support-1) .mat-rating__stars').boundingBox();
+      await pg.touchscreen.tap(b.x + b.width * 0.7, b.y + b.height / 2);
+      const s = await pg.evaluate(() => {
+        const g = document.querySelector('fieldset.mat-rating:has(#rt-support-1)');
+        return { checked: g.querySelector('input:checked').id, previewing: g.classList.contains('is-previewing'), fill: g.style.getPropertyValue('--mat-rating-fill') };
+      });
+      expect(s, { checked: 'rt-support-4', previewing: false, fill: '80%' }, 'after a tap');
+    });
+    await phone.ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {

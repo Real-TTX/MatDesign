@@ -96,6 +96,11 @@ step base of the browser (`min`, else the `value` attribute, else 0), so a value
 `aria-disabled` and never `disabled` (the focus must not be lost); a press is handled on `pointerdown` (so that holding repeats, faster and faster) and a click without a press (`detail` 0, the keyboard or an
 assistive technology) steps once. The buttons are not in the Tab order, the field has the keys (arrows, Page up and down, Shift for ten steps). The stacked variant exists only for `(pointer: fine)`: two arrows
 that share the height of one control are too small for a finger (`MOBILE-04`), so a touch screen draws the default. The texts are in `STEP_TEXT` (English and German, a test checks).
+The **rating** (`FORM-22`) keeps the native radios as the truth, like the slider keeps its range inputs: the group is a `fieldset.mat-rating[data-rating]` of radios and labels, so a form posts it and the keys, the one Tab
+stop and the screen reader are the browser's; without the script it is a row of radio buttons. The script marks it `is-ready` (the radios become invisible and stay in place) and draws two layers of the same row of equal cells
+(outlines, and the filled shapes clipped to `--mat-rating-fill`, a share of the whole row), so any value, also 3.7, is drawn exactly, and half of a cell is the middle of its shape. What can be chosen is what the radios are
+(half stars are twice the radios), so there is no `data-step`. A pointer computes the first radio value at or above its place; a click checks that radio and the browser's `input` and `change` follow, then `mat:rating-change`.
+A read-only rating has no radios: it is one image (`role="img"`, a label in words). The cell is as high as a control, so a touch screen gets 44 px from `--mat-control-h`. The texts are in `RT_TEXT` (English and German, a test checks).
 
 ### Pickers
 

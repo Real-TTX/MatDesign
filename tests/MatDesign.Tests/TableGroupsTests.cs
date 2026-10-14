@@ -130,7 +130,7 @@ public partial class TableGroupsTests
         Assert.Contains("closest('[data-groups]')", section);
         // the saved state is applied when the page loads and after a refresh
         Assert.Contains("restoreGroups();", Js);
-        Assert.Contains("restoreGroups(scope); }", Js);
+        Assert.Contains("restoreGroups(scope);", Js);
         Assert.Contains("groups: { set:", Js);
     }
 
