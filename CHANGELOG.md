@@ -42,6 +42,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 ### Changed
 
+- The accent of Matddns is a dark blue, `#204db6` (it was `#4173d1`), to go with its new icon: `[data-app="matddns"]` in `matui.apps.css` and the registry of this site. It is the darkest blue that still holds AA in both themes (white text on it in light, the toolkit's ink on its lightened form in dark). Matddns takes it with its next copy of the toolkit and changes its `theme-color` and `Ui.App.Accent` with it.
 - `MatUi.version` is the version of the toolkit (a string such as `0.1.0`); it used to be the fixed string `1`.
 - The first line of `matui.css` is `/* MatUi <version> (<hash>) - build <build> - ... */`; the build that it used to name first is now second.
 - The panels of the pickers only fade in: they no longer start lower and smaller and grow into place (`mat-picker-in` replaces `mat-menu-in` for them).

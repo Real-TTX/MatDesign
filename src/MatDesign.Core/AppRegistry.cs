@@ -58,7 +58,7 @@ public static class AppRegistry
             FoundAccent: "#2496ed", LogoColor: "#2496ed", Port: 4455, CssPrefix: "mat-", TokenScheme: "--accent, --bg, --surface"),
         new("matcad", "Matcad", "Reverse proxy with automatic HTTPS", Infrastructure, "#2f6feb", "route", "Matcad",
             FoundAccent: "#2f6feb", LogoColor: "#2f6feb", Port: 4433, CssPrefix: "(none)", TokenScheme: "--primary, --bg, --surface"),
-        new("matddns", "Matddns", "DynDNS client with failover", Infrastructure, "#4173d1", "globe", "Matddns",
+        new("matddns", "Matddns", "DynDNS client with failover", Infrastructure, "#204db6", "globe", "Matddns",
             FoundAccent: "#4f8cff", LogoColor: "#4f8cff", Port: 4060, CssPrefix: "dt-", TokenScheme: "--accent, --panel"),
         new("matgate", "Matgate", "One login for your home network", Infrastructure, "#0a7d57", "shield", "Matgate",
             Port: 8088, Notes: "No stylesheet of its own in the repository (the UI comes from Apache Guacamole), so the accent is a proposal."),
