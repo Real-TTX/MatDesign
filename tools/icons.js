@@ -47,6 +47,7 @@ const extra = {
   'archive': "<polyline points='21 8 21 21 3 21 3 8'/><rect x='1' y='3' width='22' height='5'/><line x1='10' y1='12' x2='14' y2='12'/>",
   'hard-drive': "<line x1='22' y1='12' x2='2' y2='12'/><path d='M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/><line x1='6' y1='16' x2='6.01' y2='16'/><line x1='10' y1='16' x2='10.01' y2='16'/>",
   'tv': "<rect x='2' y='7' width='20' height='15' rx='2' ry='2'/><polyline points='17 2 12 7 7 2'/>",
+  'paperclip': "<path d='m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551'/>",
   'progress-play': "<circle cx='12' cy='12' r='9.4' stroke-opacity='.3' stroke-width='3.2'/><path d='M12 2.6A9.4 9.4 0 1 1 3.06 14.9' stroke-width='3.2'/><polygon points='9.12 7.29 9.12 16.71 16.98 12' fill='currentColor' stroke-width='1' stroke-linejoin='round'/>",
   'dollar': "<line x1='12' y1='1' x2='12' y2='23'/><path d='M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'/>",
   'gamepad': "<line x1='6' y1='12' x2='10' y2='12'/><line x1='8' y1='10' x2='8' y2='14'/><line x1='15' y1='13' x2='15.01' y2='13'/><line x1='18' y1='11' x2='18.01' y2='11'/><rect x='2' y='6' width='20' height='12' rx='2'/>",
