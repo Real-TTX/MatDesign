@@ -72,7 +72,7 @@ src/MatDesign.Web          the site
                              DesignChecks (every check of the design system, one report per version of the data: the Checks page, the menu badge and the release pipeline), StudioFormat
   Pages/Studio/              Setup (the assistant of the first administrator), Login, Logout, Index, Activity, History, Checks, Releases/ (list, New, Run), Versions/ (list, Edit), Apps/, Rules/ and Components/ (list, edit); StudioPageModel is the base of the pages that need the administrator
   Services/                  ToolkitFiles, IconLibrary (the optional icon library: sprite, catalogue, single icons, archive, served under /ui/iconlib/), Ui (icons, logo, swatch), ShellModel, Navigation, Crumbs, ListModels (toolbar, pager, query),
-                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, ListComponents, LayoutComponents, ScheduleComponents, TreeComponents; CatalogSection = what a page shows),
+                             ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, ListComponents, LayoutComponents, ScheduleComponents, RatingComponents, TreeComponents, UploadComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
                              PatternCatalog, ShellSkeleton, SchemeDocs (the numbers and tokens of the colour schemes for the pages), AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
   Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
@@ -177,6 +177,14 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   what was open when cleared (`_matWas`); `data-lazy` fires `mat:tree-load`, `MatUi.tree.setChildren(item, html | null | '')`; `data-tree-key` remembers open/closed per app, tree and item (`mat-tree` in localStorage, lazy and `data-tree-fixed` items
   are skipped). Texts `TR_TEXT` (English and German, a test checks; `data-tr-<name>` on `<html>`). The CSS part must stay **before** the schedule part of `matui.lists.css` (the schedule test reads to the end of the file). The site's demo server for
   the lazy example is in `doc.js` (answers `mat:tree-load` of `#tr-lazy`); a page that answers itself stops the event.
+- File upload (`FORM-21`): `.mat-upload[data-upload data-max-size data-max-files data-paste data-preview]` around the real `input.mat-upload__input[type=file]` (the native file field without the script; what is validated and posted).
+  The script hides it (`is-ready`) and draws `.mat-upload__zone` (icon, **one** `button.mat-upload__browse` whose `::after` covers the zone, `.mat-upload__limits` built from `accept` and the data attributes), `ul.mat-upload__list`
+  of `li.mat-upload__item` (thumbnail, name, size or progress, `.mat-upload__remove` named by the file) and the live region `.mat-upload__status` (a refusal in words with an icon, never `hidden`: a hidden live region is not read).
+  Every file (dialog, drop, paste, `MatUi.upload.add`) goes through `upAdd`: folder, `accept`, size, duplicate, room; a refusal never stops the other files; without `multiple` a new file replaces the old one. The real input
+  holds the list through a `DataTransfer` (no `DataTransfer`: the control is not drawn); the dialog's own `change` is handled in the capture phase and is stopped when nothing was added, the other sources dispatch `input` and `change`
+  with `u.busy` set. **No `/*` anywhere in the section of the script, not even in a string or a comment** (`ScriptTests` strips block comments with a regex: it swallowed the code after it). Events `mat:upload-change`,
+  `mat:upload-refused`; API `MatUi.upload.init/files/add/remove/clear/setProgress/setError`. The width of a bar is the property `--mat-up-progress`. Texts in `UP_TEXT` (English and German, a test checks; `data-up-<name>` on `<html>`).
+  The CSS sits between "Files" and "Layouts" in `matui.forms.css`, not at the end: the slider tests read the stylesheet from the slider to the end.
 - Layout and utilities: mobile first with `sm` 600, `md` 900, `lg` 1200 px; no `!important`; values from the tokens; the grid spans by `grid-column-end`. An example in the catalogue uses
   toolkit classes only, never `doc-*` (it is copied into other apps).
 - Icons come from the sprite (`Ui.Icon("name")` / `#mat-i-name`); a name that is not in the sprite fails a test. No emoji, no icon font, no CDN.

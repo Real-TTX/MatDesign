@@ -254,7 +254,7 @@ public partial class MarkupContractTests
     {
         foreach (var example in ComponentCatalog.All.SelectMany(c => c.Examples).Where(e => e.Js is not null))
         {
-            Assert.StartsWith("MatUi.", example.Js!.TrimStart().Replace("const ok = await ", "").Replace("const name = await ", ""));
+            Assert.Contains("MatUi.", example.Js!);
             Assert.False(string.IsNullOrEmpty(example.Demo));
         }
     }

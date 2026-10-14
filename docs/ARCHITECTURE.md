@@ -102,6 +102,18 @@ stop and the screen reader are the browser's; without the script it is a row of 
 (half stars are twice the radios), so there is no `data-step`. A pointer computes the first radio value at or above its place; a click checks that radio and the browser's `input` and `change` follow, then `mat:rating-change`.
 A read-only rating has no radios: it is one image (`role="img"`, a label in words). The cell is as high as a control, so a touch screen gets 44 px from `--mat-control-h`. The texts are in `RT_TEXT` (English and German, a test checks).
 
+### The file upload
+
+A file that the user sends is chosen in a drop zone (`mat-upload[data-upload]`, `FORM-21`) that wraps a **real file input**, the one thing that is validated and posted; without the script it is the native file field. The decisions:
+the script keeps the `files` of the real input **equal to the list** it shows (a `DataTransfer`), so the form posts exactly what the person sees and removing a file takes it out of the post, and a control whose browser
+has no `DataTransfer` is left as the native field. The zone has **one Tab stop**, a real `button` whose `::after` covers the whole zone (a click anywhere is a click on the button, Enter and Space need no code), and the
+real input is out of the Tab order and the accessibility tree; whoever focuses it (a message of the form) lands on the button. A file is checked as it arrives, from the dialog, a drop, a paste or the API, in one order
+(folder, `accept`, `data-max-size`, already listed, room) and **a refused file never stops the others**: each is named with its reason in a live region under the zone, in words with an icon (`COLOR-04`). The limits are
+written in the zone before anybody chooses. Without `multiple` a new file replaces the old one. The change of the dialog is put in order before other listeners hear it (capture phase) and a choice that adds nothing is not
+heard at all; a drop, a paste and a removal tell the form with `input` and `change` on the real input, like the dialog does. The control **does not upload**: an app that does reads `mat:upload-change` and draws progress
+and failures with `MatUi.upload.setProgress` and `setError`, because uploading (where to, with which token, resumable or not) is the app's business and drawing it is the toolkit's. The drag state counts `dragenter` and
+`dragleave` (they are paired by the children of the control) and only reacts to a drag that carries files. The texts are in `UP_TEXT` (English and German, a test checks).
+
 ### Pickers
 
 A picker is a field whose value is chosen in a panel: a select with pictures, descriptions and tags, a date or a period, a time or a time range, a colour, an appointment (`FORM-15`, `FORM-18`). The tag input is the one

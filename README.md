@@ -53,7 +53,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   so an app that sets none sees no change; the list, with types and defaults, is read from the CSS
 
 **The documentation**
-- **66 components with 199 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
+- **66 components with 201 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
   it uses and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined
@@ -312,7 +312,7 @@ place that could.
 |---|---|---|
 | Toolkit | MatUi (ten CSS parts, one script, the icon sprite), colour maths, rulebook, app registry | ✅ |
 | Site | Rulebook, foundations, shell, identity, builder, download – tests, container, CI | ✅ |
-| Components | Menu badges, submenus and switcher, forms (with a **number stepper**, a **slider and range slider**, a **code input** and a **rating**), **pickers** (select, a **dropdown with checkboxes** and Select all, date and period, time, colour, **tags**, **appointment**), a **calendar** that is always shown, **groups in a table** (rows under a heading that folds, the add row last), a **tree view** (folders and categories with the keys of the ARIA tree pattern, boxes with a parent in between, a filter, children loaded on demand), content components (with a **carousel** and a **schedule**: agenda, day, week, month and year with calendar weeks), **lists of rows** (like ion-list: contacts, inbox, settings, files, tasks, sliding actions, reordering), **layout system**, utilities | ✅ |
+| Components | Menu badges, submenus and switcher, forms (with a **number stepper**, a **slider and range slider**, a **code input**, a **rating** and a **file upload** with a drop zone), **pickers** (select, a **dropdown with checkboxes** and Select all, date and period, time, colour, **tags**, **appointment**), a **calendar** that is always shown, **groups in a table** (rows under a heading that folds, the add row last), content components (with a **carousel** and a **schedule**: agenda, day, week, month and year with calendar weeks), **lists of rows** (like ion-list: contacts, inbox, settings, files, tasks, sliding actions, reordering), **layout system**, utilities | ✅ |
 | Flat look | No gradients, glow or blur; selected is a tint (`COLOR-08`); toolbar with search field | ✅ |
 | Studio 1–2 | Data store, sign-in, **apps** | ✅ |
 | Studio 3–4 | **Rules** and **components** with live examples | ✅ |

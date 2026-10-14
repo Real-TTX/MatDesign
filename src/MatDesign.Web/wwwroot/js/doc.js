@@ -16,6 +16,26 @@
       await ui.alert('The backup is running.', { title: 'Backup' });
       var name = await ui.prompt('Name of the folder', { value: 'New folder' });
       if (name !== null) { ui.toast('Created: ' + name, { tone: 'success' }); }
+    } else if (demo === 'upload') {
+      // the files of the example "An app that uploads by itself" are sent for show: each one climbs to 100, and the last one fails
+      var zone = document.getElementById('up-self');
+      var files = zone ? ui.upload.files(zone) : [];
+      if (!files.length) { ui.toast('Choose a few files first.', { tone: 'warning' }); return; }
+      files.forEach(function (file, i) {
+        var percent = 0;
+        ui.upload.setProgress(zone, file, 0);
+        var timer = setInterval(function () {
+          percent += 8 + i * 3;
+          if (!ui.upload.files(zone).includes(file)) { clearInterval(timer); return; }
+          if (i === files.length - 1 && files.length > 1 && percent > 60) {
+            clearInterval(timer);
+            ui.upload.setError(zone, file, 'The server did not take this file.');
+          } else if (percent >= 100) {
+            clearInterval(timer);
+            ui.upload.setProgress(zone, file, 100);
+          } else { ui.upload.setProgress(zone, file, percent); }
+        }, 160);
+      });
     }
   }
 

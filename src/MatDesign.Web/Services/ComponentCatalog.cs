@@ -1206,6 +1206,7 @@ public static class ComponentCatalog
         .. ListComponents.All,
         .. RatingComponents.All,
         .. TreeComponents.All,
+        .. UploadComponents.All,
     ]);
 
     /// <summary>A component with the examples that other files add to it.</summary>

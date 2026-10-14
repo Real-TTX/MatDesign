@@ -128,6 +128,7 @@ that words them differently, changes any of them with an attribute on `<html>`; 
 | `data-msg-required`, `data-msg-type`, `data-msg-pattern`, `data-msg-range` | The messages of a form (`FORM-05`); each can also be set on one field. |
 | `data-copied` | The tip after *Copy*. |
 | `data-locale`, `data-week-start` | The language of the dates in the pickers (default `lang`) and the first day of the week (0 Sunday to 6, default 1). |
+| `data-up-<name>` | One text of the file upload (`FORM-21`), in lower case after `data-up-`: `data-up-refusedtype="{0}: Format nicht erlaubt."`. The names are the keys of `UP_TEXT` in `matui.js`; `{0}`, `{1}` and `{2}` are the file name, the allowed types and the sizes. |
 
 A text that goes into the markup of a page (a label, a hint, the words of a `data-confirm`) is the app's own and stays in the language of the app (`CODE-05`).
 
@@ -255,6 +256,22 @@ A text that goes into the markup of a page (a label, a hint, the words of a `dat
   - From code: `MatUi.picker.set(wrapper, value)` chooses a value and fires change (for several choices the whole value: a string joined by `data-sep`, or an array), `MatUi.picker.addOption(wrapper, { value, name, description, tags })` adds
     an option (made with `textContent`, never markup). Texts: `data-create-label='Create tag "{0}"'` on the wrapper, and `data-pk-create`, `-creating`, `-created`, `-createfailed`, `-createhint`, `-suggestions`, `-all`,
     `-suggestioncount`, `-suggestionone` on the wrapper or on `<html>` (section 3a).
+
+- Files that the user sends (documents, photos, attachments) are chosen in a **file upload** (`FORM-21`): `<div class="mat-upload" data-upload>` around the real `<input type="file" class="mat-upload__input">`, which is
+  what the form posts and validates (`accept`, `multiple`, `required` are its own; without the script it is the native file field). The script draws a drop zone, the list of the chosen files with a remove button
+  each (a thumbnail for an image) and names every refused file with its reason. `data-max-size="10MB"` and `data-max-files="5"` are checked as the files arrive, `data-paste` adds pasted images, `mat-upload--compact`
+  is one row. **The server checks type, size and number again.** An app that sends the files itself (XHR, `fetch`) listens to `mat:upload-change` and draws progress with `MatUi.upload.setProgress(el, file, 0..100)` and
+  `MatUi.upload.setError(el, file, "Message")`; the texts are `data-up-<name>` on `<html>` (section 3a):
+
+  ```html
+  <div class="mat-field">
+    <label class="mat-label" for="docs">Documents</label>
+    <div class="mat-upload" data-upload data-max-files="5" data-max-size="10MB">
+      <input class="mat-upload__input" type="file" id="docs" name="docs" multiple accept=".pdf,image/*" />
+    </div>
+    <span class="mat-error" aria-live="polite"></span>
+  </div>
+  ```
 
 ## 4a. Layout and utilities
 
