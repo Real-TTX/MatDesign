@@ -95,9 +95,10 @@ public sealed class SchemeSurfaces
 
     /// <summary>
     /// The same from tokens that are parsed already, with the values of a brand (<c>COLOR-11</c>) laid over the tokens: a brand is written after the tokens, so it wins over them, and a
-    /// colour scheme (a more specific selector) wins over the brand, which is the order they are applied in here.
+    /// colour scheme (a more specific selector) wins over the brand, which is the order they are applied in here. What a brand sets inside a scheme (<paramref name="schemeOverride"/>) is
+    /// written after the scheme's own blocks with the same selector, so it wins over them.
     /// </summary>
-    public static SchemeSurfaces Read(IReadOnlyList<DesignToken> designTokens, IReadOnlyList<SchemeBlocks> schemes, string? scheme, bool dark, IReadOnlyDictionary<string, string>? brand)
+    public static SchemeSurfaces Read(IReadOnlyList<DesignToken> designTokens, IReadOnlyList<SchemeBlocks> schemes, string? scheme, bool dark, IReadOnlyDictionary<string, string>? brand, IReadOnlyDictionary<string, string>? schemeOverride = null)
     {
         var tokens = designTokens.ToDictionary(t => t.Name, t => dark ? t.Dark ?? t.Light : t.Light);
         foreach (var (name, value) in brand ?? new Dictionary<string, string>())
@@ -118,6 +119,17 @@ public sealed class SchemeSurfaces
             set.Add(name);
         }
 
+        if (id is not null && values is not null)
+        {
+            foreach (var (name, value) in schemeOverride ?? new Dictionary<string, string>())
+            {
+                if (tokens.ContainsKey(name))
+                {
+                    tokens[name] = value;
+                }
+            }
+        }
+
         return new SchemeSurfaces(id ?? ColorSchemes.Standard, dark, values is null, tokens, set);
     }
 
@@ -127,11 +139,15 @@ public sealed class SchemeSurfaces
             ? [Read(tokensCss, scheme, dark: true)]
             : [Read(tokensCss, scheme, dark: false), Read(tokensCss, scheme, dark: true)];
 
-    /// <summary>The same for tokens that are parsed already, with a brand: its light values lie over the light mode, its dark values over the dark mode.</summary>
-    public static IReadOnlyList<SchemeSurfaces> Modes(IReadOnlyList<DesignToken> tokens, IReadOnlyList<SchemeBlocks> schemes, string? scheme, IReadOnlyDictionary<string, string>? brandLight, IReadOnlyDictionary<string, string>? brandDark)
+    /// <summary>
+    /// The same for tokens that are parsed already, with a brand: its light values lie over the light mode, its dark values over the dark mode, and what it sets inside the scheme
+    /// (<paramref name="schemeLight"/>, <paramref name="schemeDark"/>) over the scheme's own values.
+    /// </summary>
+    public static IReadOnlyList<SchemeSurfaces> Modes(IReadOnlyList<DesignToken> tokens, IReadOnlyList<SchemeBlocks> schemes, string? scheme, IReadOnlyDictionary<string, string>? brandLight, IReadOnlyDictionary<string, string>? brandDark,
+        IReadOnlyDictionary<string, string>? schemeLight = null, IReadOnlyDictionary<string, string>? schemeDark = null)
         => ColorSchemes.Get(ColorSchemes.Normalize(scheme))?.DarkOnly == true
-            ? [Read(tokens, schemes, scheme, true, brandDark)]
-            : [Read(tokens, schemes, scheme, false, brandLight), Read(tokens, schemes, scheme, true, brandDark)];
+            ? [Read(tokens, schemes, scheme, true, brandDark, schemeDark)]
+            : [Read(tokens, schemes, scheme, false, brandLight, schemeLight), Read(tokens, schemes, scheme, true, brandDark, schemeDark)];
 
     /// <summary>
     /// The pairings that do not depend on the accent and have to hold on these surfaces: the text colours on every surface, the status texts on a surface and on their own tint,

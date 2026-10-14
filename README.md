@@ -70,6 +70,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   design data and a **styleguide** that opens straight from the release directory
 - **Brand**: the company's names and the tokens of the toolkit it sets, light and dark, within limits that keep it usable (touch targets, body text, line height, radii), with a live preview and a contrast check (AA) before it is saved or released
 - **Versions**: which release of MatUi each app carries, and which one is behind
+- **Component properties and overrides**: the 68 `--mat-<component>-*` properties are editable next to the real control with a live preview, per brand, per app (`[data-app]`) and, for the surfaces, inside each colour scheme; a height under 44 px is written for a mouse only, so a touch screen keeps its 44 px; the order is toolkit, brand, app, scheme
 
 ## The rules in one minute
 

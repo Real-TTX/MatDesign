@@ -401,8 +401,18 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
     /// <summary>The design data of this moment as JSON: what an app or a tool can read without the site.</summary>
     private string DesignJson() => JsonSerializer.Serialize(new
     {
-        brand = new { design.Brand.Company, design.Brand.ShortName, design.Brand.Tagline, light = design.Brand.Values(false), dark = design.Brand.Values(true) },
-        apps = design.Apps.Select(a => new { a.Id, a.Name, a.Tagline, a.Category, a.Accent, onAccent = a.OnAccent ?? "#ffffff", a.AccentText, a.Glyph, a.Port }),
+        brand = new
+        {
+            design.Brand.Company, design.Brand.ShortName, design.Brand.Tagline,
+            light = design.Brand.Values(false), dark = design.Brand.Values(true),
+            components = design.Brand.ComponentValues,
+            schemes = (design.Brand.Schemes ?? new Dictionary<string, SchemeValues>()).Where(s => s.Value.HasValues).ToDictionary(s => s.Key, s => new { light = s.Value.Values(false), dark = s.Value.Values(true) }),
+        },
+        apps = design.Apps.Select(a => new
+        {
+            a.Id, a.Name, a.Tagline, a.Category, a.Accent, onAccent = a.OnAccent ?? "#ffffff", a.AccentText, a.Glyph, a.Port,
+            overrides = a.HasOverrides ? new { light = a.Tokens?.Values(false), dark = a.Tokens?.Values(true), properties = a.Properties } : null,
+        }),
         rules = design.Rules.Select(r => new { r.Id, r.Area, r.Title, r.Statement, level = r.Level.ToString(), r.Source, r.Why, r.Do, r.Dont, r.Check }),
         components = design.Components.Select(c => new
         {

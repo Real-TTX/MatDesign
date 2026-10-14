@@ -63,6 +63,8 @@ src/MatDesign.Core         no web types
   Studio/BrandTokens.cs      which tokens of matui.tokens.css a brand may set (the others are derived or structure, with the reason), their kind (colour, length, number, duration, font stack, easing) and limits
   Studio/BrandValidator.cs   what a brand has to be: IsSafe/IsSafeValue (nothing that can leave a declaration), Normalize, CheckValue (kind and limits), Validate (names, scale, contrast)
   Studio/BrandContrast.cs    the toolkit's contrast checks run on the surfaces of a brand, per scheme, mode and app accent (SchemeSurfaces.Pairings is the shared list of pairings)
+  Studio/ComponentTokens.cs  the documented component properties as values the Studio may set (PropertyToken: kind, limits by name, touch target or not, what the control uses today); FloorPx 32, TouchPx 44
+  Studio/AppOverrides.cs     what an app sets on top of the brand (MatApp.Tokens and .Properties): the subset of tokens (shape, spacing, type, motion), Normalize, IsSafe, Validate
 src/MatDesign.Web          the site
   Program.cs                 /ui/* (the toolkit as files, bundle, archive), /releases/* (the releases of the Studio), /api/*, /health, Razor Pages, the cookie sign-in of the Studio
   Studio/VersionTracker.cs   which release of MatUi each app uses (written down by hand) and where that stands against the releases
@@ -79,7 +81,8 @@ src/MatDesign.Web          the site
   Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (items, badges, submenus; the switcher under the logo or at the end of the menu), _MenuSwitcher (the switcher button, under the logo,
                              in the foot or at the end of the menu: `ShellModel.SwitcherPlace`), _MenuSwitchPopup (its popup; menus grouped below a `NavSetParent`), _Head, _Toolbar, _Pager,
                              _DocSection + _Toc + _Component + _ContextPage (the components, layout and utilities pages), _AccentSwatches, _ContrastCard (+ _ContrastRows, _SchemeChecks), _FoundationsTabs
-  Pages/Studio/Brand         the brand editor: names, a token table per group of the CSS (an input by kind, a colour picker, a reset), a preview outside the form, the contrast; wwwroot/js/brand.js is its script
+  Pages/Studio/Brand         the brand editor: names, a token table per group of the CSS (an input by kind, a colour picker, a reset), a preview outside the form, the contrast, a section per colour scheme; wwwroot/js/brand.js is its script (also of the next two)
+  Pages/Studio/BrandComponents  /Studio/Brand/Components: the 68 properties by component, each group with a table and the real control beside it (PropertyPreviews: the mapping to the catalogue, as data; Shared/_PropertyGroup, _BrandTabs); /Studio/Apps/Edit has the section Overrides of this app (same rows)
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
 tests/e2e                  run.js: the behaviour in a real browser against a running site
@@ -212,6 +215,9 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - After a change to CSS, JS or cshtml the container must be rebuilt.
 - **The brand is tokens, never CSS (`COLOR-11`, docs/STUDIO.md "Brand")**: `ToolkitFiles.BrandOverlay` appends it to the apps part (the part count stays ten): `:root` for light, the dark set twice and identical, nothing when the brand sets nothing. A new token that a brand may set needs a
   kind the editor knows (`BrandTokens.Describe`), and a limit if usability depends on it; a brand is never held below the contrast the toolkit holds (`BrandContrast`, the `brand` check). The page of the editor sets the unsaved values on `[data-brand-preview]` through the CSSOM, never as a style attribute.
+- **Properties, apps and schemes (stage 12, docs/STUDIO.md "Components, apps and schemes")**: the order in `matui.css` is toolkit, colours of the apps, brand (tokens, properties, schemes), overrides of each app (`ToolkitFiles.Build`); light on the selector, the dark set
+  twice and identical, nothing set writes nothing. **A height of a control that is pressed under 44 px is written inside `@media (pointer: fine)` only** (`ComponentTokens.AppliesToFinePointerOnly`), never under 32 px: do not write one into `:root` or `[data-app]` directly. A new `@prop` needs no Studio code (limits by name); an
+  app owns shape, spacing, type, motion and its accent, never surfaces. A preview inside a form has `form="pv-none"` on its controls (`PropertyPreviews.Detach`). `data-*` attributes with a null value render as `data-x=""` in Razor: write them conditionally.
 - **The browser checks make one release per run** (a release never changes): the development volume grows; `docker compose -f docker-compose.dev.yml down -v` then `up -d --build` starts it clean (with the setup assistant again; the checks create the administrator).
 
 **Code**

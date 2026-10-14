@@ -62,12 +62,48 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
 
     public string? ProblemFor(string field) => Problems.FirstOrDefault(p => p.Field == field)?.Message;
 
+    // ---- what the app sets for itself on top of the brand (stage 12 of docs/PRODUCT.md)
+
+    /// <summary>The tokens an app may set (shape, spacing, type, motion), in the order of the CSS.</summary>
+    public IReadOnlyList<BrandToken> OverrideTokens => AppOverrides.Tokens(toolkit.EditableTokens);
+
+    public IEnumerable<IGrouping<string, BrandToken>> OverrideTokenGroups => OverrideTokens.GroupBy(t => t.Group);
+
+    /// <summary>The component groups with the control drawn beside their properties.</summary>
+    public IReadOnlyList<PropertyGroupView> PropertyGroups => PropertyPreviews.Groups(toolkit, design);
+
+    /// <summary>What the app sets for a token in a mode (as typed); empty when it leaves the brand's value.</summary>
+    public string TokenValue(BrandToken token, bool dark) => Preview?.Tokens?.Values(dark).GetValueOrDefault(token.Name, string.Empty) ?? string.Empty;
+
+    public string PropertyValue(PropertyToken property) => Preview?.Properties?.GetValueOrDefault(property.Name, string.Empty) ?? string.Empty;
+
+    /// <summary>How many tokens and properties the app sets (as typed).</summary>
+    public int OverrideCount => (Preview?.Tokens?.Light.Count ?? 0) + (Preview?.Tokens?.Dark.Count ?? 0) + (Preview?.Properties?.Count ?? 0);
+
+    /// <summary>How many tokens the app sets (as typed).</summary>
+    public int TokenCount => (Preview?.Tokens?.Light.Count ?? 0) + (Preview?.Tokens?.Dark.Count ?? 0);
+
+    /// <summary>How many properties of a component group the app sets.</summary>
+    public int SetIn(PropertyGroupView group) => group.Properties.Count(p => Preview?.Properties?.ContainsKey(p.Name) ?? false);
+
+    /// <summary>The id of the input of a token: <c>light-mat-radius</c>.</summary>
+    public static string TokenId(BrandToken token, bool dark) => (dark ? "dark-" : "light-") + token.Key;
+
+    /// <summary>The id of the input a problem is about, for the link in the summary: a field of the app, or a token or a property of its overrides.</summary>
+    public static string TargetOf(string field)
+        => field.Split(':') switch
+        {
+            ["Light" or "Dark", var name] => (field.StartsWith("Dark", StringComparison.Ordinal) ? "dark-" : "light-") + name.TrimStart('-'),
+            ["Property", var name] => "property-" + name.TrimStart('-'),
+            _ => "Input_" + field,
+        };
+
     public IActionResult OnGet(string? id)
     {
         if (id is null)
         {
             Input = new AppInput { Category = AppRegistry.Productivity, Accent = "#2f6feb", Glyph = "apps" };
-            Preview = Describe(Input, null);
+            Preview = Describe(Input, null, null);
             return Page();
         }
 
@@ -97,7 +133,7 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
         }
 
         Source = original is null ? ItemSource.Added : design.SourceOf(original.Id);
-        var app = Describe(Input, original);
+        var app = Describe(Input, original, Request.Form);
         Preview = app;
         var problems = Validate(app, original);
         Checked = check;
@@ -136,8 +172,12 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
     }
 
     /// <summary>The app the form describes: the app that is edited with the typed values on it (what only the audit knows stays), or a new one.</summary>
-    private static MatApp Describe(AppInput input, MatApp? original)
+    private MatApp Describe(AppInput input, MatApp? original, IFormCollection? form)
     {
+        // the overrides come from the fields light:--mat-..., dark:--mat-... and property:--mat-...; a post without the marker of that section keeps what the app has
+        var typed = form is not null && form.ContainsKey("overrides-present");
+        var tokens = typed ? new AppTokens(BrandForm.Values(form!, "light:"), BrandForm.Values(form!, "dark:")) : original?.Tokens;
+        var properties = typed ? BrandForm.Values(form!, "property:") : original?.Properties;
         var port = int.TryParse(input.Port, NumberStyles.None, CultureInfo.InvariantCulture, out var number) ? number : (int?)null;
         var app = (original ?? new MatApp(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty)) with
         {
@@ -152,14 +192,17 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
             OnAccent = input.OnAccent,
             AccentText = input.AccentText,
             Notes = input.Notes ?? string.Empty,
+            Tokens = tokens,
+            Properties = properties,
         };
-        return AppValidator.Normalize(app);
+        return AppOverrides.Normalize(AppValidator.Normalize(app), toolkit.EditableTokens, toolkit.EditableProperties);
     }
 
     private IReadOnlyList<Problem> Validate(MatApp app, MatApp? original)
     {
         var others = design.Apps.Where(a => original is null || !a.Id.Equals(original.Id, StringComparison.OrdinalIgnoreCase));
         var problems = AppValidator.Validate(app, others, toolkit.IconNames).ToList();
+        problems.AddRange(AppOverrides.Validate(app, toolkit.EditableTokens, toolkit.EditableProperties, design.Brand));
         if (!string.IsNullOrWhiteSpace(Input.Port) && !int.TryParse(Input.Port, NumberStyles.None, CultureInfo.InvariantCulture, out _) && problems.All(p => p.Field != "Port"))
         {
             problems.Add(new Core.Studio.Problem("Port", "A port is a number from 1 to 65535."));
@@ -190,6 +233,9 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
         Compare("text colour", before.OnAccent, after.OnAccent);
         Compare("link colour", before.AccentText, after.AccentText);
         Compare("note", before.Notes, after.Notes);
+        names.AddRange(BrandForm.Changed("light", before.Tokens?.Light, after.Tokens?.Light));
+        names.AddRange(BrandForm.Changed("dark", before.Tokens?.Dark, after.Tokens?.Dark));
+        names.AddRange(BrandForm.Changed("property", before.Properties, after.Properties));
         return names.Count == 0 ? ["nothing"] : names;
     }
 }

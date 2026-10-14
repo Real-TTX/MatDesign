@@ -88,8 +88,8 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
 
     private IReadOnlyList<Problem> CheckApp(JsonElement data)
     {
-        var app = AppValidator.Normalize(data.Deserialize<MatApp>(Options)!);
-        return AppValidator.Validate(app, design.Apps.Where(a => a.Id != app.Id), toolkit.IconNames);
+        var app = AppOverrides.Normalize(AppValidator.Normalize(data.Deserialize<MatApp>(Options)!), toolkit.EditableTokens, toolkit.EditableProperties);
+        return [.. AppValidator.Validate(app, design.Apps.Where(a => a.Id != app.Id), toolkit.IconNames), .. AppOverrides.Validate(app, toolkit.EditableTokens, toolkit.EditableProperties, design.Brand)];
     }
 
     private IReadOnlyList<Problem> CheckRule(JsonElement data)
@@ -106,8 +106,8 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
 
     private IReadOnlyList<Problem> CheckBrand(JsonElement data)
     {
-        var brand = BrandValidator.Normalize(data.Deserialize<Brand>(Options)!, toolkit.EditableTokens);
-        return BrandValidator.Validate(brand, toolkit.Tokens, toolkit.Schemes, design.Apps);
+        var brand = BrandValidator.Normalize(data.Deserialize<Brand>(Options)!, toolkit.EditableTokens, toolkit.EditableProperties, toolkit.Schemes);
+        return BrandValidator.Validate(brand, toolkit.Tokens, toolkit.Schemes, design.Apps, toolkit.EditableProperties);
     }
 
     /// <summary>Appends a copy of the revision as the newest one and reads the items again. <see cref="CanRestore"/> must have said yes.</summary>

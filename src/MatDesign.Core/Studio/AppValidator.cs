@@ -31,7 +31,7 @@ public static partial class AppValidator
     public static bool IsSafe(MatApp app)
         => IdPattern().IsMatch(app.Id) && HexPattern().IsMatch(app.Accent) && GlyphPattern().IsMatch(app.Glyph)
             && (app.OnAccent is null || HexPattern().IsMatch(app.OnAccent)) && (app.AccentText is null || HexPattern().IsMatch(app.AccentText))
-            && !string.IsNullOrWhiteSpace(app.Name);
+            && !string.IsNullOrWhiteSpace(app.Name) && AppOverrides.IsSafe(app);
 
     /// <summary>The name of a repository made from the name of an app: what a repository name may not contain becomes a dash ("My App" is "My-App").</summary>
     private static string RepoOf(string name) => Regex.Replace(name, @"[^A-Za-z0-9._-]+", "-").Trim('-');
