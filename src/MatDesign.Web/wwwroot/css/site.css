@@ -284,3 +284,33 @@
 ul.doc-changes > li { list-style: disc; }
 ol.doc-changes > li { list-style: decimal; }
 .mat-alert .doc-changes { margin: var(--mat-space-1) 0 var(--mat-space-2); }
+
+/* ---- The brand editor of the Studio: the form, and a sample beside it that wears the unsaved tokens ---- */
+.doc-brand { display: grid; gap: var(--mat-space-6); align-items: start; }
+.doc-brand__main { min-width: 0; }
+.doc-brand__side { min-width: 0; }
+@media (min-width: 1200px) {
+  .doc-brand { grid-template-columns: minmax(0, 1fr) 21rem; }
+  .doc-brand__side { position: sticky; top: calc(var(--mat-topbar-h) + var(--mat-space-4)); max-height: calc(100vh - var(--mat-topbar-h) - var(--mat-space-8)); overflow: auto; }
+}
+.doc-brand__body { padding-inline: 0; }
+.doc-brand__cell { display: flex; align-items: center; gap: var(--mat-space-2); }
+.doc-brand__cell .mat-input { min-width: 0; flex: 1; }
+.doc-brand__picker { flex: none; width: var(--mat-control-h); height: var(--mat-control-h); padding: 2px; background: var(--mat-surface); border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius); cursor: pointer; }
+@media (pointer: coarse) { .doc-brand__picker { width: 44px; height: 44px; } }
+.doc-brand__default { display: flex; align-items: center; gap: var(--mat-space-2); }
+.doc-brand__default + .doc-brand__default { margin-top: var(--mat-space-1); }
+.doc-brand__table td { vertical-align: top; }
+.doc-brand__table td:nth-child(3), .doc-brand__table td:nth-child(4) { min-width: 10.5rem; }
+.doc-brand__table .mat-table__name small { display: block; }
+.doc-brand__contrast td .mat-pill { margin-left: var(--mat-space-2); }
+.doc-brand__summary { margin-bottom: var(--mat-space-3); }
+.doc-brand__summary p { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-2); }
+
+/* The sample: it takes its tokens from custom properties that the script sets on this one element. */
+.doc-brand-preview { display: grid; background: var(--mat-bg); color: var(--mat-text); font-family: var(--mat-font); font-size: var(--mat-fs-md); line-height: var(--mat-lh); border: 1px solid var(--mat-border); border-radius: var(--mat-radius-lg); overflow: hidden; }
+.doc-brand-preview__nav { padding: var(--mat-space-3); background: var(--mat-nav-bg); border-bottom: 1px solid var(--mat-border); }
+.doc-brand-preview__page { display: grid; gap: var(--mat-space-4); padding: var(--mat-space-4); }
+.doc-brand-preview__title { margin: 0; font-size: var(--mat-fs-xl); line-height: var(--mat-lh-tight); }
+.doc-brand-preview__text { margin: 0; }
+.doc-brand-preview a { color: var(--mat-accent-text); }

@@ -314,6 +314,9 @@ turns the data into releases, without giving up what the site is: the decisions 
   The validators, the checks page and the release pipeline all call the same code, so a release cannot pass what the page fails.
 - **Releases are immutable.** A release is a directory with its files (the toolkit, the design data with every example, and a static styleguide that draws the components with the release's own files), their hashes and a manifest, moved into place whole. The site offers no way to change or delete one: apps may depend on it. Apps learn of the
   newest from `/releases/latest.json` and copy the files; the Studio records by hand which release each app has.
+- **A brand is tokens, with types and limits, checked for AA** (`COLOR-11`). The one item `brand` holds values for the tokens that `matui.tokens.css` documents; each has a kind (colour, length, number, duration, font stack, easing) and, where usability depends on it, a limit
+  (touch targets, body text, line height, radii). It is written as an overlay after the tokens (in the apps part, so the ten parts stay ten): light on `:root`, the dark set twice and identical, nothing at all for a brand that sets nothing. The contrast checks that the toolkit
+  holds for its own surfaces run on the brand's (`SchemeSurfaces.Pairings`, `AccentReport`, every scheme, every app), in the browser while you type for the pairings that do not depend on the accent, and on the server on save and in the pipeline. A scheme's selectors are more specific than the brand's, so a scheme keeps its surfaces.
 - **It edits data, not the toolkit.** The CSS and the script are files of the repository, reviewed and tested there; the Studio never writes them. It is also not a CI system for the apps: its release is the design system.
 
 ## What it does not do

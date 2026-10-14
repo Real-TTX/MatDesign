@@ -59,7 +59,7 @@ component of its group, and `NavFacts` carries the counts of the menu. A rule th
 
 ### History
 
-Every item has a history page (`/Studio/History?kind=apps|rules|components&id=...`), reached from its edit page (the History button, once the Studio has saved a revision of it) and from the item
+Every item has a history page (`/Studio/History?kind=apps|rules|components|brand&id=...`), reached from its edit page (the History button, once the Studio has saved a revision of it) and from the item
 in the activity list. It lists the revisions (who, when, why, the current one marked), compares any two (the fields that differ, read field by field, and for each the lines that differ: `-` gone,
 `+` new, and the sign is in the text, not only in the colour) and restores one. **A restore is a new revision** that copies the old one, so nothing is lost and a restore can itself be undone. It goes
 through only when the old revision would be accepted as it is today: `StudioHistory.CanRestore` runs the same validator as a save on it, with the other items as they are now (a port that another app
@@ -68,7 +68,7 @@ the Studio names is not deleted that way either. The activity list filters by ki
 
 ### Checks
 
-`DesignChecks` is the list of everything the design system holds itself to, run on the data as it is now (the built-in items too): every app, rule and component through its validator (contrast of every accent
+`DesignChecks` is the list of everything the design system holds itself to, run on the data as it is now (the built-in items too): every app, rule and component and the brand through its validator (contrast of every accent
 in light and dark, the contract of the markup of every example, rules that exist), the palette (advice, never an error), the ids of the pages of the documentation (no id twice across the live examples of a page,
 none that the page makes itself), groups that have components, the rules and apps that the page patterns cite, tokens with a description and a dark value, the naming of the toolkit's classes, the menus, and the
 items on the volume that the site had to leave out (edited by hand into something unsafe or wrong). A check is a named record (`Id`, `Area`, `Name`, `What`, and code that yields `Finding`s); a finding is an
@@ -96,6 +96,33 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 7 | **Releases:** the pipeline, versions, changelog, stored archives, `/releases/...` and `/api/releases/latest` | **done** |
 | 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | **done** |
 | 9 | **Setup assistant:** the first visit creates the administrator (name and password, kept as a hash in the volume), so the release compose file has no password and no variables | **done** |
+| 10 | **Brand and tokens** (docs/PRODUCT.md, stage 10): the item `brand`, a token editor with a live preview, the brand overlay in `matui.css`, releases and the archive, history, restore and checks | **done** |
+
+### Brand
+
+One item, `brand` of the kind `brand` (`studio/brand/brand/<revision>.json`), kept like the others: append-only, with history, a restore and an entry in the activity list. It holds the names of the company
+(company, short name, tagline) and two maps from the name of a token to a value, **Light** and **Dark**. Until the Studio saves one, the built-in brand is in force (Mat, no token changed); *Reset to built-in* deletes the item.
+`DesignData.Brand` is what every page reads, and a save ends with `DesignData.Reload()` like every other save.
+
+**A brand changes tokens, never CSS (`COLOR-11`).** `BrandTokens` decides from `matui.tokens.css` which tokens a brand may set: the ones that are look (colours, radii, spacing, type sizes, fonts, line heights, durations, the
+easing, the widths and heights of the layout) and not the derived or structural ones (the accent family, the layers, the safe areas, shadows, the pill radius, the colour picker's model). Each editable token has a kind
+and limits, and `BrandValidator` holds every value to them: a colour (`#rgb`, `#rrggbb`, `rgb()`, `rgba()`), a length in px, rem or em, a number, a duration in ms or s, a font stack (names from a safe set of characters, ending in a generic family) or
+an easing; no `;`, braces, comments, `url(`, `@import` or `expression` ever reaches a stylesheet (`IsSafeValue`, which also runs again for an item read from the disk). The limits are the ones of the rulebook: touch targets of 44 px
+(36 px for compact controls, `MOBILE-04`), a body text of 14 px or more, a line height of 1.2 to 2, radii of 0 to 24 px, a type scale that only grows, spacing of 2 to 96 px. A token has a Dark value only if the dark set of the CSS has one for it.
+A value that is the toolkit's own is not stored, so a brand that sets nothing writes nothing.
+
+**Contrast is checked before a save and a release.** `BrandContrast` builds the surfaces of the brand (the toolkit's tokens with the brand's values over them: its light values over light, its dark values over dark) and runs the pairings the toolkit already holds
+(`SchemeSurfaces.Pairings` for the text, the muted text, the status texts and the border of a control; `AccentReport.Checks` for the accent of every app), in the standard look and in every colour scheme, in every mode it has. A required pairing that is under AA is an error that
+blocks the save, with its numbers and, for an accent, the app that is weakest; advice stays advice. A pairing that fails in the toolkit's own look already (an app added in the Studio that a scheme does not suit) is only reported when the brand makes it worse. The same check is
+the `brand` check of `/Studio/Checks`, so a release is refused while the brand fails it.
+
+**The overlay.** `ToolkitFiles.BrandOverlay` appends the brand to the apps part, after the apps' colours, so it wins: `:root { ... }` for the light values and the dark values twice, identical (`:root[data-theme="dark"]` and the system
+`@media (prefers-color-scheme: dark)` block), exactly as `matui.tokens.css` writes its dark set. The number of CSS parts stays ten, and the bundle, its hash, `/ui/css/matui.apps.css`, the archive, the manifest, every release and its `design.json` (`brand`) follow `DesignData.Version`.
+A colour scheme (a more specific selector) still wins over the brand on the tokens it sets. A value that is not safe, or not a value of its token within its limits, is not written.
+
+**The page** `/Studio/Brand`: the names, then the tokens grouped by the groups of `matui.tokens.css` (name and description, the toolkit's value, an input for Light and one for Dark, a reset), a preview beside the form and the contrast of the brand below. The input of a colour is
+a colour picker and a text field kept in step by `wwwroot/js/brand.js` (no inline script, no inline style); the script applies the unsaved values to `[data-brand-preview]` through the CSSOM (a few real controls: buttons, a field, a card, a tag, pills, a switch, a table, alerts, the switcher),
+shows the preview in light or in dark whatever the page is in, and works out the contrast of the pairings that do not depend on the accent while you type, from the same list of pairings (`data-pairings`) the server uses. Check and Save run the whole check on the server, with the accent of every app.
 
 ### Versions
 

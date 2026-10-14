@@ -111,6 +111,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
         {
             "apps" => design.App(finding.Id) is not null,
             "rules" => design.Rule(finding.Id) is not null,
+            Brand.Kind => finding.Id == Brand.ItemId,
             _ => design.Component(finding.Id) is not null,
         };
         if (exists)
@@ -125,6 +126,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
     public static IReadOnlyList<DesignCheck> All { get; } =
     [
         new("apps", "Apps", "Every app is valid", "Name, id, tagline, category, glyph, port and colours of every app pass what a save holds them to, and every accent reaches AA in light and dark with its text.", AppsValid),
+        new("brand", "Brand", "The brand is valid", "The names of the brand, every token value it sets (its kind and its limits) and the contrast of its surfaces and of the accent of every app, in light and dark and in every colour scheme (COLOR-11).", BrandValid),
         new("versions", "Apps", "The apps use the latest release", "Every app whose version of MatUi is written down uses the latest release. Advice: updating an app is the work of its own repository.", Versions),
         new("palette", "Apps", "No two accents are alike", "No two accents are closer than the palette check allows (IDENT-04). Advice: changing an app's colour is a decision for a person.", Palette),
         new("rules", "Rules", "Every rule is valid", "Id of its area, title, statement, level and source of every rule pass what a save holds them to.", RulesValid),
@@ -147,6 +149,15 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
             {
                 yield return new Finding("apps", Severity.Error, $"{app.Name}: {problem.Message}", "apps", app.Id);
             }
+        }
+    }
+
+    private static IEnumerable<Finding> BrandValid(CheckContext c)
+    {
+        var brand = BrandValidator.Normalize(c.Design.Brand, c.Toolkit.EditableTokens);
+        foreach (var problem in BrandValidator.Validate(brand, c.Toolkit.Tokens, c.Toolkit.Schemes, c.Design.Apps))
+        {
+            yield return new Finding("brand", Severity.Error, $"{problem.Field}: {problem.Message}", Brand.Kind, Brand.ItemId);
         }
     }
 
@@ -323,6 +334,11 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
         foreach (var doc in c.Studio.Store.List("components").Where(i => c.Design.StudioComponents.All(d => !d.Id.Equals(i.Id, StringComparison.OrdinalIgnoreCase))))
         {
             yield return new Finding("volume", Severity.Error, $"The component {doc.Id} on the volume is left out: it is not valid, or breaks a check that keeps the page safe.", "components", doc.Id);
+        }
+
+        if (c.Studio.Store.List(Brand.Kind).Any(i => i.Id == Brand.ItemId) && c.Design.StudioBrand is null)
+        {
+            yield return new Finding("volume", Severity.Error, "The brand on the volume is left out: it is not a valid brand (a name that is empty or too long, a token name or a value that is not safe to write into a stylesheet).", Brand.Kind, Brand.ItemId);
         }
     }
 }

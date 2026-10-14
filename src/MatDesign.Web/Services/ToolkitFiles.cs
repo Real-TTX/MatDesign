@@ -67,6 +67,7 @@ public sealed partial class ToolkitFiles
         Tokens = CssTokens.Tokens(_css["matui.tokens.css"]);
         Schemes = CssTokens.Schemes(_css["matui.tokens.css"]);
         Properties = ComponentProperties.Parse(CssParts.Select(part => _css[part]));
+        EditableTokens = BrandTokens.Editable(Tokens);
         Facts = new MarkupFacts(MarkupChecks.ClassesIn(CssParts.Select(part => _css[part])), IconNames.ToHashSet());
         _state = Build(design.Version);
     }
@@ -98,7 +99,7 @@ public sealed partial class ToolkitFiles
 
     private State Build(long version)
     {
-        var appsCss = _css[AppsPart] + AppsOverlay(_design.StudioApps);
+        var appsCss = _css[AppsPart] + AppsOverlay(_design.StudioApps) + BrandOverlay(_design.StudioBrand, EditableTokens);
         string Part(string name) => name == AppsPart ? appsCss : _css[name];
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Concat(CssParts.Select(Part)) + Script + BootScript + Sprite)))[..10].ToLowerInvariant();
         // the first line names the version of the toolkit first (what an app compares), then the build of the site that made the file
@@ -128,6 +129,48 @@ public sealed partial class ToolkitFiles
 
         return sb.Length == 0 ? string.Empty : "\n/* Apps added or changed in the Studio. */\n" + sb;
     }
+
+    /// <summary>
+    /// The tokens a brand sets (<c>COLOR-11</c>), written after everything else so that they win: the light values on <c>:root</c>, and the dark values twice and identical, once for an explicit
+    /// <c>data-theme="dark"</c> and once for the system under <c>prefers-color-scheme: dark</c>, exactly as <c>matui.tokens.css</c> writes its dark set. Only a token a brand may set, with a value of its
+    /// kind within its limits, is written; a brand that sets nothing writes nothing, so the file is what it was without a brand.
+    /// </summary>
+    public static string BrandOverlay(Brand? brand, IReadOnlyList<BrandToken> tokens)
+    {
+        if (brand is null || !BrandValidator.IsSafe(brand))
+        {
+            return string.Empty;
+        }
+
+        IEnumerable<string> Lines(IReadOnlyDictionary<string, string> values, bool dark)
+            => tokens
+                .Where(t => values.TryGetValue(t.Name, out var v) && (!dark || t.HasDark) && BrandValidator.CheckValue(t, v) is null)
+                .Select(t => $"{t.Name}: {values[t.Name]};");
+
+        var light = Lines(brand.Values(false), dark: false).ToList();
+        var dark = Lines(brand.Values(true), dark: true).ToList();
+        if (light.Count == 0 && dark.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder("\n/* Brand set in the Studio (COLOR-11): tokens only. The dark set is written twice, like in matui.tokens.css. */\n");
+        if (light.Count > 0)
+        {
+            sb.Append(":root {\n").AppendJoin('\n', light.Select(l => "  " + l)).Append("\n}\n");
+        }
+
+        if (dark.Count > 0)
+        {
+            sb.Append(":root[data-theme=\"dark\"] {\n").AppendJoin('\n', dark.Select(l => "  " + l)).Append("\n}\n");
+            sb.Append("@media (prefers-color-scheme: dark) {\n  :root:not([data-theme=\"light\"]):not([data-theme=\"dark\"]) {\n").AppendJoin('\n', dark.Select(l => "    " + l)).Append("\n  }\n}\n");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>The tokens a brand may set, with kind and limits: what the brand editor lists.</summary>
+    public IReadOnlyList<BrandToken> EditableTokens { get; }
 
     /// <summary>Every file of the toolkit and a short README, to be copied into an app's static files (an app never loads them from this site).</summary>
     public byte[] Zip => Current.Zip.Value;

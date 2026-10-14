@@ -1,0 +1,353 @@
+@page "/Studio/Brand"
+@model MatDesign.Web.Pages.Studio.BrandModel
+@inject StudioHistory History
+@using System.Globalization
+@using MatDesign.Core
+@using MatDesign.Core.Studio
+@using MatDesign.Web.Studio
+@{
+    var input = Model.Input;
+    ViewData["Title"] = "Brand";
+    ViewData["PageSub"] = Model.Source == ItemSource.BuiltIn
+        ? "The brand that is built in: the Mat family, no token changed. Saving a change here replaces it on the site; resetting brings it back."
+        : "The brand of the company, saved in the Studio. What it sets is written after the tokens in matui.css, in every release and in the archive.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Brand", null));
+    ViewData["Width"] = "wide";
+    ViewData["IndexDialog"] = "brand-index";
+    ViewData["IndexLabel"] = "On this page";
+
+    string Field(string name) => Model.ProblemFor(name) is null ? string.Empty : " is-invalid";
+    string Ratio(double value) => value.ToString("0.00", CultureInfo.InvariantCulture);
+    var pairings = SchemeSurfaces.Pairings;
+    var light = Model.Standard.Where(r => r.Mode == "light").ToList();
+    var dark = Model.Standard.Where(r => r.Mode == "dark").ToList();
+    var failing = Model.Standard.Count(r => r.Fails);
+}
+
+<div class="doc-brand" data-brand-editor data-pairings="@Model.PairingsJson" data-accent="@Model.AccentJson">
+    <div class="doc-brand__main">
+        @* The action is written out: after Check the address of the page ends in ?check=true, and Save must not inherit it. A form with an action gets no token by itself. *@
+        <form class="mat-form" method="post" action="/Studio/Brand" novalidate>
+            @Html.AntiForgeryToken()
+
+            <div class="mat-alert mat-alert--danger" role="alert" data-validation-summary hidden="@(Model.Problems.Count == 0)">
+                @Ui.Icon("x-circle")
+                <div class="mat-alert__body">
+                    <strong>Please check the brand.</strong>
+                    <ul class="mat-alert__list">
+                        @foreach (var problem in Model.Problems)
+                        {
+                            <li><a href="#@BrandModel.TargetOf(problem.Field)">@(problem.Field.Contains(':') ? problem.Field.Replace(":", " ") + ": " : string.Empty)@problem.Message</a></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            @if (Model.Checked && Model.Problems.Count == 0)
+            {
+                <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>All checks pass.</strong> Nothing was saved yet.</div></div>
+            }
+
+            <section class="mat-card" aria-labelledby="names-title">
+                <div class="mat-card__head">@Ui.Icon("tag")<h2 class="mat-card__title" id="names-title">The company</h2></div>
+                <div class="mat-card__body">
+                    <div class="mat-form__grid">
+                        <div class="mat-field@(Field("Company"))">
+                            <label class="mat-label" for="Input_Company">Company <span class="mat-req" aria-hidden="true">*</span></label>
+                            <input class="mat-input" id="Input_Company" name="Input.Company" value="@input.Company" maxlength="60" required data-msg-required="Please name the company." />
+                            <span class="mat-error" aria-live="polite">@Model.ProblemFor("Company")</span>
+                        </div>
+                        <div class="mat-field@(Field("ShortName"))">
+                            <label class="mat-label" for="Input_ShortName">Short name <span class="mat-req" aria-hidden="true">*</span></label>
+                            <input class="mat-input" id="Input_ShortName" name="Input.ShortName" value="@input.ShortName" maxlength="16" required data-msg-required="Please give a short name." />
+                            <span class="mat-error" aria-live="polite">@Model.ProblemFor("ShortName")</span>
+                            <span class="mat-hint">For places where the full name does not fit.</span>
+                        </div>
+                        <div class="mat-field mat-field--full@(Field("Tagline"))">
+                            <label class="mat-label" for="Input_Tagline">Tagline <span class="mat-opt">(optional)</span></label>
+                            <input class="mat-input" id="Input_Tagline" name="Input.Tagline" value="@input.Tagline" maxlength="90" />
+                            <span class="mat-error" aria-live="polite">@Model.ProblemFor("Tagline")</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mat-section" aria-labelledby="tokens-title">
+                <div class="mat-section__head">
+                    <h2 id="tokens-title">Tokens</h2>
+                    <p class="mat-section__lead">
+                        A brand changes tokens, never CSS. Colours are #rrggbb, or rgba(r, g, b, a) for a tint. Leave a field empty to keep the toolkit's own value (the placeholder). Light and dark are separate; a token with no dark column has one value for both.
+                        Values are checked by their kind and within limits that keep the interface usable (touch targets of 44 px, a body text of 14 px or more, a line height of 1.2 to 2, radii of 0 to 24 px).
+                    </p>
+                </div>
+            </section>
+
+            @foreach (var group in Model.Groups)
+            {
+                var groupId = "group-" + Navigation.Slug(group.Key);
+                <section class="mat-card" aria-labelledby="@groupId">
+                    <div class="mat-card__head"><h3 class="mat-card__title" id="@groupId">@group.Key</h3><span class="mat-muted">@StudioFormat.Count(group.Count(), "token")</span></div>
+                    <div class="mat-card__body doc-brand__body">
+                        <div class="mat-table-wrap">
+                            <table class="mat-table doc-brand__table">
+                                <caption class="mat-sr-only">Tokens of the group @group.Key</caption>
+                                <thead>
+                                    <tr><th scope="col">Token</th><th scope="col">Toolkit</th><th scope="col">Light</th><th scope="col">Dark</th><th scope="col"><span class="mat-sr-only">Reset</span></th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var token in group)
+                                    {
+                                        var colour = token.Kind == BrandTokenKind.Colour;
+                                        <tr data-brand-row data-token="@token.Name" data-kind="@token.Kind.ToString().ToLowerInvariant()" data-light="@token.Light" data-dark="@token.Dark">
+                                            <td data-label="Token">
+                                                <div class="mat-table__name">
+                                                    <span>
+                                                        <code>@token.Name</code>
+                                                        <small>@token.Description</small>
+                                                        @if (!colour) { <small class="mat-muted">@token.Hint</small> }
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td data-label="Toolkit">
+                                                <span class="doc-brand__default">
+                                                    @if (colour) { @Ui.Swatch(token.Light) }
+                                                    <code>@token.Light</code>
+                                                </span>
+                                                @if (token.Dark is not null)
+                                                {
+                                                    <span class="doc-brand__default">
+                                                        @if (colour) { @Ui.Swatch(token.Dark) }
+                                                        <code>@token.Dark</code>
+                                                        <span class="mat-muted">dark</span>
+                                                    </span>
+                                                }
+                                            </td>
+                                            @foreach (var isDark in new[] { false, true })
+                                            {
+                                                var modeName = isDark ? "Dark" : "Light";
+                                                var fieldName = modeName + ":" + token.Name;
+                                                if (isDark && !token.HasDark)
+                                                {
+                                                    <td data-label="Dark"><span class="mat-muted">Same as light</span></td>
+                                                    continue;
+                                                }
+
+                                                var id = BrandModel.IdOf(token, isDark);
+                                                <td data-label="@modeName">
+                                                    <div class="mat-field@(Field(fieldName))">
+                                                        <div class="doc-brand__cell">
+                                                            @if (colour)
+                                                            {
+                                                                <input type="color" class="doc-brand__picker" id="@(id)-picker" data-brand-picker="@(isDark ? "dark" : "light")" value="#000000" aria-label="@modeName colour of @token.Name" />
+                                                            }
+                                                            <input class="mat-input mat-mono" id="@id" name="@(modeName.ToLowerInvariant() + ":" + token.Name)" value="@Model.ValueOf(token, isDark)" placeholder="@(isDark ? token.Dark : token.Light)" maxlength="@BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-brand-input="@(isDark ? "dark" : "light")" aria-label="@modeName value of @token.Name" />
+                                                        </div>
+                                                        <span class="mat-error" aria-live="polite">@Model.ProblemFor(fieldName)</span>
+                                                    </div>
+                                                </td>
+                                            }
+                                            <td data-label="Reset" class="mat-table__cell-actions">
+                                                <div class="mat-table__actions">
+                                                    <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" data-brand-reset aria-label="Reset @token.Name to the toolkit's value" data-tip="Reset">@Ui.Icon("restore")</button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            }
+
+            <section class="mat-section" aria-labelledby="contrast-title">
+                <div class="mat-section__head">
+                    <h2 id="contrast-title">Contrast of the brand</h2>
+                    <p class="mat-section__lead">
+                        The pairings the toolkit holds to AA, on the surfaces of the brand. The table below follows what you type. Saving also checks the accent of every app on these surfaces, and every colour scheme
+                        (paper, high contrast, black); a pairing that fails blocks the save, advice does not (COLOR-11).
+                    </p>
+                </div>
+                <div class="mat-table-wrap">
+                    <table class="mat-table doc-brand__contrast" data-brand-contrast>
+                        <caption class="mat-sr-only">Contrast of the accent-independent pairings, light and dark</caption>
+                        <thead><tr><th scope="col">Pairing</th><th scope="col">Needs</th><th scope="col">Light</th><th scope="col">Dark</th></tr></thead>
+                        <tbody>
+                            @for (var i = 0; i < pairings.Count; i++)
+                            {
+                                var pair = pairings[i];
+                                <tr data-pairing="@i">
+                                    <td data-label="Pairing"><code>@pair.Foreground</code> on <code>@pair.Background</code>@(pair.Over is null ? string.Empty : " over " + pair.Over)<br /><span class="mat-muted">@pair.Name.Replace(" ({mode})", string.Empty)@if (pair.Advisory || pair.AdvisoryUnlessContrast) { <text> (advice only)</text> }</span></td>
+                                    <td data-label="Needs" class="mat-num mat-mono">@Ratio(pair.Required):1</td>
+                                    @foreach (var (mode, results) in new[] { ("light", light), ("dark", dark) })
+                                    {
+                                        var r = i < results.Count ? results[i] : null;
+                                        <td data-label="@(mode == "light" ? "Light" : "Dark")" data-brand-result="@mode">
+                                            @if (r is not null)
+                                            {
+                                                <span class="mat-mono" data-ratio>@Ratio(r.Ratio):1</span>
+                                                <span class="mat-pill @(r.Passes ? "mat-pill--ok" : r.Advisory ? "mat-pill--warn" : "mat-pill--error")" data-status>@(r.Passes ? "Passes" : r.Advisory ? "Below advice" : "Fails")</span>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="mat-section" aria-labelledby="accents-title">
+                <div class="mat-section__head">
+                    <h2 id="accents-title">The accents of the apps on these surfaces</h2>
+                    <p class="mat-section__lead">For each pairing that depends on the accent, the app that reaches it least well. Worked out by the server on Check and on Save, not while you type.</p>
+                </div>
+                <div class="mat-table-wrap">
+                    <table class="mat-table">
+                        <caption class="mat-sr-only">The accent-dependent pairings in the standard look</caption>
+                        <thead><tr><th scope="col">Pairing</th><th scope="col">Weakest accent</th><th scope="col">Ratio</th><th scope="col">Needs</th><th scope="col">Result</th></tr></thead>
+                        <tbody>
+                            @foreach (var r in Model.WithAccents)
+                            {
+                                <tr>
+                                    <td data-label="Pairing">@r.Name@if (r.Advisory) { <small class="mat-muted"> (advice only)</small> }</td>
+                                    <td data-label="Weakest accent">@r.Accent</td>
+                                    <td data-label="Ratio" class="mat-num mat-mono">@Ratio(r.Ratio):1</td>
+                                    <td data-label="Needs" class="mat-num mat-mono">@Ratio(r.Required):1</td>
+                                    <td data-label="Result"><span class="mat-pill @(r.Passes ? "mat-pill--ok" : r.Advisory ? "mat-pill--warn" : "mat-pill--error")">@(r.Passes ? "Passes" : r.Advisory ? "Below advice" : "Fails")</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="mat-section" aria-labelledby="fixed-title">
+                <div class="mat-section__head">
+                    <h2 id="fixed-title">Tokens that are not set here</h2>
+                    <p class="mat-section__lead">These are derived from other values or are structure, not look, so a brand leaves them to the toolkit.</p>
+                </div>
+                <ul class="doc-list">
+                    @foreach (var reason in Model.Fixed)
+                    {
+                        <li><strong>@reason.Key</strong><br />@foreach (var t in reason) { <code>@t.Name</code><text> </text> }</li>
+                    }
+                </ul>
+            </section>
+
+            <div class="mat-btn-row">
+                <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+                <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+                <a class="mat-btn mat-btn--secondary" href="/Studio">@Ui.Icon("back")<span>Back</span></a>
+                @if (History.HasHistory(Brand.Kind, Brand.ItemId))
+                {
+                    <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl(Brand.Kind, Brand.ItemId)">@Ui.Icon("restore")<span>History</span></a>
+                }
+                @if (Model.Source != ItemSource.BuiltIn)
+                {
+                    <span class="mat-btn-row__spacer"></span>
+                    <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Reset" data-confirm="Reset the brand to the built-in one? Your names and tokens are gone from the site; the history stays." data-confirm-ok="Reset">@Ui.Icon("restore")<span>Reset to built-in</span></button>
+                }
+            </div>
+        </form>
+    </div>
+
+    @* The preview is outside the form: a button or a field in it can never submit the editor. The script sets the tokens on this one element through the CSSOM. *@
+    <aside class="doc-brand__side" aria-labelledby="preview-title">
+        <div class="mat-card">
+            <div class="mat-card__head">
+                @Ui.Icon("eye")<h2 class="mat-card__title" id="preview-title">Preview</h2>
+                <div class="mat-seg" role="group" aria-label="Mode of the preview">
+                    <button type="button" class="mat-seg__btn" aria-pressed="true" data-brand-mode="light">Light</button>
+                    <button type="button" class="mat-seg__btn" aria-pressed="false" data-brand-mode="dark">Dark</button>
+                </div>
+            </div>
+            <div class="mat-card__body">
+                <div class="doc-brand__summary" role="status" aria-live="polite" data-brand-summary>
+                    @if (failing == 0)
+                    {
+                        <p><span class="mat-pill mat-pill--ok">Passes</span> Every required pairing reaches AA, in light and dark.</p>
+                    }
+                    else
+                    {
+                        <p><span class="mat-pill mat-pill--error">Fails</span> @StudioFormat.Count(failing, "required pairing") below AA.</p>
+                    }
+                </div>
+                <div class="doc-brand-preview" data-brand-preview>
+                    <div class="doc-brand-preview__nav">
+                        <button type="button" class="mat-switcher">
+                            <span class="mat-switcher__icon">@Ui.Icon("palette")</span>
+                            <span class="mat-switcher__text"><small>Menu</small><span class="mat-switcher__name">Brand</span></span>
+                            @Ui.Icon("chevron-down", "mat-switcher__chev")
+                        </button>
+                    </div>
+                    <div class="doc-brand-preview__page">
+                        <h3 class="doc-brand-preview__title">A page title</h3>
+                        <p class="doc-brand-preview__text">Body text in the size and the font of the brand, with <a href="#preview-title">a link</a> and <span class="mat-muted">muted text for hints</span>.</p>
+                        <div class="mat-btn-row">
+                            <button type="button" class="mat-btn mat-btn--primary">Save</button>
+                            <button type="button" class="mat-btn mat-btn--secondary">Cancel</button>
+                            <button type="button" class="mat-btn mat-btn--ghost">More</button>
+                            <button type="button" class="mat-btn mat-btn--danger">Delete</button>
+                        </div>
+                        <div class="mat-field">
+                            <label class="mat-label" for="bp-name">Name</label>
+                            <input class="mat-input" id="bp-name" form="bp-none" placeholder="A placeholder" />
+                        </div>
+                        <div class="mat-row">
+                            <span class="mat-tag">Invoices</span>
+                            <span class="mat-pill mat-pill--ok">Healthy</span>
+                            <span class="mat-pill mat-pill--warn">Degraded</span>
+                            <span class="mat-pill mat-pill--error">Down</span>
+                            <label class="mat-switch"><input type="checkbox" id="bp-switch" form="bp-none" checked /><span class="mat-switch__track"></span><span>Notify me</span></label>
+                        </div>
+                        <div class="mat-card">
+                            <div class="mat-card__head"><h4 class="mat-card__title">A card</h4></div>
+                            <div class="mat-card__body">
+                                <div class="mat-table-wrap">
+                                    <table class="mat-table">
+                                        <caption class="mat-sr-only">A sample table</caption>
+                                        <thead><tr><th scope="col">Name</th><th scope="col">State</th></tr></thead>
+                                        <tbody>
+                                            <tr><td data-label="Name">Backup</td><td data-label="State"><span class="mat-pill mat-pill--ok">Done</span></td></tr>
+                                            <tr class="is-selected"><td data-label="Name">Update</td><td data-label="State"><span class="mat-pill mat-pill--warn">Waiting</span></td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mat-alert mat-alert--info" role="status">@Ui.Icon("info")<div class="mat-alert__body">Information in the info colours.</div></div>
+                        <div class="mat-alert mat-alert--danger" role="status">@Ui.Icon("x-circle")<div class="mat-alert__body">An error in the danger colours.</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+</div>
+
+<dialog class="mat-dialog mat-dialog--sm" id="brand-index" aria-labelledby="brand-index-title">
+    <div class="mat-dialog__form">
+        <div class="mat-dialog__head">
+            @Ui.Icon("list")
+            <h2 class="mat-dialog__title" id="brand-index-title">On this page</h2>
+            <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">@Ui.Icon("x")</button>
+        </div>
+        <div class="mat-dialog__body">
+            <nav class="mat-toc" aria-label="On this page">
+                <ul class="mat-toc__list">
+                    <li><a class="mat-toc__link" href="#names-title">The company</a></li>
+                    @foreach (var group in Model.Groups)
+                    {
+                        <li><a class="mat-toc__link" href="#group-@Navigation.Slug(group.Key)">@group.Key</a></li>
+                    }
+                    <li><a class="mat-toc__link" href="#contrast-title">Contrast of the brand</a></li>
+                    <li><a class="mat-toc__link" href="#accents-title">The accents of the apps</a></li>
+                    <li><a class="mat-toc__link" href="#fixed-title">Tokens that are not set here</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</dialog>
+
+@section Scripts {
+    <script src="/js/brand.js"></script>
+}

@@ -24,6 +24,7 @@ public static class StudioFormat
         "releases" => "Release",
         "runs" => "Run",
         "usage" => "Version",
+        "brand" => "Brand",
         _ => char.ToUpperInvariant(kind[0]) + kind[1..],
     };
 }

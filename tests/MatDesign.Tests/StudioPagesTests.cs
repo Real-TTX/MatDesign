@@ -48,6 +48,7 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
         _studio.Store.Save("rules", rule.Id, rule, "admin", "Created");
         _studio.Store.Save("components", "qa-pages", new ComponentDoc("qa-pages", "QA pages", "Content", "toggle", "A component for the page tests.", ["BUTTON-01"],
             [new ComponentExample("Pill", """<span class="mat-pill">x</span>""")], []), "admin", "Created");
+        _studio.Store.Save("brand", "brand", MatDesign.Core.Studio.Brand.BuiltIn with { Company = "Acme", Light = new Dictionary<string, string> { ["--mat-radius"] = "8px" } }, "admin", "Created");
         _studio.Design.Reload();
         Assert.True(_studio.Releases.Execute("0.1.0", "For the page tests.", "admin").Succeeded);
         _studio.Factory.Services.GetRequiredService<VersionTracker>().Set("matmail", "0.1.0", "A note.", "admin");
@@ -81,6 +82,8 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
         yield return "/Studio/Versions";
         yield return "/Studio/Versions/Edit?id=matmail";
         yield return "/Studio/Versions/Edit?id=matdock";
+        yield return "/Studio/Brand";
+        yield return "/Studio/History?kind=brand&id=brand";
     }
 
     [Fact]

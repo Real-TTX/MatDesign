@@ -7,7 +7,7 @@ branding, its own CI/CD for it and its own toolkit**. Mat is the first company t
 
 | Pillar | What a company does | State |
 |---|---|---|
-| **Branding** | Names itself, chooses accent, shape, type, density and logo, and gets the checks (AA contrast, touch targets) that keep a brand from breaking its own UI | accent, glyph and logo colour per app only: **stages 10 to 13** |
+| **Branding** | Names itself, chooses accent, shape, type, density and logo, and gets the checks (AA contrast, touch targets) that keep a brand from breaking its own UI | **stage 10 done** (a brand item and a token editor with limits and AA checks); logo and fonts: **stages 12 and 13** |
 | **Toolkit** | Takes the controls (CSS, one script, icon sprite) with its brand applied, its rules and its documented components | the controls, rules and components exist; the brand does not reach them yet: **stages 11 and 12** |
 | **CI/CD** | Versions, changelog, checks and a release pipeline that publishes the files and tells the apps | **done** (stages 7 and 8 of the Studio) |
 
@@ -31,7 +31,7 @@ Each stage ends with the build clean, the tests and browser checks green, the co
 
 | # | Stage | Contents |
 |---|---|---|
-| 10 | **Brand and tokens** | A `brand` item in the Studio (company name, short name, tagline) and a **token editor**: every token of `matui.tokens.css` can be overridden globally, light and dark, with a type per token (colour, length, number, font stack, duration), limits and live checks (AA for every pairing the toolkit holds, touch targets of 44 px, body text not below 16 px where a field needs it). The values are written as `matui.brand.css` into the bundle (overlay after the tokens, light and dark written twice and identical), into releases, the archive and the changelog. History, restore and checks work like for apps and rules. A live preview with the sample app. |
+| 10 | **Brand and tokens** (done) | A `brand` item in the Studio (company name, short name, tagline) and a **token editor**: every token of `matui.tokens.css` can be overridden globally, light and dark, with a type per token (colour, length, number, font stack, duration), limits and live checks (AA for every pairing the toolkit holds, touch targets of 44 px, body text not below 14 px, line height 1.2 to 2, radii 0 to 24 px). The values are written as an overlay at the end of the apps part of the bundle (after the tokens, so it wins; light on `:root`, dark written twice and identical), ten parts as before, into releases, the archive and the changelog. History, restore and checks work like for apps and rules. A live preview with the sample app. |
 | 11 | **Component properties** | The toolkit gets documented `--mat-<component>-*` properties (radius, padding, border width, height, ...) with a fallback to the global token, so that nothing changes for an app that does not set them. Part of the toolkit, no Studio change: it gives the editor something to turn. **Done:** 68 properties in 16 component groups, declared by `@prop` lines in the CSS and read by `ComponentProperties` (docs/ARCHITECTURE.md, "Component properties"; `SPACE-06`). |
 | 12 | **Token editor per component and per app** | The editor lists the properties of a component next to its examples with a preview beside each control; overrides can be global, per app (`[data-app]`) and per colour scheme. |
 | 13 | **Assets** | Logo, word mark and favicon (uploaded, checked: type, size, no script in an SVG) and the fonts of a brand as files that are served and released; `@font-face` generated, `font-display: swap`. |
