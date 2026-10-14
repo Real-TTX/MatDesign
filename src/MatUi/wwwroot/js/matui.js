@@ -101,6 +101,10 @@
      data-dismiss                           close the alert around it
      data-view-switch="list|gallery"        switch between the two views of a list (remembered per data-view-key)
      data-shortcut="/"                      key that clicks the element, or focuses it when it is a text field (not while typing)
+     data-rating                            a rating (FORM-22): a fieldset (.mat-rating) of native radio buttons that the script draws as stars (mat-rating--heart, --dot: hearts, dots); the
+                                            pointer shows the value it is on, a click chooses it; or, with .mat-rating--readonly, a value shown (data-value="4.5", data-max 3 to 10, data-count
+                                            "128" adds "(128)"). data-clearable (a click on the chosen value clears it), data-show-value (the value as text beside the shapes). Event:
+                                            mat:rating-change (detail.value). API: MatUi.rating.init / get / set. The texts: data-rt-<name> on <html>
    ========================================================================== */
 (function () {
   'use strict';
@@ -6004,6 +6008,194 @@
     }
   };
 
+  // ------------------------------------------------------------------------------------------------ rating (FORM-22, matui.forms.css)
+  // A value on a short scale that people give to something (stars, hearts or dots), or an average that is shown. To choose, the markup is a group of native radio buttons:
+  //   <fieldset class="mat-field mat-fieldset mat-rating" data-rating data-clearable data-show-value><legend class="mat-legend">Overall</legend>
+  //     <input class="mat-rating__input" type="radio" id="q-1" name="q" value="1"><label class="mat-rating__label" for="q-1">1 star</label> ... one per value</fieldset>
+  // so a form posts it, the keyboard of the browser (arrow keys, one Tab stop) and the screen reader work, and without the script it is a row of radio buttons. The radios say
+  // what can be chosen: half stars are 0.5, 1, 1.5 ... (twice the radios), and the highest value is the number of shapes. A radio with the value 0 or empty is "no rating".
+  // The script marks the group is-ready (the radios and labels become invisible, they keep the focus) and draws the shapes: the outline of each and, over it, the filled ones up
+  // to --mat-rating-fill. The pointer shows the value it is on (a mouse or a pen: the shapes fill up to it, and the text beside them says it), a click chooses it, and with
+  // data-clearable a click on the chosen value clears it (the radio "no rating", or no radio at all). The shape is the class mat-rating--heart or --dot (star by default).
+  // To show a value: <span class="mat-rating mat-rating--readonly" data-rating data-value="4.5" data-max="5" data-count="128" data-show-value>4.5 out of 5</span>; the content is what is
+  // seen without the script, the script draws the shapes (any value, partly filled), gives it role="img" and an aria-label ("Rated 4.5 out of 5, 128 ratings") unless it has one.
+  // data-max is the number of shapes (3 to 10, default 5), data-show-value writes the value as text beside the shapes (colour and shape alone do not say it, COLOR-04), data-count
+  // adds "(128)". Every change of a choice sends mat:rating-change (bubbles; detail.value, detail.rating) after the native change event. API: MatUi.rating.init / get / set.
+  var RT_TEXT = {
+    en: { rated: 'Rated {0} out of {1}', ratedCount: 'Rated {0} out of {1}, {2} ratings', ratedOne: 'Rated {0} out of {1}, 1 rating', notRated: 'Not rated' },
+    de: { rated: 'Bewertet mit {0} von {1}', ratedCount: 'Bewertet mit {0} von {1}, {2} Bewertungen', ratedOne: 'Bewertet mit {0} von {1}, 1 Bewertung', notRated: 'Nicht bewertet' }
+  };
+  var RT_ICONS = { heart: 'heart', dot: 'circle' };
+
+  function ratText(key, a, b, c) {
+    var table = RT_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || RT_TEXT.en;
+    var s = root.getAttribute('data-rt-' + key.toLowerCase()) || table[key] || RT_TEXT.en[key] || key;
+    return s.replace('{0}', function () { return a === undefined ? '' : a; }).replace('{1}', function () { return b === undefined ? '' : b; }).replace('{2}', function () { return c === undefined ? '' : c; });
+  }
+  // a number as the language of the page writes it (4,5 in German), with at most two decimals
+  function ratNum(n) {
+    var t = Math.round(n * 100) / 100;
+    try { return t.toLocaleString(root.lang || 'en', { maximumFractionDigits: 2 }); } catch (e) { return String(t); }
+  }
+  function ratOf(el) {
+    var r = el && el.closest ? el.closest('[data-rating]') : null;
+    return r && r._matRating ? r._matRating : null;
+  }
+  function ratShapes(el, max) {
+    var name = 'star', cls;
+    for (cls in RT_ICONS) { if (Object.prototype.hasOwnProperty.call(RT_ICONS, cls) && el.classList.contains('mat-rating--' + cls)) { name = RT_ICONS[cls]; } }
+    var cell = '<span class="mat-rating__cell">' + icon(name).replace('class="mat-icon"', 'class="mat-icon mat-rating__icon"') + '</span>', cells = '';
+    for (var i = 0; i < max; i += 1) { cells += cell; }
+    return '<span class="mat-rating__layer mat-rating__layer--empty">' + cells + '</span><span class="mat-rating__layer mat-rating__layer--fill">' + cells + '</span>';
+  }
+  function ratBody(r, body) {
+    var s = doc.createElement('span');
+    s.className = 'mat-rating__stars';
+    s.setAttribute('aria-hidden', 'true');
+    s.innerHTML = ratShapes(r.root, r.max);
+    body.appendChild(s);
+    r.stars = s;
+    if (r.root.hasAttribute('data-show-value')) {
+      r.valueEl = doc.createElement('span');
+      r.valueEl.className = 'mat-rating__value';
+      body.appendChild(r.valueEl);
+    }
+    var count = parseInt(r.root.getAttribute('data-count'), 10);
+    if (count >= 0) {
+      var c = doc.createElement('span');
+      c.className = 'mat-rating__count';
+      c.textContent = '(' + count.toLocaleString(root.lang || 'en') + ')';
+      body.appendChild(c);
+      r.count = count;
+    }
+  }
+
+  // the value that is chosen (0 when nothing is, or "no rating"), or for a read-only rating its data-value
+  function ratValue(r) {
+    if (r.readonly) { var v = parseFloat(r.root.getAttribute('data-value')); return isFinite(v) ? Math.max(0, Math.min(r.max, v)) : 0; }
+    var on = r.inputs.filter(function (i) { return i.el.checked; })[0];
+    return on ? on.v : 0;
+  }
+  function ratDisabled(r) { return r.inputs.every(function (i) { return i.el.matches(':disabled'); }); }
+
+  function ratSync(r) {
+    var v = ratValue(r), shown = r.preview !== null ? r.preview : v;
+    r.root.style.setProperty('--mat-rating-fill', (Math.min(100, shown / r.max * 100)) + '%');
+    r.root.classList.toggle('is-previewing', r.preview !== null);
+    if (r.valueEl) { r.valueEl.textContent = shown > 0 ? ratNum(shown) : ratText('notRated'); }
+    if (r.readonly && r.ownLabel) {
+      var text = ratNum(v), max = ratNum(r.max);
+      r.root.setAttribute('aria-label', v <= 0 ? ratText('notRated') : r.count === undefined ? ratText('rated', text, max) : r.count === 1 ? ratText('ratedOne', text, max) : ratText('ratedCount', text, max, r.count.toLocaleString(root.lang || 'en')));
+    }
+  }
+
+  function ratInit(el) {
+    var readonly = el.classList.contains('mat-rating--readonly'), r = el._matRating;
+    if (r && !readonly) { ratSync(r); return; }
+    var max = parseInt(el.getAttribute('data-max'), 10) || 5, inputs = [];
+    if (!readonly) {
+      $$('input[type=radio]', el).forEach(function (i) {
+        var v = parseFloat(i.value);
+        inputs.push({ el: i, v: isFinite(v) && v > 0 ? v : 0 });
+      });
+      var top = inputs.reduce(function (m, i) { return Math.max(m, i.v); }, 0);
+      if (!top) { return; }
+      max = Math.ceil(top - 1e-9);
+    }
+    max = Math.max(3, Math.min(10, max));
+    r = { root: el, readonly: readonly, max: max, inputs: inputs, preview: null };
+    if (readonly) {
+      r.ownLabel = el.hasAttribute('data-rating-label') || !el.hasAttribute('aria-label');
+      if (r.ownLabel) { el.setAttribute('data-rating-label', ''); }
+      el.setAttribute('role', 'img');
+      el.textContent = '';
+      ratBody(r, el);
+    } else {
+      r.values = inputs.filter(function (i) { return i.v > 0; }).map(function (i) { return i.v; }).sort(function (a, b) { return a - b; });
+      r.none = inputs.filter(function (i) { return i.v === 0; })[0] || null;
+      r.clearable = el.hasAttribute('data-clearable');
+      var body = doc.createElement('div');
+      body.className = 'mat-rating__body';
+      ratBody(r, body);
+      el.appendChild(body);
+      r.stars.addEventListener('pointermove', function (e) { if (e.pointerType !== 'touch') { ratPreview(r, ratAt(r, e.clientX)); } });
+      r.stars.addEventListener('pointerleave', function () { ratPreview(r, null); });
+      r.stars.addEventListener('click', function (e) { ratPick(r, ratAt(r, e.clientX)); });
+    }
+    el.style.setProperty('--mat-rating-max', String(max));
+    el._matRating = r;
+    el.classList.add('is-ready');
+    ratSync(r);
+  }
+  function initRatings(scope) { $$('[data-rating]', scope).forEach(ratInit); }
+
+  // the value under the pointer: the first value that can be chosen at or above its place in the row (the left half of a star is the half value where there is one)
+  function ratAt(r, x) {
+    var box = r.stars.getBoundingClientRect(), raw = box.width ? Math.max(0, Math.min(1, (x - box.left) / box.width)) * r.max : 0, i;
+    for (i = 0; i < r.values.length; i += 1) { if (r.values[i] >= raw - 1e-9) { return r.values[i]; } }
+    return r.values[r.values.length - 1];
+  }
+  function ratPreview(r, v) {
+    if (v !== null && ratDisabled(r)) { v = null; }
+    if (r.preview === v) { return; }
+    r.preview = v;
+    ratSync(r);
+  }
+  function ratFire(input) {
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  // Choose a value (0 clears): the radio that has it is checked and the browser's own events follow; without a radio for "no rating" the checked one is unchecked.
+  function ratChoose(r, v) {
+    if (v === ratValue(r)) { return true; }
+    if (v === 0) {
+      if (r.none) { r.none.el.checked = true; ratFire(r.none.el); return true; }
+      var on = r.inputs.filter(function (i) { return i.el.checked; })[0];
+      if (on) { on.el.checked = false; ratFire(on.el); }
+      return true;
+    }
+    var hit = r.inputs.filter(function (i) { return Math.abs(i.v - v) < 1e-9; })[0];
+    if (!hit) { return false; }
+    hit.el.checked = true;
+    ratFire(hit.el);
+    return true;
+  }
+  function ratPick(r, v) {
+    r.preview = null;
+    if (ratDisabled(r) || v === undefined) { ratSync(r); return; }
+    if (v === ratValue(r) && r.clearable) { ratChoose(r, 0); }
+    else {
+      ratChoose(r, v);
+      var on = r.inputs.filter(function (i) { return i.el.checked; })[0];
+      if (on) { on.el.focus({ preventScroll: true }); }
+    }
+    ratSync(r);
+  }
+  function ratGet(el) { var r = ratOf(el); return r ? ratValue(r) : null; }
+  function ratSet(el, value) {
+    var host = el && el.closest ? el.closest('[data-rating]') : null, r;
+    if (host && !host._matRating) { ratInit(host); }
+    r = ratOf(el);
+    if (!r) { return null; }
+    var v = Math.max(0, Math.min(r.max, parseFloat(value) || 0));
+    if (r.readonly) { host.setAttribute('data-value', String(v)); ratSync(r); return v; }
+    ratChoose(r, v);
+    ratSync(r);
+    return ratValue(r);
+  }
+
+  // every change of the choice (a click on a shape, a key, a script) is told to the page, after the native events
+  doc.addEventListener('change', function (e) {
+    var r = e.target.matches && e.target.matches('.mat-rating__input') ? ratOf(e.target) : null;
+    if (!r || r.readonly) { return; }
+    r.preview = null;
+    ratSync(r);
+    r.root.dispatchEvent(new CustomEvent('mat:rating-change', { bubbles: true, detail: { value: ratValue(r), rating: r.root } }));
+  });
+  doc.addEventListener('reset', function (e) {
+    setTimeout(function () { $$('[data-rating]', e.target).forEach(function (w) { if (w._matRating && !w._matRating.readonly) { ratSync(w._matRating); } }); }, 0);
+  }, true);
+
   // ------------------------------------------------------------------------------------------------------- init
   // a meter is filled by data: <div class="mat-meter__fill" data-value="63"> (no inline style in the markup)
   function fillMeters(scope) {
@@ -6038,6 +6230,7 @@
     initCarousels();
     initSchedules();
     initItemLists();
+    initRatings();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
     restoreBranches();
@@ -6083,6 +6276,7 @@
     schedule: schedule,
     groups: { set: function (group, open) { setGroup(group, open !== false, true); }, setAll: function (scope, open) { setAllGroups(scope, open !== false); }, restore: restoreGroups },
     itemlist: { init: initItemLists, close: function () { ilCloseAll(); }, open: function (item, side) { if (item && item._matSlide) { ilOpen(item, side === 'start' ? 'start' : 'end'); } } },
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); restoreGroups(scope); }
+    rating: { init: initRatings, get: ratGet, set: ratSet },
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); restoreGroups(scope); initRatings(scope); }
   };
 })();

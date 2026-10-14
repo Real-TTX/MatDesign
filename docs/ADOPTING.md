@@ -201,6 +201,21 @@ A text that goes into the markup of a page (a label, a hint, the words of a `dat
   </div>
   ```
 
+- A value that people give on a short scale (a review, a priority) is a **rating** (`FORM-22`): a `fieldset` with `mat-rating` and `data-rating`, a legend and a native radio with its label per value, so a form posts it and,
+  without the script, it is a row of radio buttons. The script draws stars over them (`mat-rating--heart` or `--dot` for hearts and dots, `mat-rating--sm` / `--lg`); the radios say what can be chosen, so half stars are the values
+  0.5, 1, 1.5 ... and a radio with the value 0 is "no rating". `data-clearable` lets a click on the chosen value clear it, `data-show-value` writes the value beside the shapes, `mat:rating-change` tells the page.
+  An average that is only shown is `<span class="mat-rating mat-rating--readonly" data-rating data-value="4.5" data-count="128" data-show-value>4.5 out of 5</span>` (the text is what is seen without the script; the script adds
+  `role="img"` and a label in words). Texts: `data-rt-<name>` on `<html>`; API `MatUi.rating.get(el)` / `.set(el, value)`:
+
+  ```html
+  <fieldset class="mat-field mat-fieldset mat-rating" data-rating data-clearable data-show-value>
+    <legend class="mat-legend">Overall</legend>
+    <input class="mat-rating__input" type="radio" id="q-0" name="q" value="0" checked /><label class="mat-rating__label" for="q-0">No rating</label>
+    <input class="mat-rating__input" type="radio" id="q-1" name="q" value="1" /><label class="mat-rating__label" for="q-1">1 star</label>
+    <!-- ... one radio and label for each value up to 5 -->
+  </fieldset>
+  ```
+
 - A month that is **always shown** (`FORM-18`) is a calendar: `mat-calendar` with `data-calendar` around the real input `mat-calendar__input`, for one day, a period (`data-mode="range"`) or several days
   (`data-mode="multiple"`). It posts `2026-10-10`, `2026-10-10..2026-10-14` or `2026-10-10,2026-10-12`. `data-min="today"` (also `tomorrow`, `+3d`, `-1w`) means nobody can pick the past, `data-disabled`
   and `data-disabled-weekdays="0,6"` close days, `data-events` (JSON) marks days with dots and `data-agenda` lists the events of the chosen day. The date picker takes the same `data-min` and `data-max`.
