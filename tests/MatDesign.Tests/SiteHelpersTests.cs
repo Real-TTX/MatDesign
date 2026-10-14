@@ -318,6 +318,26 @@ public class SiteHelpersTests
     }
 
     [Fact]
+    public void The_page_of_a_group_action_belongs_to_the_menu_of_its_group_although_it_is_no_item()
+    {
+        // "Manage lists" is not an item of any menu (the action replaced it), but it is a page of the menu whose group has the gear
+        var work = new NavSet("work", "Work", "briefcase", [new("Lists", [new("A", "/a", "list")], new NavGroupAction("Manage lists", "settings", "/lists"))]);
+        var admin = new NavSet("admin", "Administration", "shield", [new(null, [new("Users", "/users", "users")])]);
+
+        Assert.True(work.Contains("/a"));
+        Assert.True(work.Contains("/lists"));
+        Assert.False(admin.Contains("/lists"));
+        Assert.False(work.Contains(null));
+
+        // an action that opens a menu has no address to claim
+        var withMenu = new NavSet("m", "M", "list", [new("Lists", [new("A", "/a", "list")], new NavGroupAction("Add", "plus", MenuId: "x"))]);
+        Assert.False(withMenu.Contains("/x"));
+
+        // the shell shows the menu of that page, not simply the first one
+        Assert.Equal("work", Shell(SwitcherPlace.Top, admin, work).CurrentMenu("/lists").Id);
+    }
+
+    [Fact]
     public void The_menus_of_the_site_are_not_grouped()
         => Assert.All(Navigation.Sets, s => Assert.Null(s.Parent));
 

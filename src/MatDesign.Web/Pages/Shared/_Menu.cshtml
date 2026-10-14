@@ -38,7 +38,9 @@
                         <span class="mat-nav__group-title">@group.Title</span>
                         @if (action.Href is not null)
                         {
-                            <a class="mat-nav__group-action" href="@action.Href" aria-label="@action.Label" title="@action.Label">@Ui.Icon(action.Icon)</a>
+                            @* a link to the current page is marked like a current item *@
+                            var actionActive = action.Href == active;
+                            <a class="mat-nav__group-action@(actionActive ? " is-active" : "")" href="@action.Href" aria-label="@action.Label" title="@action.Label" aria-current="@(actionActive ? "page" : null)">@Ui.Icon(action.Icon)</a>
                         }
                         else
                         {

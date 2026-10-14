@@ -821,6 +821,7 @@ public static class ComponentCatalog
             ],
             [
                 "A group heading can carry one icon action at its right end (`NavGroup.Action`: a link or a menu, `mat-nav__group--action`, `mat-nav__group-action`); it needs a heading and an `aria-label`.",
+                "A group action that is a link to the current page is marked like a current item: `aria-current=\"page\"` (or `is-active`), the tint of the accent behind it and the accent on its icon.",
                 "A submenu is one level deep; the children show no icon. If the section has a page of its own, that page is its first child.",
                 "The user's choice (open or closed) is remembered per app; the branch with the current page is open whatever was saved.",
                 "Arrow keys: up and down walk the visible items, right opens a parent or goes to its first child, left closes it or goes back to the parent.",

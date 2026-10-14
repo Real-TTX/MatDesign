@@ -52,6 +52,7 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
     private static readonly Dictionary<string, (string Title, string Icon, string[] Trail)> Areas = new()
     {
         ["review"] = ("Needs review", "alert", ["Work", "Items"]),
+        ["lists"] = ("Manage lists", "settings", ["Work"]),
         ["users"] = ("Users", "users", ["Administration"]),
         ["roles"] = ("Roles", "shield", ["Administration"]),
         ["general"] = ("General", "settings", ["Administration", "Settings"]),
@@ -193,7 +194,7 @@ public class PreviewModel(MatDesign.Web.Studio.DesignData design) : PageModel
                 new("work", "Work", "briefcase",
                 [
                     new(null, start),
-                    new("Work", [new("Items", null, "list", Children: itemPages)], GroupAction ? new NavGroupAction("Manage lists", "settings", Query("settings")) : null),
+                    new("Work", [new("Items", null, "list", Children: itemPages)], GroupAction ? new NavGroupAction("Manage lists", "settings", Query("list", "lists")) : null),
                     new("Account",
                     [
                         new("Settings", Query("settings"), "settings"),

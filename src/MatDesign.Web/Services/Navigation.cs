@@ -102,7 +102,8 @@ public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<
     /// <summary>The pages of the menu (parents are not pages).</summary>
     public IEnumerable<NavItem> Pages => AllItems.Where(i => !i.IsParent && i.Href is not null);
 
-    public bool Contains(string? href) => href is not null && Pages.Any(i => i.Href == href);
+    /// <summary>True when the page belongs to this menu: one of its items, or the page that the icon action of a group heading leads to (that page is no item, but it is this menu's).</summary>
+    public bool Contains(string? href) => href is not null && (Pages.Any(i => i.Href == href) || Groups.Any(g => g.Action?.Href == href));
 
     /// <summary>True when an item of this menu asks for attention (a warning or error badge): the switcher then shows a dot while another menu is shown.</summary>
     public bool NeedsAttention => AllItems.Any(i => i.Badge is { Tone: "warn" or "error" });

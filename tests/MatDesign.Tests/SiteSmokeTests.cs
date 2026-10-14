@@ -393,6 +393,20 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Fact]
+    public async Task The_icon_action_of_a_group_heading_is_marked_on_its_own_page_and_only_there()
+    {
+        // SHELL-02: a link action that leads to the current page is marked like a current item (aria-current and is-active), and no item is marked with it
+        var (_, own) = await Get("/Preview?app=matmail&view=list&area=lists&groupaction=1");
+        Assert.Matches(@"<a class=""mat-nav__group-action is-active"" href=""[^""]+"" aria-label=""Manage lists"" title=""Manage lists"" aria-current=""page"">", own);
+        Assert.DoesNotMatch(@"class=""mat-nav__item[^""]*"" href=""[^""]*"" aria-current=""page""", own);
+
+        // on any other page it is not
+        var (_, elsewhere) = await Get("/Preview?app=matmail&view=list&groupaction=1");
+        Assert.DoesNotMatch(@"mat-nav__group-action[^>]*aria-current", elsewhere);
+        Assert.DoesNotContain("mat-nav__group-action is-active", elsewhere);
+    }
+
+    [Fact]
     public async Task The_sample_app_has_an_administration_behind_the_switcher_with_badges_and_a_submenu()
     {
         var (_, work) = await Get("/Preview?app=matmail&view=list");

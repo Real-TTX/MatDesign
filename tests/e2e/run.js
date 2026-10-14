@@ -709,7 +709,29 @@ function seenAt(page, selector) {
       expect(await page.getAttribute('.mat-nav__group-action', 'aria-label'), 'Manage lists', 'name');
       await page.focus('.mat-nav__group-action');
       expectTrue(await page.evaluate(() => document.activeElement.matches('.mat-nav__group-action:focus-visible')), 'no focus ring');
-      await Promise.all([page.waitForURL(/view=settings/), page.click('.mat-nav__group-action')]);
+      await Promise.all([page.waitForURL(/area=lists/), page.click('.mat-nav__group-action')]);
+    });
+    await check('on its own page the action is marked like a current item: aria-current, the tint of the accent behind it, the accent on its icon, and no item is marked at the same time', async () => {
+      const state = await page.evaluate(() => {
+        const probe = (prop, value) => { const t = document.createElement('i'); t.style.setProperty(prop, value); document.body.appendChild(t); const c = getComputedStyle(t).getPropertyValue(prop); t.remove(); return c; };
+        const a = document.querySelector('.mat-nav__group-action');
+        const s = getComputedStyle(a);
+        return {
+          current: a.getAttribute('aria-current'), active: a.classList.contains('is-active'), bg: s.backgroundColor, colour: s.color,
+          tint: probe('background-color', 'var(--mat-accent-soft-strong)'), accentText: probe('color', 'var(--mat-accent-text)'),
+          items: document.querySelectorAll('.mat-nav__item[aria-current="page"]').length,
+        };
+      });
+      expect(state.current, 'page', 'aria-current');
+      expectTrue(state.active, 'no is-active class');
+      expect(state.bg, state.tint, 'the tint behind the action');
+      expect(state.colour, state.accentText, 'the colour of its icon');
+      expect(state.items, 0, 'items marked as current at the same time');
+    });
+    await check('on another page the action is not marked', async () => {
+      await page.goto(BASE + '/Preview?app=matmail&view=list&groupaction=1', { waitUntil: 'networkidle' });
+      expectTrue(!(await page.getAttribute('.mat-nav__group-action', 'aria-current')), 'aria-current on a page that is not its own');
+      expectTrue(!(await page.locator('.mat-nav__group-action').evaluate(a => a.classList.contains('is-active'))), 'is-active on a page that is not its own');
     });
     await ctx.close();
   }
