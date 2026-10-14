@@ -69,7 +69,7 @@
     </div>
     <div class="mat-card"><div class="mat-card__body">
         <dl class="mat-kv">
-            <dt>This version</dt><dd><strong>@Model.Version</strong>, built by MatDesign <code>@Model.Build</code></dd>
+            <dt>This version</dt><dd><strong>@Model.Version</strong>, built by @Model.SiteName <code>@Model.Build</code></dd>
             <dt>What changed</dt><dd><a href="/Changelog">The changelog</a>, or as a file <a href="/ui/CHANGELOG.md">/ui/CHANGELOG.md</a>, or as data <a href="/api/changelog">/api/changelog</a> (<code>?since=0.1.0</code> gives what an app on 0.1.0 takes with an update)</dd>
             <dt>For a program</dt><dd><a href="/ui/manifest.json">/ui/manifest.json</a>: the version and every file with its SHA-256; the archive carries it as <code>matui.manifest.json</code></dd>
             <dt>Check an app</dt><dd><code>node tools/matui-check.js &lt;folder of the app&gt;</code> finds its copy of MatUi, says which version it is, whether files were changed by hand and what an update takes with it</dd>

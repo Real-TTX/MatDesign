@@ -99,6 +99,14 @@ public static class RuleBook
             "The browser title is `Page title · App name`. A detail page puts the entity first (`Invoice 2026-04 · Documents · MatPaper`).",
             RuleLevel.Should, MatPaper),
 
+        // stage 14 of docs/PRODUCT.md (demo data and templates)
+        new("IDENT-09", "IDENT", "A program names its surfaces after its company",
+            "The program that runs a design system names its own surfaces after the company that runs it, never after another company. The name under the logo, the title of every page, the footer, the version line, the sign-in and setup pages, and the README, the styleguide and the changelog of a release read the names of the company (company, short name, site name, tagline: the tenant) and never a name written into the code. The Mat apps, their accents, the audit of their repositories and the Mat brand are a template, the demo, that a company can start from, look at and change; the demo is not the default identity of every instance. A company that starts blank sees its own name and none of the Mat apps. The toolkit's own names (`MatUi`, the prefix `mat-`) are the toolkit's and not a company's.",
+            RuleLevel.Must, Owner,
+            Why: "MatDesign is software in which any company builds its own branding, toolkit and CI/CD (docs/PRODUCT.md). A site that says Mat on every page of another company is that company's site with the wrong name on it. Decided by the owner on 2026-10-14.",
+            Do: "@Design.Tenant.SiteName in the footer, ShellModel.Site(design) for the shell", Dont: "a literal MatDesign in a page, a footer or a README",
+            Check: "Test (a blank start shows its own names and none of the Mat apps)"),
+
         // ------------------------------------------------------------------------------------------------- SHELL
         new("SHELL-01", "SHELL", "The menu is on the left, the logo above it",
             "The menu is always on the left. At its top is the logo with the app name; clicking it leads to the start page.",

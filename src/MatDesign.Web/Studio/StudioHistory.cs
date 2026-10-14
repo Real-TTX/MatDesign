@@ -15,18 +15,19 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
 
     /// <summary>The kinds that have a history page.</summary>
-    public static readonly IReadOnlyList<string> Kinds = ["apps", "rules", "components", Brand.Kind];
+    public static readonly IReadOnlyList<string> Kinds = ["apps", "rules", "components", Brand.Kind, Tenant.Kind];
 
     public static bool IsKind(string? kind) => kind is not null && Kinds.Contains(kind);
 
-    public static string Singular(string kind) => kind switch { "apps" => "App", "rules" => "Rule", Brand.Kind => "Brand", _ => "Component" };
+    public static string Singular(string kind) => kind switch { "apps" => "App", "rules" => "Rule", Brand.Kind => "Brand", Tenant.Kind => "Company", _ => "Component" };
 
-    public static string Plural(string kind) => kind switch { "apps" => "Apps", "rules" => "Rules", Brand.Kind => "Brand", _ => "Components" };
+    public static string Plural(string kind) => kind switch { "apps" => "Apps", "rules" => "Rules", Brand.Kind => "Brand", Tenant.Kind => "Company", _ => "Components" };
 
     /// <summary>The list page of a kind in the Studio.</summary>
     public static string ListUrl(string kind) => $"/Studio/{Plural(kind)}";
 
-    public static string EditUrl(string kind, string id) => kind == Brand.Kind ? "/Studio/Brand" : $"/Studio/{Plural(kind)}/Edit?id={Uri.EscapeDataString(id)}";
+    public static string EditUrl(string kind, string id)
+        => kind == Brand.Kind ? "/Studio/Brand" : kind == Tenant.Kind ? "/Studio/Company" : $"/Studio/{Plural(kind)}/Edit?id={Uri.EscapeDataString(id)}";
 
     public static string HistoryUrl(string kind, string id) => $"/Studio/History?kind={kind}&id={Uri.EscapeDataString(id)}";
 
@@ -37,6 +38,7 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
         "rules" => design.Rule(id)?.Title,
         "components" => design.Component(id)?.Name,
         Brand.Kind => id == Brand.ItemId ? design.Brand.Company : null,
+        Tenant.Kind => id == Tenant.ItemId ? design.Tenant.Company : null,
         _ => null,
     } ?? id;
 
@@ -47,6 +49,7 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
         "rules" => design.Rule(id) is not null,
         "components" => design.Component(id) is not null,
         Brand.Kind => id == Brand.ItemId,
+        Tenant.Kind => id == Tenant.ItemId,
         _ => false,
     };
 
@@ -77,6 +80,7 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
                 "rules" => CheckRule(revision.Data),
                 "components" => CheckComponent(revision.Data),
                 Brand.Kind => CheckBrand(revision.Data),
+                Tenant.Kind => CheckTenant(revision.Data),
                 _ => [new("Kind", "Unknown kind of item.")],
             };
         }
@@ -109,6 +113,10 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
         var brand = BrandValidator.Normalize(data.Deserialize<Brand>(Options)!, toolkit.EditableTokens);
         return BrandValidator.Validate(brand, toolkit.Tokens, toolkit.Schemes, design.Apps);
     }
+
+    /// <summary>The company of an old revision must be one the Company page would save today (names, template, and for the blank template an accent that reaches AA).</summary>
+    private static IReadOnlyList<Problem> CheckTenant(JsonElement data)
+        => TenantValidator.Validate(TenantValidator.Normalize(data.Deserialize<Tenant>(Options)!));
 
     /// <summary>Appends a copy of the revision as the newest one and reads the items again. <see cref="CanRestore"/> must have said yes.</summary>
     public Revision Restore(string kind, string id, int number)

@@ -1,6 +1,7 @@
 using MatDesign.Core;
 using MatDesign.Web.Services;
 using MatDesign.Web.Studio;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace MatDesign.Web.Pages.Identity;
@@ -34,8 +35,14 @@ public class AuditModel : PageModel
 
     public static string Word(string state) => state switch { "yes" => "Yes", "partial" => "Partly", "no" => "No", _ => "Unknown" };
 
-    public void OnGet()
+    public IActionResult OnGet()
     {
+        // the audit is a scan of the repositories of the Mat apps: sample data of the demo template, not offered to a company that started blank
+        if (!_design.Template.OffersAudit)
+        {
+            return NotFound();
+        }
+
         var q = ListQuery.Text(Request, "q");
         var category = ListQuery.Text(Request, "category");
         var sort = ListQuery.Text(Request, "sort") ?? "name";
@@ -85,5 +92,6 @@ public class AuditModel : PageModel
             SortOptions = [new("name", "Name"), new("score", "Score (closest to the rules first)")],
             Filters = [new("category", "Category", AppRegistry.Categories.Select(c => new FilterOption(c, c)).ToList(), category)],
         };
+        return Page();
     }
 }

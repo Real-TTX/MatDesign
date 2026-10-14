@@ -112,6 +112,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
             "apps" => design.App(finding.Id) is not null,
             "rules" => design.Rule(finding.Id) is not null,
             Brand.Kind => finding.Id == Brand.ItemId,
+            Tenant.Kind => finding.Id == Tenant.ItemId,
             _ => design.Component(finding.Id) is not null,
         };
         if (exists)
@@ -125,6 +126,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
     /// <summary>Every check, in the order the report shows them.</summary>
     public static IReadOnlyList<DesignCheck> All { get; } =
     [
+        new("tenant", "Company", "The company is valid", "The names of the company, its template and, for the blank template, the accent of the site (it reaches AA in light and dark) pass what the Company page holds them to (IDENT-09).", TenantValid),
         new("apps", "Apps", "Every app is valid", "Name, id, tagline, category, glyph, port and colours of every app pass what a save holds them to, and every accent reaches AA in light and dark with its text.", AppsValid),
         new("brand", "Brand", "The brand is valid", "The names of the brand, every token value it sets (its kind and its limits) and the contrast of its surfaces and of the accent of every app, in light and dark and in every colour scheme (COLOR-11).", BrandValid),
         new("versions", "Apps", "The apps use the latest release", "Every app whose version of MatUi is written down uses the latest release. Advice: updating an app is the work of its own repository.", Versions),
@@ -139,6 +141,20 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
         new("menu", "Site", "The menus are well formed", "Every menu has at most one level of submenus, its ids are unique, and so are its addresses.", Menus),
         new("volume", "Studio", "Nothing on the volume is left out", "Every item the Studio saved is read back by the site; an item that was edited by hand into something unsafe or wrong is not, and is reported here.", Volume),
     ];
+
+    private static IEnumerable<Finding> TenantValid(CheckContext c)
+    {
+        foreach (var problem in TenantValidator.Validate(TenantValidator.Normalize(c.Design.Tenant)))
+        {
+            yield return new Finding("tenant", Severity.Error, $"{problem.Field}: {problem.Message}", Tenant.Kind, Tenant.ItemId);
+        }
+
+        // advice: a company that kept the names of the demo would put another company's name on its own releases (IDENT-09)
+        if (!c.Design.IsDemo && c.Design.Tenant.SiteName.Contains("MatDesign", StringComparison.OrdinalIgnoreCase))
+        {
+            yield return new Finding("tenant", Severity.Advice, $"The site is called {c.Design.Tenant.SiteName}, the name of the demo. Give it a name of the company.", Tenant.Kind, Tenant.ItemId);
+        }
+    }
 
     private static IEnumerable<Finding> AppsValid(CheckContext c)
     {
@@ -264,7 +280,8 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
             }
         }
 
-        foreach (var app in PatternCatalog.Apps.Where(a => c.Design.App(a) is null))
+        // the patterns are shown in the accent of five apps of the demo; a site without them shows them in its own apps
+        foreach (var app in PatternCatalog.Apps.Where(a => c.Design.Template.OffersSampleApps && c.Design.App(a) is null))
         {
             yield return new Finding("patterns", Severity.Error, $"The patterns show the app {app}, which is not in the family.");
         }
@@ -334,6 +351,27 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
         foreach (var doc in c.Studio.Store.List("components").Where(i => c.Design.StudioComponents.All(d => !d.Id.Equals(i.Id, StringComparison.OrdinalIgnoreCase))))
         {
             yield return new Finding("volume", Severity.Error, $"The component {doc.Id} on the volume is left out: it is not valid, or breaks a check that keeps the page safe.", "components", doc.Id);
+        }
+
+        if (c.Studio.Store.List(Tenant.Kind).Any(i => i.Id == Tenant.ItemId) && c.Design.StudioTenant is null)
+        {
+            yield return new Finding("volume", Severity.Error, "The company on the volume is left out: it is not a valid company (a name that is empty or too long, a template that does not exist, an accent that is not a colour).", Tenant.Kind, Tenant.ItemId);
+        }
+
+        // the file of the setup assistant: a file that cannot be read leaves the site as the demo, which would turn it into another company's site
+        string? fileProblem = null;
+        try
+        {
+            Tenant.ReadFile(c.Studio.DataDirectory);
+        }
+        catch (InvalidDataException ex)
+        {
+            fileProblem = ex.Message;
+        }
+
+        if (fileProblem is not null)
+        {
+            yield return new Finding("volume", Severity.Error, fileProblem);
         }
 
         if (c.Studio.Store.List(Brand.Kind).Any(i => i.Id == Brand.ItemId) && c.Design.StudioBrand is null)

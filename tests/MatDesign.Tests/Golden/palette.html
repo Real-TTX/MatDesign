@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en" data-app="matdesign" >
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#d6336c" />
+    <title>Palette · MatDesign</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/ui/matui.boot.js?v=d2126bc2b9"></script>
+    <link rel="stylesheet" href="/ui/matui.css?v=d2126bc2b9" />
+    <link rel="stylesheet" href="/css/site.css?v=IZvpJ2UeI9K3HqAhIei-X7zZuGLPnvIsY0um4HUd2mE" />
+</head>
+
+<body>
+    <a class="mat-skip" href="#main">Skip to the content</a>
+    <!-- sprite -->
+
+
+    <div class="mat-app">
+        <aside class="mat-nav" id="mat-nav">
+            <div class="mat-nav__brand">
+                <a href="/" aria-label="MatDesign, start page">
+                    <span class="mat-logo mat-logo--md" data-app="matdesign" role="img" aria-label="MatDesign"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg></span>
+                    <span>
+                        <span class="mat-nav__name">MatDesign</span>
+                        <span class="mat-nav__tagline">Identity of the Mat apps</span>
+                    </span>
+                </a>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-nav__close" data-nav-close aria-label="Close the menu"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-x"></use></svg></button>
+            </div>
+
+            
+
+    <nav class="mat-nav__scroll" aria-label="Design" data-nav-panel="design">
+        <ul class="mat-nav__list">
+                        <li>
+                            <a class="mat-nav__item " href="/">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-home"></use></svg><span>Overview</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Identity</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Identity">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-apps"></use></svg><span>Apps</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item is-active" href="/Identity/Palette" aria-current="page">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><span>Palette</span>
+<span class="mat-nav__badge mat-nav__badge--warn">16<span class="mat-sr-only"> pairs of accents that are too close</span></span>                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Identity/Audit">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-check-square"></use></svg><span>Audit</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Rules</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Rules">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-book"></use></svg><span>Rulebook</span>
+<span class="mat-nav__badge mat-nav__badge--plain">99+<span class="mat-sr-only"> rules</span></span>                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Foundations</li>
+                        <li class="mat-nav__branch ">
+                            <button type="button" class="mat-nav__item mat-nav__parent" aria-expanded="false" aria-controls="nav-sub-design-foundations" data-nav-branch="foundations">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-layers"></use></svg><span>Foundations</span>
+                                <svg class="mat-icon mat-nav__chev" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-down"></use></svg>
+                            </button>
+                            <div class="mat-nav__sub" id="nav-sub-design-foundations">
+                                <ul class="mat-nav__list">
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations">
+                                                <span>Colour</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Type">
+                                                <span>Type</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Space">
+                                                <span>Space and shape</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Motion">
+                                                <span>Motion</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Icons">
+                                                <span>Icons</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/IconLibrary">
+                                                <span>Icon library</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Tokens">
+                                                <span>All tokens</span>
+                                            </a>
+                                        </li>
+                                </ul>
+                            </div>
+                        </li>
+        </ul>
+    </nav>
+    <nav class="mat-nav__scroll" aria-label="Toolkit" data-nav-panel="toolkit" hidden="hidden">
+        <ul class="mat-nav__list">
+                        <li>
+                            <a class="mat-nav__item " href="/Shell">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sidebar"></use></svg><span>Shell</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Build with it</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Components">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-toggle"></use></svg><span>Components</span>
+<span class="mat-nav__badge mat-nav__badge--plain">68<span class="mat-sr-only"> components</span></span>                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Layout">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-grid"></use></svg><span>Layout</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Utilities">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sliders"></use></svg><span>Utilities</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Patterns">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-template"></use></svg><span>Patterns</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Builder">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Builder</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Use it</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Download">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-download"></use></svg><span>Download</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Changelog">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-file-text"></use></svg><span>Changelog</span>
+                            </a>
+                        </li>
+        </ul>
+    </nav>
+
+
+
+            <div class="mat-nav__foot">
+                    <div class="mat-nav__switch mat-nav__switch--foot">
+    <button type="button" class="mat-switcher" data-menu-toggle="nav-switch-menu" data-menu-place="top" aria-haspopup="menu" aria-expanded="false">
+        <span class="mat-switcher__icon"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg></span>
+        <span class="mat-switcher__text"><small data-nav-label="Menu">Menu</small><span class="mat-switcher__name">Design</span></span>
+        <svg class="mat-icon mat-switcher__chev" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-up"></use></svg>
+        <span class="mat-switcher__dot" hidden="hidden"></span>
+    </button>
+</div>
+
+                <div class="mat-nav__account">
+                    <button type="button" class="mat-user" data-menu-toggle="user-menu" aria-haspopup="menu" aria-expanded="false">
+                        <span class="mat-avatar" aria-hidden="true">V</span>
+                        <span class="mat-user__text">
+                            <span class="mat-user__name">Visitor</span>
+                            <span class="mat-user__role">Guest</span>
+                        </span>
+                        <svg class="mat-icon mat-user__chev" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-up"></use></svg>
+                    </button>
+                    <button type="button" class="mat-theme" data-theme-toggle data-theme-state="system" aria-label="Theme: System. Click for Light." title="Theme: System. Click for Light.">
+                        <svg class="mat-icon" data-theme-icon="system" aria-hidden="true" focusable="false"><use href="#mat-i-monitor"></use></svg>
+                        <svg class="mat-icon" data-theme-icon="light" aria-hidden="true" focusable="false"><use href="#mat-i-sun"></use></svg>
+                        <svg class="mat-icon" data-theme-icon="dark" aria-hidden="true" focusable="false"><use href="#mat-i-moon"></use></svg>
+                    </button>
+                </div>
+                <div class="mat-nav__version">MatDesign local-20261014</div>
+            </div>
+        </aside>
+
+        <div class="mat-main">
+            <header class="mat-topbar">
+                <button type="button" class="mat-burger" data-nav-toggle aria-label="Open the menu" aria-controls="mat-nav" aria-expanded="false"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-menu"></use></svg></button>
+                <nav class="mat-crumbs" aria-label="Breadcrumb">
+                    <ol>
+                            <li><a href="/">MatDesign</a></li>
+                                    <li><a href="/Identity">Identity</a></li>
+                                    <li aria-current="page">Palette</li>
+                    </ol>
+                </nav>
+            </header>
+
+            <main class="mat-page " id="main">
+                    <div class="mat-page__head">
+                        <div class="mat-page__title">
+                            <h1>Palette</h1>
+                                <p class="mat-page__sub">Can you tell the apps apart by their colour? A report on how close the accents are, with free colours as proposals.</p>
+                        </div>
+                    </div>
+
+                
+<section class="mat-card" aria-labelledby="strip-title">
+    <div class="mat-card__head"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><h2 class="mat-card__title" id="strip-title">All accents around the colour wheel</h2></div>
+    <div class="mat-card__body mat-stack">
+        <p class="mat-muted">Sorted by hue. Neighbours that look alike are the ones in the table below. Rule <a href="/Rules/Detail?id=IDENT-04">IDENT-04</a>: no two apps look alike.</p>
+        <div class="doc-strip" role="list">
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matdesign">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#d6336c"><rect width="4" height="4" fill="#d6336c"></rect></svg>
+                    <small>MatDesign</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matsplit">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#bf5610"><rect width="4" height="4" fill="#bf5610"></rect></svg>
+                    <small>MatSplit</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matpaper">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#268538"><rect width="4" height="4" fill="#268538"></rect></svg>
+                    <small>MatPaper</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matlan">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#418251"><rect width="4" height="4" fill="#418251"></rect></svg>
+                    <small>Matlan</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matgate">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#0a7d57"><rect width="4" height="4" fill="#0a7d57"></rect></svg>
+                    <small>Matgate</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matarchive">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#4fd1c5"><rect width="4" height="4" fill="#4fd1c5"></rect></svg>
+                    <small>Matarchive</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matbu">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#0b7f8a"><rect width="4" height="4" fill="#0b7f8a"></rect></svg>
+                    <small>MatBu</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matplay">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#00819b"><rect width="4" height="4" fill="#00819b"></rect></svg>
+                    <small>MatPlay</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matdock">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#1d78be"><rect width="4" height="4" fill="#1d78be"></rect></svg>
+                    <small>MatDock</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matbiz">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#1b6ec2"><rect width="4" height="4" fill="#1b6ec2"></rect></svg>
+                    <small>Matbiz</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matmail">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#475569"><rect width="4" height="4" fill="#475569"></rect></svg>
+                    <small>MatMail</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matfile">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#3472d8"><rect width="4" height="4" fill="#3472d8"></rect></svg>
+                    <small>MatFile</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matcad">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2f6feb"><rect width="4" height="4" fill="#2f6feb"></rect></svg>
+                    <small>Matcad</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matcms">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg>
+                    <small>MatCMS</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matstat">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg>
+                    <small>Matstat</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matddns">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#204db6"><rect width="4" height="4" fill="#204db6"></rect></svg>
+                    <small>Matddns</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matmon">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#295cff"><rect width="4" height="4" fill="#295cff"></rect></svg>
+                    <small>Matmon</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=mattiverse">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6164ec"><rect width="4" height="4" fill="#6164ec"></rect></svg>
+                    <small>Mattiverse</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=msbi">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6d5df6"><rect width="4" height="4" fill="#6d5df6"></rect></svg>
+                    <small>msBi</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=mattrakr">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6c5ce7"><rect width="4" height="4" fill="#6c5ce7"></rect></svg>
+                    <small>MatTrakr</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matos">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#8558ec"><rect width="4" height="4" fill="#8558ec"></rect></svg>
+                    <small>MatOS</small>
+                </a>
+                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matdo">
+                    <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#8300bc"><rect width="4" height="4" fill="#8300bc"></rect></svg>
+                    <small>Matdo</small>
+                </a>
+        </div>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="pairs-title">
+    <div class="mat-section__head">
+        <h2 id="pairs-title">Too close to tell apart</h2>
+        <p class="mat-section__lead">Distance is measured in OKLab (times 10): below 0.05 the colours are identical, below 0.25 hard to tell apart, below 0.45 still easy to mix up on a small logo or a tab.</p>
+    </div>
+
+    <div class="mat-list">
+        
+<div class="mat-toolbar" role="toolbar" aria-label="Colour pairs tools">
+        <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn " data-dialog-open="pairs-search" data-shortcut="/" aria-haspopup="dialog">
+            <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-search"></use></svg><span>Search</span>        </button>
+            <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn " data-dialog-open="pairs-filter" aria-haspopup="dialog">
+                <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sliders"></use></svg><span>Filter</span>            </button>
+            <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn " data-dialog-open="pairs-sort" aria-haspopup="dialog">
+                <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sort"></use></svg><span>Sort</span>            </button>
+        <span class="mat-toolbar__spacer"></span>
+        <span class="mat-toolbar__info" aria-live="polite">16 pairs</span>
+</div>
+
+
+<form id="pairs-form" method="get" action="/Identity/Palette" hidden>
+</form>
+
+    <dialog class="mat-dialog mat-dialog--sm" id="pairs-search" aria-labelledby="pairs-search-title">
+        <div class="mat-dialog__form">
+            <div class="mat-dialog__head">
+                <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-search"></use></svg>
+                <h2 class="mat-dialog__title" id="pairs-search-title">Search</h2>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-x"></use></svg></button>
+            </div>
+            <div class="mat-dialog__body">
+                <div class="mat-field">
+                    <label class="mat-label" for="pairs-q">Search for</label>
+                    <input class="mat-input" type="search" id="pairs-q" name="q" form="pairs-form" placeholder="An app name" autocomplete="off" />
+                    <span class="mat-hint">Press <kbd>/</kbd> on the page to open this dialog.</span>
+                </div>
+            </div>
+            <div class="mat-dialog__foot">
+                <div class="mat-btn-row mat-btn-row--plain">
+                    <button type="submit" form="pairs-form" class="mat-btn mat-btn--primary"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-search"></use></svg><span>Apply</span></button>
+                    <button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button>
+                    <span class="mat-btn-row__spacer"></span>
+                    <a class="mat-btn mat-btn--ghost mat-btn--end" href="/Identity/Palette">Clear search</a>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog class="mat-dialog mat-dialog--sm" id="pairs-filter" aria-labelledby="pairs-filter-title">
+        <div class="mat-dialog__form">
+            <div class="mat-dialog__head">
+                <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sliders"></use></svg>
+                <h2 class="mat-dialog__title" id="pairs-filter-title">Filter</h2>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-x"></use></svg></button>
+            </div>
+            <div class="mat-dialog__body mat-form">
+                    <div class="mat-field">
+                        <label class="mat-label" for="pairs-f-verdict">Verdict</label>
+                        <select class="mat-select" id="pairs-f-verdict" name="verdict" form="pairs-form">
+                            <option value="">All</option>
+                                <option value="Identical">Identical</option>
+                                <option value="Very close">Very close</option>
+                                <option value="Close">Close</option>
+                        </select>
+                    </div>
+            </div>
+            <div class="mat-dialog__foot">
+                <div class="mat-btn-row mat-btn-row--plain">
+                    <button type="submit" form="pairs-form" class="mat-btn mat-btn--primary"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sliders"></use></svg><span>Apply</span></button>
+                    <button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button>
+                    <span class="mat-btn-row__spacer"></span>
+                    <a class="mat-btn mat-btn--ghost mat-btn--end" href="/Identity/Palette">Reset everything</a>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog class="mat-dialog mat-dialog--sm" id="pairs-sort" aria-labelledby="pairs-sort-title">
+        <div class="mat-dialog__form">
+            <div class="mat-dialog__head">
+                <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sort"></use></svg>
+                <h2 class="mat-dialog__title" id="pairs-sort-title">Sort</h2>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-x"></use></svg></button>
+            </div>
+            <div class="mat-dialog__body mat-form">
+                <fieldset class="mat-field mat-fieldset">
+                    <legend class="mat-label">Sort by</legend>
+                    <div class="mat-options">
+                            <label class="mat-option"><input type="radio" id="pairs-sort-by-distance" name="sort" value="distance" form="pairs-form" checked="checked" /><span>Distance (closest first)</span></label>
+                            <label class="mat-option"><input type="radio" id="pairs-sort-by-name" name="sort" value="name" form="pairs-form" /><span>Name</span></label>
+                    </div>
+                </fieldset>
+                <fieldset class="mat-field mat-fieldset">
+                    <legend class="mat-label">Order</legend>
+                    <div class="mat-options">
+                        <label class="mat-option"><input type="radio" id="pairs-dir-asc" name="dir" value="asc" form="pairs-form" checked="checked" /><span>Ascending</span></label>
+                        <label class="mat-option"><input type="radio" id="pairs-dir-desc" name="dir" value="desc" form="pairs-form" /><span>Descending</span></label>
+                    </div>
+                </fieldset>
+            </div>
+            <div class="mat-dialog__foot">
+                <div class="mat-btn-row mat-btn-row--plain">
+                    <button type="submit" form="pairs-form" class="mat-btn mat-btn--primary"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sort"></use></svg><span>Apply</span></button>
+                    <button type="button" class="mat-btn mat-btn--secondary" data-dialog-close>Cancel</button>
+                    <span class="mat-btn-row__spacer"></span>
+                    <a class="mat-btn mat-btn--ghost mat-btn--end" href="/Identity/Palette">Default order</a>
+                </div>
+            </div>
+        </div>
+    </dialog>
+
+
+            <div class="mat-table-wrap">
+                <table class="mat-table">
+                    <caption class="mat-sr-only">Pairs of apps with similar accents</caption>
+                    <thead><tr><th scope="col">One app</th><th scope="col">The other</th><th scope="col" class="mat-num">Distance</th><th scope="col">Verdict</th></tr></thead>
+                    <tbody>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><a href="/Identity/App?id=matcms">MatCMS</a><code>#2563eb</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><a href="/Identity/App?id=matstat">Matstat</a><code>#2563eb</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.00</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--error">Identical</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6d5df6"><rect width="4" height="4" fill="#6d5df6"></rect></svg><a href="/Identity/App?id=msbi">msBi</a><code>#6d5df6</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6c5ce7"><rect width="4" height="4" fill="#6c5ce7"></rect></svg><a href="/Identity/App?id=mattrakr">MatTrakr</a><code>#6c5ce7</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.23</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--warn">Very close</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6164ec"><rect width="4" height="4" fill="#6164ec"></rect></svg><a href="/Identity/App?id=mattiverse">Mattiverse</a><code>#6164ec</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6c5ce7"><rect width="4" height="4" fill="#6c5ce7"></rect></svg><a href="/Identity/App?id=mattrakr">MatTrakr</a><code>#6c5ce7</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.23</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--warn">Very close</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#0b7f8a"><rect width="4" height="4" fill="#0b7f8a"></rect></svg><a href="/Identity/App?id=matbu">MatBu</a><code>#0b7f8a</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#00819b"><rect width="4" height="4" fill="#00819b"></rect></svg><a href="/Identity/App?id=matplay">MatPlay</a><code>#00819b</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.26</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--info">Close</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6164ec"><rect width="4" height="4" fill="#6164ec"></rect></svg><a href="/Identity/App?id=mattiverse">Mattiverse</a><code>#6164ec</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6d5df6"><rect width="4" height="4" fill="#6d5df6"></rect></svg><a href="/Identity/App?id=msbi">msBi</a><code>#6d5df6</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.26</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--info">Close</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#1d78be"><rect width="4" height="4" fill="#1d78be"></rect></svg><a href="/Identity/App?id=matdock">MatDock</a><code>#1d78be</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#1b6ec2"><rect width="4" height="4" fill="#1b6ec2"></rect></svg><a href="/Identity/App?id=matbiz">Matbiz</a><code>#1b6ec2</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.30</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--info">Close</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2f6feb"><rect width="4" height="4" fill="#2f6feb"></rect></svg><a href="/Identity/App?id=matcad">Matcad</a><code>#2f6feb</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#3472d8"><rect width="4" height="4" fill="#3472d8"></rect></svg><a href="/Identity/App?id=matfile">MatFile</a><code>#3472d8</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.31</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--info">Close</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2f6feb"><rect width="4" height="4" fill="#2f6feb"></rect></svg><a href="/Identity/App?id=matcad">Matcad</a><code>#2f6feb</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><a href="/Identity/App?id=matcms">MatCMS</a><code>#2563eb</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.31</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--info">Close</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2f6feb"><rect width="4" height="4" fill="#2f6feb"></rect></svg><a href="/Identity/App?id=matcad">Matcad</a><code>#2f6feb</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><a href="/Identity/App?id=matstat">Matstat</a><code>#2563eb</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.31</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--info">Close</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><a href="/Identity/App?id=matcms">MatCMS</a><code>#2563eb</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#295cff"><rect width="4" height="4" fill="#295cff"></rect></svg><a href="/Identity/App?id=matmon">Matmon</a><code>#295cff</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.34</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--info">Close</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#295cff"><rect width="4" height="4" fill="#295cff"></rect></svg><a href="/Identity/App?id=matmon">Matmon</a><code>#295cff</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><a href="/Identity/App?id=matstat">Matstat</a><code>#2563eb</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.34</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--info">Close</span></td>
+                            </tr>
+                            <tr>
+                                <td data-label="One app"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#0a7d57"><rect width="4" height="4" fill="#0a7d57"></rect></svg><a href="/Identity/App?id=matgate">Matgate</a><code>#0a7d57</code></span></td>
+                                <td data-label="The other"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#418251"><rect width="4" height="4" fill="#418251"></rect></svg><a href="/Identity/App?id=matlan">Matlan</a><code>#418251</code></span></td>
+                                <td data-label="Distance" class="mat-num mat-mono">0.37</td>
+                                <td data-label="Verdict"><span class="mat-pill mat-pill--info">Close</span></td>
+                            </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <nav class="mat-pager" aria-label="Pagination">
+        <span class="mat-pager__info">1 to 12 of 16</span>
+        <div class="mat-pager__pages">
+                <span class="mat-pager__btn is-disabled" aria-hidden="true"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-left"></use></svg></span>
+
+                    <span class="mat-pager__btn is-current" aria-current="page">1</span>
+                    <a class="mat-pager__btn" href="/Identity/Palette?page=2" aria-label="Page 2">2</a>
+
+                <a class="mat-pager__btn" href="/Identity/Palette?page=2" aria-label="Next page" rel="next"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-right"></use></svg></a>
+        </div>
+    </nav>
+
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="suggest-title">
+    <div class="mat-section__head">
+        <h2 id="suggest-title">Proposals</h2>
+        <p class="mat-section__lead">Of each group that is too close, the first app keeps its colour. For the others the advisor picks the colour that is farthest from everything in use and still carries white text at AA. These are proposals: the registry is changed by a person.</p>
+    </div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">Proposed accents</caption>
+            <thead><tr><th scope="col">App</th><th scope="col">Now</th><th scope="col">Proposed</th><th scope="col" class="mat-num">Then nearest</th><th scope="col"><span class="mat-sr-only">Try</span></th></tr></thead>
+            <tbody>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matos" role="img" aria-label="MatOS"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-monitor"></use></svg></span><a href="/Identity/App?id=matos">MatOS</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#8558ec"><rect width="4" height="4" fill="#8558ec"></rect></svg><code>#8558ec</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#932467"><rect width="4" height="4" fill="#932467"></rect></svg><code>#932467</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">1.45 (MatDesign)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23932467&app=matos"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matcad" role="img" aria-label="Matcad"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-route"></use></svg></span><a href="/Identity/App?id=matcad">Matcad</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2f6feb"><rect width="4" height="4" fill="#2f6feb"></rect></svg><code>#2f6feb</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#9961a6"><rect width="4" height="4" fill="#9961a6"></rect></svg><code>#9961a6</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">1.39 (Mattiverse)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%239961a6&app=matcad"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matpaper" role="img" aria-label="MatPaper"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-paperclip"></use></svg></span><a href="/Identity/App?id=matpaper">MatPaper</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#268538"><rect width="4" height="4" fill="#268538"></rect></svg><code>#268538</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#7a4e00"><rect width="4" height="4" fill="#7a4e00"></rect></svg><code>#7a4e00</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">1.37 (MatSplit)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%237a4e00&app=matpaper"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matfile" role="img" aria-label="MatFile"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-hard-drive"></use></svg></span><a href="/Identity/App?id=matfile">MatFile</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#3472d8"><rect width="4" height="4" fill="#3472d8"></rect></svg><code>#3472d8</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#ac0000"><rect width="4" height="4" fill="#ac0000"></rect></svg><code>#ac0000</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">1.28 (MatSplit)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23ac0000&app=matfile"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matcms" role="img" aria-label="MatCMS"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-template"></use></svg></span><a href="/Identity/App?id=matcms">MatCMS</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><code>#2563eb</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6b438b"><rect width="4" height="4" fill="#6b438b"></rect></svg><code>#6b438b</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">1.02 (MatMail)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%236b438b&app=matcms"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matmon" role="img" aria-label="Matmon"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-activity"></use></svg></span><a href="/Identity/App?id=matmon">Matmon</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#295cff"><rect width="4" height="4" fill="#295cff"></rect></svg><code>#295cff</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6f7000"><rect width="4" height="4" fill="#6f7000"></rect></svg><code>#6f7000</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">0.96 (MatPaper)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%236f7000&app=matmon"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matstat" role="img" aria-label="Matstat"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-bar-chart"></use></svg></span><a href="/Identity/App?id=matstat">Matstat</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2563eb"><rect width="4" height="4" fill="#2563eb"></rect></svg><code>#2563eb</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#a24851"><rect width="4" height="4" fill="#a24851"></rect></svg><code>#a24851</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">0.96 (MatFile)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23a24851&app=matstat"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="msbi" role="img" aria-label="msBi"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-layers"></use></svg></span><a href="/Identity/App?id=msbi">msBi</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6d5df6"><rect width="4" height="4" fill="#6d5df6"></rect></svg><code>#6d5df6</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#a12ca1"><rect width="4" height="4" fill="#a12ca1"></rect></svg><code>#a12ca1</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">0.93 (Matdo)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23a12ca1&app=msbi"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matbiz" role="img" aria-label="Matbiz"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-briefcase"></use></svg></span><a href="/Identity/App?id=matbiz">Matbiz</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#1b6ec2"><rect width="4" height="4" fill="#1b6ec2"></rect></svg><code>#1b6ec2</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#9551d8"><rect width="4" height="4" fill="#9551d8"></rect></svg><code>#9551d8</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">0.91 (Matcad)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%239551d8&app=matbiz"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="mattrakr" role="img" aria-label="MatTrakr"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-progress-play"></use></svg></span><a href="/Identity/App?id=mattrakr">MatTrakr</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6c5ce7"><rect width="4" height="4" fill="#6c5ce7"></rect></svg><code>#6c5ce7</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#116b00"><rect width="4" height="4" fill="#116b00"></rect></svg><code>#116b00</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">0.90 (Matgate)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23116b00&app=mattrakr"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matplay" role="img" aria-label="MatPlay"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-gamepad"></use></svg></span><a href="/Identity/App?id=matplay">MatPlay</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#00819b"><rect width="4" height="4" fill="#00819b"></rect></svg><code>#00819b</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#5935be"><rect width="4" height="4" fill="#5935be"></rect></svg><code>#5935be</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">0.83 (Matddns)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%235935be&app=matplay"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matlan" role="img" aria-label="Matlan"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-message-square"></use></svg></span><a href="/Identity/App?id=matlan">Matlan</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#418251"><rect width="4" height="4" fill="#418251"></rect></svg><code>#418251</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#5c5fac"><rect width="4" height="4" fill="#5c5fac"></rect></svg><code>#5c5fac</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">0.82 (MatDock)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%235c5fac&app=matlan"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+            </main>
+
+            <footer class="mat-footer">
+                <p class="mat-footer__text">MatDesign · the design and identity of the Mat apps</p>
+                <ul class="mat-footer__links">
+                    <li><a href="/Rules">Rules</a></li>
+                    <li><a href="/Download">Download MatUi</a></li>
+                </ul>
+            </footer>
+        </div>
+    </div>
+
+    <div class="mat-menu" id="user-menu" role="menu" aria-label="Visitor" hidden>
+        <div class="mat-menu__head">
+            <span class="mat-avatar" aria-hidden="true">V</span>
+            <div><strong>Visitor</strong><small>The Studio is off</small></div>
+        </div>
+                <a class="mat-menu__item " role="menuitem" href="/Studio/Login"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-login"></use></svg><span>Studio: sign in</span></a>
+                <a class="mat-menu__item " role="menuitem" href="/Download"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-download"></use></svg><span>Download the toolkit</span></a>
+                <a class="mat-menu__item " role="menuitem" href="/Rules"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-book"></use></svg><span>Rulebook</span></a>
+                <a class="mat-menu__item " role="menuitem" href="/api/version"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-code"></use></svg><span>API: version</span></a>
+    </div>
+
+        <div class="mat-menu" id="nav-switch-menu" role="menu" aria-label="Menus" data-nav-scope="mat-nav" hidden>
+            <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="true" data-nav-set="design" data-nav-title="Design"  data-nav-attention>
+
+            <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><span>Design</span>
+ <span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn"><span class="mat-sr-only">needs attention</span></span>             <svg class="mat-icon mat-menu__check" aria-hidden="true" focusable="false"><use href="#mat-i-check"></use></svg>
+                    </button>
+            <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="false" data-nav-set="toolkit" data-nav-title="Toolkit"  >
+
+            <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-toggle"></use></svg><span>Toolkit</span>
+            <svg class="mat-icon mat-menu__check" aria-hidden="true" focusable="false"><use href="#mat-i-check"></use></svg>
+                    </button>
+    </div>
+
+
+
+    <script src="/ui/matui.js?v=d2126bc2b9"></script>
+    
+</body>
+</html>

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using MatDesign.Core;
+using MatDesign.Core.Studio;
 
 namespace MatDesign.Web.Services;
 
@@ -184,10 +185,12 @@ public sealed class ShellModel
             facts = facts with { CheckErrors = checks.Report.Errors };
         }
 
+        // the names of the site are the tenant's (stage 14): the demo tenant is what the site always said, a company's own says its own
+        var tenant = design?.Tenant ?? Tenant.Demo;
         return new ShellModel
         {
-            App = design?.App("matdesign") ?? AppRegistry.Get("matdesign")!,
-            Tagline = "Identity of the Mat apps",
+            App = design?.SiteApp ?? AppRegistry.Get("matdesign")!,
+            Tagline = tenant.Tagline,
             Menus = Navigation.For(facts, signedIn),
             // the site has its switcher at the foot of the menu, directly above the user (SHELL-15); an app may choose SwitcherPlace.Top or Both instead
             SwitcherPlace = SwitcherPlace.Bottom,
@@ -195,7 +198,7 @@ public sealed class ShellModel
             UserRole = signedIn ? "Studio" : "Guest",
             UserLine = signedIn ? "Signed in to the Studio" : needsSetup ? "Set up the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",
             UserMenu = SiteUserMenu(signedIn, needsSetup),
-            Version = $"MatDesign {AppVersion.Current}",
+            Version = $"{tenant.SiteName} {AppVersion.Current}",
         };
     }
 

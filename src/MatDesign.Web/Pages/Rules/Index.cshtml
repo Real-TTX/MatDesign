@@ -1,8 +1,9 @@
 @page "/Rules"
 @model MatDesign.Web.Pages.Rules.IndexModel
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     ViewData["Title"] = "Rulebook";
-    ViewData["PageSub"] = "Every rule about how a Mat app looks and behaves. Each has an id you can cite in a review, a commit or a prompt.";
+    ViewData["PageSub"] = $"Every rule about how a {Design.Tenant.App} looks and behaves. Each has an id you can cite in a review, a commit or a prompt.";
     ViewData["Crumbs"] = Crumbs.Of(("Rules", "/Rules"), ("Rulebook", null));
 }
 
@@ -22,7 +23,7 @@
     {
         <div class="mat-table-wrap">
             <table class="mat-table">
-                <caption class="mat-sr-only">Rules of the Mat family</caption>
+                <caption class="mat-sr-only">Rules of the @Design.Tenant.Family</caption>
                 <thead>
                     <tr><th scope="col">Rule</th><th scope="col">Area</th><th scope="col">Level</th><th scope="col" class="mat-hide-sm">Source</th><th scope="col">Checked by</th></tr>
                 </thead>

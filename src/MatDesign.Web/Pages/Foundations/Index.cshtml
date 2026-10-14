@@ -6,7 +6,11 @@
     ViewData["PageSub"] = "The values every control is made of. They are custom properties, so an app can never drift from them.";
     ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Foundations", "/Foundations"), ("Colour", null));
 
-    var me = AccentReport.For(Design.App("matdesign")!);
+    var me = AccentReport.For(Design.SiteApp);
+    var sampleApp = Design.Pick("matpaper");
+    IEnumerable<MatApp> samples = Design.Template.OffersSampleApps
+        ? new[] { "mattiverse", "matdock", "matmail", "matpaper", "matsplit", "matdo", "matarchive" }.Select(key => Design.App(key)!)
+        : Design.Apps.Count > 0 ? Design.Apps.Take(7) : new[] { Design.SiteApp };
     DesignToken? Find(string name) => Toolkit.Tokens.FirstOrDefault(t => t.Name == name);
 
     var groups = new (string Title, string Lead, string[] Names)[]
@@ -49,7 +53,7 @@
         <p class="mat-section__lead">
             An app sets one colour, <code>--mat-app-accent</code>. The toolkit derives the rest from it: hover and pressed (mixed with black in light mode, white in dark),
             two tints, the text colour for links, the colour of text on the accent, and the focus ring. In dark mode the accent is lightened (74 % accent, 26 % white) and the text on it is dark.
-            Shown here for MatDesign's own accent, @me.App.Accent.
+            Shown here for @(Design.Tenant.SiteName)'s own accent, @me.App.Accent.
         </p>
     </div>
     <div class="doc-swatches">
@@ -61,9 +65,9 @@
     <div class="mat-card"><div class="mat-card__body mat-stack">
         <strong>The same controls with the accent of different apps</strong>
         <div class="mat-row">
-            @foreach (var key in new[] { "mattiverse", "matdock", "matmail", "matpaper", "matsplit", "matdo", "matarchive" })
+            @* the demo shows seven apps of the family; a site shows its own apps (at most seven), or itself when it has none *@
+            @foreach (var a in samples)
             {
-                var a = Design.App(key)!;
                 <span class="mat-row mat-row--nowrap" data-app="@a.Id">
                     <button type="button" class="mat-btn mat-btn--primary mat-btn--sm">@a.Name</button>
                     <span class="mat-pill mat-pill--accent">@a.Accent</span>
@@ -150,10 +154,10 @@
                         </tbody>
                     </table>
                 </div>
-                <p class="mat-hint">Pairings that depend on the accent show the weakest of the @Design.Apps.Count apps and the @AccentPresets.All.Count presets, with its name. <a href="/Builder?app=matpaper@(query)">Try your own accent on this scheme</a>.</p>
+                <p class="mat-hint">Pairings that depend on the accent show the weakest of the @Design.Apps.Count apps and the @AccentPresets.All.Count presets, with its name. <a href="/Builder?app=@(sampleApp.Id)@(query)">Try your own accent on this scheme</a>.</p>
                 <div class="mat-row">
-                    <a class="mat-btn mat-btn--secondary mat-btn--sm" href="/Preview?app=matpaper&amp;view=list&amp;theme=light@(query)">@Ui.Icon("sun")<span>Sample app, light</span></a>
-                    <a class="mat-btn mat-btn--secondary mat-btn--sm" href="/Preview?app=matpaper&amp;view=list&amp;theme=dark@(query)">@Ui.Icon("moon")<span>Sample app, dark</span></a>
+                    <a class="mat-btn mat-btn--secondary mat-btn--sm" href="/Preview?app=@(sampleApp.Id)&amp;view=list&amp;theme=light@(query)">@Ui.Icon("sun")<span>Sample app, light</span></a>
+                    <a class="mat-btn mat-btn--secondary mat-btn--sm" href="/Preview?app=@(sampleApp.Id)&amp;view=list&amp;theme=dark@(query)">@Ui.Icon("moon")<span>Sample app, dark</span></a>
                 </div>
             </div>
         </section>

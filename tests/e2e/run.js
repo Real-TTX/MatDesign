@@ -5806,6 +5806,44 @@ function seenAt(page, selector) {
         expect(await page.locator('.mat-auth__card input[type="password"]').count(), 2, 'password fields');
         expect(await page.inputValue('#Name'), 'admin', 'the suggested name');
       });
+      // the assistant has three steps (stage 14 of docs/PRODUCT.md): the company, the template the site starts from, the administrator. STUDIO_COMPANY (default Mat) is the company
+      // and STUDIO_TEMPLATE (default demo) the template: the checks of this file are about the Mat apps, so the default is the demo.
+      const company = process.env.STUDIO_COMPANY || 'Mat';
+      const template = process.env.STUDIO_TEMPLATE || 'demo';
+      await check('the assistant shows one step at a time: the company first, and Next does not leave it while the company is empty', async () => {
+        expect(await page.locator('[data-setup-step]').count(), 3, 'steps');
+        expect(await page.locator('[data-setup-step]:not([hidden])').count(), 1, 'steps on show');
+        expectTrue(await page.isVisible('#Company'), 'the company field is not shown');
+        expect(await page.isVisible('#Name'), false, 'the administrator step is shown too early');
+        expect(await page.isVisible('[data-setup-back]'), false, 'Back on the first step');
+        expect(await page.locator('[data-setup-progress] li.is-active').count(), 1, 'steps marked as current');
+        await page.click('[data-setup-next]');
+        expectTrue(await page.locator('.mat-field:has(#Company).is-invalid').count() > 0, 'the empty company is not marked');
+        expectTrue(await page.isVisible('#Company'), 'left the first step with no company');
+        // Enter in the field does not send an unfinished form either
+        await page.press('#Company', 'Enter');
+        expectTrue(page.url().includes('/Studio/Setup'), 'left the setup: ' + page.url());
+        expectTrue(await page.isVisible('#Company'), 'Enter left the first step with no company');
+      });
+      await check('Next leads to the two templates as cards, Back returns, and the right choice leads to the administrator', async () => {
+        await page.fill('#Company', company);
+        await page.click('[data-setup-next]');
+        expectTrue(await page.isVisible('.mat-choice'), 'the templates are not shown');
+        expect(await page.locator('.mat-choice').count(), 2, 'template cards');
+        expect(await page.locator('.mat-choice__text strong').allTextContents(), ['Demo', 'Blank'], 'the names of the templates');
+        expectTrue((await page.textContent('[data-setup-step="2"]')).includes('The Mat apps as a sample, to look around and change.'), 'no description of the demo');
+        expectTrue((await page.textContent('[data-setup-step="2"]')).includes('Start with your own brand and no apps.'), 'no description of the blank template');
+        expect(await page.isVisible('#Company'), false, 'the first step is still shown');
+        await page.click('[data-setup-back]');
+        expectTrue(await page.isVisible('#Company'), 'Back did not return to the company');
+        expect(await page.inputValue('#Company'), company, 'the company was lost on the way back');
+        await page.click('[data-setup-next]');
+        await page.locator(`.mat-choice:has(input[value="${template}"])`).click();
+        await page.click('[data-setup-next]');
+        expectTrue(await page.isVisible('#Name'), 'the administrator step is not shown');
+        expectTrue(await page.isVisible('[data-setup-submit]'), 'no Create button on the last step');
+        expect(await page.isVisible('[data-setup-next]'), false, 'Next on the last step');
+      });
       await check('a password that is too short, or typed differently the second time, is refused at its field and leads nowhere', async () => {
         await page.fill('#Name', name);
         await page.fill('#Password', 'short');
@@ -5863,7 +5901,7 @@ function seenAt(page, selector) {
         await page.keyboard.press('Escape');
         expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
         const names = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').evaluateAll(els => els.map(e => { const c = e.cloneNode(true); c.querySelectorAll('.mat-nav__badge').forEach(b => b.remove()); return c.textContent.trim(); }));
-        expect(names, ['Overview', 'Apps', 'Brand', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'Versions'], 'items of the Studio menu');
+        expect(names, ['Overview', 'Apps', 'Company', 'Brand', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'Versions'], 'items of the Studio menu');
       });
       await check('choosing the Studio in the switcher loads its overview (a start page); the other menus swap the items', async () => {
         await page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
@@ -7664,6 +7702,73 @@ function seenAt(page, selector) {
       expect(rows.overflow, false, 'the compact zone does not overflow');
     });
     await ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- the company and the template (stage 14, demo path; blank.js is the blank one)
+  // It needs the administrator like the Studio block above. The tagline is changed and put back, and the template is asked about and not switched, so the site is what it was.
+  console.log('\nCompany');
+  {
+    const name = process.env.STUDIO_NAME || 'admin';
+    const password = process.env.STUDIO_PASSWORD || 'studio-dev';
+    const { ctx, page } = await open(desktopOptions, '/Studio/Login');
+    if (await page.locator('input[type="password"]').count() === 0) {
+      console.log('  --    the Studio is off on this site (no data directory): the company checks are skipped');
+      await ctx.close();
+    } else {
+      await page.fill('#Name', name);
+      await page.fill('#Password', password);
+      await page.click('.mat-auth__card button[type="submit"]');
+      await page.waitForURL('**/Studio**');
+      let original = '';
+      await check('the company page has the shell, one h1, the names of the tenant, its menu item and the two templates', async () => {
+        await page.goto(BASE + '/Studio/Company', { waitUntil: 'networkidle' });
+        expect(await page.locator('main h1').count(), 1, 'h1');
+        expect(await page.textContent('main h1'), 'Company', 'the title');
+        expect(await page.locator('a.mat-nav__item.is-active[href="/Studio/Company"]').count(), 1, 'the menu item');
+        expectTrue((await page.inputValue('#Input_Company')).length > 1, 'no company');
+        expectTrue((await page.inputValue('#Input_SiteName')).length > 1, 'no site name');
+        original = await page.inputValue('#Input_Tagline');
+        expect(await page.locator('[data-template]').count(), 2, 'template cards');
+        expect(await page.locator('[data-template] .mat-pill', { hasText: 'In use' }).count(), 1, 'the template in use');
+      });
+      await check('a change of the tagline is saved, shows in the menu of every page and in the history; saving the old one puts it back', async () => {
+        await page.fill('#Input_Tagline', 'A tagline from the browser checks');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+        expect(await page.textContent('.mat-nav__tagline'), 'A tagline from the browser checks', 'the tagline in the menu');
+        await page.goto(BASE + '/Studio/Company', { waitUntil: 'networkidle' });
+        expectTrue(await page.locator('a.mat-btn', { hasText: 'History' }).count() > 0, 'no History button once a revision exists');
+        await page.fill('#Input_Tagline', original);
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        await page.goto(BASE + '/', { waitUntil: 'networkidle' });
+        expect(await page.textContent('.mat-nav__tagline'), original, 'the tagline after it was put back');
+      });
+      await check('a name that is too short is refused at its field and saved nowhere', async () => {
+        await page.goto(BASE + '/Studio/Company', { waitUntil: 'networkidle' });
+        const before = await page.inputValue('#Input_Company');
+        await page.fill('#Input_Company', 'A');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await page.locator('.mat-field.is-invalid').count()) > 0, 'the company is not marked');
+        await page.goto(BASE + '/Studio/Company', { waitUntil: 'networkidle' });
+        expect(await page.inputValue('#Input_Company'), before, 'the company was saved');
+      });
+      await check('switching the template asks first and says what is hidden and that nothing is deleted; cancelling changes nothing', async () => {
+        await page.goto(BASE + '/Studio/Company', { waitUntil: 'networkidle' });
+        await page.click('[data-template-switch]');
+        await page.waitForSelector('dialog[open]');
+        const text = await page.textContent('dialog[open]');
+        expectTrue(text.includes('Nothing is deleted'), 'the question does not say that nothing is deleted: ' + text);
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+        expect(await page.locator('[data-template] .mat-pill', { hasText: 'In use' }).count(), 1, 'the template in use after Cancel');
+        const apps = await (await page.request.get(BASE + '/api/apps')).json();
+        expectTrue(apps.length > 5, 'the apps after Cancel: ' + apps.length);
+      });
+      await ctx.close();
+    }
   }
 
   // ---------------------------------------------------------------------------------------------------- the end

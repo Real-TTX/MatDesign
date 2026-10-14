@@ -1,6 +1,7 @@
 @page "/Studio/Brand"
 @model MatDesign.Web.Pages.Studio.BrandModel
 @inject StudioHistory History
+@inject DesignData Design
 @using System.Globalization
 @using MatDesign.Core
 @using MatDesign.Core.Studio
@@ -9,7 +10,7 @@
     var input = Model.Input;
     ViewData["Title"] = "Brand";
     ViewData["PageSub"] = Model.Source == ItemSource.BuiltIn
-        ? "The brand that is built in: the Mat family, no token changed. Saving a change here replaces it on the site; resetting brings it back."
+        ? $"The brand that is built in: the {Design.Tenant.Family}, no token changed. Saving a change here replaces it on the site; resetting brings it back."
         : "The brand of the company, saved in the Studio. What it sets is written after the tokens in matui.css, in every release and in the archive.";
     ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Brand", null));
     ViewData["Width"] = "wide";

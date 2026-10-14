@@ -10,15 +10,22 @@
     <div class="mat-card__head">@Ui.Icon("palette")<h2 class="mat-card__title" id="strip-title">All accents around the colour wheel</h2></div>
     <div class="mat-card__body mat-stack">
         <p class="mat-muted">Sorted by hue. Neighbours that look alike are the ones in the table below. Rule <a href="/Rules/Detail?id=IDENT-04">IDENT-04</a>: no two apps look alike.</p>
-        <div class="doc-strip" role="list">
-            @foreach (var app in Model.ByHue)
-            {
-                <a class="doc-strip__item" role="listitem" href="/Identity/App?id=@app.Id">
-                    @Ui.Swatch(app.Accent, "bar")
-                    <small>@app.Name</small>
-                </a>
-            }
-        </div>
+        @if (Model.ByHue.Count == 0)
+        {
+            <p class="mat-muted">There are no apps yet. Add the first one in the Studio and its accent shows here.</p>
+        }
+        else
+        {
+            <div class="doc-strip" role="list">
+                @foreach (var app in Model.ByHue)
+                {
+                    <a class="doc-strip__item" role="listitem" href="/Identity/App?id=@app.Id">
+                        @Ui.Swatch(app.Accent, "bar")
+                        <small>@app.Name</small>
+                    </a>
+                }
+            </div>
+        }
     </div>
 </section>
 
@@ -29,9 +36,21 @@
     </div>
 
     <div class="mat-list">
-        <partial name="_Toolbar" model="Model.Toolbar" />
+        @if (Model.TotalCollisions == 0)
+        {
+            @* no pair at all (a site with no app or one app): good news, and no tool to reset *@
+            <div class="mat-empty">
+                <span class="mat-empty__icon">@Ui.Icon("check-circle")</span>
+                <div class="mat-empty__title">No two accents are too close</div>
+                <p>@(Model.ByHue.Count < 2 ? "A palette compares apps with one another, and there are fewer than two. " : string.Empty)The pairs that are too close to tell apart are listed here when there are any.</p>
+            </div>
+        }
+        else
+        {
+            <partial name="_Toolbar" model="Model.Toolbar" />
+        }
 
-        @if (Model.Items.Count == 0)
+        @if (Model.TotalCollisions > 0 && Model.Items.Count == 0)
         {
             <div class="mat-empty">
                 <span class="mat-empty__icon">@Ui.Icon("check-circle")</span>
@@ -39,7 +58,7 @@
                 <a class="mat-btn mat-btn--primary" href="/Identity/Palette">@Ui.Icon("refresh")<span>Reset the tools</span></a>
             </div>
         }
-        else
+        else if (Model.TotalCollisions > 0)
         {
             <div class="mat-table-wrap">
                 <table class="mat-table">
@@ -64,6 +83,8 @@
     </div>
 </section>
 
+@if (Model.TotalCollisions > 0)
+{
 <section class="mat-section" aria-labelledby="suggest-title">
     <div class="mat-section__head">
         <h2 id="suggest-title">Proposals</h2>
@@ -92,3 +113,4 @@
         <div class="mat-alert mat-alert--success">@Ui.Icon("check-circle")<div class="mat-alert__body">No two accents are too close.</div></div>
     }
 </section>
+}

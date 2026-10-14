@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en" data-app="matdesign" >
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#d6336c" />
+    <title>Overview · MatDesign</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/ui/matui.boot.js?v=d2126bc2b9"></script>
+    <link rel="stylesheet" href="/ui/matui.css?v=d2126bc2b9" />
+    <link rel="stylesheet" href="/css/site.css?v=IZvpJ2UeI9K3HqAhIei-X7zZuGLPnvIsY0um4HUd2mE" />
+</head>
+
+<body>
+    <a class="mat-skip" href="#main">Skip to the content</a>
+    <!-- sprite -->
+
+
+    <div class="mat-app">
+        <aside class="mat-nav" id="mat-nav">
+            <div class="mat-nav__brand">
+                <a href="/" aria-label="MatDesign, start page">
+                    <span class="mat-logo mat-logo--md" data-app="matdesign" role="img" aria-label="MatDesign"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg></span>
+                    <span>
+                        <span class="mat-nav__name">MatDesign</span>
+                        <span class="mat-nav__tagline">Identity of the Mat apps</span>
+                    </span>
+                </a>
+                <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-nav__close" data-nav-close aria-label="Close the menu"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-x"></use></svg></button>
+            </div>
+
+            
+
+    <nav class="mat-nav__scroll" aria-label="Design" data-nav-panel="design">
+        <ul class="mat-nav__list">
+                        <li>
+                            <a class="mat-nav__item is-active" href="/" aria-current="page">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-home"></use></svg><span>Overview</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Identity</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Identity">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-apps"></use></svg><span>Apps</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Identity/Palette">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><span>Palette</span>
+<span class="mat-nav__badge mat-nav__badge--warn">16<span class="mat-sr-only"> pairs of accents that are too close</span></span>                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Identity/Audit">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-check-square"></use></svg><span>Audit</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Rules</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Rules">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-book"></use></svg><span>Rulebook</span>
+<span class="mat-nav__badge mat-nav__badge--plain">99+<span class="mat-sr-only"> rules</span></span>                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Foundations</li>
+                        <li class="mat-nav__branch ">
+                            <button type="button" class="mat-nav__item mat-nav__parent" aria-expanded="false" aria-controls="nav-sub-design-foundations" data-nav-branch="foundations">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-layers"></use></svg><span>Foundations</span>
+                                <svg class="mat-icon mat-nav__chev" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-down"></use></svg>
+                            </button>
+                            <div class="mat-nav__sub" id="nav-sub-design-foundations">
+                                <ul class="mat-nav__list">
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations">
+                                                <span>Colour</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Type">
+                                                <span>Type</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Space">
+                                                <span>Space and shape</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Motion">
+                                                <span>Motion</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Icons">
+                                                <span>Icons</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/IconLibrary">
+                                                <span>Icon library</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="mat-nav__item mat-nav__item--sub " href="/Foundations/Tokens">
+                                                <span>All tokens</span>
+                                            </a>
+                                        </li>
+                                </ul>
+                            </div>
+                        </li>
+        </ul>
+    </nav>
+    <nav class="mat-nav__scroll" aria-label="Toolkit" data-nav-panel="toolkit" hidden="hidden">
+        <ul class="mat-nav__list">
+                        <li>
+                            <a class="mat-nav__item " href="/Shell">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sidebar"></use></svg><span>Shell</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Build with it</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Components">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-toggle"></use></svg><span>Components</span>
+<span class="mat-nav__badge mat-nav__badge--plain">68<span class="mat-sr-only"> components</span></span>                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Layout">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-grid"></use></svg><span>Layout</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Utilities">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sliders"></use></svg><span>Utilities</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Patterns">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-template"></use></svg><span>Patterns</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Builder">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Builder</span>
+                            </a>
+                        </li>
+                    <li class="mat-nav__group" role="presentation">Use it</li>
+                        <li>
+                            <a class="mat-nav__item " href="/Download">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-download"></use></svg><span>Download</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="mat-nav__item " href="/Changelog">
+<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-file-text"></use></svg><span>Changelog</span>
+                            </a>
+                        </li>
+        </ul>
+    </nav>
+
+
+
+            <div class="mat-nav__foot">
+                    <div class="mat-nav__switch mat-nav__switch--foot">
+    <button type="button" class="mat-switcher" data-menu-toggle="nav-switch-menu" data-menu-place="top" aria-haspopup="menu" aria-expanded="false">
+        <span class="mat-switcher__icon"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg></span>
+        <span class="mat-switcher__text"><small data-nav-label="Menu">Menu</small><span class="mat-switcher__name">Design</span></span>
+        <svg class="mat-icon mat-switcher__chev" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-up"></use></svg>
+        <span class="mat-switcher__dot" hidden="hidden"></span>
+    </button>
+</div>
+
+                <div class="mat-nav__account">
+                    <button type="button" class="mat-user" data-menu-toggle="user-menu" aria-haspopup="menu" aria-expanded="false">
+                        <span class="mat-avatar" aria-hidden="true">V</span>
+                        <span class="mat-user__text">
+                            <span class="mat-user__name">Visitor</span>
+                            <span class="mat-user__role">Guest</span>
+                        </span>
+                        <svg class="mat-icon mat-user__chev" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-up"></use></svg>
+                    </button>
+                    <button type="button" class="mat-theme" data-theme-toggle data-theme-state="system" aria-label="Theme: System. Click for Light." title="Theme: System. Click for Light.">
+                        <svg class="mat-icon" data-theme-icon="system" aria-hidden="true" focusable="false"><use href="#mat-i-monitor"></use></svg>
+                        <svg class="mat-icon" data-theme-icon="light" aria-hidden="true" focusable="false"><use href="#mat-i-sun"></use></svg>
+                        <svg class="mat-icon" data-theme-icon="dark" aria-hidden="true" focusable="false"><use href="#mat-i-moon"></use></svg>
+                    </button>
+                </div>
+                <div class="mat-nav__version">MatDesign local-20261014</div>
+            </div>
+        </aside>
+
+        <div class="mat-main">
+            <header class="mat-topbar">
+                <button type="button" class="mat-burger" data-nav-toggle aria-label="Open the menu" aria-controls="mat-nav" aria-expanded="false"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-menu"></use></svg></button>
+                <nav class="mat-crumbs" aria-label="Breadcrumb">
+                    <ol>
+                            <li aria-current="page">MatDesign</li>
+                    </ol>
+                </nav>
+            </header>
+
+            <main class="mat-page " id="main">
+
+                
+
+<header class="doc-intro">
+    <h1>MatDesign</h1>
+    <p>
+        How the Mat apps are meant to look. The rulebook lists the rules, the components show them at work, and <code>MatUi</code>
+        is the CSS and script an app copies to follow them.
+    </p>
+    <p class="mat-muted">
+        <a href="/Rules">126 rules</a> in 14 areas, <a href="/Identity">22 apps</a>,
+        <a href="/Foundations/Tokens">91 design tokens</a> and <a href="/Foundations/Icons">112 icons</a>.
+    </p>
+    <div class="mat-btn-row mat-btn-row--plain">
+        <a class="mat-btn mat-btn--primary" href="/Rules"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-book"></use></svg><span>Rulebook</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/Download"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-download"></use></svg><span>Get MatUi</span></a>
+    </div>
+</header>
+
+<section class="mat-section" aria-labelledby="first-title">
+    <div class="mat-section__head">
+        <h2 id="first-title">The rules you notice first</h2>
+        <p class="mat-section__lead">The menu is on the left with the logo above it, the breadcrumb sits above the content, every list has a toolbar, and the buttons are under the content. <a href="/Shell">The shell</a> shows it.</p>
+    </div>
+    <ul class="doc-index">
+            <li>
+                <a class="doc-index__row" href="/Rules/Detail?id=SHELL-01">
+                    <span class="doc-index__key doc-index__key--mono">SHELL-01</span>
+                    <span class="doc-index__body">
+                        <strong class="doc-index__title">The menu is on the left, the logo above it</strong>
+                        <span class="mat-muted">The menu is always on the left.</span>
+                    </span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Rules/Detail?id=SHELL-03">
+                    <span class="doc-index__key doc-index__key--mono">SHELL-03</span>
+                    <span class="doc-index__body">
+                        <strong class="doc-index__title">The foot of the menu</strong>
+                        <span class="mat-muted">At the bottom of the menu, in this order from top to bottom: the 3-state theme button together with the user, and below them the version.</span>
+                    </span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Rules/Detail?id=SHELL-07">
+                    <span class="doc-index__key doc-index__key--mono">SHELL-07</span>
+                    <span class="doc-index__body">
+                        <strong class="doc-index__title">The menu scrolls on its own</strong>
+                        <span class="mat-muted">The menu and the content scroll separately.</span>
+                    </span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Rules/Detail?id=SHELL-08">
+                    <span class="doc-index__key doc-index__key--mono">SHELL-08</span>
+                    <span class="doc-index__body">
+                        <strong class="doc-index__title">A breadcrumb above every page</strong>
+                        <span class="mat-muted">The content always has a breadcrumb above it: <code>Section / Page / Detail</code>.</span>
+                    </span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Rules/Detail?id=LIST-03">
+                    <span class="doc-index__key doc-index__key--mono">LIST-03</span>
+                    <span class="doc-index__body">
+                        <strong class="doc-index__title">Search is a button or a field; filter and sort are buttons that open dialogs</strong>
+                        <span class="mat-muted">In the toolbar Filter and Sort are separate buttons.</span>
+                    </span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Rules/Detail?id=FORM-01">
+                    <span class="doc-index__key doc-index__key--mono">FORM-01</span>
+                    <span class="doc-index__body">
+                        <strong class="doc-index__title">Buttons are always under the content</strong>
+                        <span class="mat-muted">On every create and edit page the buttons are under the content of the form, never in the page head and never floating beside it.</span>
+                    </span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Rules/Detail?id=DIALOG-03">
+                    <span class="doc-index__key doc-index__key--mono">DIALOG-03</span>
+                    <span class="doc-index__body">
+                        <strong class="doc-index__title">On a phone every dialog is full screen</strong>
+                        <span class="mat-muted">Below 640 px every dialog fills the screen.</span>
+                    </span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Rules/Detail?id=IDENT-01">
+                    <span class="doc-index__key doc-index__key--mono">IDENT-01</span>
+                    <span class="doc-index__body">
+                        <strong class="doc-index__title">One colour per app</strong>
+                        <span class="mat-muted">Every app has its own accent colour, and it is the only colour an app chooses.</span>
+                    </span>
+                </a>
+            </li>
+    </ul>
+</section>
+
+<section class="mat-section" aria-labelledby="family-title">
+    <div class="mat-section__head">
+        <h2 id="family-title">The apps</h2>
+        <p class="mat-section__lead">Each has one accent colour of its own. Everything else is shared.</p>
+    </div>
+    <div class="mat-grid">
+            <a class="mat-card doc-app" href="/Identity/App?id=mattiverse" data-app="mattiverse">
+                <span class="mat-logo mat-logo--md" data-app="mattiverse" role="img" aria-label="Mattiverse"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sparkles"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">Mattiverse</span>
+                    <span class="doc-app__line">Launcher and store for your Docker apps</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matos" data-app="matos">
+                <span class="mat-logo mat-logo--md" data-app="matos" role="img" aria-label="MatOS"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-monitor"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatOS</span>
+                    <span class="doc-app__line">A desktop for your Docker host, in the browser</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matdesign" data-app="matdesign">
+                <span class="mat-logo mat-logo--md" data-app="matdesign" role="img" aria-label="MatDesign"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatDesign</span>
+                    <span class="doc-app__line">Design and identity of all Mat apps</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matdock" data-app="matdock">
+                <span class="mat-logo mat-logo--md" data-app="matdock" role="img" aria-label="MatDock"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-whale"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatDock</span>
+                    <span class="doc-app__line">Advanced Docker management</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matcad" data-app="matcad">
+                <span class="mat-logo mat-logo--md" data-app="matcad" role="img" aria-label="Matcad"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-route"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">Matcad</span>
+                    <span class="doc-app__line">Reverse proxy with automatic HTTPS</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matddns" data-app="matddns">
+                <span class="mat-logo mat-logo--md" data-app="matddns" role="img" aria-label="Matddns"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-globe"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">Matddns</span>
+                    <span class="doc-app__line">DynDNS client with failover</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matgate" data-app="matgate">
+                <span class="mat-logo mat-logo--md" data-app="matgate" role="img" aria-label="Matgate"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-shield"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">Matgate</span>
+                    <span class="doc-app__line">One login for your home network</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matbu" data-app="matbu">
+                <span class="mat-logo mat-logo--md" data-app="matbu" role="img" aria-label="MatBu"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-archive"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatBu</span>
+                    <span class="doc-app__line">Backup and sync</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matarchive" data-app="matarchive">
+                <span class="mat-logo mat-logo--md" data-app="matarchive" role="img" aria-label="Matarchive"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-archive"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">Matarchive</span>
+                    <span class="doc-app__line">Backup and sync jobs</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matmail" data-app="matmail">
+                <span class="mat-logo mat-logo--md" data-app="matmail" role="img" aria-label="MatMail"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-mail-m"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatMail</span>
+                    <span class="doc-app__line">Mail gateway with a web mail client</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matpaper" data-app="matpaper">
+                <span class="mat-logo mat-logo--md" data-app="matpaper" role="img" aria-label="MatPaper"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-paperclip"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatPaper</span>
+                    <span class="doc-app__line">Document management system</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matdo" data-app="matdo">
+                <span class="mat-logo mat-logo--md" data-app="matdo" role="img" aria-label="Matdo"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-check-square"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">Matdo</span>
+                    <span class="doc-app__line">Tasks and projects</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matfile" data-app="matfile">
+                <span class="mat-logo mat-logo--md" data-app="matfile" role="img" aria-label="MatFile"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-hard-drive"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatFile</span>
+                    <span class="doc-app__line">File explorer for your NAS</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matcms" data-app="matcms">
+                <span class="mat-logo mat-logo--md" data-app="matcms" role="img" aria-label="MatCMS"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-template"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatCMS</span>
+                    <span class="doc-app__line">Block-based CMS for websites</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matmon" data-app="matmon">
+                <span class="mat-logo mat-logo--md" data-app="matmon" role="img" aria-label="Matmon"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-activity"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">Matmon</span>
+                    <span class="doc-app__line">Monitoring for your services</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matstat" data-app="matstat">
+                <span class="mat-logo mat-logo--md" data-app="matstat" role="img" aria-label="Matstat"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-bar-chart"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">Matstat</span>
+                    <span class="doc-app__line">Data integration, statistics and reporting</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=msbi" data-app="msbi">
+                <span class="mat-logo mat-logo--md" data-app="msbi" role="img" aria-label="msBi"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-layers"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">msBi</span>
+                    <span class="doc-app__line">Self-hosted business intelligence</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matbiz" data-app="matbiz">
+                <span class="mat-logo mat-logo--md" data-app="matbiz" role="img" aria-label="Matbiz"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-briefcase"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">Matbiz</span>
+                    <span class="doc-app__line">Modular ERP</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matsplit" data-app="matsplit">
+                <span class="mat-logo mat-logo--md" data-app="matsplit" role="img" aria-label="MatSplit"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-dollar"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatSplit</span>
+                    <span class="doc-app__line">Shared expenses for trips and flats</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=mattrakr" data-app="mattrakr">
+                <span class="mat-logo mat-logo--md" data-app="mattrakr" role="img" aria-label="MatTrakr"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-progress-play"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatTrakr</span>
+                    <span class="doc-app__line">Movies, series and books</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matplay" data-app="matplay">
+                <span class="mat-logo mat-logo--md" data-app="matplay" role="img" aria-label="MatPlay"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-gamepad"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">MatPlay</span>
+                    <span class="doc-app__line">Scorekeeper for game nights</span>
+                </span>
+            </a>
+            <a class="mat-card doc-app" href="/Identity/App?id=matlan" data-app="matlan">
+                <span class="mat-logo mat-logo--md" data-app="matlan" role="img" aria-label="Matlan"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-message-square"></use></svg></span>
+                <span class="doc-app__text">
+                    <span class="doc-app__name">Matlan</span>
+                    <span class="doc-app__line">Language practice</span>
+                </span>
+            </a>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="inside-title">
+    <div class="mat-section__head"><h2 id="inside-title">Where to look</h2></div>
+    <ul class="doc-index">
+            <li>
+                <a class="doc-index__row" href="/Foundations">
+                    <span class="doc-index__key"><strong class="doc-index__title">Foundations</strong></span>
+                    <span class="doc-index__body"><span class="mat-muted">Colour, type, space, shape, motion and the icons.</span></span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Components">
+                    <span class="doc-index__key"><strong class="doc-index__title">Components</strong></span>
+                    <span class="doc-index__body"><span class="mat-muted">Every control, forms and pickers included, live and with its markup.</span></span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Layout">
+                    <span class="doc-index__key"><strong class="doc-index__title">Layout</strong></span>
+                    <span class="doc-index__body"><span class="mat-muted">Breakpoints, containers and the grid of twelve columns.</span></span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Utilities">
+                    <span class="doc-index__key"><strong class="doc-index__title">Utilities</strong></span>
+                    <span class="doc-index__body"><span class="mat-muted">Spacing, display, flex, text, colour and sizing: one class, one property.</span></span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Patterns">
+                    <span class="doc-index__key"><strong class="doc-index__title">Patterns</strong></span>
+                    <span class="doc-index__body"><span class="mat-muted">List page, edit page, sign-in and settings, on a desktop and on a phone.</span></span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Builder">
+                    <span class="doc-index__key"><strong class="doc-index__title">Builder</strong></span>
+                    <span class="doc-index__body"><span class="mat-muted">Try an accent colour in both modes and check the contrast.</span></span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Identity/Audit">
+                    <span class="doc-index__key"><strong class="doc-index__title">Audit</strong></span>
+                    <span class="doc-index__body"><span class="mat-muted">How close each app is to the rules today.</span></span>
+                </a>
+            </li>
+            <li>
+                <a class="doc-index__row" href="/Download">
+                    <span class="doc-index__key"><strong class="doc-index__title">Download</strong></span>
+                    <span class="doc-index__body"><span class="mat-muted">The CSS, the script and the icon sprite, and the rules as JSON.</span></span>
+                </a>
+            </li>
+    </ul>
+</section>
+
+            </main>
+
+            <footer class="mat-footer">
+                <p class="mat-footer__text">MatDesign · the design and identity of the Mat apps</p>
+                <ul class="mat-footer__links">
+                    <li><a href="/Rules">Rules</a></li>
+                    <li><a href="/Download">Download MatUi</a></li>
+                </ul>
+            </footer>
+        </div>
+    </div>
+
+    <div class="mat-menu" id="user-menu" role="menu" aria-label="Visitor" hidden>
+        <div class="mat-menu__head">
+            <span class="mat-avatar" aria-hidden="true">V</span>
+            <div><strong>Visitor</strong><small>The Studio is off</small></div>
+        </div>
+                <a class="mat-menu__item " role="menuitem" href="/Studio/Login"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-login"></use></svg><span>Studio: sign in</span></a>
+                <a class="mat-menu__item " role="menuitem" href="/Download"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-download"></use></svg><span>Download the toolkit</span></a>
+                <a class="mat-menu__item " role="menuitem" href="/Rules"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-book"></use></svg><span>Rulebook</span></a>
+                <a class="mat-menu__item " role="menuitem" href="/api/version"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-code"></use></svg><span>API: version</span></a>
+    </div>
+
+        <div class="mat-menu" id="nav-switch-menu" role="menu" aria-label="Menus" data-nav-scope="mat-nav" hidden>
+            <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="true" data-nav-set="design" data-nav-title="Design"  data-nav-attention>
+
+            <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><span>Design</span>
+ <span class="mat-nav__badge mat-nav__badge--dot mat-nav__badge--warn"><span class="mat-sr-only">needs attention</span></span>             <svg class="mat-icon mat-menu__check" aria-hidden="true" focusable="false"><use href="#mat-i-check"></use></svg>
+                    </button>
+            <button type="button" class="mat-menu__item" role="menuitemradio" aria-checked="false" data-nav-set="toolkit" data-nav-title="Toolkit"  >
+
+            <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-toggle"></use></svg><span>Toolkit</span>
+            <svg class="mat-icon mat-menu__check" aria-hidden="true" focusable="false"><use href="#mat-i-check"></use></svg>
+                    </button>
+    </div>
+
+
+
+    <script src="/ui/matui.js?v=d2126bc2b9"></script>
+    
+</body>
+</html>

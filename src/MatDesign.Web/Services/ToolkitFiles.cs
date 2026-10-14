@@ -99,12 +99,27 @@ public sealed partial class ToolkitFiles
 
     private State Build(long version)
     {
-        var appsCss = _css[AppsPart] + AppsOverlay(_design.StudioApps) + BrandOverlay(_design.StudioBrand, EditableTokens);
+        var appsCss = _css[AppsPart] + SiteOverlay(_design) + AppsOverlay(_design.StudioApps) + BrandOverlay(_design.StudioBrand, EditableTokens);
         string Part(string name) => name == AppsPart ? appsCss : _css[name];
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Concat(CssParts.Select(Part)) + Script + BootScript + Sprite)))[..10].ToLowerInvariant();
         // the first line names the version of the toolkit first (what an app compares), then the build of the site that made the file
         var bundle = $"/* MatUi {AppVersion.MatUi} ({hash}) - build {AppVersion.Current} - bundled from {string.Join(", ", CssParts)} */\n" + string.Join("\n", CssParts.Select(Part));
         return new State(version, appsCss, hash, bundle, new Lazy<byte[]>(() => BuildZip(bundle, Script, BootScript, appsCss, hash, AppVersion.MatUi)));
+    }
+
+    /// <summary>
+    /// The colour of the site itself when it is not an app of the family (stage 14, the blank template): <c>[data-app="this-site"]</c> with the accent of the tenant. The demo writes nothing: the site
+    /// is the <c>matdesign</c> app there, whose colour <c>matui.apps.css</c> has. The text colours are the ones the toolkit derives (the accent is checked for AA like any app's, when the tenant is saved).
+    /// </summary>
+    public static string SiteOverlay(DesignData design)
+    {
+        if (design.IsDemo)
+        {
+            return string.Empty;
+        }
+
+        var site = design.SiteApp;
+        return $"\n/* The site itself (template {design.Template.Id}). */\n[data-app=\"{site.Id}\"] {{ --mat-app-accent: {site.Accent}; }}\n";
     }
 
     /// <summary>The colours of the apps that were added or changed in the Studio, written like the built-in ones and placed after them, so they win.</summary>
@@ -291,10 +306,10 @@ public sealed partial class ToolkitFiles
         return stream.ToArray();
     }
 
-    private static string Readme(string hash, string version) => string.Join('\n',
+    private string Readme(string hash, string version) => string.Join('\n',
         $"MatUi {version} ({hash})",
-        $"Made by MatDesign {AppVersion.Current}.",
-        "The UI toolkit of the Mat apps. Rules, documentation and live examples: the MatDesign site.",
+        $"Made by {_design.Tenant.SiteName} {AppVersion.Current}.",
+        $"The UI toolkit of the {_design.Tenant.Apps}. Rules, documentation and live examples: the {_design.Tenant.SiteName} site.",
         string.Empty,
         "Copy these files into the app's static files. An app never loads them from another site (rule CODE-03); update by copying again.",
         string.Empty,
@@ -310,7 +325,7 @@ public sealed partial class ToolkitFiles
         "An app sets one colour:  [data-app=\"yourapp\"] { --mat-app-accent: #2f6feb; }",
         "css/ holds the parts of matui.css (tokens, base, shell, controls, forms, lists, dialogs, layout, apps) for apps that load them one by one.",
         string.Empty,
-        "Versions (docs/VERSIONING.md on the MatDesign site):",
+        $"Versions (docs/VERSIONING.md on the {_design.Tenant.SiteName} site):",
         "  The version is in the first line of matui.css and in window.MatUi.version; matui.manifest.json lists every file with its SHA-256.",
         "  CHANGELOG.md says what changed in each version. A version with a Breaking section needs a change in the app: its Migration section says what.",
         "  Update by copying ALL the files again, never a few of them: the files of one version belong together.",

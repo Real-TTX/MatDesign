@@ -18,6 +18,15 @@ public enum ItemSource
     Changed,
 }
 
+/// <summary>Where the tenant of the instance comes from, the first that exists: the Studio, the setup assistant's file, the environment, the default (the demo).</summary>
+public enum TenantOrigin
+{
+    Default,
+    Environment,
+    Setup,
+    Studio,
+}
+
 /// <summary>
 /// The design data as the site shows it: what is built in, with what the Studio saved on top (docs/STUDIO.md). An item with the id of a built-in entry
 /// replaces it; deleting the item brings the built-in one back. The pages read from here, not from the registries in the code, so a change made in the
@@ -40,14 +49,45 @@ public sealed class DesignData
 
     private sealed record Kind<T>(IReadOnlyList<T> All, IReadOnlyList<T> Items, IReadOnlyDictionary<string, ItemSource> Sources);
 
-    private sealed record Snapshot(Kind<MatApp> Apps, Kind<Rule> Rules, Kind<ComponentDoc> Components, Brand? Brand);
+    private sealed record Snapshot(Kind<MatApp> Apps, Kind<Rule> Rules, Kind<ComponentDoc> Components, Brand? Brand, Tenant Tenant, TenantOrigin Origin);
 
     /// <summary>A number that grows with every change made in the Studio.</summary>
     public long Version => Interlocked.Read(ref _version);
 
+    // ---- tenant and template
+
+    /// <summary>
+    /// The company of this instance (stage 14): what the Studio saved, else what the setup assistant wrote to <c>tenant.json</c>, else what the environment says
+    /// (<c>MATDESIGN_TEMPLATE</c>, <c>MATDESIGN_COMPANY</c>), else the demo as the site always was. Every page reads the names of the site from here.
+    /// </summary>
+    public Tenant Tenant => _snapshot.Tenant;
+
+    /// <summary>Where <see cref="Tenant"/> comes from.</summary>
+    public TenantOrigin TenantOrigin => _snapshot.Origin;
+
+    /// <summary>The tenant as the Studio saved it; null while it only comes from the setup, the environment or the default.</summary>
+    public Tenant? StudioTenant => _snapshot.Origin == TenantOrigin.Studio ? _snapshot.Tenant : null;
+
+    /// <summary>The built-in layer of this instance: the template of the tenant.</summary>
+    public ITemplate Template => DesignTemplates.Get(Tenant.Template);
+
+    public bool IsDemo => Template.Id == DesignTemplates.DemoId;
+
+    /// <summary>
+    /// The app that is the site itself (the logo, the colour and the name of the shell, the sign-in and the sample pages): the <c>matdesign</c> app of the demo, as it always was, or an app made
+    /// from the tenant's site name, tagline and accent for the blank template.
+    /// </summary>
+    public MatApp SiteApp => Template.SiteApp(Tenant, Apps);
+
+    /// <summary>
+    /// The app of the family with the id <paramref name="preferred"/> (a sample for a preview or a link: a page of the demo names <c>matpaper</c>), or the site app when this instance has no
+    /// such app, so that a blank site never shows or links an app of the Mat family.
+    /// </summary>
+    public MatApp Pick(string? preferred) => App(preferred) ?? SiteApp;
+
     // ---- apps
 
-    /// <summary>Every app of the family: the built-in ones (changed ones replaced) and the added ones.</summary>
+    /// <summary>Every app of the family: the built-in ones of the template (changed ones replaced) and the added ones.</summary>
     public IReadOnlyList<MatApp> Apps => _snapshot.Apps.All;
 
     /// <summary>The apps that were added or changed in the Studio.</summary>
@@ -95,7 +135,7 @@ public sealed class DesignData
     // ---- brand
 
     /// <summary>The brand of the company: what the Studio saved, or the built-in brand (the demo data of the Mat family, no token changed).</summary>
-    public Brand Brand => _snapshot.Brand ?? Brand.BuiltIn;
+    public Brand Brand => _snapshot.Brand ?? Template.BrandFor(Tenant);
 
     /// <summary>The brand as the Studio saved it; null while it has never been saved (or was reset).</summary>
     public Brand? StudioBrand => _snapshot.Brand;
@@ -104,7 +144,7 @@ public sealed class DesignData
     public ItemSource BrandSource => _snapshot.Brand is null ? ItemSource.BuiltIn : ItemSource.Changed;
 
     /// <summary>What the menu counts: the apps (for the palette), the rules and the components of the components page.</summary>
-    public NavFacts NavFacts => new(Apps, Rules.Count, ComponentsIn(ComponentCatalog.Sections[0]).Count());
+    public NavFacts NavFacts => new(Apps, Rules.Count, ComponentsIn(ComponentCatalog.Sections[0]).Count(), Audit: Template.OffersAudit);
 
     /// <summary>Reads the Studio's items again. Called after every save and delete.</summary>
     public void Reload()
@@ -169,14 +209,42 @@ public sealed class DesignData
         return new Kind<T>(all, items, sources);
     }
 
+    /// <summary>The tenant and where it came from: the Studio's item, the file of the setup assistant, the environment, or the demo.</summary>
+    private (Tenant Tenant, TenantOrigin Origin) LoadTenant()
+    {
+        if (Items<Tenant>(Tenant.Kind, TenantValidator.Normalize, TenantValidator.IsSafe, _ => Tenant.ItemId).FirstOrDefault() is { } item)
+        {
+            return (item, TenantOrigin.Studio);
+        }
+
+        if (_studio.Enabled)
+        {
+            try
+            {
+                if (Tenant.ReadFile(_studio.DataDirectory) is { } file)
+                {
+                    return (file, TenantOrigin.Setup);
+                }
+            }
+            catch (InvalidDataException)
+            {
+                // a tenant file that cannot be read is reported by the checks; the site goes on as the default
+            }
+        }
+
+        return _studio.TenantDefault is { } fromEnvironment ? (fromEnvironment, TenantOrigin.Environment) : (Tenant.Demo, TenantOrigin.Default);
+    }
+
     private Snapshot Load()
     {
-        var apps = Merge(AppRegistry.All, Items<MatApp>("apps", a => a, AppValidator.IsSafe, a => a.Id), a => a.Id, StringComparison.Ordinal, (all, _) => all.Count);
+        var (tenant, origin) = LoadTenant();
+        var template = DesignTemplates.Get(tenant.Template);
+        var apps = Merge(template.Apps, Items<MatApp>("apps", a => a, AppValidator.IsSafe, a => a.Id), a => a.Id, StringComparison.Ordinal, (all, _) => all.Count);
         var rules = Merge(RuleBook.All, Items<Rule>("rules", r => r, RuleValidator.IsSafe, r => r.Id), r => r.Id, StringComparison.Ordinal,
             (all, added) => all.FindLastIndex(r => r.Area == added.Area) is var last and >= 0 ? last + 1 : all.Count);
         var components = Merge(ComponentCatalog.All, Items<ComponentDoc>("components", ComponentValidator.Normalize, ComponentValidator.IsSafe, c => c.Id), c => c.Id, StringComparison.Ordinal,
             (all, added) => all.FindLastIndex(c => c.Group == added.Group) is var last and >= 0 ? last + 1 : all.Count);
         var brand = Items<Brand>(Brand.Kind, b => b with { Light = b.Light ?? new Dictionary<string, string>(), Dark = b.Dark ?? new Dictionary<string, string>() }, BrandValidator.IsSafe, _ => Brand.ItemId).FirstOrDefault();
-        return new Snapshot(apps, rules, components, brand);
+        return new Snapshot(apps, rules, components, brand, tenant, origin);
     }
 }

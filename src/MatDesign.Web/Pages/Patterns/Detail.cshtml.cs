@@ -31,7 +31,10 @@ public class DetailModel(MatDesign.Web.Studio.DesignData design) : PageModel
         }
 
         Pattern = pattern;
-        Apps = PatternCatalog.Apps.Select(design.App).OfType<MatApp>().ToList();
+        // the frames can be shown in the accent of five apps of the demo; a site shows them in its own apps (at most five), or in its own colour when it has none
+        Apps = design.Template.OffersSampleApps
+            ? PatternCatalog.Apps.Select(design.App).OfType<MatApp>().ToList()
+            : design.Apps.Count > 0 ? design.Apps.Take(PatternCatalog.Apps.Count).ToList() : [design.SiteApp];
         App = Apps.FirstOrDefault(a => a.Id.Equals(app, StringComparison.OrdinalIgnoreCase)) ?? Apps[0];
         Rules = pattern.Rules.Select(design.Rule).OfType<Rule>().ToList();
         var all = PatternCatalog.All.ToList();

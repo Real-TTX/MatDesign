@@ -83,7 +83,8 @@ public class RuleValidatorTests
     [Fact]
     public void The_next_id_of_an_area_follows_the_highest_one()
     {
-        Assert.Equal("IDENT-08", RuleValidator.NextId("IDENT", RuleBook.All));
+        var highest = RuleBook.In("IDENT").Max(r => int.Parse(r.Id[6..]));
+        Assert.Equal($"IDENT-{highest + 1:00}", RuleValidator.NextId("IDENT", RuleBook.All));
         Assert.Equal("FORM-01", RuleValidator.NextId("FORM", []));
         Assert.Equal("FORM-91", RuleValidator.NextId("FORM", [.. RuleBook.All, Good()]));
         Assert.Equal("CODE-100", RuleValidator.NextId("CODE", [Good() with { Id = "CODE-99", Area = "CODE" }]));

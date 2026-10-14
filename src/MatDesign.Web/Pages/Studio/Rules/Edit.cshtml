@@ -1,6 +1,7 @@
 @page "/Studio/Rules/Edit"
 @model MatDesign.Web.Pages.Studio.Rules.EditModel
 @inject StudioHistory History
+@inject DesignData Design
 @using MatDesign.Web.Studio
 @{
     var input = Model.Input;
@@ -8,7 +9,7 @@
     var title = isNew ? "New rule" : input.Id ?? "Rule";
     ViewData["Title"] = title;
     ViewData["PageSub"] = isNew
-        ? "A rule says how every Mat app looks or behaves. It gets an id that reviews, commits and prompts can cite."
+        ? $"A rule says how every {Design.Tenant.App} looks or behaves. It gets an id that reviews, commits and prompts can cite."
         : Model.Source switch
         {
             ItemSource.BuiltIn => "A built-in rule. Saving a change here replaces it in the rulebook; deleting that change brings the built-in rule back.",
