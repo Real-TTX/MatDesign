@@ -117,7 +117,7 @@ public sealed record NavSet(string Id, string Title, string Icon, IReadOnlyList<
 /// What the menu counts: the apps (the palette's badge counts the pairs of accents that are too close), the rules and the components of the components page, and for the Studio the errors
 /// of the checks (-1 when they were not run: no badge).
 /// </summary>
-public sealed record NavFacts(IReadOnlyList<MatApp> Apps, int Rules, int Components, int CheckErrors = -1)
+public sealed record NavFacts(IReadOnlyList<MatApp> Apps, int Rules, int Components, int CheckErrors = -1, bool Audit = true)
 {
     /// <summary>The built-in data, before the Studio has changed anything.</summary>
     public static NavFacts BuiltIn { get; } = new(AppRegistry.All, RuleBook.All.Count, ComponentCatalog.In(ComponentCatalog.Sections[0]).Count());
@@ -141,8 +141,9 @@ public static class Navigation
             new("Identity",
             [
                 new("Apps", "/Identity", "apps"),
-                new("Palette", "/Identity/Palette", "palette", NavBadge.Count(PaletteAdvisor.Collisions(facts.Apps).Count, "warn", "pairs of accents that are too close")),
-                new("Audit", "/Identity/Audit", "check-square"),
+                // no pair that is too close (a company with no app or one app) is no warning: a badge says "0" in the colour of a warning
+                new("Palette", "/Identity/Palette", "palette", PaletteAdvisor.Collisions(facts.Apps).Count is var pairs and > 0 ? NavBadge.Count(pairs, "warn", "pairs of accents that are too close") : null),
+                .. (facts.Audit ? new[] { new NavItem("Audit", "/Identity/Audit", "check-square") } : Array.Empty<NavItem>()),
             ]),
             new("Rules", [new("Rulebook", "/Rules", "book", NavBadge.Count(facts.Rules, "plain", "rules"))]),
             new("Foundations",
@@ -187,6 +188,7 @@ public static class Navigation
         new("Maintain",
         [
             new("Apps", "/Studio/Apps", "apps"),
+            new("Company", "/Studio/Company", "briefcase"),
             new("Brand", "/Studio/Brand", "palette"),
             new("Rules", "/Studio/Rules", "book"),
             new("Components", "/Studio/Components", "toggle"),
@@ -201,6 +203,7 @@ public static class Navigation
                 var n => NavBadge.Count(n, "error", "checks find errors"),
             }),
             new("Releases", "/Studio/Releases", "rocket"),
+            new("White label", "/Studio/Releases/WhiteLabel", "layers"),
             new("Versions", "/Studio/Versions", "tag"),
         ]),
     ], Href: "/Studio");

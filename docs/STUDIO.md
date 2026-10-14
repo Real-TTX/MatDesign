@@ -97,6 +97,9 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | **done** |
 | 9 | **Setup assistant:** the first visit creates the administrator (name and password, kept as a hash in the volume), so the release compose file has no password and no variables | **done** |
 | 10 | **Brand and tokens** (docs/PRODUCT.md, stage 10): the item `brand`, a token editor with a live preview, the brand overlay in `matui.css`, releases and the archive, history, restore and checks | **done** |
+| 12 | **Token editor per component, per app and per colour scheme** (docs/PRODUCT.md, stage 12): the 68 component properties next to the real control with a live preview, overrides on `[data-app]`, tokens inside each colour scheme, the 44 px rule for touch targets | **done** |
+| 14 | **Demo data and templates** (docs/PRODUCT.md, stage 14): the item `tenant`, the setup assistant's company and template steps, the Company page, the template layer under `DesignData`, a site that names itself after its company, `IDENT-09` | **done** |
+| 15 | **White label build** (docs/PRODUCT.md, stage 15): the item `whitelabel` (prefix and product name), the renamer, the Build stage with checks on the renamed copy, a trial build, history, restore and a check | **done** |
 
 ### Brand
 
@@ -124,12 +127,85 @@ A colour scheme (a more specific selector) still wins over the brand on the toke
 a colour picker and a text field kept in step by `wwwroot/js/brand.js` (no inline script, no inline style); the script applies the unsaved values to `[data-brand-preview]` through the CSSOM (a few real controls: buttons, a field, a card, a tag, pills, a switch, a table, alerts, the switcher),
 shows the preview in light or in dark whatever the page is in, and works out the contrast of the pairings that do not depend on the accent while you type, from the same list of pairings (`data-pairings`) the server uses. Check and Save run the whole check on the server, with the accent of every app.
 
+### Components, apps and schemes (stage 12)
+
+The brand item and its history grow by three maps; nothing else is new in the store.
+
+- **`Components`** on the brand: the name of a documented property (`--mat-btn-radius`, read from the `@prop` lines of the CSS by `ComponentProperties`) to one value, the same in light and dark. `ComponentTokens` turns each of the 68 into a
+  `PropertyToken` (a `BrandToken` for the kind and the limits, whether it is a touch target, what the control uses today). The limits are in code: a radius of 0 to 24 px, padding and gaps of 0 to 48 px, a border or the indicator of a tab of 0 to 4 px,
+  the width of a dialog or a toast of 200 to 960 px, a weight of 100 to 900, the text of a table or the breadcrumb of 12 to 22 px and of a small label (tag, pill, badge) of 11 to 18 px, the parts of a switch and a check within a range (and the knob smaller than its track).
+  A new property needs no code: it gets the limits of its name (`-radius`, `-pad-x`, `-font-size` ...), and a test fails while a length or a number has none.
+- **The 44 px rule.** The heights of the controls that are pressed (`--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-menu-item-height`, `--mat-nav-item-height`) fall back to `--mat-control-h`, which the tokens make 44 px under `(pointer: coarse)`. They take
+  32 to 72 px. A value of **44 px or more** is written on `:root` and applies everywhere; a value **under 44 px** is written inside `@media (pointer: fine) { :root { ... } }`, so on a touch screen the property is unset and the control keeps its 44 px (`MOBILE-04`). Under 32 px is refused.
+  The editor says so at the field, and its preview does what the CSS does: a phone ignores a height under 44 px. `(pointer: fine)` is the primary pointer of the device (a laptop with a touch screen counts as fine); a hybrid that also takes touches keeps the small control for the touches.
+- **`Schemes`** on the brand: a colour scheme id to a light and a dark map (`SchemeValues`). Only a token that the scheme itself sets in that mode can be changed (paper and contrast in both, black in dark only), with the kind and limits of the token. It is written after the scheme blocks of
+  `matui.tokens.css` with the same selectors (`:root[data-scheme="paper"]`, `... [data-theme="dark"]` and the system block), so it wins over them, the dark set twice and identical. `BrandContrast` reads the surfaces of a scheme with its override over the scheme's own values, so every pairing and the accent of every app are checked
+  in that scheme; a failing one is an error, with the scheme named. A value that equals the scheme's own is not stored.
+- **Per app.** `MatApp` gets `Tokens` (light and dark maps) and `Properties`, both null (and absent from the stored JSON) for an app that sets nothing. The tokens open to an app are the **non-colour tokens of the groups Shape, Spacing, Type and Motion** (`AppOverrides.Allows`): the app owns its accent and its shape, the surfaces,
+  lines and text are the brand's so that the apps of a company stay one family, and the layout widths and control heights belong to the brand (the heights of single controls are properties and carry the 44 px rule). Every component property is open. The limits are the brand editor's, and the type scale is checked with the brand's sizes under the app's. A dark value is accepted only for a token that has one (none of the
+  subset has today; the writer and the validator handle it for the day one does). It is written on `[data-app="id"]`, the dark set on `:root[data-theme="dark"][data-app="id"]` and in the system block, and the properties likewise (a height under 44 px inside `@media (pointer: fine)`).
+- **The order the values win in** is the order of `matui.css`: the toolkit's defaults, the colours of the apps, the brand (tokens, properties, schemes), then the overrides of each app, with the colour scheme the user chose last (a scheme is a more specific selector). `ToolkitFiles.Build` puts them together in that order; ten CSS parts as before.
+- **Pages.** `/Studio/Brand/Components` (a tab of the brand next to *Names and tokens*) lists the properties by component with the description, the type and limits, the default, an input of the type and a reset, and beside each group the first example of the documentation with a live preview (`PropertyPreviews`: the
+  mapping from a group to an example of the catalogue as data; a dialog, a toast and a context menu, which are on a page only while something opens them, are drawn still). `/Studio/Brand` has a section per colour scheme. `/Studio/Apps/Edit` has the section *Overrides of this app* (the same rows and previews, the previews wear the `data-app` of the app).
+  `brand.js` sets the typed values on `[data-brand-preview]` through the CSSOM and tells a value that is outside its limits at the field. A control of a preview is cut off from every form (`form="pv-none"`), so Enter in it can never save the editor.
+- **Checks, history, release.** The `brand` check validates the properties and the schemes, the `apps` check the overrides of every app; the restore of a revision that fails is refused with the reason; the release pipeline refuses on either; the release (bundle, apps part, archive, `design.json` with `brand.components`, `brand.schemes` and `overrides` of an app, the changelog lines
+  `component --mat-btn-radius`, `paper light --mat-bg`, `property --mat-btn-radius`) carries all of it.
+
+Not done here: the static styleguide of a release does not show the company name or the property tables (it lists the rules, the components and the apps as before).
+### White label
+
+One item, `whitelabel` of the kind `whitelabel` (`studio/whitelabel/whitelabel/<revision>.json`), kept like the others: append-only, with history, a restore and an entry in the activity list. It holds a class **prefix** and a **product name**
+(`WhiteLabelSetting`); until one is saved, or while it keeps the toolkit's own `mat` and `MatUi`, a release is what it always was, byte for byte. The page is `/Studio/Releases/WhiteLabel` (menu: Release, and a button on the Releases page).
+Rules of the setting (`WhiteLabel.Validate`, run again in the browser while you type and for an item read from the disk): a prefix is 2 to 8 lower-case letters and digits starting with a letter, none of `data`, `aria`, `js`, `is`, `has`, `on`,
+`ng`, `v`, `x`, `matui`, nothing that starts with `xml`; a name is 3 to 24 letters starting with a capital (it need not end in `Ui`), not `MatUi` (unless the prefix is `mat`), not `Mat` or `MatUi` in other capitals.
+
+**The renamer** (`WhiteLabel`, in `MatDesign.Core`, pure) works on token boundaries in one pass: `mat-xxx` (classes, ids, animation names, the keys of `localStorage`, the sprite ids `mat-i-` and `mat-il-`, the bare `"mat-"` of a selector),
+`--mat-xxx`, `data-mat-xxx`, `mat:xxx` (events), `_matXxx` (the private properties the script puts on elements), `MatUi` (the global, comments, the first line of the bundle, the README) and `matui` in a file name (it becomes the name in lower case:
+`acmeui.css`, `acmeui.boot.js`, `acmeui-icons.svg`, `acmeui.manifest.json`, `acmeui-<version>.zip`). Nothing is renamed when a letter, digit, `_`, `$` or `-` stands in front of it (`format-`, `automat-`, `Mattiverse`, `Matdo`, `x-mat-y`) or a letter, digit
+or `_` follows `MatUi` (`MatUiVersion`); addresses with a scheme and the repository's tool `matui-check.js` are never touched. The design data (`design.json`) is renamed as JSON strings and keys, not as text, because the serializer writes a quote as `"`,
+which would hide the name behind a digit. The traps found in `matui.js` and how each is handled are listed in docs/ARCHITECTURE.md, "White label build".
+
+**In the pipeline.** The Build stage assembles the files as before (`ReleaseService.AssembleFiles`), and when a setting is in force `WhiteLabelBuild.Apply` renames every file and its path, writes a hash of the copy into the first line of the bundle, the manifest
+and the README, opens the archive, renames its entries, writes its manifest again from the renamed entries and writes the archive again (fixed time stamps, so the same input is the same archive). The log of the stage says which rename was applied and how
+many replacements each file got. Then `WhiteLabelChecks` runs on the result, in C# because the image has no node, and **a finding fails the stage** (nothing is published): no name of the source left in any file or file name; every class of the source
+stylesheet is in the renamed one and every class the script, the examples and the style guide use exists; every custom property that is used is defined, and every renamed class and property is what the source had; every icon that is named is in the sprite;
+the script has the same strings, comments, regular expressions and brackets as the source, all well formed, and defines its global once; the braces of the stylesheets balance; the length of every file differs from the source by exactly what its replacements add;
+every renamed example passes `MarkupChecks` against the renamed stylesheet and sprite; the files are named after the product; the archive holds the renamed files and a manifest with their hashes. Only what the rename broke is reported: what was already
+wrong in the source is found by running the same look at the original and subtracting. The manifest of the release names the setting (`whiteLabel`).
+
+**The page** shows the setting, a table of before and after that follows the typing, the list of what is renamed, and **Check a trial build**: the renamer and every check on the files of the next release, with the findings and the replacements per
+file, without making a release. Saving a setting whose trial fails is refused. The check `whitelabel` of `/Studio/Checks` runs the same trial for a saved setting (an error stops a release at Check; a setting on the volume that is not valid is reported too).
+`POST /Studio/Releases/WhiteLabel/rename?prefix=&name=` (administrator only) answers a text renamed by the same function; the browser checks (`tests/e2e/white-label.js`) put the browser behind it to run the renamed toolkit.
+
 ### Versions
 
 The Studio does not look into the apps. A person writes down which release of MatUi an app carries (Studio → Versions → the app; one button takes the latest release over), with a note such as the branch
 of the app that has the copy. `VersionTracker` compares that with the releases: **Latest**, **N releases behind**, **not from a release** (a copy from before the first release, or an app's own build),
 **no release yet**, or **not written down**. Being behind is advice (a check says so and links to the app's page), never an error: updating an app is the work of its own repository. The overview counts
 the apps that are behind. The record is an item of the kind `usage`, one per app, with a history of its own.
+
+### Company and templates
+
+One item, `tenant` of the kind `tenant` (`studio/tenant/tenant/<revision>.json`), kept like the others with a history and a restore. It holds the **company** (full name), the **short name** (the word in "the Mat apps"), the **site name** (what the site calls itself: under the logo, in
+the title of every page, in the footer and on the version line; `<short name> Design`, and exactly `MatDesign` for the demo), the **tagline** (under the site name in the menu), the **template** and, for a blank start, the **accent of the site**. `DesignData.Tenant` is what every page reads.
+It comes from the first of: the Studio's item, the file `tenant.json` that the setup assistant wrote once, the environment (`MATDESIGN_TEMPLATE=demo|blank`, `MATDESIGN_COMPANY`; documented here and used by the browser checks to start a blank site), and the demo: an instance without any of
+them (every volume from before the tenants) is the demo, unchanged. `TenantValidator` holds what is saved (names of a sensible length without markup or control characters, a template that exists, and for the blank template an accent that reaches AA in light and dark like the accent of any app),
+and again for what is read from the disk; the check `tenant` of `/Studio/Checks` and the pipeline run it, and a company on the volume that is not valid is left out and reported.
+
+**Templates.** `demo` is everything as it always was: the Mat apps with their accents, the audit snapshot, the Mat brand and the sample apps that the patterns and the colour page draw. `blank` is the toolkit's own content only: the rules and the documentation of the components stay (they document MatUi), the
+Mat apps, the audit and the Mat brand are not offered, the brand is neutral (the names of the company, no token changed), the accent of the site is `#2563eb` unless the company chose another, and the app list starts empty: the company adds its apps in the Studio. The built-in `[data-app]` rules stay in
+`matui.apps.css` (a file of the toolkit); they are simply not offered. Studio items sit on top of both. **Switching the template deletes nothing** (the Company page says so and asks first): the items the Studio saved stay, the apps a company added stay in the blank template, and switching back brings the demo layer back.
+
+**The page** `/Studio/Company` (the menu, between Apps and Brand): the names and, for a blank start, the accent, with Check and Save and a History button; below them the two templates as cards and one button that switches to the other, behind a question (`data-confirm`) that says what the site stops offering.
+**The shell and the pages** read the names from the tenant: the logo and name, the tagline and the version line, the title of every page, the footer, the sign-in and the setup pages, the start page, the Download page, the README of the archive, and in a release the changelog line, the manifest (`company`), `design.json` (`tenant`)
+and the styleguide. Where a blank site has no apps its lists are empty states with the way out (the start page, the apps page of the site and of the Studio, the versions, the palette), and the audit page is not there. What still says Mat on a blank site is the toolkit's: the text of the rules, the components and their examples, the `mat-` classes and `MatUi` (stage 15 renames them).
+
+### Setup
+
+The assistant has three steps in one form: **your company** (the name, and an optional short name that is the first word when left empty), **where to start** (the two templates as cards: *Demo*, "The Mat apps as a sample, to look around and change", and *Blank*, "Start with your own brand and no apps"), and **the administrator** (as before).
+With the script it shows one step at a time (Next checks the step it leaves, Back keeps what was typed, Enter goes on instead of sending an unfinished form); without it all three are on the page and the form is sent as it is. The server checks everything and shows the step that has the first problem. The company and the template are written to `tenant.json` once,
+together with the administrator. A post that has only the name and the password (a script, an old client) creates the administrator and leaves the site what the environment says, the demo by default. The release `docker-compose.yml` still has no variable; `MATDESIGN_TEMPLATE` and `MATDESIGN_COMPANY` are for automation (a throwaway stack, the browser checks):
+they are where the assistant starts, and what the site is when it never runs (`MATDESIGN_ADMIN_PASSWORD` skips it).
 
 ## Releases in practice
 
@@ -154,6 +230,8 @@ the version, no inline style, no id twice, a label on every table cell), crawls 
 drives a real browser through the Studio: the setup assistant (when the site has no administrator yet, it creates one with `STUDIO_NAME` / `STUDIO_PASSWORD`, default `admin` / `studio-dev`), sign-in and lock, creating, refusing, saving and deleting an app, a rule and a component, the history and a restore, the checks, a release and the files it serves, the
 versions, and every page at the width of a phone. **Each run of the browser checks makes one release** (they never change), so the development volume grows by one release per run;
 `docker compose -f docker-compose.dev.yml down -v` followed by `up -d --build` starts it clean.
+`tests/e2e/blank.js` is the blank start in a second site (`MATDESIGN_TEMPLATE=blank MATDESIGN_COMPANY=Acme`, its own port and an empty data directory): the assistant's three steps by the real form, the shell saying the company and no Mat app anywhere, a first app, and the Company page switching to the demo and back.
+`run.js` goes through the same steps for the demo (`STUDIO_COMPANY`, default Mat, and `STUDIO_TEMPLATE`, default demo) and has a short block for the Company page.
 
 ## What it does not do
 

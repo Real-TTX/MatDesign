@@ -1,0 +1,200 @@
+@page "/Studio/Releases/WhiteLabel"
+@model MatDesign.Web.Pages.Studio.Releases.WhiteLabelModel
+@inject StudioHistory History
+@using MatDesign.Core.Studio
+@using MatDesign.Web.Studio
+@{
+    ViewData["Title"] = "White label";
+    ViewData["PageSub"] = "A company's releases can carry their own class prefix and product name. The build renames a copy of the toolkit, checks the copy and publishes it; the source of the toolkit is never edited for a brand.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Releases", "/Studio/Releases"), ("White label", null));
+    ViewData["Width"] = "narrow";
+
+    var input = Model.Input;
+    var saved = Model.Saved;
+    var valid = Model.Problems.Count == 0;
+    var shown = valid ? Model.Current : WhiteLabelSetting.None;
+    string Field(string name) => Model.ProblemFor(name) is null ? string.Empty : " is-invalid";
+    var trial = Model.Trial;
+}
+
+<form class="mat-form" method="post" action="/Studio/Releases/WhiteLabel" novalidate data-white-label data-reserved="@string.Join(",", WhiteLabel.ReservedPrefixes)">
+    @* The action is written out: after Check the address of the page ends in ?handler=Check, and Save must not inherit it. A form with an action gets no token by itself. *@
+    @Html.AntiForgeryToken()
+
+    <div class="mat-alert mat-alert--danger" role="alert" data-validation-summary hidden="@(Model.Problems.Count == 0)">
+        @Ui.Icon("x-circle")
+        <div class="mat-alert__body">
+            <strong>Please check the setting.</strong>
+            <ul class="mat-alert__list">
+                @foreach (var problem in Model.Problems)
+                {
+                    <li><a href="#Input_@problem.Field">@problem.Message</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    @if (trial is { Passed: true })
+    {
+        <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>The trial build passes.</strong> @WhiteLabelChecks.Summary(trial.Findings) @(Model.Checked ? "Nothing was saved yet." : string.Empty)</div></div>
+    }
+    else if (trial is not null)
+    {
+        <div class="mat-alert mat-alert--danger" role="alert">@Ui.Icon("x-circle")<div class="mat-alert__body"><strong>The trial build fails.</strong> @WhiteLabelChecks.Summary(trial.Findings) The setting is not saved, and a release with it would stop at Build.</div></div>
+    }
+    else if (Model.Checked && valid && shown.IsNoOp)
+    {
+        <div class="mat-alert mat-alert--info" role="status">@Ui.Icon("info")<div class="mat-alert__body">This setting renames nothing (the prefix mat and the name MatUi are the toolkit's own), so there is nothing to build or check.</div></div>
+    }
+
+    <section class="mat-card" aria-labelledby="setting-title">
+        <div class="mat-card__head">@Ui.Icon("layers")<h2 class="mat-card__title" id="setting-title">The setting</h2>
+            @if (saved is null) { <span class="mat-pill mat-pill--plain">Not set</span> }
+            else if (saved.IsNoOp) { <span class="mat-pill mat-pill--plain">No rename</span> }
+            else { <span class="mat-pill mat-pill--ok">In force</span> }
+        </div>
+        <div class="mat-card__body">
+            <p class="mat-muted">
+                @if (saved is null || saved.IsNoOp)
+                {
+                    <text>Releases carry the toolkit's own names: the prefix <code>mat-</code> and the name <code>MatUi</code>.</text>
+                }
+                else
+                {
+                    <text>Releases carry the prefix <code>@(saved.Prefix)-</code> and the name <code>@saved.Name</code>.</text>
+                }
+            </p>
+            <div class="mat-form__grid">
+                <div class="mat-field@(Field("Prefix"))">
+                    <label class="mat-label" for="Input_Prefix">Class prefix <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input mat-mono" id="Input_Prefix" name="Input.Prefix" value="@input.Prefix" maxlength="@WhiteLabel.MaxPrefixLength" required autocomplete="off" spellcheck="false" data-wl-prefix data-msg-required="Please give a prefix, or mat to keep the toolkit's own." />
+                    <span class="mat-error" aria-live="polite" data-wl-error="Prefix">@Model.ProblemFor("Prefix")</span>
+                    <span class="mat-hint">@WhiteLabel.MinPrefixLength to @WhiteLabel.MaxPrefixLength lower-case letters and digits, starting with a letter. Replaces <code>mat-</code>. <code>mat</code> renames nothing.</span>
+                </div>
+                <div class="mat-field@(Field("Name"))">
+                    <label class="mat-label" for="Input_Name">Product name <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Input_Name" name="Input.Name" value="@input.Name" maxlength="@WhiteLabel.MaxNameLength" required autocomplete="off" spellcheck="false" data-wl-name data-msg-required="Please give a name, or MatUi to keep the toolkit's own." />
+                    <span class="mat-error" aria-live="polite" data-wl-error="Name">@Model.ProblemFor("Name")</span>
+                    <span class="mat-hint">@WhiteLabel.MinNameLength to @WhiteLabel.MaxNameLength letters, starting with a capital, like AcmeUi. Replaces <code>MatUi</code>; the file names use it in lower case.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mat-section" aria-labelledby="examples-title">
+        <div class="mat-section__head">
+            <h2 id="examples-title">Before and after</h2>
+            <p class="mat-section__lead">What the build turns the names of the toolkit into. It follows what you type. A name is renamed only as a whole token: <code>format-</code>, <code>Mattiverse</code>, addresses and the other names of the family are left alone.</p>
+        </div>
+        <div class="mat-table-wrap">
+            <table class="mat-table" data-wl-examples>
+                <caption class="mat-sr-only">The names of the toolkit and what they become</caption>
+                <thead><tr><th scope="col">In the toolkit</th><th scope="col">In your release</th></tr></thead>
+                <tbody>
+                    @foreach (var (before, after) in WhiteLabel.Examples(shown))
+                    {
+                        <tr>
+                            <td data-label="In the toolkit"><code>@before</code></td>
+                            <td data-label="In your release"><code data-wl-after="@before">@after</code></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="mat-section" aria-labelledby="rules-title">
+        <div class="mat-section__head">
+            <h2 id="rules-title">What is renamed</h2>
+            <p class="mat-section__lead">Every file of the release: the bundle and its parts, the script, the icon sprite, the design data, the style guide and the archive with its manifest. The build then checks the copy with the tests of the toolkit (CODE-09).</p>
+        </div>
+        <ul class="doc-list">
+            @foreach (var rule in WhiteLabel.Rules(shown))
+            {
+                <li><strong>@rule.Name</strong>: @rule.What <code>@rule.Before</code> becomes <code>@rule.After</code></li>
+            }
+        </ul>
+    </section>
+
+    @if (trial is not null)
+    {
+        <section class="mat-section" aria-labelledby="trial-title">
+            <div class="mat-section__head">
+                <h2 id="trial-title">The trial build</h2>
+                <p class="mat-section__lead">The files of the next release, renamed and checked in @Model.TrialMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture) ms. Nothing was published.</p>
+            </div>
+            <div class="mat-table-wrap">
+                <table class="mat-table" data-wl-checks>
+                    <caption class="mat-sr-only">The checks run on the renamed copy</caption>
+                    <thead><tr><th scope="col">Check</th><th scope="col">What it holds</th><th scope="col">Result</th></tr></thead>
+                    <tbody>
+                        @foreach (var check in WhiteLabelChecks.All)
+                        {
+                            var count = trial.Findings.Count(f => f.Check == check.Id);
+                            <tr>
+                                <td data-label="Check"><code>@check.Id</code></td>
+                                <td data-label="What it holds" class="mat-hide-sm">@check.What</td>
+                                <td data-label="Result">@if (count == 0) { <span class="mat-pill mat-pill--ok">Passes</span> } else { <span class="mat-pill mat-pill--error">@StudioFormat.Count(count, "finding")</span> }</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (trial.Findings.Count > 0)
+            {
+                <div class="mat-table-wrap">
+                    <table class="mat-table" data-wl-findings>
+                        <caption class="mat-sr-only">What the checks found</caption>
+                        <thead><tr><th scope="col">Check</th><th scope="col">File</th><th scope="col">Finding</th></tr></thead>
+                        <tbody>
+                            @foreach (var finding in trial.Findings.Take(60))
+                            {
+                                <tr><td data-label="Check"><code>@finding.Check</code></td><td data-label="File">@(finding.Path ?? "-")</td><td data-label="Finding">@finding.Message</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            <div class="mat-table-wrap">
+                <table class="mat-table" data-wl-counts>
+                    <caption class="mat-sr-only">The replacements per file</caption>
+                    <thead><tr><th scope="col">File</th><th scope="col" class="mat-num">Replacements</th><th scope="col" class="mat-hide-sm">Of which</th></tr></thead>
+                    <tbody>
+                        @foreach (var file in trial.Report.Where(f => f.Replacements > 0))
+                        {
+                            <tr>
+                                <td data-label="File"><code>@file.Path</code></td>
+                                <td data-label="Replacements" class="mat-num">@file.Replacements.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</td>
+                                <td data-label="Of which" class="mat-hide-sm mat-muted">@string.Join(", ", file.Counts.Where(p => p.Value > 0).Select(p => $"{p.Value.ToString("N0", System.Globalization.CultureInfo.InvariantCulture)} {p.Key}"))</td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr><td data-label="File"><strong>All files</strong></td><td data-label="Replacements" class="mat-num"><strong>@trial.Totals.Values.Sum().ToString("N0", System.Globalization.CultureInfo.InvariantCulture)</strong></td><td data-label="Of which" class="mat-hide-sm mat-muted">hash of the copy <code>@trial.Hash</code></td></tr>
+                    </tfoot>
+                </table>
+            </div>
+        </section>
+    }
+
+    <div class="mat-btn-row">
+        <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+        <button type="submit" class="mat-btn mat-btn--secondary" formaction="?handler=Check">@Ui.Icon("check-circle")<span>Check a trial build</span></button>
+        <a class="mat-btn mat-btn--secondary" href="/Studio/Releases">@Ui.Icon("back")<span>Back</span></a>
+        @if (History.HasHistory(WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId))
+        {
+            <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl(WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId)">@Ui.Icon("restore")<span>History</span></a>
+        }
+        @if (saved is not null)
+        {
+            <span class="mat-btn-row__spacer"></span>
+            <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Reset" formnovalidate data-confirm="Take the setting away? Releases carry the toolkit's own names again; the history stays." data-confirm-ok="Reset">@Ui.Icon("restore")<span>Reset</span></button>
+        }
+    </div>
+</form>
+
+@section Scripts {
+    <script src="/js/whitelabel.js"></script>
+}

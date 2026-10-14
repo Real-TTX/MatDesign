@@ -1,18 +1,20 @@
 @page "/Studio/Setup"
 @model MatDesign.Web.Pages.Studio.SetupModel
 @inject MatDesign.Web.Studio.DesignData Design
+@using MatDesign.Core.Studio
 @{
     ViewData["Title"] = "Set up the Studio";
     Layout = "_Bare";
-    var app = Design.App("matdesign")!;
+    var app = Design.SiteApp;
     string Invalid(string field) => Model.ErrorFor(field) is null ? string.Empty : " is-invalid";
+    var first = Model.FirstStep;
 }
 
 <div class="mat-auth__card">
     <div class="mat-auth__brand">
         @Ui.Logo(app, "lg")
         <h1>Set up the Studio</h1>
-        <p class="mat-muted">You are the first one here. Create the administrator, and the Studio is yours.</p>
+        <p class="mat-muted">You are the first one here. Name your company, choose where to start, and create the administrator.</p>
     </div>
 
     @if (!Model.Enabled)
@@ -24,30 +26,82 @@
     }
     else
     {
-        <form class="mat-form" method="post" novalidate>
+        <form class="mat-form" method="post" novalidate data-setup data-setup-first="@first">
             @if (Model.ErrorFor("Form") is { } formError)
             {
                 <div class="mat-alert mat-alert--danger" role="alert">@Ui.Icon("alert")<div class="mat-alert__body">@formError</div></div>
             }
-            <div class="mat-field@(Invalid("Name"))">
-                <label class="mat-label" for="Name">Name <span class="mat-req" aria-hidden="true">*</span></label>
-                <input class="mat-input" id="Name" name="Name" value="@Model.Name" maxlength="32" autocomplete="username" required data-msg-required="Please give the administrator a name." />
-                <span class="mat-error" aria-live="polite">@Model.ErrorFor("Name")</span>
-                <span class="mat-hint">You sign in with it, and the history of the Studio shows it.</span>
-            </div>
-            <div class="mat-field@(Invalid("Password"))">
-                <label class="mat-label" for="Password">Password <span class="mat-req" aria-hidden="true">*</span></label>
-                <input class="mat-input" id="Password" name="Password" type="password" minlength="@Model.MinLength" autocomplete="new-password" required data-msg-required="Please choose a password." data-msg-range="At least @Model.MinLength characters." />
-                <span class="mat-error" aria-live="polite">@Model.ErrorFor("Password")</span>
-                <span class="mat-hint">At least @Model.MinLength characters.</span>
-            </div>
-            <div class="mat-field@(Invalid("Repeat"))">
-                <label class="mat-label" for="Repeat">Password again <span class="mat-req" aria-hidden="true">*</span></label>
-                <input class="mat-input" id="Repeat" name="Repeat" type="password" autocomplete="new-password" required data-msg-required="Please type the password again." />
-                <span class="mat-error" aria-live="polite">@Model.ErrorFor("Repeat")</span>
-            </div>
-            <div class="mat-btn-row mat-btn-row--plain">
-                <button type="submit" class="mat-btn mat-btn--primary mat-btn--block">@Ui.Icon("check")<span>Create the administrator</span></button>
+
+            <ol class="mat-steps" aria-label="Setup progress" data-setup-progress>
+                <li class="@(first == 1 ? "is-active" : first > 1 ? "is-done" : string.Empty)"@(first == 1 ? " aria-current=step" : string.Empty)><span class="mat-sr-only">Step 1, your company</span></li>
+                <li class="@(first == 2 ? "is-active" : first > 2 ? "is-done" : string.Empty)"@(first == 2 ? " aria-current=step" : string.Empty)><span class="mat-sr-only">Step 2, where to start</span></li>
+                <li class="@(first == 3 ? "is-active" : string.Empty)"@(first == 3 ? " aria-current=step" : string.Empty)><span class="mat-sr-only">Step 3, the administrator</span></li>
+            </ol>
+
+            <fieldset class="mat-fieldset" data-setup-step="1" aria-labelledby="step-company">
+                <legend class="mat-legend" id="step-company">Step 1 of 3: your company</legend>
+                <div class="mat-stack">
+                <div class="mat-field@(Invalid("Company"))">
+                    <label class="mat-label" for="Company">Company <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Company" name="Company" value="@Model.Company" maxlength="@TenantValidator.CompanyMax" autocomplete="organization" required data-msg-required="Please name your company." />
+                    <span class="mat-error" aria-live="polite">@Model.ErrorFor("Company")</span>
+                    <span class="mat-hint">The site, its releases and the archive are named after it.</span>
+                </div>
+                <div class="mat-field@(Invalid("ShortName"))">
+                    <label class="mat-label" for="ShortName">Short name <span class="mat-opt">(optional)</span></label>
+                    <input class="mat-input" id="ShortName" name="ShortName" value="@Model.ShortName" maxlength="@TenantValidator.ShortNameMax" />
+                    <span class="mat-error" aria-live="polite">@Model.ErrorFor("ShortName")</span>
+                    <span class="mat-hint">For places where the full name does not fit. Empty means the first word.</span>
+                </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="mat-fieldset" data-setup-step="2" aria-labelledby="step-template">
+                <legend class="mat-legend" id="step-template">Step 2 of 3: where to start</legend>
+                <div class="mat-stack">
+                <div class="mat-field@(Invalid("Template"))">
+                    <div class="mat-choices">
+                        @foreach (var template in Model.Templates)
+                        {
+                            <label class="mat-choice">
+                                <input type="radio" name="Template" value="@template.Id" checked="@(string.Equals(Model.Template, template.Id, StringComparison.OrdinalIgnoreCase))" />
+                                <span class="mat-choice__text"><strong>@template.Name</strong><small>@template.Description</small></span>
+                            </label>
+                        }
+                    </div>
+                    <span class="mat-error" aria-live="polite">@Model.ErrorFor("Template")</span>
+                    <span class="mat-hint">You can change it later in the Studio. Nothing you add is lost when you do.</span>
+                </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="mat-fieldset" data-setup-step="3" aria-labelledby="step-admin">
+                <legend class="mat-legend" id="step-admin">Step 3 of 3: the administrator</legend>
+                <div class="mat-stack">
+                <div class="mat-field@(Invalid("Name"))">
+                    <label class="mat-label" for="Name">Name <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Name" name="Name" value="@Model.Name" maxlength="32" autocomplete="username" required data-msg-required="Please give the administrator a name." />
+                    <span class="mat-error" aria-live="polite">@Model.ErrorFor("Name")</span>
+                    <span class="mat-hint">You sign in with it, and the history of the Studio shows it.</span>
+                </div>
+                <div class="mat-field@(Invalid("Password"))">
+                    <label class="mat-label" for="Password">Password <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Password" name="Password" type="password" minlength="@Model.MinLength" autocomplete="new-password" required data-msg-required="Please choose a password." data-msg-range="At least @Model.MinLength characters." />
+                    <span class="mat-error" aria-live="polite">@Model.ErrorFor("Password")</span>
+                    <span class="mat-hint">At least @Model.MinLength characters.</span>
+                </div>
+                <div class="mat-field@(Invalid("Repeat"))">
+                    <label class="mat-label" for="Repeat">Password again <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Repeat" name="Repeat" type="password" autocomplete="new-password" required data-msg-required="Please type the password again." />
+                    <span class="mat-error" aria-live="polite">@Model.ErrorFor("Repeat")</span>
+                </div>
+                </div>
+            </fieldset>
+
+            <div class="mat-btn-row mat-btn-row--plain" data-setup-actions>
+                <button type="button" class="mat-btn mat-btn--secondary mat-btn--block" data-setup-back hidden>@Ui.Icon("back")<span>Back</span></button>
+                <button type="button" class="mat-btn mat-btn--primary mat-btn--block" data-setup-next hidden><span>Next</span>@Ui.Icon("chevron-right")</button>
+                <button type="submit" class="mat-btn mat-btn--primary mat-btn--block" data-setup-submit>@Ui.Icon("check")<span>Create the administrator</span></button>
             </div>
             <p class="mat-muted">
                 Whoever opens this page first becomes the administrator, so do it right after the start. The password is kept as a salted hash
@@ -56,3 +110,7 @@
         </form>
     }
 </div>
+
+@section Scripts {
+    <script src="/js/setup.js"></script>
+}

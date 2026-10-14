@@ -1,6 +1,7 @@
 @page "/Studio/Brand"
 @model MatDesign.Web.Pages.Studio.BrandModel
 @inject StudioHistory History
+@inject DesignData Design
 @using System.Globalization
 @using MatDesign.Core
 @using MatDesign.Core.Studio
@@ -9,7 +10,7 @@
     var input = Model.Input;
     ViewData["Title"] = "Brand";
     ViewData["PageSub"] = Model.Source == ItemSource.BuiltIn
-        ? "The brand that is built in: the Mat family, no token changed. Saving a change here replaces it on the site; resetting brings it back."
+        ? $"The brand that is built in: the {Design.Tenant.Family}, no token changed. Saving a change here replaces it on the site; resetting brings it back."
         : "The brand of the company, saved in the Studio. What it sets is written after the tokens in matui.css, in every release and in the archive.";
     ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Brand", null));
     ViewData["Width"] = "wide";
@@ -24,6 +25,8 @@
     var failing = Model.Standard.Count(r => r.Fails);
 }
 
+<partial name="_BrandTabs" model="@("tokens")" />
+
 <div class="doc-brand" data-brand-editor data-pairings="@Model.PairingsJson" data-accent="@Model.AccentJson">
     <div class="doc-brand__main">
         @* The action is written out: after Check the address of the page ends in ?check=true, and Save must not inherit it. A form with an action gets no token by itself. *@
@@ -37,7 +40,8 @@
                     <ul class="mat-alert__list">
                         @foreach (var problem in Model.Problems)
                         {
-                            <li><a href="#@BrandModel.TargetOf(problem.Field)">@(problem.Field.Contains(':') ? problem.Field.Replace(":", " ") + ": " : string.Empty)@problem.Message</a></li>
+                            var target = BrandModel.TargetOf(problem.Field);
+                            <li><a href="@(target.StartsWith('/') ? target : "#" + target)">@(problem.Field.Contains(':') ? problem.Field.Replace(":", " ") + ": " : string.Empty)@problem.Message</a></li>
                         }
                     </ul>
                 </div>
@@ -77,6 +81,7 @@
                     <p class="mat-section__lead">
                         A brand changes tokens, never CSS. Colours are #rrggbb, or rgba(r, g, b, a) for a tint. Leave a field empty to keep the toolkit's own value (the placeholder). Light and dark are separate; a token with no dark column has one value for both.
                         Values are checked by their kind and within limits that keep the interface usable (touch targets of 44 px, a body text of 14 px or more, a line height of 1.2 to 2, radii of 0 to 24 px).
+                        The shape of single controls (the radius of a button, the padding of a card) is on <a href="/Studio/Brand/Components">the Components page</a>.
                     </p>
                 </div>
             </section>
@@ -158,6 +163,81 @@
                     </div>
                 </section>
             }
+
+            <section class="mat-section" aria-labelledby="schemes-title">
+                <div class="mat-section__head">
+                    <h2 id="schemes-title">Inside the colour schemes</h2>
+                    <p class="mat-section__lead">
+                        A user can choose a colour scheme (paper, high contrast, black). Each one sets its own surfaces, lines and text; here the brand changes single values <em>inside</em> a scheme, written after the scheme's own blocks so that they win.
+                        Only the tokens the scheme sets can be changed, and the same checks run on the result: every pairing must still reach AA in that scheme, with the accent of every app (COLOR-09, COLOR-11).
+                        Black has dark values only. Leave a field empty to keep the scheme's own value (the placeholder).
+                    </p>
+                </div>
+                <div class="mat-accordion">
+                    @foreach (var section in Model.SchemeSections)
+                    {
+                        var scheme = section.Scheme;
+                        var count = Model.SchemeCount(scheme.Id);
+                        var failures = Model.SchemeFailures(scheme.Id);
+                        var invalid = Model.Problems.Any(p => p.Field.StartsWith("Scheme:" + scheme.Id, StringComparison.Ordinal));
+                        <details class="mat-accordion__item" id="scheme-@scheme.Id" open="@(count > 0 || invalid)">
+                            <summary>@scheme.Name<span class="mat-muted"> (@(count == 0 ? "nothing changed" : count + " changed"))</span>@Ui.Icon("chevron-down", "mat-accordion__chev")</summary>
+                            <div class="mat-accordion__body">
+                                <p class="mat-muted">@scheme.Description</p>
+                                @if (failures.Count > 0)
+                                {
+                                    <div class="mat-alert mat-alert--danger" role="status">@Ui.Icon("x-circle")<div class="mat-alert__body"><strong>@StudioFormat.Count(failures.Count, "required pairing") below AA in this scheme.</strong> @string.Join("; ", failures.Take(4).Select(f => f.Name + " " + Ratio(f.Ratio) + ":1"))</div></div>
+                                }
+                                <div class="mat-table-wrap">
+                                    <table class="mat-table doc-scheme-table">
+                                        <caption class="mat-sr-only">Tokens the @scheme.Name scheme sets</caption>
+                                        <thead><tr><th scope="col">Token</th><th scope="col">Light</th><th scope="col">Dark</th><th scope="col"><span class="mat-sr-only">Reset</span></th></tr></thead>
+                                        <tbody>
+                                            @foreach (var row in section.Rows)
+                                            {
+                                                var token = row.Token;
+                                                var colour = token.Kind == BrandTokenKind.Colour;
+                                                <tr data-brand-scheme-row data-token="@token.Name" data-kind="@token.Kind.ToString().ToLowerInvariant()" data-light="@row.Light" data-dark="@row.Dark">
+                                                    <td data-label="Token"><div class="mat-table__name"><span><code>@token.Name</code><small>@token.Description</small></span></div></td>
+                                                    @foreach (var isDark in new[] { false, true })
+                                                    {
+                                                        var modeName = isDark ? "Dark" : "Light";
+                                                        if ((isDark ? row.Dark : row.Light) is not { } own)
+                                                        {
+                                                            <td data-label="@modeName"><span class="mat-muted">@(scheme.DarkOnly && !isDark ? "No light values" : "Not set by this scheme")</span></td>
+                                                            continue;
+                                                        }
+
+                                                        var fieldName = $"Scheme:{scheme.Id}:{modeName}:{token.Name}";
+                                                        var id = BrandForm.SchemeId(scheme.Id, isDark, token);
+                                                        <td data-label="@modeName">
+                                                            <div class="mat-field@(Field(fieldName))">
+                                                                <div class="doc-brand__cell">
+                                                                    @if (colour)
+                                                                    {
+                                                                        <input type="color" class="doc-brand__picker" id="@(id)-picker" data-brand-picker="@(isDark ? "dark" : "light")" value="#000000" aria-label="@modeName colour of @token.Name in the @scheme.Name scheme" />
+                                                                    }
+                                                                    <input class="mat-input mat-mono" id="@id" name="scheme:@scheme.Id:@(modeName.ToLowerInvariant()):@token.Name" value="@Model.SchemeValueOf(scheme.Id, token, isDark)" placeholder="@own" maxlength="@BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-brand-input="@(isDark ? "dark" : "light")" aria-label="@modeName value of @token.Name in the @scheme.Name scheme" />
+                                                                </div>
+                                                                <span class="mat-error" aria-live="polite">@Model.ProblemFor(fieldName)</span>
+                                                            </div>
+                                                        </td>
+                                                    }
+                                                    <td data-label="Reset" class="mat-table__cell-actions">
+                                                        <div class="mat-table__actions">
+                                                            <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" data-brand-reset aria-label="Reset @token.Name in the @scheme.Name scheme to the scheme's value" data-tip="Reset">@Ui.Icon("restore")</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </details>
+                    }
+                </div>
+            </section>
 
             <section class="mat-section" aria-labelledby="contrast-title">
                 <div class="mat-section__head">
@@ -339,6 +419,7 @@
                     {
                         <li><a class="mat-toc__link" href="#group-@Navigation.Slug(group.Key)">@group.Key</a></li>
                     }
+                    <li><a class="mat-toc__link" href="#schemes-title">Inside the colour schemes</a></li>
                     <li><a class="mat-toc__link" href="#contrast-title">Contrast of the brand</a></li>
                     <li><a class="mat-toc__link" href="#accents-title">The accents of the apps</a></li>
                     <li><a class="mat-toc__link" href="#fixed-title">Tokens that are not set here</a></li>

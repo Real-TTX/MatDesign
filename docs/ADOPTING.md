@@ -309,6 +309,12 @@ A custom property inherits, so an element sets it for itself and everything insi
 only inside `@media (pointer: fine)`); a property of the **default size** leaves the `sm` and `lg` sizes alone (the radius is the exception: one value for every size of a control); and a property
 changes a shape, never a colour or a shadow (`COLOR-01`, `SPACE-03`). The accent, the surfaces and the dark mode stay the tokens' business.
 
+**Setting them in the Studio** (stage 12): a company edits the properties on *Studio → Brand → Components*, next to the real control with a live preview, and an app on its own edit page (*Overrides of this app*); the Studio writes them
+at the end of `matui.css` (the apps part), so an app that copies the files needs to do nothing. The order in which values win is **the toolkit's defaults, the brand, the app (`[data-app="id"]`), and, last, a colour scheme the user chose**
+(`data-scheme` is a more specific selector). Ranges that the editor holds a value to: a radius 0 to 24 px, padding and gaps 0 to 48 px, a border 0 to 4 px, the width of a dialog or a toast 200 to 960 px, a weight 100 to 900, small text 11 px and up (table and breadcrumb 12 px).
+**Touch targets:** a height of 44 px or more is written for everyone; a height under 44 px (never under 32 px) is written inside `@media (pointer: fine)` and so applies with a mouse only, while a touch screen keeps the 44 px of `--mat-control-h`.
+Do the same in an app's own CSS (the example above). `(pointer: fine)` is the device's primary pointer: a laptop with a touch screen counts as a mouse. A brand can also change, inside a colour scheme, the colours that scheme sets, and an app its radii, spacing, type and motion tokens on `[data-app]`.
+
 ## 5. Dialogs (`DIALOG-*`)
 
 - **Every confirmation, alert and input is a dialog** of the toolkit: `data-confirm="…"` on a button, link or form; `MatUi.confirm`, `MatUi.alert`, `MatUi.prompt` from a script. Remove
@@ -335,7 +341,17 @@ with the one it carries, and when the release is newer copies `/releases/<versio
 checking each file against the SHA-256 of the manifest. Every release also carries `styleguide.html`, the rules and every component with its examples as one static page (`/releases/<version>/styleguide.html`), and `design.json` with the same as data. The app still carries its own copy (`CODE-03`): the release is where the copy comes from, not something it loads at run time. The Studio's **Versions** page is where it is written down which release each app has,
 and which apps are behind.
 
+A company that runs its own instance starts from the **demo** (the Mat apps as sample data) or a **blank** template (docs/STUDIO.md, "Company and templates"): the README of the archive, `design.json` and the styleguide of a release say the company's own name, and the apps of a blank site are the ones its Studio holds.
+
 **The toolkit has a version of its own** (semantic versioning): it is in the first line of `matui.css` and in `MatUi.version`, and `/Changelog` (also `/ui/CHANGELOG.md` and `/api/changelog?since=0.1.0`) says what changed in each version, what breaks and what an app has to do. `node tools/matui-check.js <folder of the app>` finds the app's copy, says which version it is, whether the files are all one version and whether one was changed by hand, and what an update takes with it. How a version is made and how an app updates, step by step: [VERSIONING.md](VERSIONING.md).
+
+## 6b. A white-labelled copy (`CODE-09`)
+
+A company that runs its own MatDesign can have its releases carry its own class prefix and product name (Studio, Release, White label). Such an archive is the same toolkit under other names: the classes are `acme-btn`, the properties `--acme-radius`,
+the attributes `data-acme-...`, the events `acme:theme`, the keys of the storage `acme-theme`, the global `window.AcmeUi`, and the files `acmeui.css`, `acmeui.js`, `acmeui.boot.js`, `acmeui-icons.svg` and `acmeui.manifest.json` (the sprite ids are `acme-i-...`). An app that copies
+that archive uses the prefix of the archive everywhere this document says `mat-`, `--mat-`, `data-mat-` or `MatUi`, and its own classes carry the app's prefix as before (`CODE-02`): a company that white-labels the toolkit and an app that
+copies the original must not share a page. Update by copying all the files of the archive again, never by renaming in the app: the next release has the same names. `node tools/matui-check.js <folder of the app>` reads the product and the file names from
+`<name>.manifest.json`, so it checks such a copy like any other (it names the product); a copy without a manifest is looked for under the names of MatUi itself. The version is the same number as the toolkit's: the manifest names the product.
 
 ## 7. Check it
 

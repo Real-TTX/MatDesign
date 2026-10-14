@@ -92,7 +92,9 @@ public static class Styleguide
         Line("<head>");
         Line("<meta charset=\"utf-8\">");
         Line("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-        Line($"<title>MatUi {Encode(version)} – styleguide</title>");
+        // a company's own design system says whose it is; the demo is what it always was
+        var owner = design.IsDemo ? string.Empty : $"{Encode(design.Tenant.SiteName)}: ";
+        Line($"<title>{owner}MatUi {Encode(version)} – styleguide</title>");
         Line("<link rel=\"icon\" href=\"data:,\">");
         Line("<script src=\"matui.boot.js\"></script>");
         Line("<link rel=\"stylesheet\" href=\"matui.css\">");
@@ -104,7 +106,7 @@ public static class Styleguide
 
         Line("<header class=\"sg__head\">");
         Line($"<h1>MatUi {Encode(version)} – styleguide</h1>");
-        Line($"<p class=\"mat-muted\">The rules, the components with their examples, and the apps of this release of the design system. The toolkit files of the release (<code>{Encode(hash)}</code>) are the ones this page uses.</p>");
+        Line($"<p class=\"mat-muted\">{(design.IsDemo ? string.Empty : $"The design system of {Encode(design.Tenant.Company)}. ")}The rules, the components with their examples, and the apps of this release of the design system. The toolkit files of the release (<code>{Encode(hash)}</code>) are the ones this page uses.</p>");
         Line("<ul class=\"sg__toc\"><li><a href=\"#rules\">Rules</a></li><li><a href=\"#components\">Components</a></li><li><a href=\"#apps\">Apps</a></li></ul>");
         Line("</header>");
 
@@ -236,6 +238,11 @@ public static class Styleguide
     {
         line("<section class=\"sg__section\" id=\"apps\" aria-labelledby=\"h-apps\">");
         line($"<h2 id=\"h-apps\">Apps ({design.Apps.Count})</h2>");
+        if (design.Apps.Count == 0)
+        {
+            line("<p class=\"mat-muted\">This release has no apps yet.</p>");
+        }
+
         line("<ul class=\"sg__apps\">");
         foreach (var app in design.Apps)
         {

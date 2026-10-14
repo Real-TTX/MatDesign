@@ -1,0 +1,129 @@
+@page "/Studio/Company"
+@model MatDesign.Web.Pages.Studio.CompanyModel
+@inject StudioHistory History
+@using MatDesign.Core
+@using MatDesign.Core.Studio
+@using MatDesign.Web.Studio
+@{
+    var input = Model.Input;
+    var blank = Model.Template.Id == DesignTemplates.BlankId;
+    ViewData["Title"] = "Company";
+    ViewData["PageSub"] = Model.Origin switch
+    {
+        TenantOrigin.Studio => "The company that runs this site, saved in the Studio. The names below are what the pages, the releases and the archive say.",
+        TenantOrigin.Setup => "The company you named in the setup assistant. Saving a change here keeps a history of it.",
+        _ => "This site has no company yet, so it is the demo. Name the company and what the site calls itself, or start with a blank brand.",
+    };
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Company", null));
+    ViewData["Width"] = "narrow";
+
+    string Field(string name) => Model.ProblemFor(name) is null ? string.Empty : " is-invalid";
+}
+
+@* The action is written out: after Check the address of the page ends in ?check=true, and Save must not inherit it. A form with an action gets no token by itself. *@
+<form class="mat-form" method="post" action="/Studio/Company" novalidate>
+    @Html.AntiForgeryToken()
+
+    <div class="mat-alert mat-alert--danger" role="alert" data-validation-summary hidden="@(Model.Problems.Count == 0)">
+        @Ui.Icon("x-circle")
+        <div class="mat-alert__body">
+            <strong>Please check the form.</strong>
+            <ul class="mat-alert__list">
+                @foreach (var problem in Model.Problems)
+                {
+                    <li><a href="#Input_@problem.Field">@problem.Message</a></li>
+                }
+            </ul>
+        </div>
+    </div>
+    @if (Model.Checked && Model.Problems.Count == 0)
+    {
+        <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>All checks pass.</strong> Nothing was saved yet.</div></div>
+    }
+
+    <section class="mat-card" aria-labelledby="names-title">
+        <div class="mat-card__head">@Ui.Icon("briefcase")<h2 class="mat-card__title" id="names-title">The company and the site</h2></div>
+        <div class="mat-card__body">
+            <div class="mat-form__grid">
+                <div class="mat-field@(Field("Company"))">
+                    <label class="mat-label" for="Input_Company">Company <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Input_Company" name="Input.Company" value="@input.Company" maxlength="60" required data-msg-required="Please name the company." />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Company")</span>
+                    <span class="mat-hint">The full name, as in a release and in the README of the archive.</span>
+                </div>
+                <div class="mat-field@(Field("ShortName"))">
+                    <label class="mat-label" for="Input_ShortName">Short name <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Input_ShortName" name="Input.ShortName" value="@input.ShortName" maxlength="16" required data-msg-required="Please give a short name." />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("ShortName")</span>
+                    <span class="mat-hint">The word in "the @(Model.Current.ShortName) apps", where the full name does not fit.</span>
+                </div>
+                <div class="mat-field@(Field("SiteName"))">
+                    <label class="mat-label" for="Input_SiteName">Site name <span class="mat-req" aria-hidden="true">*</span></label>
+                    <input class="mat-input" id="Input_SiteName" name="Input.SiteName" value="@input.SiteName" maxlength="40" required data-msg-required="Please name the site." />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("SiteName")</span>
+                    <span class="mat-hint">What the site calls itself: under the logo, in the title of every page, in the footer and on the version line.</span>
+                </div>
+                <div class="mat-field@(Field("Tagline"))">
+                    <label class="mat-label" for="Input_Tagline">Tagline <span class="mat-opt">(optional)</span></label>
+                    <input class="mat-input" id="Input_Tagline" name="Input.Tagline" value="@input.Tagline" maxlength="90" />
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Tagline")</span>
+                    <span class="mat-hint">The line under the site name in the menu.</span>
+                </div>
+                @if (blank)
+                {
+                    <div class="mat-field@(Field("Accent"))">
+                        <label class="mat-label" for="Input_Accent">Accent of the site <span class="mat-req" aria-hidden="true">*</span></label>
+                        <div class="mat-picker" data-picker="colour" data-placeholder="Choose a colour">
+                            <input class="mat-picker__input" id="Input_Accent" name="Input.Accent" value="@input.Accent" />
+                        </div>
+                        <span class="mat-error" aria-live="polite">@Model.ProblemFor("Accent")</span>
+                        <span class="mat-hint">The colour of the logo and of the controls of this site. Each app you add has a colour of its own.</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </section>
+
+    <div class="mat-btn-row">
+        <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+        <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        <a class="mat-btn mat-btn--secondary" href="/Studio">@Ui.Icon("back")<span>Back</span></a>
+        @if (History.HasHistory(Tenant.Kind, Tenant.ItemId))
+        {
+            <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl(Tenant.Kind, Tenant.ItemId)">@Ui.Icon("restore")<span>History</span></a>
+        }
+    </div>
+</form>
+
+<section class="mat-section" aria-labelledby="template-title">
+    <div class="mat-section__head">
+        <h2 id="template-title">Template</h2>
+        <p class="mat-section__lead">
+            The site starts from a template: the built-in layer under everything the Studio saved. The rules and the documentation of the components are in both.
+        </p>
+    </div>
+    <div class="mat-choices">
+        @foreach (var template in DesignTemplates.All)
+        {
+            var current = template.Id == Model.Template.Id;
+            <div class="mat-card" data-template="@template.Id">
+                <div class="mat-card__head">
+                    @Ui.Icon(template.Id == DesignTemplates.DemoId ? "apps" : "template")
+                    <h3 class="mat-card__title">@template.Name</h3>
+                    @if (current)
+                    {
+                        <span class="mat-pill mat-pill--accent">In use</span>
+                    }
+                </div>
+                <div class="mat-card__body"><p>@template.Description</p></div>
+            </div>
+        }
+    </div>
+    <form class="mat-form" method="post" action="/Studio/Company?handler=Switch" novalidate>
+        @Html.AntiForgeryToken()
+        <div class="mat-btn-row">
+            <button type="submit" class="mat-btn mat-btn--danger" data-confirm="@Model.SwitchQuestion" data-confirm-ok="Switch" data-template-switch="@Model.Other.Id">@Ui.Icon("refresh")<span>Switch to the @Model.Other.Name.ToLowerInvariant() template</span></button>
+        </div>
+        <p class="mat-hint">@Model.SwitchQuestion</p>
+    </form>
+</section>

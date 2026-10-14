@@ -9,12 +9,17 @@ public class IndexModel : PageModel
 {
     private readonly ToolkitFiles _toolkit;
     private readonly IconLibrary _iconLibrary;
+    private readonly MatDesign.Web.Studio.DesignData _design;
 
-    public IndexModel(ToolkitFiles toolkit, IconLibrary iconLibrary)
+    public IndexModel(ToolkitFiles toolkit, IconLibrary iconLibrary, MatDesign.Web.Studio.DesignData design)
     {
         _toolkit = toolkit;
         _iconLibrary = iconLibrary;
+        _design = design;
     }
+
+    /// <summary>What the site calls itself: the name of the program that built the files.</summary>
+    public string SiteName => _design.Tenant.SiteName;
 
     /// <summary>The version of the toolkit (semantic versioning): what an app compares with its copy.</summary>
     public string Version => AppVersion.MatUi;

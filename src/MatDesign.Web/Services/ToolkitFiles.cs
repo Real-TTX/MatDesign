@@ -68,6 +68,7 @@ public sealed partial class ToolkitFiles
         Schemes = CssTokens.Schemes(_css["matui.tokens.css"]);
         Properties = ComponentProperties.Parse(CssParts.Select(part => _css[part]));
         EditableTokens = BrandTokens.Editable(Tokens);
+        EditableProperties = ComponentTokens.Editable(Properties, Tokens);
         Facts = new MarkupFacts(MarkupChecks.ClassesIn(CssParts.Select(part => _css[part])), IconNames.ToHashSet());
         _state = Build(design.Version);
     }
@@ -99,12 +100,28 @@ public sealed partial class ToolkitFiles
 
     private State Build(long version)
     {
-        var appsCss = _css[AppsPart] + AppsOverlay(_design.StudioApps) + BrandOverlay(_design.StudioBrand, EditableTokens);
+        // the order of the cascade: the toolkit's defaults, the site's own look, the colours of the apps, the brand (tokens, component properties, colour schemes), then what each app sets for itself
+        var appsCss = _css[AppsPart] + SiteOverlay(_design) + AppsOverlay(_design.StudioApps) + BrandOverlay(_design.StudioBrand, EditableTokens, EditableProperties, Schemes) + AppOverridesOverlay(_design.StudioApps, EditableTokens, EditableProperties);
         string Part(string name) => name == AppsPart ? appsCss : _css[name];
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Concat(CssParts.Select(Part)) + Script + BootScript + Sprite)))[..10].ToLowerInvariant();
         // the first line names the version of the toolkit first (what an app compares), then the build of the site that made the file
         var bundle = $"/* MatUi {AppVersion.MatUi} ({hash}) - build {AppVersion.Current} - bundled from {string.Join(", ", CssParts)} */\n" + string.Join("\n", CssParts.Select(Part));
         return new State(version, appsCss, hash, bundle, new Lazy<byte[]>(() => BuildZip(bundle, Script, BootScript, appsCss, hash, AppVersion.MatUi)));
+    }
+
+    /// <summary>
+    /// The colour of the site itself when it is not an app of the family (stage 14, the blank template): <c>[data-app="this-site"]</c> with the accent of the tenant. The demo writes nothing: the site
+    /// is the <c>matdesign</c> app there, whose colour <c>matui.apps.css</c> has. The text colours are the ones the toolkit derives (the accent is checked for AA like any app's, when the tenant is saved).
+    /// </summary>
+    public static string SiteOverlay(DesignData design)
+    {
+        if (design.IsDemo)
+        {
+            return string.Empty;
+        }
+
+        var site = design.SiteApp;
+        return $"\n/* The site itself (template {design.Template.Id}). */\n[data-app=\"{site.Id}\"] {{ --mat-app-accent: {site.Accent}; }}\n";
     }
 
     /// <summary>The colours of the apps that were added or changed in the Studio, written like the built-in ones and placed after them, so they win.</summary>
@@ -135,35 +152,126 @@ public sealed partial class ToolkitFiles
     /// <c>data-theme="dark"</c> and once for the system under <c>prefers-color-scheme: dark</c>, exactly as <c>matui.tokens.css</c> writes its dark set. Only a token a brand may set, with a value of its
     /// kind within its limits, is written; a brand that sets nothing writes nothing, so the file is what it was without a brand.
     /// </summary>
-    public static string BrandOverlay(Brand? brand, IReadOnlyList<BrandToken> tokens)
+    public static string BrandOverlay(Brand? brand, IReadOnlyList<BrandToken> tokens, IReadOnlyList<PropertyToken>? properties = null, IReadOnlyList<SchemeBlocks>? schemes = null)
     {
         if (brand is null || !BrandValidator.IsSafe(brand))
         {
             return string.Empty;
         }
 
-        IEnumerable<string> Lines(IReadOnlyDictionary<string, string> values, bool dark)
-            => tokens
-                .Where(t => values.TryGetValue(t.Name, out var v) && (!dark || t.HasDark) && BrandValidator.CheckValue(t, v) is null)
-                .Select(t => $"{t.Name}: {values[t.Name]};");
+        var sb = new StringBuilder();
 
-        var light = Lines(brand.Values(false), dark: false).ToList();
-        var dark = Lines(brand.Values(true), dark: true).ToList();
-        if (light.Count == 0 && dark.Count == 0)
+        // the tokens: light on :root, dark twice
+        var light = TokenLines(tokens, brand.Values(false), dark: false);
+        var dark = TokenLines(tokens, brand.Values(true), dark: true);
+        if (light.Count > 0 || dark.Count > 0)
         {
-            return string.Empty;
+            sb.Append("\n/* Brand set in the Studio (COLOR-11): tokens only. The dark set is written twice, like in matui.tokens.css. */\n");
+            sb.Append(TokenBlocks(":root", ":root[data-theme=\"dark\"]", ":root:not([data-theme=\"light\"]):not([data-theme=\"dark\"])", light, dark));
         }
 
-        var sb = new StringBuilder("\n/* Brand set in the Studio (COLOR-11): tokens only. The dark set is written twice, like in matui.tokens.css. */\n");
+        // the component properties: one value for light and dark; a height under the touch target is written for a fine pointer only (MOBILE-04)
+        var props = PropertyBlocks(":root", properties ?? [], brand.ComponentValues);
+        if (props.Length > 0)
+        {
+            sb.Append("\n/* Component properties of the brand (SPACE-06): a height under 44 px is only for a fine pointer, so a touch screen keeps the 44 px of the control height (MOBILE-04). */\n").Append(props);
+        }
+
+        // inside a colour scheme, after the scheme's own blocks of matui.tokens.css and with the same selectors, so they win; oled has no light values
+        var inSchemes = new StringBuilder();
+        foreach (var scheme in ColorSchemes.All)
+        {
+            if (brand.SchemeFor(scheme.Id) is not { } values)
+            {
+                continue;
+            }
+
+            var own = (schemes ?? []).FirstOrDefault(s => s.Id == scheme.Id);
+            var schemeLight = own?.Light is null ? new List<string>() : TokenLines(tokens.Where(t => own.Light.ContainsKey(t.Name)).ToList(), values.Values(false), dark: false, schemeDark: false);
+            var schemeDark = own?.Dark is null ? new List<string>() : TokenLines(tokens.Where(t => own.Dark.ContainsKey(t.Name)).ToList(), values.Values(true), dark: true, schemeDark: true);
+            if (schemeLight.Count > 0 || schemeDark.Count > 0)
+            {
+                var root = $":root[data-scheme=\"{scheme.Id}\"]";
+                inSchemes.Append(TokenBlocks(root, root + "[data-theme=\"dark\"]", root + ":not([data-theme=\"light\"]):not([data-theme=\"dark\"])", schemeLight, schemeDark));
+            }
+        }
+
+        if (inSchemes.Length > 0)
+        {
+            sb.Append("\n/* Tokens of the brand inside a colour scheme (COLOR-09, COLOR-11): after the blocks of the scheme, with their selectors. The dark set is written twice. */\n").Append(inSchemes);
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// What each app sets for itself on top of the brand (stage 12 of docs/PRODUCT.md): its tokens (shape, spacing, type, motion) on <c>[data-app="id"]</c> with the dark set twice and identical, and its
+    /// component properties on <c>[data-app="id"]</c>, after the brand, so the order is the toolkit, the brand, the app. An app that sets nothing writes nothing: with no override at all the result is empty.
+    /// </summary>
+    public static string AppOverridesOverlay(IEnumerable<MatApp> apps, IReadOnlyList<BrandToken> tokens, IReadOnlyList<PropertyToken>? properties = null)
+    {
+        var allowed = AppOverrides.Tokens(tokens);
+        var sb = new StringBuilder();
+        foreach (var app in apps.Where(a => a.HasOverrides && AppValidator.IsSafe(a)))
+        {
+            var scope = $"[data-app=\"{app.Id}\"]";
+            var light = TokenLines(allowed, app.Tokens?.Values(false) ?? new Dictionary<string, string>(), dark: false);
+            var dark = TokenLines(allowed, app.Tokens?.Values(true) ?? new Dictionary<string, string>(), dark: true);
+            var props = PropertyBlocks(scope, properties ?? [], app.Properties ?? new Dictionary<string, string>());
+            if (light.Count == 0 && dark.Count == 0 && props.Length == 0)
+            {
+                continue;
+            }
+
+            sb.Append(TokenBlocks(scope, $":root[data-theme=\"dark\"]{scope}", $":root:not([data-theme=\"light\"]):not([data-theme=\"dark\"]){scope}", light, dark)).Append(props);
+        }
+
+        return sb.Length == 0 ? string.Empty : "\n/* Overrides of apps set in the Studio (SPACE-06, stage 12): after the brand, on [data-app]. A height under 44 px is only for a fine pointer. */\n" + sb;
+    }
+
+    private static List<string> TokenLines(IReadOnlyList<BrandToken> tokens, IReadOnlyDictionary<string, string> values, bool dark, bool schemeDark = false)
+        => tokens
+            .Where(t => values.TryGetValue(t.Name, out var v) && (schemeDark || !dark || t.HasDark) && BrandValidator.CheckValue(t, v) is null)
+            .Select(t => $"{t.Name}: {values[t.Name]};")
+            .ToList();
+
+    /// <summary>A light block, and the dark values twice and identical: for an explicit dark theme and, in a media query, for the system. A block without lines is left out.</summary>
+    private static string TokenBlocks(string lightSelector, string darkSelector, string systemSelector, List<string> light, List<string> dark)
+    {
+        var sb = new StringBuilder();
         if (light.Count > 0)
         {
-            sb.Append(":root {\n").AppendJoin('\n', light.Select(l => "  " + l)).Append("\n}\n");
+            sb.Append(lightSelector).Append(" {\n").AppendJoin('\n', light.Select(l => "  " + l)).Append("\n}\n");
         }
 
         if (dark.Count > 0)
         {
-            sb.Append(":root[data-theme=\"dark\"] {\n").AppendJoin('\n', dark.Select(l => "  " + l)).Append("\n}\n");
-            sb.Append("@media (prefers-color-scheme: dark) {\n  :root:not([data-theme=\"light\"]):not([data-theme=\"dark\"]) {\n").AppendJoin('\n', dark.Select(l => "    " + l)).Append("\n  }\n}\n");
+            sb.Append(darkSelector).Append(" {\n").AppendJoin('\n', dark.Select(l => "  " + l)).Append("\n}\n");
+            sb.Append("@media (prefers-color-scheme: dark) {\n  ").Append(systemSelector).Append(" {\n").AppendJoin('\n', dark.Select(l => "    " + l)).Append("\n  }\n}\n");
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// The properties with a value of their type within their limits: one block on <paramref name="selector"/> and, for a height of a control that is pressed and is under the touch target of 44 px, a block
+    /// inside <c>@media (pointer: fine)</c>. On a touch screen the property is then unset and the control keeps its fallback, <c>--mat-control-h</c>, which the tokens make 44 px under
+    /// <c>(pointer: coarse)</c>: nothing can make a touch target smaller (<c>MOBILE-04</c>).
+    /// </summary>
+    private static string PropertyBlocks(string selector, IReadOnlyList<PropertyToken> properties, IReadOnlyDictionary<string, string> values)
+    {
+        var valid = properties.Where(p => values.TryGetValue(p.Name, out var v) && BrandValidator.CheckValue(p.Token, v) is null).ToList();
+        var always = valid.Where(p => !ComponentTokens.AppliesToFinePointerOnly(p, values[p.Name])).Select(p => $"{p.Name}: {values[p.Name]};").ToList();
+        var fine = valid.Where(p => ComponentTokens.AppliesToFinePointerOnly(p, values[p.Name])).Select(p => $"{p.Name}: {values[p.Name]};").ToList();
+        var sb = new StringBuilder();
+        if (always.Count > 0)
+        {
+            sb.Append(selector).Append(" {\n").AppendJoin('\n', always.Select(l => "  " + l)).Append("\n}\n");
+        }
+
+        if (fine.Count > 0)
+        {
+            sb.Append("@media (pointer: fine) {\n  ").Append(selector).Append(" {\n").AppendJoin('\n', fine.Select(l => "    " + l)).Append("\n  }\n}\n");
         }
 
         return sb.ToString();
@@ -171,6 +279,9 @@ public sealed partial class ToolkitFiles
 
     /// <summary>The tokens a brand may set, with kind and limits: what the brand editor lists.</summary>
     public IReadOnlyList<BrandToken> EditableTokens { get; }
+
+    /// <summary>The documented component properties the Studio may set, with kind, limits, whether they are touch targets and what each is today.</summary>
+    public IReadOnlyList<PropertyToken> EditableProperties { get; }
 
     /// <summary>Every file of the toolkit and a short README, to be copied into an app's static files (an app never loads them from this site).</summary>
     public byte[] Zip => Current.Zip.Value;
@@ -291,10 +402,10 @@ public sealed partial class ToolkitFiles
         return stream.ToArray();
     }
 
-    private static string Readme(string hash, string version) => string.Join('\n',
+    private string Readme(string hash, string version) => string.Join('\n',
         $"MatUi {version} ({hash})",
-        $"Made by MatDesign {AppVersion.Current}.",
-        "The UI toolkit of the Mat apps. Rules, documentation and live examples: the MatDesign site.",
+        $"Made by {_design.Tenant.SiteName} {AppVersion.Current}.",
+        $"The UI toolkit of the {_design.Tenant.Apps}. Rules, documentation and live examples: the {_design.Tenant.SiteName} site.",
         string.Empty,
         "Copy these files into the app's static files. An app never loads them from another site (rule CODE-03); update by copying again.",
         string.Empty,
@@ -310,7 +421,7 @@ public sealed partial class ToolkitFiles
         "An app sets one colour:  [data-app=\"yourapp\"] { --mat-app-accent: #2f6feb; }",
         "css/ holds the parts of matui.css (tokens, base, shell, controls, forms, lists, dialogs, layout, apps) for apps that load them one by one.",
         string.Empty,
-        "Versions (docs/VERSIONING.md on the MatDesign site):",
+        $"Versions (docs/VERSIONING.md on the {_design.Tenant.SiteName} site):",
         "  The version is in the first line of matui.css and in window.MatUi.version; matui.manifest.json lists every file with its SHA-256.",
         "  CHANGELOG.md says what changed in each version. A version with a Breaking section needs a change in the app: its Migration section says what.",
         "  Update by copying ALL the files again, never a few of them: the files of one version belong together.",

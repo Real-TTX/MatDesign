@@ -243,6 +243,7 @@ releases.MapGet("/{version}/{**file}", (string version, string file, ReleaseServ
 });
 
 app.MapGet("/health", () => Results.Text("ok"));
+app.MapWhiteLabel();
 app.MapRazorPages();
 
 app.Run();

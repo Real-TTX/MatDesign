@@ -1,5 +1,8 @@
 @page "/Shell"
+@inject MatDesign.Web.Studio.DesignData Design
 @{
+    // the sample frames use MatMail's accent on the demo; a site that has no such app shows its own
+    var sample = Design.Pick("matmail");
     ViewData["Title"] = "Shell";
     ViewData["PageSub"] = "The frame around every page of every app: menu on the left, breadcrumb above the content.";
     ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), ("Shell", null));
@@ -47,9 +50,9 @@
 </section>
 
 <section class="mat-section" aria-labelledby="live-title">
-    <div class="mat-section__head"><h2 id="live-title">The real thing</h2><p class="mat-section__lead">This is a sample app of the family drawn by the same layout as this site, here in the accent of MatMail. Use its menu, the user menu and the theme button.</p></div>
+    <div class="mat-section__head"><h2 id="live-title">The real thing</h2><p class="mat-section__lead">This is a sample app of the family drawn by the same layout as this site, here in the accent of @sample.Name. Use its menu, the user menu and the theme button.</p></div>
     <div class="doc-frames">
-        <iframe class="doc-frame" title="The shell on a desktop" loading="lazy" src="/Preview?app=matmail&amp;view=list"></iframe>
+        <iframe class="doc-frame" title="The shell on a desktop" loading="lazy" src="/Preview?app=@sample.Id&amp;view=list"></iframe>
     </div>
 </section>
 
@@ -63,7 +66,7 @@
         </p>
     </div>
     <div class="doc-frames">
-        <iframe class="doc-frame" title="The administration menu with a submenu and badges" loading="lazy" src="/Preview?app=matmail&amp;view=dashboard&amp;area=backups"></iframe>
+        <iframe class="doc-frame" title="The administration menu with a submenu and badges" loading="lazy" src="/Preview?app=@sample.Id&amp;view=dashboard&amp;area=backups"></iframe>
     </div>
 </section>
 
@@ -77,22 +80,22 @@
         </p>
     </div>
     <div class="doc-frames">
-        <iframe class="doc-frame" title="The switcher at the foot of the menu, with grouped menus" loading="lazy" src="/Preview?app=matmail&amp;view=dashboard&amp;switcher=bottom&amp;menus=tree"></iframe>
+        <iframe class="doc-frame" title="The switcher at the foot of the menu, with grouped menus" loading="lazy" src="/Preview?app=@sample.Id&amp;view=dashboard&amp;switcher=bottom&amp;menus=tree"></iframe>
     </div>
 </section>
 
 <section class="mat-section" aria-labelledby="phone-title">
     <div class="mat-section__head"><h2 id="phone-title">On a phone</h2><p class="mat-section__lead">Below 900 px the menu is a drawer behind the burger button; the breadcrumb shows its last two items; the toolbar keeps its three buttons.</p></div>
     <div class="doc-frames">
-        <iframe class="doc-frame doc-frame--phone" title="The shell on a phone: a list" loading="lazy" src="/Preview?app=matmail&amp;view=list"></iframe>
-        <iframe class="doc-frame doc-frame--phone" title="The shell on a phone: a form" loading="lazy" src="/Preview?app=matmail&amp;view=form"></iframe>
+        <iframe class="doc-frame doc-frame--phone" title="The shell on a phone: a list" loading="lazy" src="/Preview?app=@sample.Id&amp;view=list"></iframe>
+        <iframe class="doc-frame doc-frame--phone" title="The shell on a phone: a form" loading="lazy" src="/Preview?app=@sample.Id&amp;view=form"></iframe>
     </div>
 </section>
 
 <section class="mat-section" aria-labelledby="skeleton-title">
     <div class="mat-section__head"><h2 id="skeleton-title">The skeleton</h2><p class="mat-section__lead">What an app puts in its layout. One stylesheet, one boot script in the head, one script at the end, the sprite inline.</p></div>
     <div class="mat-card"><div class="mat-card__body mat-stack">
-        <pre class="mat-code doc-skeleton" id="skeleton"><code>@ShellSkeleton.Html</code></pre>
+        <pre class="mat-code doc-skeleton" id="skeleton"><code>@ShellSkeleton.For(sample)</code></pre>
         <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-copy="#skeleton">@Ui.Icon("copy")<span>Copy the skeleton</span></button></div>
     </div></div>
 </section>

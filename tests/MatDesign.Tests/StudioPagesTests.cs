@@ -54,6 +54,9 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
         _studio.Factory.Services.GetRequiredService<VersionTracker>().Set("matmail", "0.1.0", "A note.", "admin");
         // a second app and a second release, so that something is behind
         Assert.True(_studio.Releases.Execute("0.1.1", string.Empty, "admin").Succeeded);
+        // the white label setting (stage 15), after the releases so that they stay what the other tests expect
+        _studio.Store.Save("whitelabel", "whitelabel", new MatDesign.Core.Studio.WhiteLabelSetting("acme", "AcmeUi"), "admin", "Created");
+        _studio.Design.Reload();
     }
 
     private IEnumerable<string> Pages()
@@ -83,7 +86,10 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
         yield return "/Studio/Versions/Edit?id=matmail";
         yield return "/Studio/Versions/Edit?id=matdock";
         yield return "/Studio/Brand";
+        yield return "/Studio/Brand/Components";
         yield return "/Studio/History?kind=brand&id=brand";
+        yield return "/Studio/Releases/WhiteLabel";
+        yield return "/Studio/History?kind=whitelabel&id=whitelabel";
     }
 
     [Fact]

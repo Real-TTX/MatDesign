@@ -304,6 +304,9 @@ ol.doc-changes > li { list-style: decimal; }
 .doc-brand__table td:nth-child(3), .doc-brand__table td:nth-child(4) { min-width: 10.5rem; }
 .doc-brand__table .mat-table__name small { display: block; }
 .doc-brand__contrast td .mat-pill { margin-left: var(--mat-space-2); }
+.doc-scheme-table td { vertical-align: top; }
+.doc-scheme-table td:nth-child(2), .doc-scheme-table td:nth-child(3) { min-width: 10.5rem; }
+.doc-scheme-table .mat-table__name small { display: block; }
 .doc-brand__summary { margin-bottom: var(--mat-space-3); }
 .doc-brand__summary p { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-2); }
 
@@ -314,3 +317,30 @@ ol.doc-changes > li { list-style: decimal; }
 .doc-brand-preview__title { margin: 0; font-size: var(--mat-fs-xl); line-height: var(--mat-lh-tight); }
 .doc-brand-preview__text { margin: 0; }
 .doc-brand-preview a { color: var(--mat-accent-text); }
+
+/* ---- The component properties (brand and apps): a table of properties and, beside it, the real control of the documentation, which wears the unsaved values ---- */
+.doc-brand-comps { display: grid; gap: var(--mat-space-6); min-width: 0; }
+.doc-comp { display: grid; gap: var(--mat-space-6); align-items: start; }
+@media (min-width: 1100px) {
+  .doc-comp:not(.doc-comp--stacked) { grid-template-columns: minmax(0, 1fr) minmax(18rem, 26rem); }
+  .doc-comp:not(.doc-comp--stacked) .doc-comp__preview { position: sticky; top: calc(var(--mat-topbar-h) + var(--mat-space-4)); }
+}
+/* on a narrow page (and on a page that is narrow, like an app's) the preview is above its table, so it stays in sight while a value is typed */
+.doc-comp--stacked .doc-comp__preview { order: -1; }
+@media (max-width: 1099px) { .doc-comp__preview { order: -1; } }
+.doc-comp-table .mat-field { text-align: left; }
+.doc-comp__table, .doc-comp__preview { min-width: 0; }
+.doc-comp__preview { display: flex; flex-direction: column; gap: var(--mat-space-2); }
+.doc-comp__title { font-size: var(--mat-fs-md); }
+.doc-comp__preview .doc-example__live { margin: 0; }
+.doc-comp-table td { vertical-align: top; }
+.doc-comp-table td:nth-child(2) { min-width: 11rem; }
+.doc-comp-table .mat-hint { display: block; }
+.doc-comp-table .mat-table__name small { display: block; }
+/* controls that are on a page only while something opens them (a dialog, a toast, a context menu) are drawn still, in the flow of the preview */
+/* the dialog has no open attribute (a script that looks for the dialog that is open must not find it): its display is set here */
+.doc-example__live--dialog dialog.mat-dialog { display: flex; flex-direction: column; position: static; inset: auto; margin: 0 auto; max-width: 100%; height: auto; max-height: none; animation: none; }
+.doc-example__live--toast .mat-toast { width: min(var(--mat-toast-width, 380px), 100%); animation: none; }
+.doc-example__live--popup .mat-menu { position: static; max-height: none; }
+/* the overrides of an app sit in a card of their own below the colours */
+.doc-overrides .doc-comp + .doc-comp { margin-top: var(--mat-space-6); padding-top: var(--mat-space-6); border-top: 1px solid var(--mat-border); }

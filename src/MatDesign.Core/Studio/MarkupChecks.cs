@@ -98,12 +98,13 @@ public static partial class MarkupChecks
             .ToHashSet();
 
     /// <summary>Everything that is wrong with the markup of the examples of one component. The ids and the references are looked at across all of them, as they share a page.</summary>
-    public static IReadOnlyList<MarkupProblem> Check(IReadOnlyList<string> examples, MarkupFacts facts)
+    /// <param name="prefix">The class prefix the examples are written for: <c>mat</c>, or the prefix of a white label build (stage 15) when the examples were renamed.</param>
+    public static IReadOnlyList<MarkupProblem> Check(IReadOnlyList<string> examples, MarkupFacts facts, string prefix = "mat")
     {
         var problems = new List<MarkupProblem>();
         for (var i = 0; i < examples.Count; i++)
         {
-            problems.AddRange(CheckOne(examples[i], i, facts));
+            problems.AddRange(CheckOne(examples[i], i, facts, prefix));
         }
 
         var html = string.Join("\n", examples);
@@ -129,7 +130,7 @@ public static partial class MarkupChecks
         return problems;
     }
 
-    private static IEnumerable<MarkupProblem> CheckOne(string html, int index, MarkupFacts facts)
+    private static IEnumerable<MarkupProblem> CheckOne(string html, int index, MarkupFacts facts, string prefix)
     {
         foreach (var token in ClassAttribute().Matches(html).SelectMany(m => m.Groups[1].Value.Split(' ', StringSplitOptions.RemoveEmptyEntries)).Distinct())
         {
@@ -164,7 +165,7 @@ public static partial class MarkupChecks
             yield return new(Outside, index, "an address of another site: an example loads nothing from outside (CODE-03)");
         }
 
-        foreach (var name in SpriteReference().Matches(html).Select(m => m.Groups[1].Value).Distinct())
+        foreach (var name in (prefix == "mat" ? SpriteReference().Matches(html) : Regex.Matches(html, $"#{Regex.Escape(prefix)}-i-([a-z0-9-]+)")).Select(m => m.Groups[1].Value).Distinct())
         {
             if (!facts.Icons.Contains(name))
             {
@@ -175,7 +176,7 @@ public static partial class MarkupChecks
         foreach (Match cell in TableCell().Matches(html))
         {
             var attributes = cell.Groups[1].Value;
-            if (!attributes.Contains("data-label=", StringComparison.Ordinal) && !attributes.Contains("mat-table__cell-actions", StringComparison.Ordinal) && !attributes.Contains("mat-group__cell", StringComparison.Ordinal))
+            if (!attributes.Contains("data-label=", StringComparison.Ordinal) && !attributes.Contains($"{prefix}-table__cell-actions", StringComparison.Ordinal) && !attributes.Contains($"{prefix}-group__cell", StringComparison.Ordinal))
             {
                 yield return new(CellLabel, index, $"a <td> without data-label (TABLE-02): {cell.Value}");
             }
@@ -206,8 +207,8 @@ public static partial class MarkupChecks
         {
             var dialogs = Regex.Matches(html, @"<dialog\b").Count;
             if (Regex.Matches(html, @"<dialog\b[^>]*aria-labelledby=""[^""]+""[^>]*>").Count != dialogs
-                || Regex.Matches(html, @"class=""mat-dialog__title""").Count != dialogs
-                || Regex.Matches(html, @"mat-dialog__close[^>]*aria-label=""Close""").Count != dialogs)
+                || Regex.Matches(html, $@"class=""{Regex.Escape(prefix)}-dialog__title""").Count != dialogs
+                || Regex.Matches(html, $@"{Regex.Escape(prefix)}-dialog__close[^>]*aria-label=""Close""").Count != dialogs)
             {
                 yield return new(Dialog, index, "every dialog is named (aria-labelledby, a title) and has the X with aria-label=\"Close\" (DIALOG-03, DIALOG-04)");
             }

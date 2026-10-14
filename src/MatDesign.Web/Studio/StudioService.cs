@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using MatDesign.Core;
 using MatDesign.Core.Studio;
 
 namespace MatDesign.Web.Studio;
@@ -28,6 +29,7 @@ public sealed class StudioService
     {
         var directory = configuration["MATDESIGN_DATA"];
         DataDirectory = string.IsNullOrWhiteSpace(directory) ? string.Empty : directory.Trim();
+        TenantDefault = TenantFromEnvironment(configuration["MATDESIGN_TEMPLATE"], configuration["MATDESIGN_COMPANY"]);
 
         if (DataDirectory.Length == 0)
         {
@@ -59,6 +61,26 @@ public sealed class StudioService
     public const string StampClaim = "matdesign:stamp";
 
     public string DataDirectory { get; }
+
+    /// <summary>
+    /// The tenant an instance has when nobody set one up (stage 14): what <c>MATDESIGN_TEMPLATE</c> (<c>demo</c> or <c>blank</c>) and <c>MATDESIGN_COMPANY</c> name, or null when neither is set, which
+    /// is the demo as the site always was. It is the starting point of the setup assistant's form and what an instance has when its administrator comes from <c>MATDESIGN_ADMIN_PASSWORD</c>
+    /// and no assistant ever ran. A tenant the assistant wrote to <c>tenant.json</c>, or the Studio saved, wins over it.
+    /// </summary>
+    public Tenant? TenantDefault { get; }
+
+    private static Tenant? TenantFromEnvironment(string? template, string? company)
+    {
+        if (string.IsNullOrWhiteSpace(template) && string.IsNullOrWhiteSpace(company))
+        {
+            return null;
+        }
+
+        var chosen = DesignTemplates.Find(template?.Trim().ToLowerInvariant()) ?? DesignTemplates.Demo;
+        var name = string.IsNullOrWhiteSpace(company) ? (chosen.Id == DesignTemplates.DemoId ? Tenant.Demo.Company : "Your company") : company.Trim();
+        var tenant = TenantValidator.Normalize(Tenant.For(name, chosen.Id));
+        return TenantValidator.IsSafe(tenant) ? tenant : null;
+    }
 
     public bool Enabled => _store is not null;
 
@@ -98,7 +120,7 @@ public sealed class StudioService
     /// Creates the first administrator. Only possible while there is none; two visitors at the same moment cannot both succeed. The password is checked
     /// (length, not the name, repeated), and what is saved is a salted hash.
     /// </summary>
-    public SetupResult Setup(string? name, string? password, string? repeat)
+    public SetupResult Setup(string? name, string? password, string? repeat, Tenant? tenant = null)
     {
         var already = new SetupResult(false, new Dictionary<string, string> { ["Form"] = "The Studio is set up already." });
         if (!NeedsSetup)
@@ -106,7 +128,22 @@ public sealed class StudioService
             return already;
         }
 
-        var errors = AdminAccount.Validate(name, password, repeat);
+        // the company and the template come first in the assistant, so their problems are listed first; without them (automation) the tenant stays what the environment says, the demo by default
+        var errors = new Dictionary<string, string>();
+        if (tenant is not null)
+        {
+            tenant = TenantValidator.Normalize(tenant);
+            foreach (var problem in TenantValidator.Validate(tenant).Where(p => p.Field is "Company" or "ShortName" or "Template"))
+            {
+                errors.TryAdd(problem.Field, problem.Message);
+            }
+        }
+
+        foreach (var (field, message) in AdminAccount.Validate(name, password, repeat))
+        {
+            errors[field] = message;
+        }
+
         if (errors.Count > 0)
         {
             return new SetupResult(false, errors);
@@ -122,6 +159,7 @@ public sealed class StudioService
             var account = AdminAccount.Create(name!.Trim(), password!);
             try
             {
+                tenant?.WriteFile(DataDirectory);
                 if (!account.TryWrite(DataDirectory))
                 {
                     _account = AdminAccount.Read(DataDirectory);

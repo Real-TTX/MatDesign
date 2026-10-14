@@ -1,6 +1,7 @@
 @page "/Studio/Rules"
 @model MatDesign.Web.Pages.Studio.Rules.IndexModel
 @using MatDesign.Web.Studio
+@inject DesignData Design
 @{
     ViewData["Title"] = "Rules";
     ViewData["PageSub"] = "The rulebook: add a rule, or change one. What is written here is what the rulebook, the rule pages and the API say.";
@@ -23,7 +24,7 @@
     {
         <div class="mat-table-wrap">
             <table class="mat-table">
-                <caption class="mat-sr-only">Rules of the Mat family</caption>
+                <caption class="mat-sr-only">Rules of the @Design.Tenant.Family</caption>
                 <thead>
                     <tr><th scope="col">Rule</th><th scope="col" class="mat-hide-sm">Area</th><th scope="col">Level</th><th scope="col">Source</th><th scope="col"><span class="mat-sr-only">Actions</span></th></tr>
                 </thead>

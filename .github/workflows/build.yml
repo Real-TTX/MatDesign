@@ -100,7 +100,19 @@ jobs:
         run: |
           dotnet run --project src/MatDesign.Web -c Release --no-build --urls http://localhost:8060 > /tmp/matdesign.log 2>&1 &
           for i in $(seq 1 30); do curl -sf http://localhost:8060/health && break; sleep 1; done
-          (cd tests/e2e && npm ci --no-audit --no-fund && node run.js http://localhost:8060) || { cat /tmp/matdesign.log; exit 1; }
+          (cd tests/e2e && npm ci --no-audit --no-fund && node run.js http://localhost:8060 && node white-label.js http://localhost:8060) || { cat /tmp/matdesign.log; exit 1; }
+
+      # A blank start (docs/STUDIO.md, "Company and templates"): a second site on its own port with an empty data directory, template and company from the environment.
+      - name: End-to-end checks of a blank start
+        env:
+          ASPNETCORE_ENVIRONMENT: Development
+          MATDESIGN_DATA: ${{ runner.temp }}/matdesign-data-blank
+          MATDESIGN_TEMPLATE: blank
+          MATDESIGN_COMPANY: Acme
+        run: |
+          dotnet run --project src/MatDesign.Web -c Release --no-build --urls http://localhost:8189 > /tmp/matdesign-blank.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:8189/health && break; sleep 1; done
+          (cd tests/e2e && node blank.js http://localhost:8189) || { cat /tmp/matdesign-blank.log; exit 1; }
 
       - name: Resolve version string
         id: appver

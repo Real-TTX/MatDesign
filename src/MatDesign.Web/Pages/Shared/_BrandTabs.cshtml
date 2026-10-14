@@ -1,0 +1,18 @@
+@model string
+@*
+    The two pages of the brand as tabs: the tokens (names, colours, type, schemes) and the components (the properties of single controls). They are links, each is a page of its own,
+    so they carry aria-current instead of aria-selected. One brand item and one history serve both.
+*@
+@{
+    var tabs = new (string Key, string Title, string Href, string Icon)[]
+    {
+        ("tokens", "Names and tokens", "/Studio/Brand", "palette"),
+        ("components", "Components", "/Studio/Brand/Components", "toggle"),
+    };
+}
+<nav class="mat-tabs" aria-label="The brand">
+    @foreach (var t in tabs)
+    {
+        <a class="mat-tab @(t.Key == Model ? "is-active" : "")" href="@t.Href" aria-current="@(t.Key == Model ? "page" : null)">@Ui.Icon(t.Icon)<span>@t.Title</span></a>
+    }
+</nav>
