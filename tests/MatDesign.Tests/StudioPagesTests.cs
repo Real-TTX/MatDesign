@@ -86,6 +86,7 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
         yield return "/Studio/Versions/Edit?id=matmail";
         yield return "/Studio/Versions/Edit?id=matdock";
         yield return "/Studio/Brand";
+        yield return "/Studio/Brand/Components";
         yield return "/Studio/History?kind=brand&id=brand";
         yield return "/Studio/Releases/WhiteLabel";
         yield return "/Studio/History?kind=whitelabel&id=whitelabel";

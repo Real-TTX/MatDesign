@@ -7666,6 +7666,281 @@ function seenAt(page, selector) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- stage 12: component properties, overrides of an app, colour schemes
+  // Needs the administrator like the blocks above. Everything it saves (the brand, one app) is reset or deleted at the end, so the files of the site are what they were.
+  console.log('\nBrand components, overrides of an app and colour schemes (stage 12)');
+  {
+    const name = process.env.STUDIO_NAME || 'admin';
+    const password = process.env.STUDIO_PASSWORD || 'studio-dev';
+    const signIn = async (p) => { await p.fill('#Name', name); await p.fill('#Password', password); await p.click('.mat-auth__card button[type="submit"]'); await p.waitForURL('**/Studio**'); };
+    const { ctx, page } = await open(desktopOptions, '/Studio/Login');
+    if (await page.locator('input[type="password"]').count() === 0) {
+      console.log('  --    the Studio is off on this site (no data directory): the stage 12 checks are skipped');
+      await ctx.close();
+    } else {
+      await signIn(page);
+      const css = async () => (await page.request.get(BASE + '/ui/matui.css')).text();
+      const save = async () => { await page.click('.mat-btn-row button.mat-btn--primary'); await page.waitForLoadState('networkidle'); };
+      const previewStyle = (group, selector, prop) => page.$eval(`[data-prop-group="${group}"] ${selector}`, (e, p) => getComputedStyle(e)[p], prop);
+      const resetBrand = async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        if (await page.locator('.mat-btn--danger[data-confirm]').count() > 0) {
+          await page.click('.mat-btn--danger[data-confirm]');
+          await page.click('dialog[open] button[value="ok"]');
+          await page.waitForSelector('.mat-toast');
+        }
+      };
+      await resetBrand();
+
+      await check('the components page is a tab of the brand with one h1, a row for every property and a real control beside each group, outside the form', async () => {
+        await page.goto(BASE + '/Studio/Brand/Components', { waitUntil: 'networkidle' });
+        expect(await page.locator('main h1').count(), 1, 'h1');
+        expect(await page.locator('a.mat-tab.is-active[href="/Studio/Brand/Components"]').count(), 1, 'the tab');
+        expect(await page.locator('a.mat-nav__item.is-active[href="/Studio/Brand"]').count(), 1, 'the menu item');
+        expect(await page.locator('[data-prop-row]').count(), 68, 'rows');
+        expect(await page.locator('[data-brand-preview][data-prop-group]').count(), 16, 'previews');
+        expect(await page.locator('form [data-brand-preview]').count(), 0, 'a preview is not in the form');
+        expect(await page.locator('[data-prop-group="btn"] .mat-btn').count() > 0, true, 'the real buttons of the documentation');
+        expect(await page.locator('[data-prop-group="dialog"] dialog.mat-dialog:visible').count(), 1, 'the dialog is drawn');
+        expect(await page.locator('dialog[open]').count(), 0, 'no dialog that is open: a script that looks for one finds none');
+      });
+      await check('a typed value is on the control beside it at once and not on the page; a second group is not touched; Reset brings the default back', async () => {
+        expect(await previewStyle('btn', '.mat-btn--primary', 'borderTopLeftRadius'), '6px', 'the radius of the toolkit');
+        await page.fill('#component-mat-btn-radius', '14px');
+        expect(await previewStyle('btn', '.mat-btn--primary', 'borderTopLeftRadius'), '14px', 'the button of the preview');
+        expect(await page.$eval('.mat-btn-row .mat-btn--primary', e => getComputedStyle(e).borderTopLeftRadius), '6px', 'a button of the page');
+        expect(await previewStyle('card', '.mat-card', 'borderTopLeftRadius'), '8px', 'another component');
+        await page.fill('#component-mat-card-pad', '40px');
+        expect(await previewStyle('card', '.mat-card__body', 'paddingLeft'), '40px', 'the padding of a card');
+        await page.click('[data-prop="--mat-btn-radius"] [data-prop-reset]');
+        expect(await page.inputValue('#component-mat-btn-radius'), '', 'the field');
+        expect(await previewStyle('btn', '.mat-btn--primary', 'borderTopLeftRadius'), '6px', 'back to the default');
+        await page.click('[data-prop="--mat-card-pad"] [data-prop-reset]');
+      });
+      await check('a value outside its limits is marked at the field with the reason and not applied; a height under 44 px is valid, noted as for a mouse, and applied with a mouse', async () => {
+        await page.fill('#component-mat-btn-radius', '40px');
+        expect(await page.getAttribute('#component-mat-btn-radius', 'aria-invalid'), 'true', 'marked');
+        expectTrue((await page.locator('.mat-field:has(#component-mat-btn-radius) .mat-error').textContent()).includes('above the most'), 'the message');
+        expect(await previewStyle('btn', '.mat-btn--primary', 'borderTopLeftRadius'), '6px', 'not applied');
+        await page.fill('#component-mat-btn-radius', '');
+        await page.fill('#component-mat-btn-height', '20px');
+        expectTrue((await page.locator('.mat-field:has(#component-mat-btn-height) .mat-error').textContent()).includes('below the least'), 'under the floor of 32 px');
+        expect(await page.locator('[data-prop="--mat-btn-height"] [data-prop-note]').isVisible(), false, 'no note for a refused value');
+        await page.fill('#component-mat-btn-height', '36px');
+        expect(await page.getAttribute('#component-mat-btn-height', 'aria-invalid'), null, 'valid');
+        expect(await page.locator('[data-prop="--mat-btn-height"] [data-prop-note]').isVisible(), true, 'the note for a mouse only');
+        expect(await previewStyle('btn', '.mat-btn--primary', 'minHeight'), '36px', 'applied with a mouse');
+        await page.fill('#component-mat-btn-height', '44px');
+        expect(await page.locator('[data-prop="--mat-btn-height"] [data-prop-note]').isVisible(), false, '44 px needs no note');
+        await page.fill('#component-mat-btn-height', '');
+      });
+      await check('the server refuses a value too, with the reason at the page, and nothing reaches matui.css', async () => {
+        await page.goto(BASE + '/Studio/Brand/Components', { waitUntil: 'networkidle' });
+        // the script would mark it first; a post that skips it is refused all the same
+        await page.evaluate(() => { const f = document.getElementById('components-form'); f.setAttribute('novalidate', ''); });
+        await page.fill('#component-mat-btn-radius', '30px');
+        await page.evaluate(() => document.getElementById('component-mat-btn-radius').setCustomValidity(''));
+        await page.click('.mat-btn-row button[formaction="?check=true"]');
+        await page.waitForLoadState('networkidle');
+        const alert = await page.textContent('[data-validation-summary]');
+        expectTrue(alert.includes('Please check the properties.') && alert.includes('above the most'), 'the message: ' + alert.trim().slice(0, 200));
+        expect(await page.inputValue('#component-mat-btn-radius'), '30px', 'the form keeps what was typed');
+        expectTrue(!(await css()).includes('--mat-btn-radius: 30px'), 'in matui.css');
+      });
+      await check('a good set is saved with a toast and reaches matui.css after the brand; a height under 44 px is only inside @media (pointer: fine)', async () => {
+        await page.goto(BASE + '/Studio/Brand/Components', { waitUntil: 'networkidle' });
+        const values = { 'mat-btn-radius': '2px', 'mat-btn-height': '36px', 'mat-input-height': '34px', 'mat-tabs-height': '36px', 'mat-menu-item-height': '36px', 'mat-nav-item-height': '36px', 'mat-card-pad': '1.25rem', 'mat-switch-height': '20px', 'mat-check-size': '16px' };
+        for (const [key, value] of Object.entries(values)) { await page.fill('#component-' + key, value); }
+        await save();
+        await page.waitForSelector('.mat-toast:has-text("The component properties were saved.")');
+        const text = await css();
+        const start = text.indexOf('Component properties of the brand');
+        expectTrue(start > 0 && start > text.indexOf('--mat-radius-xl: 12px;'), 'after the tokens of the toolkit');
+        const head = text.slice(start, text.indexOf('@media (pointer: fine)', start));
+        expectTrue(head.includes('--mat-btn-radius: 2px;') && head.includes('--mat-card-pad: 1.25rem;'), 'the values for everyone');
+        for (const small of ['--mat-btn-height', '--mat-input-height', '--mat-tabs-height', '--mat-menu-item-height', '--mat-nav-item-height']) {
+          expectTrue(!head.includes(small), small + ' (under 44 px) is outside the media query');
+        }
+        const fine = text.slice(text.indexOf('@media (pointer: fine) {\n  :root {', start));
+        const fineBlock = fine.slice(0, fine.indexOf('\n  }\n}\n'));
+        for (const small of ['--mat-btn-height: 36px;', '--mat-input-height: 34px;', '--mat-tabs-height: 36px;', '--mat-menu-item-height: 36px;', '--mat-nav-item-height: 36px;']) {
+          expectTrue(fineBlock.includes(small), small + ' is in the fine pointer block');
+        }
+        expect(await page.inputValue('#component-mat-btn-height'), '36px', 'the saved value is shown again');
+      });
+      await check('with a mouse the controls of the site wear the smaller heights', async () => {
+        await page.goto(BASE + '/Studio/Brand/Components', { waitUntil: 'networkidle' });
+        expect(await page.evaluate(() => matchMedia('(pointer: fine)').matches), true, 'a fine pointer');
+        const min = (sel) => page.$eval(sel, e => getComputedStyle(e).minHeight);
+        expect(await min('.mat-btn-row .mat-btn--primary'), '36px', 'a button of the page');
+        expect(await min('[data-prop-group="input"] .mat-input'), '34px', 'a field');
+        expect(await min('[data-prop-group="tabs"] .mat-tab'), '36px', 'a tab');
+        expect(await min('[data-prop-group="menu"] .mat-menu__item'), '36px', 'a menu item');
+        expect(await min('[data-prop-group="nav"] .mat-nav__item'), '36px', 'a menu item of the shell');
+      });
+
+      // the same site on a touch screen: nothing under 44 px
+      const touch = await open({ viewport: { width: 1100, height: 900 }, isMobile: true, hasTouch: true }, '/Studio/Login');
+      await signIn(touch.page);
+      await check('on a touch screen every control that is pressed is still 44 px high whatever the brand set (button, field, tab, menu item, item of the shell); switch and check targets keep their 36 px', async () => {
+        await touch.page.goto(BASE + '/Studio/Brand/Components', { waitUntil: 'networkidle' });
+        const s = await touch.page.evaluate(() => {
+          const r = sel => { const e = document.querySelector(sel); return { h: Math.round(e.getBoundingClientRect().height * 10) / 10, min: getComputedStyle(e).minHeight }; };
+          return {
+            coarse: matchMedia('(pointer: coarse)').matches, fine: matchMedia('(pointer: fine)').matches,
+            btn: r('[data-prop-group="btn"] .mat-btn--primary'), pageBtn: r('.mat-btn-row .mat-btn--primary'), input: r('[data-prop-group="input"] .mat-input'), tab: r('[data-prop-group="tabs"] .mat-tab'),
+            menu: r('[data-prop-group="menu"] .mat-menu__item'), nav: r('[data-prop-group="nav"] .mat-nav__item'), sw: r('[data-prop-group="switch"] .mat-switch'), check: r('[data-prop-group="check"] .mat-check'),
+          };
+        });
+        expect([s.coarse, s.fine], [true, false], 'a touch screen');
+        for (const key of ['btn', 'pageBtn', 'input', 'tab', 'menu', 'nav']) { expectTrue(s[key].h >= 44 && s[key].min === '44px', `${key} is ${s[key].h} px high with min-height ${s[key].min}`); }
+        for (const key of ['sw', 'check']) { expectTrue(s[key].h >= 36, `${key} is ${s[key].h} px high`); }
+      });
+      await check('the preview on a touch screen ignores a height under 44 px that is typed, and takes one of 44 px or more', async () => {
+        await touch.page.fill('#component-mat-btn-height', '34px');
+        expect(await touch.page.$eval('[data-prop-group="btn"] .mat-btn--primary', e => getComputedStyle(e).minHeight), '44px', '34 px is for a mouse');
+        await touch.page.fill('#component-mat-btn-height', '52px');
+        expect(await touch.page.$eval('[data-prop-group="btn"] .mat-btn--primary', e => getComputedStyle(e).minHeight), '52px', '52 px applies');
+      });
+      await touch.ctx.close();
+
+      // the overrides of one app
+      const letters = Array.from({ length: 6 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join('');
+      const appId = 'qo' + letters;
+      await check('an app has a section of overrides with the same rows, and its previews wear its data-app; what is typed is on the preview, a refused value is marked', async () => {
+        await page.goto(BASE + '/Studio/Apps/Edit', { waitUntil: 'networkidle' });
+        await page.fill('#Input_Name', 'Qo' + letters);
+        await page.fill('#Input_Id', appId);
+        await page.fill('#Input_Tagline', 'Overrides');
+        await page.evaluate(() => { const el = document.getElementById('Input_Accent'); el.value = '#0f766e'; el.dispatchEvent(new Event('input', { bubbles: true })); });
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForURL('**/Studio/Apps');
+        await page.goto(BASE + '/Studio/Apps/Edit?id=' + appId, { waitUntil: 'networkidle' });
+        expect(await page.locator('#overrides-title').count(), 1, 'the section');
+        expect(await page.locator(`[data-brand-preview][data-prop-group][data-app="${appId}"]`).count(), 16, 'previews of the app');
+        expect(await page.locator('[name="light:--mat-bg"]').count(), 0, 'no colours');
+        await page.evaluate(() => document.querySelectorAll('.doc-overrides details').forEach(d => { d.open = true; }));
+        await page.fill('#property-mat-card-radius', '0');
+        expect(await previewStyle('card', '.mat-card', 'borderTopLeftRadius'), '0px', 'the card of the preview');
+        await page.fill('#light-mat-radius', '2px');
+        expect(await previewStyle('btn', '.mat-btn--primary', 'borderTopLeftRadius'), '2px', 'a token of the app on the preview');
+        await page.fill('#property-mat-btn-height', '20px');
+        expect(await page.getAttribute('#property-mat-btn-height', 'aria-invalid'), 'true', 'below the floor');
+        await page.fill('#property-mat-btn-height', '');
+        expect(await page.locator('#Input_Name').inputValue(), 'Qo' + letters, 'the form is intact');
+      });
+      await check('saved, the overrides are on [data-app] after the brand, win for that app only, and the other apps are not touched', async () => {
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForURL('**/Studio/Apps');
+        const text = await css();
+        expectTrue(text.includes(`[data-app="${appId}"] {\n  --mat-radius: 2px;\n}`), 'the token on data-app');
+        expectTrue(text.includes(`[data-app="${appId}"] {\n  --mat-card-radius: 0px;\n}`), 'the property on data-app');
+        expectTrue(text.indexOf('Component properties of the brand') < text.indexOf('Overrides of apps set in the Studio'), 'after the brand');
+        const probe = async (app) => {
+          await page.goto(BASE + '/Preview?app=' + app + '&view=list', { waitUntil: 'networkidle' });
+          return page.evaluate(() => { document.body.insertAdjacentHTML('beforeend', '<div class="mat-card" id="probe-card"><div class="mat-card__body">x</div></div>'); return getComputedStyle(document.getElementById('probe-card')).borderTopLeftRadius; });
+        };
+        expect(await probe(appId), '0px', 'the card of the app');
+        expect(await probe('matmail'), '8px', 'the card of another app');
+      });
+      await check('an app that sets nothing writes nothing: clearing the fields takes its overrides out of matui.css', async () => {
+        await page.goto(BASE + '/Studio/Apps/Edit?id=' + appId, { waitUntil: 'networkidle' });
+        await page.click('[data-prop="--mat-card-radius"] [data-prop-reset]');
+        await page.click('[data-brand-row][data-token="--mat-radius"] [data-brand-reset]');
+        await page.click('.mat-btn-row button.mat-btn--primary');
+        await page.waitForURL('**/Studio/Apps');
+        const text = await css();
+        expectTrue(!text.includes(`[data-app="${appId}"] {\n  --mat-`), 'overrides are still there');
+        expectTrue(!text.includes('Overrides of apps set in the Studio'), 'the block is still there');
+      });
+      await check('the server refuses an override outside its limits at its field, and the app is not changed', async () => {
+        await page.goto(BASE + '/Studio/Apps/Edit?id=' + appId, { waitUntil: 'networkidle' });
+        await page.evaluate(() => document.querySelectorAll('.doc-overrides details').forEach(d => { d.open = true; }));
+        await page.fill('#property-mat-btn-height', '36px');
+        await page.evaluate(() => { document.getElementById('property-mat-btn-height').setAttribute('value', '20px'); });
+        await page.evaluate(() => { const i = document.getElementById('property-mat-btn-height'); i.value = '20px'; i.setCustomValidity(''); });
+        await page.click('.mat-btn-row button[formaction="?check=true"]');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await page.textContent('[data-validation-summary]')).includes('MOBILE-04'), 'the message');
+        expect(await page.inputValue('#property-mat-btn-height'), '20px', 'what was typed stays');
+      });
+
+      // inside a colour scheme
+      await check('a scheme can be changed inside; a contrast that fails in that scheme is refused with its name; a good value is written after the scheme and works', async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        await page.evaluate(() => { document.getElementById('scheme-paper').open = true; });
+        expect(await page.locator('[name="scheme:oled:light:--mat-bg"]').count(), 0, 'black has no light values');
+        expect(await page.locator('[name="scheme:paper:light:--mat-radius"]').count(), 0, 'only what the scheme sets');
+        await page.fill('#scheme-paper-light-mat-text', '#c8c8c0');
+        await save();
+        expectTrue((await page.textContent('[data-validation-summary]')).includes('In the paper scheme'), 'the message: ' + (await page.textContent('[data-validation-summary]')).trim().slice(0, 200));
+        await page.fill('#scheme-paper-light-mat-text', '');
+        await page.fill('#scheme-paper-light-mat-bg', '#fff8e6');
+        await page.fill('#scheme-paper-dark-mat-bg', '#1c1810');
+        await save();
+        await page.waitForSelector('.mat-toast:has-text("The brand was saved.")');
+        const text = await css();
+        expectTrue(text.includes(':root[data-scheme="paper"] {\n  --mat-bg: #fff8e6;\n}'), 'the light block');
+        const dark = ':root[data-scheme="paper"][data-theme="dark"] {\n  --mat-bg: #1c1810;\n}';
+        expectTrue(text.includes(dark) && text.includes('  :root[data-scheme="paper"]:not([data-theme="light"]):not([data-theme="dark"]) {\n    --mat-bg: #1c1810;\n  }'), 'the dark set twice');
+        expectTrue(text.lastIndexOf(':root[data-scheme="paper"] {') > text.indexOf('--mat-radius-xl: 12px;'), 'after the schemes of the tokens file');
+        await page.goto(BASE + '/Preview?app=matmail&view=list', { waitUntil: 'networkidle' });
+        const bg = (attr) => page.evaluate((a) => { const h = document.documentElement; h.setAttribute('data-theme', 'light'); if (a) { h.setAttribute('data-scheme', a); } else { h.removeAttribute('data-scheme'); } return getComputedStyle(h).getPropertyValue('--mat-bg').trim(); }, attr);
+        expect(await bg('paper'), '#fff8e6', 'the paper scheme with the brand inside it');
+        expect(await bg(null), '#f5f4f1', 'the standard look');
+      });
+      await check('the history names what was changed and a restore of the earlier revision brings the scheme back to its own value, keeping the properties', async () => {
+        await page.goto(BASE + '/Studio/Brand', { waitUntil: 'networkidle' });
+        await page.click('a.mat-btn:has-text("History")');
+        await page.waitForURL('**/Studio/History**');
+        const diff = await page.textContent('section[aria-labelledby="changes-title"] .mat-table-wrap');
+        expectTrue(diff.includes('schemes.paper.light.--mat-bg') && diff.includes('#fff8e6'), 'the diff: ' + diff.trim().slice(0, 200));
+        const numbers = (await page.locator('section[aria-labelledby="revisions-title"] tbody tr td:first-child .doc-rule-id').allTextContents()).map(Number).sort((a, b) => b - a);
+        await page.click(`button[aria-label="Restore revision ${numbers[1]}"]`);
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForSelector('.mat-toast:has-text("was restored")');
+        const text = await css();
+        expectTrue(!text.includes('--mat-bg: #fff8e6;') && text.includes('--mat-btn-radius: 2px;'), 'the scheme value is gone, the properties are there');
+      });
+
+      // a phone
+      const phone = await open(phoneOptions, '/Studio/Login');
+      await signIn(phone.page);
+      await check('on a phone the components page and the overrides of an app do not scroll sideways, a row is a card with labels, an input is 44 px high and a preview fits', async () => {
+        for (const url of ['/Studio/Brand/Components', '/Studio/Apps/Edit?id=' + appId, '/Studio/Brand']) {
+          await phone.page.goto(BASE + url, { waitUntil: 'networkidle' });
+          await phone.page.evaluate(() => document.querySelectorAll('details').forEach(d => { d.open = true; }));
+          const s = await phone.page.evaluate(() => {
+            const row = document.querySelector('[data-prop-row]');
+            const input = row ? row.querySelector('input') : document.querySelector('[data-brand-scheme-row] input.mat-input');
+            const preview = document.querySelector('[data-brand-preview]');
+            return {
+              page: document.documentElement.scrollWidth, window: innerWidth, display: row ? getComputedStyle(row).display : 'n/a', inputH: input.getBoundingClientRect().height,
+              previewRight: preview ? preview.getBoundingClientRect().right : 0,
+            };
+          });
+          expectTrue(s.page <= s.window, `${url}: the page is ${s.page} px wide in a window of ${s.window} px`);
+          expectTrue(s.inputH >= 43.5, `${url}: an input is ${s.inputH} px high`);
+          expectTrue(s.previewRight <= s.window + 1, `${url}: a preview ends at ${s.previewRight}`);
+          if (s.display !== 'n/a') { expect(s.display, 'block', `${url}: a row is a card`); }
+        }
+      });
+      await phone.ctx.close();
+
+      // clean up: the app and the brand
+      await check('the app is deleted again and the brand reset: matui.css is what it was', async () => {
+        await page.goto(BASE + '/Studio/Apps/Edit?id=' + appId, { waitUntil: 'networkidle' });
+        await page.click('.mat-btn--danger[data-confirm]');
+        await page.click('dialog[open] button[value="ok"]');
+        await page.waitForURL('**/Studio/Apps');
+        await resetBrand();
+        const text = await css();
+        expectTrue(!text.includes('Component properties of the brand') && !text.includes('Overrides of apps') && !text.includes('inside a colour scheme') && !text.includes('Brand set in the Studio'), 'something of the brand or the apps is still in matui.css');
+      });
+      await ctx.close();
+    }
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {

@@ -129,8 +129,8 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
     /// <summary>Every check, in the order the report shows them.</summary>
     public static IReadOnlyList<DesignCheck> All { get; } =
     [
-        new("apps", "Apps", "Every app is valid", "Name, id, tagline, category, glyph, port and colours of every app pass what a save holds them to, and every accent reaches AA in light and dark with its text.", AppsValid),
-        new("brand", "Brand", "The brand is valid", "The names of the brand, every token value it sets (its kind and its limits) and the contrast of its surfaces and of the accent of every app, in light and dark and in every colour scheme (COLOR-11).", BrandValid),
+        new("apps", "Apps", "Every app is valid", "Name, id, tagline, category, glyph, port and colours of every app pass what a save holds them to, and every accent reaches AA in light and dark with its text; the tokens and component properties an app sets for itself are within the limits of the brand's editor.", AppsValid),
+        new("brand", "Brand", "The brand is valid", "The names of the brand, every token value it sets (its kind and its limits), its component properties (their type, their limits, and no touch target under 44 px for a touch screen), what it sets inside each colour scheme, and the contrast of its surfaces and of the accent of every app, in light and dark and in every colour scheme (COLOR-11, SPACE-06). The apps' own overrides are held to the same limits under the apps check.", BrandValid),
         new("versions", "Apps", "The apps use the latest release", "Every app whose version of MatUi is written down uses the latest release. Advice: updating an app is the work of its own repository.", Versions),
         new("palette", "Apps", "No two accents are alike", "No two accents are closer than the palette check allows (IDENT-04). Advice: changing an app's colour is a decision for a person.", Palette),
         new("rules", "Rules", "Every rule is valid", "Id of its area, title, statement, level and source of every rule pass what a save holds them to.", RulesValid),
@@ -186,13 +186,20 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
             {
                 yield return new Finding("apps", Severity.Error, $"{app.Name}: {problem.Message}", "apps", app.Id);
             }
+
+            // what the app sets for itself on top of the brand (stage 12): its tokens and component properties, within the same limits
+            var overrides = AppOverrides.Normalize(app, c.Toolkit.EditableTokens, c.Toolkit.EditableProperties);
+            foreach (var problem in AppOverrides.Validate(overrides, c.Toolkit.EditableTokens, c.Toolkit.EditableProperties, c.Design.Brand))
+            {
+                yield return new Finding("apps", Severity.Error, $"{app.Name}, {problem.Field.Replace(":", " ")}: {problem.Message}", "apps", app.Id);
+            }
         }
     }
 
     private static IEnumerable<Finding> BrandValid(CheckContext c)
     {
-        var brand = BrandValidator.Normalize(c.Design.Brand, c.Toolkit.EditableTokens);
-        foreach (var problem in BrandValidator.Validate(brand, c.Toolkit.Tokens, c.Toolkit.Schemes, c.Design.Apps))
+        var brand = BrandValidator.Normalize(c.Design.Brand, c.Toolkit.EditableTokens, c.Toolkit.EditableProperties, c.Toolkit.Schemes);
+        foreach (var problem in BrandValidator.Validate(brand, c.Toolkit.Tokens, c.Toolkit.Schemes, c.Design.Apps, c.Toolkit.EditableProperties))
         {
             yield return new Finding("brand", Severity.Error, $"{problem.Field}: {problem.Message}", Brand.Kind, Brand.ItemId);
         }

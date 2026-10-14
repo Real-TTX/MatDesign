@@ -69,9 +69,46 @@ public class BrandModel(StudioService studio, DesignData design, ToolkitFiles to
 
     public static string IdOf(BrandToken token, bool dark) => (dark ? "dark-" : "light-") + token.Key;
 
-    /// <summary>The id of the input a problem is about, for the link in the summary.</summary>
+    /// <summary>The id of the input a problem is about, for the link in the summary (a component property is on the page of the components).</summary>
     public static string TargetOf(string field)
-        => field.Split(':') is [var mode, var name] ? (mode == "Dark" ? "dark-" : "light-") + name.TrimStart('-') : field == "Contrast" ? "contrast-title" : "Input_" + field;
+        => field.Split(':') switch
+        {
+            ["Scheme", var scheme, var mode, var name] => $"scheme-{scheme}-{mode.ToLowerInvariant()}-{name.TrimStart('-')}",
+            ["Scheme", var scheme] => "scheme-" + scheme,
+            ["Component", var name] => "/Studio/Brand/Components#component-" + name.TrimStart('-'),
+            [var mode, var name] => (mode == "Dark" ? "dark-" : "light-") + name.TrimStart('-'),
+            _ => field == "Contrast" ? "contrast-title" : "Input_" + field,
+        };
+
+    /// <summary>The colour schemes of the toolkit, each with the tokens a brand may change inside it (those the scheme itself sets) and its own values.</summary>
+    public IReadOnlyList<SchemeRows> SchemeSections => ColorSchemes.All
+        .Select(s =>
+        {
+            var blocks = toolkit.Schemes.FirstOrDefault(b => b.Id == s.Id);
+            var rows = Tokens
+                .Where(t => (blocks?.Light?.ContainsKey(t.Name) ?? false) || (blocks?.Dark?.ContainsKey(t.Name) ?? false))
+                .Select(t => new SchemeRow(t, blocks?.Light?.GetValueOrDefault(t.Name), blocks?.Dark?.GetValueOrDefault(t.Name)))
+                .ToList();
+            return new SchemeRows(s, rows);
+        })
+        .ToList();
+
+    /// <summary>What the brand sets for a token inside a scheme; empty when it leaves the scheme's value.</summary>
+    public string SchemeValueOf(string scheme, BrandToken token, bool dark) => Current.SchemeFor(scheme)?.Values(dark).GetValueOrDefault(token.Name, string.Empty) ?? string.Empty;
+
+    /// <summary>How many tokens the brand sets inside a scheme.</summary>
+    public int SchemeCount(string scheme) => Current.SchemeFor(scheme) is { } v ? v.Values(false).Count + v.Values(true).Count : 0;
+
+    /// <summary>The required pairings that fail inside a scheme on the surfaces of the brand, worked out on Check and on Save.</summary>
+    public IReadOnlyList<BrandContrastResult> SchemeFailures(string scheme) => All.Where(r => r.Scheme == scheme && r.Fails).ToList();
+
+    /// <summary>A colour scheme and the tokens a brand may change inside it.</summary>
+    public sealed record SchemeRows(ColorScheme Scheme, IReadOnlyList<SchemeRow> Rows);
+
+    /// <summary>A token a scheme sets, with the scheme's value in light and in dark (null where it sets none).</summary>
+    public sealed record SchemeRow(BrandToken Token, string? Light, string? Dark);
+
+    private IReadOnlyList<BrandContrastResult> All { get; set; } = [];
 
     public IActionResult OnGet()
     {
@@ -96,7 +133,7 @@ public class BrandModel(StudioService studio, DesignData design, ToolkitFiles to
         }
 
         var before = design.Brand;
-        Studio.Store.Save(Brand.Kind, Brand.ItemId, typed, Studio.Administrator, design.StudioBrand is null ? "Created: " + What(before, typed) : "Changed " + What(before, typed));
+        Studio.Store.Save(Brand.Kind, Brand.ItemId, typed, Studio.Administrator, design.StudioBrand is null ? "Created: " + BrandForm.What(before, typed) : "Changed " + BrandForm.What(before, typed));
         design.Reload();
         TempData["Flash"] = "The brand was saved.";
         return RedirectToPage("/Studio/Brand");
@@ -116,46 +153,36 @@ public class BrandModel(StudioService studio, DesignData design, ToolkitFiles to
         return RedirectToPage("/Studio/Brand");
     }
 
-    /// <summary>The brand the form describes: the names, and every field called <c>light:--mat-...</c> or <c>dark:--mat-...</c>.</summary>
+    /// <summary>
+    /// The brand the form describes: the names, every field called <c>light:--mat-...</c> or <c>dark:--mat-...</c>, and what is set inside each colour scheme (<c>scheme:paper:light:--mat-...</c>).
+    /// The component properties are edited on their own page and stay as they are saved.
+    /// </summary>
     private Brand Describe()
     {
-        Dictionary<string, string> Values(string mode) => Request.Form.Keys
-            .Where(k => k.StartsWith(mode + ":", StringComparison.Ordinal))
-            .ToDictionary(k => k[(mode.Length + 1)..], k => Request.Form[k].ToString());
-
-        var brand = new Brand(Input.Company ?? string.Empty, Input.ShortName ?? string.Empty, Input.Tagline ?? string.Empty, Values("light"), Values("dark"));
-        return BrandValidator.Normalize(brand, Tokens);
+        var brand = new Brand(Input.Company ?? string.Empty, Input.ShortName ?? string.Empty, Input.Tagline ?? string.Empty,
+            BrandForm.Values(Request.Form, "light:"), BrandForm.Values(Request.Form, "dark:"), design.Brand.Components, BrandForm.Schemes(Request.Form));
+        return BrandValidator.Normalize(brand, Tokens, toolkit.EditableProperties, toolkit.Schemes);
     }
 
-    private IReadOnlyList<Problem> Validate(Brand brand) => BrandValidator.Validate(brand, toolkit.Tokens, toolkit.Schemes, design.Apps);
+    private IReadOnlyList<Problem> Validate(Brand brand) => BrandValidator.Validate(brand, toolkit.Tokens, toolkit.Schemes, design.Apps, toolkit.EditableProperties);
 
     /// <summary>The contrast on the surfaces of the brand; what is not a value of its token is left out, so that a typo does not hide the numbers of the rest.</summary>
     private void Evaluate(Brand brand)
     {
         var byName = Tokens.ToDictionary(t => t.Name);
-        IReadOnlyDictionary<string, string> Usable(IReadOnlyDictionary<string, string> map, bool dark)
-            => map.Where(p => byName.TryGetValue(p.Key, out var t) && (!dark || t.HasDark) && BrandValidator.CheckValue(t, p.Value) is null).ToDictionary(p => p.Key, p => p.Value);
+        IReadOnlyDictionary<string, string> Usable(IReadOnlyDictionary<string, string> map, bool dark, IReadOnlyDictionary<string, string>? own = null)
+            => map.Where(p => byName.TryGetValue(p.Key, out var t) && (!dark || own is not null || t.HasDark) && (own is null || own.ContainsKey(p.Key)) && BrandValidator.CheckValue(t, p.Value) is null).ToDictionary(p => p.Key, p => p.Value);
 
-        var usable = brand with { Light = Usable(brand.Values(false), false), Dark = Usable(brand.Values(true), true) };
-        Standard = BrandContrast.Standard(toolkit.Tokens, toolkit.Schemes, usable);
-        WithAccents = BrandContrast.Run(toolkit.Tokens, toolkit.Schemes, usable, design.Apps).Where(r => r.Scheme == ColorSchemes.Standard && r.Accent is not null).ToList();
-    }
-
-    /// <summary>For the note of the revision: the names that differ.</summary>
-    private static string What(Brand before, Brand after)
-    {
-        var names = new List<string>();
-        if (before.Company != after.Company) { names.Add("company"); }
-        if (before.ShortName != after.ShortName) { names.Add("short name"); }
-        if (before.Tagline != after.Tagline) { names.Add("tagline"); }
-        foreach (var (mode, a, b) in new[] { ("light", before.Values(false), after.Values(false)), ("dark", before.Values(true), after.Values(true)) })
-        {
-            foreach (var name in b.Keys.Union(a.Keys).Where(k => a.GetValueOrDefault(k) != b.GetValueOrDefault(k)).Order(StringComparer.Ordinal).Take(6))
+        var schemes = (brand.Schemes ?? new Dictionary<string, SchemeValues>()).Where(s => ColorSchemes.IsKnown(s.Key)).ToDictionary(s =>
+            s.Key,
+            s =>
             {
-                names.Add($"{mode} {name}");
-            }
-        }
-
-        return names.Count == 0 ? "nothing" : string.Join(", ", names);
+                var blocks = toolkit.Schemes.FirstOrDefault(b => b.Id == s.Key);
+                return new SchemeValues(blocks?.Light is null ? new Dictionary<string, string>() : Usable(s.Value.Values(false), false, blocks.Light), blocks?.Dark is null ? new Dictionary<string, string>() : Usable(s.Value.Values(true), true, blocks.Dark));
+            });
+        var usable = brand with { Light = Usable(brand.Values(false), false), Dark = Usable(brand.Values(true), true), Schemes = schemes };
+        Standard = BrandContrast.Standard(toolkit.Tokens, toolkit.Schemes, usable);
+        All = BrandContrast.Run(toolkit.Tokens, toolkit.Schemes, usable, design.Apps);
+        WithAccents = All.Where(r => r.Scheme == ColorSchemes.Standard && r.Accent is not null).ToList();
     }
 }

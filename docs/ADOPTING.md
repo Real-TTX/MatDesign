@@ -309,6 +309,12 @@ A custom property inherits, so an element sets it for itself and everything insi
 only inside `@media (pointer: fine)`); a property of the **default size** leaves the `sm` and `lg` sizes alone (the radius is the exception: one value for every size of a control); and a property
 changes a shape, never a colour or a shadow (`COLOR-01`, `SPACE-03`). The accent, the surfaces and the dark mode stay the tokens' business.
 
+**Setting them in the Studio** (stage 12): a company edits the properties on *Studio → Brand → Components*, next to the real control with a live preview, and an app on its own edit page (*Overrides of this app*); the Studio writes them
+at the end of `matui.css` (the apps part), so an app that copies the files needs to do nothing. The order in which values win is **the toolkit's defaults, the brand, the app (`[data-app="id"]`), and, last, a colour scheme the user chose**
+(`data-scheme` is a more specific selector). Ranges that the editor holds a value to: a radius 0 to 24 px, padding and gaps 0 to 48 px, a border 0 to 4 px, the width of a dialog or a toast 200 to 960 px, a weight 100 to 900, small text 11 px and up (table and breadcrumb 12 px).
+**Touch targets:** a height of 44 px or more is written for everyone; a height under 44 px (never under 32 px) is written inside `@media (pointer: fine)` and so applies with a mouse only, while a touch screen keeps the 44 px of `--mat-control-h`.
+Do the same in an app's own CSS (the example above). `(pointer: fine)` is the device's primary pointer: a laptop with a touch screen counts as a mouse. A brand can also change, inside a colour scheme, the colours that scheme sets, and an app its radii, spacing, type and motion tokens on `[data-app]`.
+
 ## 5. Dialogs (`DIALOG-*`)
 
 - **Every confirmation, alert and input is a dialog** of the toolkit: `data-confirm="…"` on a button, link or form; `MatUi.confirm`, `MatUi.alert`, `MatUi.prompt` from a script. Remove

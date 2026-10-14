@@ -33,7 +33,7 @@
             <ul class="mat-alert__list">
                 @foreach (var problem in Model.Problems)
                 {
-                    <li><a href="#Input_@problem.Field">@problem.Message</a></li>
+                    <li><a href="#@EditModel.TargetOf(problem.Field)">@(problem.Field.Contains(':') ? problem.Field.Replace(":", " ") + ": " : string.Empty)@problem.Message</a></li>
                 }
             </ul>
         </div>
@@ -161,6 +161,74 @@
         </div>
     </section>
 
+    @* What the app sets for itself on top of the brand. The marker tells the server that this section was sent, so that a post without it leaves the overrides alone. *@
+    <input type="hidden" name="overrides-present" value="1" />
+    <section class="mat-card doc-overrides" aria-labelledby="overrides-title" data-brand-editor>
+        <div class="mat-card__head">@Ui.Icon("sliders")<h2 class="mat-card__title" id="overrides-title">Overrides of this app</h2><span class="mat-muted">@(Model.OverrideCount == 0 ? "nothing set" : Model.OverrideCount + " set")</span></div>
+        <div class="mat-card__body">
+            <p class="mat-muted">
+                The look of an app is the toolkit's, then the brand's (<a href="/Studio/Brand">tokens</a> and <a href="/Studio/Brand/Components">component properties</a>), then what this app sets here, and last a colour scheme the user chooses.
+                An app owns its accent and its shape: radii, spacing, type, motion and the properties of single controls. The surfaces, lines and text are the brand's, so the apps of the company stay one family; they are not offered here.
+                Leave a field empty to keep what the brand gives; what you type shows in the control beside it at once. An app that sets nothing writes nothing. Limits are those of the brand editor:
+                a height under 44 px (not under 32 px) is written for a mouse only, so a touch screen keeps its 44 px (<a href="/Rules/Detail?id=MOBILE-04">MOBILE-04</a>).
+            </p>
+
+            <div class="mat-accordion"><details class="mat-accordion__item" id="override-tokens" open="@(Model.TokenCount > 0 || Model.Problems.Any(p => p.Field.StartsWith("Light:", StringComparison.Ordinal) || p.Field.StartsWith("Dark:", StringComparison.Ordinal)))">
+                <summary>Shape, spacing, type and motion<span class="mat-muted"> (@Model.OverrideTokens.Count tokens)</span>@Ui.Icon("chevron-down", "mat-accordion__chev")</summary>
+                <div class="mat-accordion__body">
+                    <div class="mat-table-wrap">
+                        <table class="mat-table doc-comp-table">
+                            <caption class="mat-sr-only">Tokens this app may set</caption>
+                            <thead><tr><th scope="col">Token</th><th scope="col">Brand and toolkit</th><th scope="col">Value</th><th scope="col"><span class="mat-sr-only">Reset</span></th></tr></thead>
+                            <tbody>
+                                @foreach (var token in Model.OverrideTokens)
+                                {
+                                    var fieldName = "Light:" + token.Name;
+                                    <tr data-brand-row data-token="@token.Name" data-kind="@token.Kind.ToString().ToLowerInvariant()" data-light="@token.Light" data-dark="@token.Dark">
+                                        <td data-label="Token">
+                                            <div class="mat-table__name"><span><code>@token.Name</code><small>@token.Description</small><small class="mat-muted">@token.Hint</small></span></div>
+                                        </td>
+                                        <td data-label="Brand and toolkit"><span class="doc-brand__default"><code>@token.Light</code></span></td>
+                                        <td data-label="Value">
+                                            <div class="mat-field@(Field(fieldName))">
+                                                <input class="mat-input mat-mono" id="@EditModel.TokenId(token, false)" name="light:@token.Name" value="@Model.TokenValue(token, false)" placeholder="@token.Light" maxlength="@MatDesign.Core.Studio.BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-brand-input="light" aria-label="Value of @token.Name" />
+                                                <span class="mat-error" aria-live="polite">@Model.ProblemFor(fieldName)</span>
+                                            </div>
+                                            @if (token.HasDark)
+                                            {
+                                                var darkName = "Dark:" + token.Name;
+                                                <div class="mat-field@(Field(darkName))">
+                                                    <input class="mat-input mat-mono" id="@EditModel.TokenId(token, true)" name="dark:@token.Name" value="@Model.TokenValue(token, true)" placeholder="@token.Dark" maxlength="@MatDesign.Core.Studio.BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-brand-input="dark" aria-label="Dark value of @token.Name" />
+                                                    <span class="mat-error" aria-live="polite">@Model.ProblemFor(darkName)</span>
+                                                </div>
+                                            }
+                                        </td>
+                                        <td data-label="Reset" class="mat-table__cell-actions">
+                                            <div class="mat-table__actions"><button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" data-brand-reset aria-label="Reset @token.Name to the brand's value" data-tip="Reset">@Ui.Icon("restore")</button></div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </details></div>
+
+            <h3 class="doc-comp__title">Component properties</h3>
+            <div class="mat-accordion">
+                @foreach (var group in Model.PropertyGroups)
+                {
+                    var editor = new PropertyGroupEditor(group, Model.PropertyValue, Model.ProblemFor, "property", null, string.IsNullOrEmpty(input.Id) || isNew ? null : input.Id, Stacked: true);
+                    var count = Model.SetIn(group);
+                    <details class="mat-accordion__item" id="override-@group.Component.Id" open="@(count > 0 || Model.Problems.Any(p => group.Properties.Any(x => p.Field == "Property:" + x.Name)))">
+                        <summary>@group.Component.Title<span class="mat-muted"> (@(count == 0 ? group.Properties.Count + " properties" : count + " set"))</span>@Ui.Icon("chevron-down", "mat-accordion__chev")</summary>
+                        <div class="mat-accordion__body"><partial name="_PropertyGroup" model="editor" /></div>
+                    </details>
+                }
+            </div>
+        </div>
+    </section>
+
     <div class="mat-btn-row">
         <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
         <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
@@ -187,3 +255,7 @@
         }
     </div>
 </form>
+
+@section Scripts {
+    <script src="/js/brand.js"></script>
+}

@@ -97,6 +97,7 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | **done** |
 | 9 | **Setup assistant:** the first visit creates the administrator (name and password, kept as a hash in the volume), so the release compose file has no password and no variables | **done** |
 | 10 | **Brand and tokens** (docs/PRODUCT.md, stage 10): the item `brand`, a token editor with a live preview, the brand overlay in `matui.css`, releases and the archive, history, restore and checks | **done** |
+| 12 | **Token editor per component, per app and per colour scheme** (docs/PRODUCT.md, stage 12): the 68 component properties next to the real control with a live preview, overrides on `[data-app]`, tokens inside each colour scheme, the 44 px rule for touch targets | **done** |
 | 15 | **White label build** (docs/PRODUCT.md, stage 15): the item `whitelabel` (prefix and product name), the renamer, the Build stage with checks on the renamed copy, a trial build, history, restore and a check | **done** |
 
 ### Brand
@@ -125,6 +126,31 @@ A colour scheme (a more specific selector) still wins over the brand on the toke
 a colour picker and a text field kept in step by `wwwroot/js/brand.js` (no inline script, no inline style); the script applies the unsaved values to `[data-brand-preview]` through the CSSOM (a few real controls: buttons, a field, a card, a tag, pills, a switch, a table, alerts, the switcher),
 shows the preview in light or in dark whatever the page is in, and works out the contrast of the pairings that do not depend on the accent while you type, from the same list of pairings (`data-pairings`) the server uses. Check and Save run the whole check on the server, with the accent of every app.
 
+### Components, apps and schemes (stage 12)
+
+The brand item and its history grow by three maps; nothing else is new in the store.
+
+- **`Components`** on the brand: the name of a documented property (`--mat-btn-radius`, read from the `@prop` lines of the CSS by `ComponentProperties`) to one value, the same in light and dark. `ComponentTokens` turns each of the 68 into a
+  `PropertyToken` (a `BrandToken` for the kind and the limits, whether it is a touch target, what the control uses today). The limits are in code: a radius of 0 to 24 px, padding and gaps of 0 to 48 px, a border or the indicator of a tab of 0 to 4 px,
+  the width of a dialog or a toast of 200 to 960 px, a weight of 100 to 900, the text of a table or the breadcrumb of 12 to 22 px and of a small label (tag, pill, badge) of 11 to 18 px, the parts of a switch and a check within a range (and the knob smaller than its track).
+  A new property needs no code: it gets the limits of its name (`-radius`, `-pad-x`, `-font-size` ...), and a test fails while a length or a number has none.
+- **The 44 px rule.** The heights of the controls that are pressed (`--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-menu-item-height`, `--mat-nav-item-height`) fall back to `--mat-control-h`, which the tokens make 44 px under `(pointer: coarse)`. They take
+  32 to 72 px. A value of **44 px or more** is written on `:root` and applies everywhere; a value **under 44 px** is written inside `@media (pointer: fine) { :root { ... } }`, so on a touch screen the property is unset and the control keeps its 44 px (`MOBILE-04`). Under 32 px is refused.
+  The editor says so at the field, and its preview does what the CSS does: a phone ignores a height under 44 px. `(pointer: fine)` is the primary pointer of the device (a laptop with a touch screen counts as fine); a hybrid that also takes touches keeps the small control for the touches.
+- **`Schemes`** on the brand: a colour scheme id to a light and a dark map (`SchemeValues`). Only a token that the scheme itself sets in that mode can be changed (paper and contrast in both, black in dark only), with the kind and limits of the token. It is written after the scheme blocks of
+  `matui.tokens.css` with the same selectors (`:root[data-scheme="paper"]`, `... [data-theme="dark"]` and the system block), so it wins over them, the dark set twice and identical. `BrandContrast` reads the surfaces of a scheme with its override over the scheme's own values, so every pairing and the accent of every app are checked
+  in that scheme; a failing one is an error, with the scheme named. A value that equals the scheme's own is not stored.
+- **Per app.** `MatApp` gets `Tokens` (light and dark maps) and `Properties`, both null (and absent from the stored JSON) for an app that sets nothing. The tokens open to an app are the **non-colour tokens of the groups Shape, Spacing, Type and Motion** (`AppOverrides.Allows`): the app owns its accent and its shape, the surfaces,
+  lines and text are the brand's so that the apps of a company stay one family, and the layout widths and control heights belong to the brand (the heights of single controls are properties and carry the 44 px rule). Every component property is open. The limits are the brand editor's, and the type scale is checked with the brand's sizes under the app's. A dark value is accepted only for a token that has one (none of the
+  subset has today; the writer and the validator handle it for the day one does). It is written on `[data-app="id"]`, the dark set on `:root[data-theme="dark"][data-app="id"]` and in the system block, and the properties likewise (a height under 44 px inside `@media (pointer: fine)`).
+- **The order the values win in** is the order of `matui.css`: the toolkit's defaults, the colours of the apps, the brand (tokens, properties, schemes), then the overrides of each app, with the colour scheme the user chose last (a scheme is a more specific selector). `ToolkitFiles.Build` puts them together in that order; ten CSS parts as before.
+- **Pages.** `/Studio/Brand/Components` (a tab of the brand next to *Names and tokens*) lists the properties by component with the description, the type and limits, the default, an input of the type and a reset, and beside each group the first example of the documentation with a live preview (`PropertyPreviews`: the
+  mapping from a group to an example of the catalogue as data; a dialog, a toast and a context menu, which are on a page only while something opens them, are drawn still). `/Studio/Brand` has a section per colour scheme. `/Studio/Apps/Edit` has the section *Overrides of this app* (the same rows and previews, the previews wear the `data-app` of the app).
+  `brand.js` sets the typed values on `[data-brand-preview]` through the CSSOM and tells a value that is outside its limits at the field. A control of a preview is cut off from every form (`form="pv-none"`), so Enter in it can never save the editor.
+- **Checks, history, release.** The `brand` check validates the properties and the schemes, the `apps` check the overrides of every app; the restore of a revision that fails is refused with the reason; the release pipeline refuses on either; the release (bundle, apps part, archive, `design.json` with `brand.components`, `brand.schemes` and `overrides` of an app, the changelog lines
+  `component --mat-btn-radius`, `paper light --mat-bg`, `property --mat-btn-radius`) carries all of it.
+
+Not done here: the static styleguide of a release does not show the company name or the property tables (it lists the rules, the components and the apps as before).
 ### White label
 
 One item, `whitelabel` of the kind `whitelabel` (`studio/whitelabel/whitelabel/<revision>.json`), kept like the others: append-only, with history, a restore and an entry in the activity list. It holds a class **prefix** and a **product name**

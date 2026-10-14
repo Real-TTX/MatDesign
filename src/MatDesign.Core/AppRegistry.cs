@@ -3,9 +3,24 @@ using System.Text.Json.Serialization;
 namespace MatDesign.Core;
 
 /// <summary>
+/// The tokens an app sets for itself (docs/PRODUCT.md, stage 12): <see cref="Light"/> and <see cref="Dark"/> map the name of a token (<c>--mat-radius</c>) to a value, written on
+/// <c>[data-app="id"]</c> after the brand. Only a safe subset of the tokens is open to an app (<c>AppOverrides</c>: shape, spacing, type, motion), and the dark values only for a token that has one.
+/// </summary>
+public sealed record AppTokens(IReadOnlyDictionary<string, string> Light, IReadOnlyDictionary<string, string> Dark)
+{
+    /// <summary>True when it sets at least one token.</summary>
+    [JsonIgnore]
+    public bool HasValues => (Light?.Count ?? 0) > 0 || (Dark?.Count ?? 0) > 0;
+
+    /// <summary>The values of a mode (never null).</summary>
+    public IReadOnlyDictionary<string, string> Values(bool dark) => (dark ? Dark : Light) ?? new Dictionary<string, string>();
+}
+
+/// <summary>
 /// One app of the Mat family as the design system knows it. <see cref="Accent"/> is the colour the toolkit uses (the identity colour,
 /// adjusted where the original failed WCAG AA with white text). What was found in the app's own files is kept next to it, so the
-/// site can show where the apps differ today.
+/// site can show where the apps differ today. <see cref="Tokens"/> and <see cref="Properties"/> are what the app sets for itself on top of the brand (stage 12 of
+/// docs/PRODUCT.md): null for every app that sets nothing, and then nothing is written.
 /// </summary>
 public sealed record MatApp(
     string Id,
@@ -22,8 +37,14 @@ public sealed record MatApp(
     int? Port = null,
     string CssPrefix = "",
     string TokenScheme = "",
-    string Notes = "")
+    string Notes = "",
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] AppTokens? Tokens = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] IReadOnlyDictionary<string, string>? Properties = null)
 {
+    /// <summary>True when the app sets at least one token or component property of its own.</summary>
+    [JsonIgnore]
+    public bool HasOverrides => (Tokens?.HasValues ?? false) || (Properties?.Count ?? 0) > 0;
+
     [JsonIgnore]
     public Rgb AccentRgb => Rgb.Parse(Accent);
 
