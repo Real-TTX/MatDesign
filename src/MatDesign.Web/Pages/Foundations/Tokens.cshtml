@@ -70,5 +70,25 @@
     <div class="mat-actions">
         <a class="mat-btn mat-btn--secondary" href="/ui/css/matui.tokens.css">@Ui.Icon("download")<span>matui.tokens.css</span></a>
         <a class="mat-btn mat-btn--secondary" href="/api/tokens">@Ui.Icon("code")<span>Tokens as JSON</span></a>
+        <a class="mat-btn mat-btn--secondary" href="#component-properties">@Ui.Icon("sliders")<span>Component properties</span></a>
     </div>
 </div>
+
+<section class="mat-section mat-anchor" id="component-properties" aria-labelledby="component-properties-title">
+    <div class="mat-section__head">
+        <h2 id="component-properties-title">Component properties</h2>
+        <p class="mat-section__lead">
+            The shape of a control, one handle per aspect: <code>--mat-btn-radius</code>, <code>--mat-card-pad</code> and the like (@Model.Properties.Count properties in @Model.PropertyGroups.Count components).
+            None of them has a value in the toolkit; a control that does not find one uses the default shown here, so nothing changes until an app, a brand or one element sets it
+            (<a href="/Rules/Detail?id=SPACE-06">SPACE-06</a>). A height is a floor: on a touch screen keep it at 44 px or more (MOBILE-04).
+            The list is read from the <code>@@prop</code> lines in the CSS, so it cannot go out of date; <a href="/api/properties">as JSON</a>.
+        </p>
+    </div>
+    @foreach (var group in Model.PropertyGroups)
+    {
+        <div class="mat-stack mat-stack--sm">
+            <h3 id="props-@group.Id">@group.Title</h3>
+            <partial name="_ComponentProperties" model="group.Properties" />
+        </div>
+    }
+</section>

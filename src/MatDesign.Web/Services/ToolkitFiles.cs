@@ -66,6 +66,7 @@ public sealed partial class ToolkitFiles
         IconNames = SymbolRegex().Matches(Sprite).Select(m => m.Groups[1].Value).Order().ToList();
         Tokens = CssTokens.Tokens(_css["matui.tokens.css"]);
         Schemes = CssTokens.Schemes(_css["matui.tokens.css"]);
+        Properties = ComponentProperties.Parse(CssParts.Select(part => _css[part]));
         Facts = new MarkupFacts(MarkupChecks.ClassesIn(CssParts.Select(part => _css[part])), IconNames.ToHashSet());
         _state = Build(design.Version);
     }
@@ -191,6 +192,9 @@ public sealed partial class ToolkitFiles
     public IReadOnlyList<string> IconNames { get; }
 
     public IReadOnlyList<DesignToken> Tokens { get; }
+
+    /// <summary>The documented component properties (<c>--mat-btn-radius</c> ...), read from the <c>@prop</c> lines of the CSS parts.</summary>
+    public IReadOnlyList<ComponentProperty> Properties { get; }
 
     /// <summary>What each colour scheme sets in <c>matui.tokens.css</c> (the base tokens are <see cref="Tokens"/>).</summary>
     public IReadOnlyList<SchemeBlocks> Schemes { get; }
