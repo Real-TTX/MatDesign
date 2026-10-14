@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **126 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **127 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -69,6 +69,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 - **Releases** through a pipeline – *Check → Version → Build → Publish → Notify* – with the toolkit files, the
   design data and a **styleguide** that opens straight from the release directory
 - **Brand**: the company's names and the tokens of the toolkit it sets, light and dark, within limits that keep it usable (touch targets, body text, line height, radii), with a live preview and a contrast check (AA) before it is saved or released
+- **Logo and fonts** (`IDENT-08`): the company's logo, word mark, favicon, app icon and font files, judged by what is inside them (an SVG against an allowlist, no script, no outside reference), kept in the volume under their SHA-256, served from the site, shown in the shell and written into every release under `brand/`, with `@font-face` for the fonts
 - **Versions**: which release of MatUi each app carries, and which one is behind
 
 ## The rules in one minute
@@ -298,8 +299,9 @@ None of them is needed to run it – the image has the right defaults.
 /data
 ├─ admin.json     the administrator: a name and a salted hash of the password (written by the setup assistant)
 ├─ studio/        what the Studio saves: one append-only log of revisions per item
-│                 (apps, rules, components, brand, releases, runs, versions in use)
-├─ releases/      one directory per release: the toolkit, design.json, the styleguide, manifest.json
+│                 (apps, rules, components, brand, assets, releases, runs, versions in use)
+├─ assets/        the files of the brand, named by their SHA-256 and never overwritten or deleted (logo, favicon, fonts)
+├─ releases/      one directory per release: the toolkit, design.json, the styleguide, brand/ (when there are assets), manifest.json
 └─ keys/          DataProtection keys (the Studio session survives a restart)
 ```
 

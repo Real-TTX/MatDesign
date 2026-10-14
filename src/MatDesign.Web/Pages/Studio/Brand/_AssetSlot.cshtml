@@ -1,0 +1,97 @@
+@model MatDesign.Web.Pages.StudioBrandAssets.SlotView
+@namespace MatDesign.Web.Pages.StudioBrandAssets
+@using MatDesign.Core.Studio
+@*
+    One slot of the brand assets: what is there (a preview on a light and on a dark surface, the facts, the checks run on its bytes now) and the form that replaces or removes it. The form is a
+    normal multipart form with the anti-forgery token; the file input is the toolkit's file upload (FORM-21). The server looks at the content again (IDENT-08), whatever the zone said.
+*@
+@{
+    var v = Model;
+    var id = v.Slot;
+    var darkOnly = id.EndsWith("-dark", StringComparison.Ordinal);
+    var invalid = v.Error is null ? string.Empty : " is-invalid";
+    var icon = id == "favicon" || id == "app-icon";
+}
+<div class="doc-asset" id="asset-@id">
+    <div class="doc-asset__head">
+        <h3 class="doc-asset__title" id="asset-@(id)-title">@v.Title</h3>
+        @if (v.File is null)
+        {
+            <span class="mat-pill mat-pill--plain">Not set</span>
+        }
+        else
+        {
+            <span class="mat-pill mat-pill--ok">Set</span>
+        }
+    </div>
+    <p class="mat-muted">@v.Hint</p>
+
+    @if (v.File is not null)
+    {
+        var size = icon ? (id == "favicon" ? 32 : 96) : 0;
+        <div class="doc-asset__stages">
+            @foreach (var surface in new[] { "light", "dark" })
+            {
+                if (darkOnly && surface == "light")
+                {
+                    continue;
+                }
+
+                <figure class="doc-asset__stage doc-asset__stage--@surface">
+                    @if (icon)
+                    {
+                        <img class="doc-asset__image doc-asset__image--icon" src="@v.Url" alt="Preview of the @v.Title.ToLowerInvariant() on a @surface surface" width="@size" height="@size" />
+                    }
+                    else
+                    {
+                        <img class="doc-asset__image" src="@v.Url" alt="@(v.HasAlt && v.Alt.Length > 0 ? v.Alt : "Preview of the " + v.Title.ToLowerInvariant() + " on a " + surface + " surface")" @(v.File.Width > 0 && v.File.Height > 0 ? Html.Raw($"width=\"{v.File.Width}\" height=\"{v.File.Height}\"") : null) />
+                    }
+                    <figcaption class="mat-muted">On a @surface surface</figcaption>
+                </figure>
+            }
+        </div>
+        <dl class="mat-kv doc-asset__facts">
+            <dt>File</dt>
+            <dd><a href="@v.Url"><code>@v.Name</code></a></dd>
+            <dt>Size</dt>
+            <dd>@(v.File.Width > 0 ? $"{v.File.Width} x {v.File.Height} px, " : string.Empty)@MatDesign.Web.Pages.StudioBrandAssets.AssetsModel.Kb(v.File.Bytes)</dd>
+            <dt>Content address</dt>
+            <dd><code>@v.File.File[..16]...</code></dd>
+        </dl>
+        <ul class="doc-asset__checks" aria-label="Checks of the @v.Title.ToLowerInvariant()">
+            @foreach (var check in v.Checks)
+            {
+                <li><span class="mat-pill @(check.Ok ? "mat-pill--ok" : "mat-pill--error")">@(check.Ok ? "Passes" : "Fails")</span> @check.Text</li>
+            }
+        </ul>
+    }
+
+    <form class="mat-form" method="post" action="/Studio/Brand/Assets?handler=Save" enctype="multipart/form-data" novalidate>
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="slot" value="@id" />
+        @if (v.HasAlt)
+        {
+            <div class="mat-field@(invalid)">
+                <label class="mat-label" for="alt-@id">Alt text <span class="mat-req" aria-hidden="true">*</span></label>
+                <input class="mat-input" id="alt-@id" name="alt" value="@v.Alt" maxlength="120" required data-msg-required="Please write the alt text: what a person who cannot see the image should hear." aria-describedby="alt-@(id)-hint" />
+                <span class="mat-hint" id="alt-@(id)-hint">What the image says, usually the name of the company. It is the text of the image on the site (IDENT-08).</span>
+                <span class="mat-error" aria-live="polite"></span>
+            </div>
+        }
+        <div class="mat-field@(invalid)">
+            <label class="mat-label" for="file-@id">@(v.File is null ? "Choose the file" : "Replace the file")</label>
+            <div class="mat-upload" data-upload data-max-size="@v.MaxSize">
+                <input class="mat-upload__input" type="file" id="file-@id" name="file" accept="@v.Accept" @(v.File is null && !v.HasAlt ? "required" : null) data-msg-required="Please choose a file." aria-describedby="file-@(id)-hint file-@(id)-error" />
+            </div>
+            <span class="mat-hint" id="file-@(id)-hint">Judged by what is inside it, not by its name. @v.MaxSize at most.</span>
+            <span class="mat-error" id="file-@(id)-error" aria-live="polite">@v.Error</span>
+        </div>
+        <div class="mat-btn-row">
+            <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>@(v.File is null ? "Upload" : "Save")</span></button>
+            @if (v.File is not null)
+            {
+                <button type="submit" class="mat-btn mat-btn--ghost" formaction="/Studio/Brand/Assets?handler=Remove" formnovalidate data-confirm="Remove the @v.Title.ToLowerInvariant()? The file stays on the volume and the history can bring it back." data-confirm-ok="Remove">@Ui.Icon("trash")<span>Remove</span></button>
+            }
+        </div>
+    </form>
+</div>

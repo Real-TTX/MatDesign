@@ -58,6 +58,18 @@
 .mat-logo--xl { width: 88px; height: 88px; }
 .mat-nav__name { font-size: var(--mat-fs-lg); font-weight: 650; line-height: 1.1; }
 .mat-nav__brand a > span:last-child { min-width: 0; }
+/* The logo and the word mark of a brand (IDENT-08): a picture from the company's own files instead of the tile with a glyph, or instead of the name. A variant for dark surfaces is a second image;
+   the theme shows one of the two (the dark set is written twice, like in the tokens). A wide logo carries the name itself, so the name and tagline stay for screen readers only. */
+.mat-brandmark { display: block; flex: none; height: 38px; width: auto; max-width: 100%; }
+.mat-brandmark--word { height: 22px; }
+.mat-brandmark--dark { display: none; }
+:root[data-theme="dark"] .mat-brandmark--light { display: none; }
+:root[data-theme="dark"] .mat-brandmark--dark { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .mat-brandmark--light { display: none; }
+  :root:not([data-theme="light"]):not([data-theme="dark"]) .mat-brandmark--dark { display: block; }
+}
+.mat-nav__brand-link--logo-only > span:last-child { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .mat-nav__tagline { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--mat-fs-xs); font-weight: 500; color: var(--mat-text-muted); margin-top: 2px; }
 
 /* The part of the menu that scrolls; the brand above and the foot below stay in place. */

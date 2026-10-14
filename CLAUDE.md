@@ -58,6 +58,9 @@ src/MatDesign.Core         no web types
   Studio/Diff.cs             what changed between two revisions: the fields (Flatten, Changes) and the lines (Lines)
   Studio/HtmlFormatter.cs    indents and wraps the markup of an example for showing it as code (white space only; a test holds that for every example)
   Studio/MarkupChecks.cs     the contract of the markup of an example (classes, icons, no inline/outside/script, labels, ids ...): the unit tests and the Studio use this one code
+  Studio/BrandAssets.cs      the item `assets` (logo, word mark, favicon, app icon, font faces: only references to files), the public names (`logo-<10 hex>.svg`, `fonts/<family>-<weight>-<style>-<10 hex>.woff2`), content types
+  Studio/BrandAssetValidator.cs  what a file of a brand is, by CONTENT (magic bytes, SVG parsed with a forbidden DTD and an allowlist), limits, families, the item, the files against the volume (IDENT-08)
+  Studio/AssetStore.cs       `<data>/assets/<sha256>.<ext>`: written once, never overwritten or deleted (no public member can), a name is never a path
   ComponentProperties.cs     the documented `--mat-<component>-*` properties: reads the `@prop` lines of the CSS (ComponentProperty), the uses `var(--mat-x-y, fallback)`, `Problems` (what makes the list stale), Components (group id, title, the catalogue components that show it)
   Studio/Brand.cs            the brand (COLOR-11): company, short name, tagline and the tokens it sets, Light and Dark (the item `brand` of the kind `brand`; Brand.BuiltIn is the Mat demo brand)
   Studio/BrandTokens.cs      which tokens of matui.tokens.css a brand may set (the others are derived or structure, with the reason), their kind (colour, length, number, duration, font stack, easing) and limits
@@ -81,6 +84,9 @@ src/MatDesign.Web          the site
                              _DocSection + _Toc + _Component + _ContextPage (the components, layout and utilities pages), _AccentSwatches, _ContrastCard (+ _ContrastRows, _SchemeChecks), _FoundationsTabs
   Pages/Studio/Brand         the brand editor: names, a token table per group of the CSS (an input by kind, a colour picker, a reset), a preview outside the form, the contrast; wwwroot/js/brand.js is its script
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
+  Studio/AssetFiles.cs       the files of the current assets as they are served and released (`/ui/brand/<name>`, `brand/` in a release, the archive, the manifests); the store; only what still has its hash
+  Pages/Studio/Brand/        Assets.cshtml(.cs) = `/Studio/Brand/Assets` (a card per slot, uploads, fonts, specimen), `_AssetSlot.cshtml`; its pages are in the namespace `MatDesign.Web.Pages.StudioBrandAssets` (a namespace called Brand would hide the type Brand);
+                             wwwroot/js/brand-assets.js the font specimens; `ToolkitFiles.AssetsOverlay` the @font-face rules; `Ui.BrandImage` / `Ui.AppIconLink` the logo and the icon links of the shell
 tests/MatDesign.Tests      unit tests + the site in memory
 tests/e2e                  run.js: the behaviour in a real browser against a running site
 tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js, bump.js (makes a version of the toolkit), matui-check.js (checks an app's copy of it)
@@ -213,6 +219,11 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
 - **The brand is tokens, never CSS (`COLOR-11`, docs/STUDIO.md "Brand")**: `ToolkitFiles.BrandOverlay` appends it to the apps part (the part count stays ten): `:root` for light, the dark set twice and identical, nothing when the brand sets nothing. A new token that a brand may set needs a
   kind the editor knows (`BrandTokens.Describe`), and a limit if usability depends on it; a brand is never held below the contrast the toolkit holds (`BrandContrast`, the `brand` check). The page of the editor sets the unsaved values on `[data-brand-preview]` through the CSSOM, never as a style attribute.
 - **The browser checks make one release per run** (a release never changes): the development volume grows; `docker compose -f docker-compose.dev.yml down -v` then `up -d --build` starts it clean (with the setup assistant again; the checks create the administrator).
+- **Brand assets (`IDENT-08`, stage 13).** The Studio item `assets` only refers to files; the files are `<data>/assets/<sha256>.<ext>` and **never overwritten or deleted** (nothing public in `AssetStore` can). A file is judged by its CONTENT (`BrandAssetValidator.Inspect`: PNG, ICO, WOFF2, WOFF by magic bytes, SVG parsed with a forbidden DTD against an allowlist), never by its name or the type a browser sent;
+  every new refusal has a test (the hostile SVG corpus in `BrandAssetValidatorTests`). An upload, a restore, the check `assets` and the pipeline all use that one code. The public name carries the first ten digits of the hash, so `/ui/brand/<name>` may be `immutable`; SVGs are served with `Content-Security-Policy: default-src 'none'; style-src 'none'`
+  and everything with `nosniff`. `@font-face` is written by `ToolkitFiles.AssetsOverlay` with a URL relative to the stylesheet (`brand/fonts/...`; `../brand/fonts/...` in the part `css/matui.apps.css`) and nothing for a brand without fonts; a brand without assets leaves every file and every page byte for byte as it was (tests hold it).
+  The shell uses the logo, the word mark, the favicon and the app icon only on the site's own pages (not in a sample app); a dark variant is a second `img` (`mat-brandmark--light` / `--dark`, CSS only, no inline style). The assets page is `/Studio/Brand/Assets`: the folder is called Brand, so its pages live in the namespace
+  `MatDesign.Web.Pages.StudioBrandAssets` (a namespace `...Studio.Brand` would hide the type `Brand`). A test that builds a PNG or a font builds it itself (`AssetFixtures`, `tests/e2e/brand-asset-files.js`): no binary file in the repository.
 
 **Code**
 - Microsoft C# guidelines, file-scoped namespaces, `.editorconfig`. Few nested types; several functions per class are fine. Code, identifiers and comments are English.

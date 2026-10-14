@@ -1,5 +1,6 @@
 using System.Globalization;
 using MatDesign.Core;
+using MatDesign.Core.Studio;
 using MatDesign.Web;
 using MatDesign.Web.Services;
 using MatDesign.Web.Studio;
@@ -73,6 +74,7 @@ builder.Services.AddSingleton<StudioHistory>();
 builder.Services.AddSingleton<DesignChecks>();
 builder.Services.AddSingleton<ReleaseService>();
 builder.Services.AddSingleton<VersionTracker>();
+builder.Services.AddSingleton<AssetFiles>();
 builder.Services.AddSingleton<ToolkitFiles>();
 builder.Services.AddSingleton<IconLibrary>();
 builder.Services.AddSingleton<AuditData>();
@@ -127,6 +129,29 @@ ui.MapGet("/iconlib/README.txt", (IconLibrary library, HttpContext http) => Tool
 ui.MapGet("/iconlib/matui-iconlib.zip", (IconLibrary library) => Results.File(library.Zip, "application/zip", "matui-iconlib.zip"));
 ui.MapGet("/iconlib/svg/{name}.svg", (string name, IconLibrary library, HttpContext http) =>
     library.Find(name) is null ? Results.NotFound() : ToolkitFiles.Result(http, library.Svg(name), "image/svg+xml; charset=utf-8", library.Hash));
+
+// The files of the brand (stage 13, IDENT-08): logo, word mark, favicon, app icon and fonts, served from the volume. The name is the slot and the first ten digits of the hash of the content,
+// so a name always means the same bytes and may be cached for good; only what the current assets name, and only while the file still has its hash, is served. An SVG gets a policy that
+// forbids everything (a brand's picture is a picture, also when somebody opens its address directly), and no type is ever sniffed.
+ui.MapGet("/brand/{**name}", (string name, AssetFiles assets, HttpContext http) =>
+{
+    if (assets.Find(name) is not { } file)
+    {
+        return Results.NotFound();
+    }
+
+    var etag = $"\"{file.Sha256}\"";
+    var headers = http.Response.Headers;
+    headers.CacheControl = "public, max-age=31536000, immutable";
+    headers.ETag = etag;
+    headers["X-Content-Type-Options"] = "nosniff";
+    if (file.ContentType == "image/svg+xml")
+    {
+        headers.ContentSecurityPolicy = "default-src 'none'; style-src 'none'";
+    }
+
+    return http.Request.Headers.IfNoneMatch == etag ? Results.StatusCode(StatusCodes.Status304NotModified) : Results.File(file.Bytes, file.ContentType);
+});
 
 // ---- The design system as data: what a tool, a test or another app can read. ----
 var api = app.MapGroup("/api");
@@ -239,6 +264,16 @@ releases.MapGet("/{version}/{**file}", (string version, string file, ReleaseServ
 
     // a release never changes, so a copy of it never goes out of date
     http.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+    if (file.StartsWith(BrandAssets.Folder + "/", StringComparison.Ordinal))
+    {
+        // the files of the brand: no sniffing, and an SVG that is opened on its own may do nothing
+        http.Response.Headers["X-Content-Type-Options"] = "nosniff";
+        if (found.ContentType.StartsWith("image/svg+xml", StringComparison.Ordinal))
+        {
+            http.Response.Headers.ContentSecurityPolicy = "default-src 'none'; style-src 'none'";
+        }
+    }
+
     return Results.File(found.Path, found.ContentType);
 });
 

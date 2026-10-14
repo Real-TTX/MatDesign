@@ -272,7 +272,7 @@ the version and the hash.
 ## 7. No build step, no web fonts, no icon font
 
 Plain CSS in ten parts that are bundled in the order of the cascade (`tokens`, `base`, `shell`, `controls`, `forms`, `pickers`, `lists`, `dialogs`, `layout`, `apps`) and one dependency-free script that wires
-everything with delegated listeners and `data-` attributes, so server-rendered and dynamically added markup behave the same. System fonts only. Icons are one inline SVG sprite
+everything with delegated listeners and `data-` attributes, so server-rendered and dynamically added markup behave the same. System fonts only (the font files of a company's own brand are the one exception: `IDENT-08`, section 12). Icons are one inline SVG sprite
 (`tools/icons.js` builds it; CI fails when it is stale). SVG and not an icon font (`ICON-01`): the icons are strokes, a font would need them turned into outlines, and an icon in a page is a `<use>` of
 a symbol that takes its colour from the text.
 
@@ -335,6 +335,11 @@ turns the data into releases, without giving up what the site is: the decisions 
   (touch targets, body text, line height, radii). It is written as an overlay after the tokens (in the apps part, so the ten parts stay ten): light on `:root`, the dark set twice and identical, nothing at all for a brand that sets nothing. The contrast checks that the toolkit
   holds for its own surfaces run on the brand's (`SchemeSurfaces.Pairings`, `AccentReport`, every scheme, every app), in the browser while you type for the pairings that do not depend on the accent, and on the server on save and in the pipeline. A scheme's selectors are more specific than the brand's, so a scheme keeps its surfaces.
 - **It edits data, not the toolkit.** The CSS and the script are files of the repository, reviewed and tested there; the Studio never writes them. It is also not a CI system for the apps: its release is the design system.
+- **A brand's files are immutable, content-addressed and judged by content** (`IDENT-08`). The one item `assets` (logo, word mark, favicon, app icon, font faces) only refers to files in `<data>/assets/<sha256>.<ext>`, which are written once and never overwritten or deleted, so a restore can always find what a revision refers to
+  (and is refused when a file is gone). `BrandAssetValidator` (in `MatDesign.Core`, no web types) is the one gate, for an upload, a restore, the check and the pipeline: the type comes from the first bytes or from an XML parse, never from a name; an SVG is read with a DTD forbidden and against an allowlist of elements and attributes, because an
+  uploaded SVG is the one place where somebody else's markup reaches the site. The site serves a file only while it still has its hash, under a name that carries the first ten digits of it (so `immutable` is true), with `nosniff` and, for an SVG, a policy that forbids everything. The `@font-face` rules are an overlay after the brand's
+  tokens (`ToolkitFiles.AssetsOverlay`) with a URL **relative to the stylesheet**, so the same text is right on the site (`/ui/`), in a release and in an app's own folder; a release carries the files under `brand/`. Nothing in the toolkit's source knows a brand: `.mat-brandmark` (the image of a logo, two of them with a dark variant) is the only
+  class added, and a page without assets is byte for byte what it was.
 
 ## What it does not do
 

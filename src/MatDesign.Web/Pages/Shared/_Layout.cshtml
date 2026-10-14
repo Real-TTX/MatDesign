@@ -14,6 +14,12 @@
     var width = ViewData["Width"] as string;
     // A page can name the menu item it belongs to (ViewData["ActiveHref"]): a component page belongs to its group in the menu.
     var active = ViewData["ActiveHref"] as string ?? shell.ActiveHref ?? Navigation.ActiveHref(Context.Request.Path.Value ?? "/", Context.Request.QueryString.Value);
+    // The logo and the word mark of the brand (IDENT-08) replace the glyph tile and the name in the menu header of the site's own shell; a sample app in a preview keeps its own, and without assets nothing changes.
+    var brand = ViewData["Shell"] is null ? Design.Assets : null;
+    var brandLogo = brand?.Logo is { } logoFile ? Ui.BrandImage("logo", logoFile, brand.LogoDark, brand.LogoAlt, 38) : null;
+    var brandWord = brand?.Wordmark is { } wordFile ? Ui.BrandImage("wordmark", wordFile, brand.WordmarkDark, brand.WordmarkAlt, 22, "mat-brandmark--word") : null;
+    // a wide logo carries the name itself: the text next to it is kept for screen readers only
+    var logoOnly = brand?.Logo is { } wide && wide.Width > wide.Height * 2 ? "mat-nav__brand-link--logo-only" : null;
 }
 <!DOCTYPE html>
 <html lang="en" data-app="@app.Id" @Html.Raw(shell.RootAttributes)>
@@ -25,10 +31,10 @@
     <div class="mat-app">
         <aside class="mat-nav" id="mat-nav">
             <div class="mat-nav__brand">
-                <a href="@(shell.PreviewQuery is null ? "/" : "#")" aria-label="@app.Name, start page">
-                    @Ui.Logo(app)
+                <a href="@(shell.PreviewQuery is null ? "/" : "#")" aria-label="@app.Name, start page" class="@logoOnly">
+                    @(brandLogo ?? Ui.Logo(app))
                     <span>
-                        <span class="mat-nav__name">@app.Name</span>
+                        <span class="mat-nav__name">@(brandWord ?? (object)app.Name)</span>
                         <span class="mat-nav__tagline">@shell.Tagline</span>
                     </span>
                 </a>

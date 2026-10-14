@@ -238,6 +238,7 @@
                 <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
                 <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
                 <a class="mat-btn mat-btn--secondary" href="/Studio">@Ui.Icon("back")<span>Back</span></a>
+                <a class="mat-btn mat-btn--ghost" href="/Studio/Brand/Assets">@Ui.Icon("image")<span>Logo and fonts</span></a>
                 @if (History.HasHistory(Brand.Kind, Brand.ItemId))
                 {
                     <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl(Brand.Kind, Brand.ItemId)">@Ui.Icon("restore")<span>History</span></a>

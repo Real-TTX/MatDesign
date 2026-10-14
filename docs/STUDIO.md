@@ -59,7 +59,7 @@ component of its group, and `NavFacts` carries the counts of the menu. A rule th
 
 ### History
 
-Every item has a history page (`/Studio/History?kind=apps|rules|components|brand&id=...`), reached from its edit page (the History button, once the Studio has saved a revision of it) and from the item
+Every item has a history page (`/Studio/History?kind=apps|rules|components|brand|assets&id=...`), reached from its edit page (the History button, once the Studio has saved a revision of it) and from the item
 in the activity list. It lists the revisions (who, when, why, the current one marked), compares any two (the fields that differ, read field by field, and for each the lines that differ: `-` gone,
 `+` new, and the sign is in the text, not only in the colour) and restores one. **A restore is a new revision** that copies the old one, so nothing is lost and a restore can itself be undone. It goes
 through only when the old revision would be accepted as it is today: `StudioHistory.CanRestore` runs the same validator as a save on it, with the other items as they are now (a port that another app
@@ -97,6 +97,7 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | **done** |
 | 9 | **Setup assistant:** the first visit creates the administrator (name and password, kept as a hash in the volume), so the release compose file has no password and no variables | **done** |
 | 10 | **Brand and tokens** (docs/PRODUCT.md, stage 10): the item `brand`, a token editor with a live preview, the brand overlay in `matui.css`, releases and the archive, history, restore and checks | **done** |
+| 13 | **Brand assets** (docs/PRODUCT.md, stage 13): the item `assets`, files in the volume under their SHA-256, logo, word mark, favicon, app icon and fonts checked by content, served under `/ui/brand/`, `@font-face` in `matui.css`, `brand/` in every release and the archive, history, restore and checks | **done** |
 
 ### Brand
 
@@ -123,6 +124,31 @@ A colour scheme (a more specific selector) still wins over the brand on the toke
 **The page** `/Studio/Brand`: the names, then the tokens grouped by the groups of `matui.tokens.css` (name and description, the toolkit's value, an input for Light and one for Dark, a reset), a preview beside the form and the contrast of the brand below. The input of a colour is
 a colour picker and a text field kept in step by `wwwroot/js/brand.js` (no inline script, no inline style); the script applies the unsaved values to `[data-brand-preview]` through the CSSOM (a few real controls: buttons, a field, a card, a tag, pills, a switch, a table, alerts, the switcher),
 shows the preview in light or in dark whatever the page is in, and works out the contrast of the pairings that do not depend on the accent while you type, from the same list of pairings (`data-pairings`) the server uses. Check and Save run the whole check on the server, with the accent of every app.
+
+### Brand assets
+
+One more item, `assets` of the kind `assets` (`studio/assets/assets/<revision>.json`), with its own history, restore, activity and check. It holds the **logo** (with an optional variant for dark surfaces and an alt text, which is required), the **word mark** (the same),
+the **favicon** (SVG, PNG or ICO), the **app icon** (a PNG of 512 px) and a list of **font faces** (family, weight 100 to 900, style, file). It holds no bytes: the files live in `<data>/assets/<sha256>.<ext>` (`AssetStore`), are written once under the hash of
+their content and **never overwritten or deleted** (the class has no way to), so every revision can be restored; a replaced logo stays on the volume. `DesignData.Assets` is what the pages read, and a save ends with `DesignData.Reload()` like every other save.
+
+**Checked by content, not by name (`IDENT-08`).** `BrandAssetValidator` (in `MatDesign.Core`, no web types) decides the type of a file from its first bytes (PNG, ICO, WOFF2, WOFF) or by parsing it as XML (SVG); the name of the file and the type the browser sent are never looked at,
+so a program called `logo.png` is refused. Limits: SVG 100 KB, PNG 500 KB and 2048 px (a PNG is walked chunk by chunk, with its checksums, and nothing may follow its end), ICO 200 KB (its directory is read), a font 400 KB (the length in its header must be the length of the file),
+at most 12 faces in 3 families, 6 MB together; a logo may be wide (up to 8 to 1), a PNG favicon is square (16 to 512 px), an app icon is exactly 512 x 512. **An SVG is read with an XML reader that forbids a DTD** (no entity, so no external file and no entity bomb) **and an allowlist**
+of elements (shapes, gradients, clip paths, text, `use`) and attributes: no script, foreignObject, style element, image, link, animation or filter; no attribute that starts with `on`; a `href` is only a `#fragment`; a `url(` only points into the file; no `javascript:` or `data:`
+anywhere (also split by white space or written as character references); a `style` attribute only with presentation properties and plain values; no namespace but SVG and xlink (an Inkscape file is saved as plain SVG); a size over 4096 px or no size at all, and nesting or `use` bombs, are refused.
+A refused file says why. A font family is letters, digits, spaces and dashes, is not a generic family and not a name the toolkit's own stacks (`--mat-font`, `--mat-mono`) use, and a face of the same family, weight and style is refused twice.
+
+**The page** `/Studio/Brand/Assets` (the menu item *Logo and fonts*, and a link on the brand page): a card per slot with a preview on a light and on a dark surface (the browser's own `Canvas` colour under `color-scheme`, no literal colour), the file, its address, the checks run on its bytes now (type by content, size,
+dimensions, hash, alt text), and a normal multipart form with the anti-forgery token and the toolkit's file upload (`FORM-21`) to upload, replace or remove. The request limit of this page is its own (a megabyte). Every change is one new revision, saving the same thing again is none. The fonts have a table with a live **specimen**:
+`wwwroot/js/brand-assets.js` loads each file from its served address under a temporary family name (`mat-specimen-N`) and says "Loaded", or in words that the browser could not read it. A family is used on the site by naming it in the brand editor, in the stack of `--mat-font` or `--mat-mono`
+(`"Acme Sans", system-ui, sans-serif`, shown on the page; the brand editor already accepts it). A restore is refused when a file the revision refers to is missing from the volume or no longer valid. *Remove all* deletes the item (the files and the history stay).
+
+**Serving and releasing.** The site serves `/ui/brand/<name>` (the name is the slot and the first ten digits of the hash, `logo-1a2b3c4d5e.svg`, `fonts/acme-sans-400-normal-1a2b3c4d5e.woff2`, so it follows the content and is cached for good: `public, max-age=31536000, immutable`), with the type of its
+extension, `X-Content-Type-Options: nosniff` and, for an SVG, `Content-Security-Policy: default-src 'none'; style-src 'none'`; only what the current assets name, and only while the file still has its hash. `ToolkitFiles.AssetsOverlay` writes one `@font-face` per face after the brand's tokens
+(`font-display: swap`, `src: url("brand/fonts/<name>") format("woff2")`, **relative to the stylesheet**; the part `css/matui.apps.css` has `../brand/fonts/...`), and nothing for a brand without fonts. A release writes the files under `brand/` with their hashes in `manifest.json`, the
+archive (`matui/brand/`, its `matui.manifest.json` and its README, which says where the files go) and the manifest of the toolkit list them, and `design.json` has an `assets` section (files as they lie in the release, alt text, fonts); without assets none of this is written and every file is what it was.
+The shell uses them on the site's own pages: the logo replaces the glyph tile (a wide one carries the name itself), the word mark replaces the name, the favicon and the app icon (`apple-touch-icon`) replace the favicon link; a dark variant is a second image that the theme shows (`mat-brandmark--light` / `--dark`).
+A sample app in a preview keeps its own logo. The check `assets` (every file is there, has its hash, is still valid, the alt texts, the families, the budget) is a check of `/Studio/Checks` and of the pipeline, so a release is refused while it fails.
 
 ### Versions
 
