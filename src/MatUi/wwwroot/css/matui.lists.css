@@ -462,6 +462,99 @@ select.mat-item__input { width: calc(100% + 4px); margin-left: -4px; cursor: poi
   .mat-itemlist.is-ready .mat-item--sliding > .mat-item__row, .mat-itemlist.is-reordering .mat-item, .mat-itemlist.is-ready .mat-item--sliding .mat-item__options { transition: none; }
 }
 
+/* ---- Tree view (LIST-17): folders, categories, a hierarchy of any depth ----
+   <ul class="mat-tree" data-tree aria-label="..."> of <li class="mat-tree__item">; a parent holds a <ul class="mat-tree__group"> of more items. An item is its row (.mat-tree__row: an icon, the
+   label, maybe a count and actions) and, in a parent, its group. Without the script it is a nested list that is all open. The script (data-tree) gives it the roles of the tree pattern, draws the
+   chevron (and, with data-multiple, the box) and writes the level of each item into --mat-tree-level, which this part turns into the indentation and the guide lines. What is open is
+   aria-expanded, what is chosen is aria-selected (one) or aria-checked (several): the CSS reads those, so the markup and the state cannot disagree. ---- */
+.mat-tree, .mat-tree__group { list-style: none; margin: 0; padding: 0; }
+.mat-tree {
+  --mat-tree-indent: 24px;
+  --mat-tree-pad: var(--mat-space-2);
+  --mat-tree-row-h: 36px;
+  --mat-tree-line: var(--mat-border);
+  min-width: 0; font-size: var(--mat-fs-md);
+}
+.mat-tree--compact { --mat-tree-row-h: 30px; font-size: var(--mat-fs-sm); }
+.mat-tree--no-lines { --mat-tree-line: transparent; }
+/* without the script the groups are nested lists; with it the level of the item is the indentation of its row, so that the tint of a selected row reaches both edges */
+.mat-tree:not(.is-ready) .mat-tree__group { padding-left: var(--mat-tree-indent); }
+.mat-tree__item { outline: none; }
+.mat-tree__item[hidden] { display: none; }
+.mat-tree__item[aria-expanded="false"] > .mat-tree__group { display: none; }
+.mat-tree__row {
+  position: relative; display: flex; align-items: center; gap: var(--mat-space-2);
+  min-width: 0; min-height: var(--mat-tree-row-h);
+  padding: var(--mat-space-1) var(--mat-space-2) var(--mat-space-1) calc(var(--mat-tree-pad) + var(--mat-tree-level, 0) * var(--mat-tree-indent));
+  border-radius: var(--mat-radius); color: var(--mat-text); cursor: pointer;
+  transition: background var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-tree:not(.is-ready) .mat-tree__row { padding-left: var(--mat-tree-pad); }
+.mat-tree__row:hover { background: color-mix(in srgb, var(--mat-text) 5%, transparent); }
+/* the guides: one line under the chevron of each ancestor, drawn the whole height of the row, so the rows of a level make one line */
+.mat-tree__row::before {
+  content: ""; position: absolute; top: 0; bottom: 0;
+  left: calc(var(--mat-tree-pad) + var(--mat-tree-indent) / 2);
+  width: calc(var(--mat-tree-level, 0) * var(--mat-tree-indent));
+  background: repeating-linear-gradient(to right, var(--mat-tree-line) 0 1px, transparent 1px var(--mat-tree-indent));
+  pointer-events: none;
+}
+/* the chevron: the whole height of the row, as wide as one level; a leaf has the space but no chevron, so the labels of one level line up */
+.mat-tree__toggle {
+  position: relative; flex: none; align-self: stretch; display: flex; align-items: center; justify-content: center;
+  width: var(--mat-tree-indent); margin: calc(var(--mat-space-1) * -1) calc(var(--mat-space-1) * -1) calc(var(--mat-space-1) * -1) 0; color: var(--mat-text-muted);
+}
+.mat-tree__toggle > .mat-icon { transition: transform var(--mat-dur) var(--mat-ease); }
+.mat-tree__item:not([aria-expanded]) > .mat-tree__row > .mat-tree__toggle > .mat-icon { visibility: hidden; }
+.mat-tree__item[aria-expanded="true"] > .mat-tree__row > .mat-tree__toggle > .mat-icon { transform: rotate(90deg); }
+/* the state of a lazy parent that is being filled: the chevron makes room for a small spinner */
+.mat-tree__item.is-loading > .mat-tree__row > .mat-tree__toggle > .mat-icon { display: none; }
+.mat-tree__item.is-loading > .mat-tree__row > .mat-tree__toggle::after {
+  content: ""; width: 14px; height: 14px; border: 2px solid var(--mat-surface-3); border-top-color: var(--mat-accent); border-radius: 50%; animation: mat-spin .75s linear infinite;
+}
+/* the box of several (a tree with data-multiple): checked, or in between when some of what is below it is checked; the check and the minus are icons, so the state is a shape too (COLOR-04) */
+.mat-tree__check {
+  flex: none; display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px;
+  border: 2px solid var(--mat-text-muted); border-radius: var(--mat-radius-xs); background: var(--mat-surface); color: var(--mat-on-accent);
+  transition: background var(--mat-dur-fast) var(--mat-ease), border-color var(--mat-dur-fast) var(--mat-ease);
+}
+.mat-tree__check > .mat-icon { display: none; width: 14px; height: 14px; stroke-width: 3; vertical-align: 0; }
+.mat-tree__item[aria-checked="true"] > .mat-tree__row > .mat-tree__check, .mat-tree__item[aria-checked="mixed"] > .mat-tree__row > .mat-tree__check { border-color: var(--mat-accent); background: var(--mat-accent); }
+.mat-tree__item[aria-checked="true"] > .mat-tree__row > .mat-tree__check > .mat-tree__check-on, .mat-tree__item[aria-checked="mixed"] > .mat-tree__row > .mat-tree__check > .mat-tree__check-mixed { display: inline-block; }
+/* the icon of a row; a folder has two (closed and open) of which the state shows one */
+.mat-tree__icon { flex: none; display: inline-flex; color: var(--mat-text-muted); font-size: 1.15rem; }
+.mat-tree__icon--folder > .mat-icon:last-child { display: none; }
+.mat-tree__item[aria-expanded="true"] > .mat-tree__row .mat-tree__icon--folder > .mat-icon:first-child { display: none; }
+.mat-tree__item[aria-expanded="true"] > .mat-tree__row .mat-tree__icon--folder > .mat-icon:last-child { display: inline-block; }
+.mat-tree__label { flex: 1 1 auto; min-width: 0; color: inherit; font: inherit; line-height: var(--mat-lh-tight); text-decoration: none; overflow-wrap: anywhere; }
+a.mat-tree__label:hover { text-decoration: none; }
+.mat-tree__count { flex: none; }
+.mat-tree__actions { flex: none; display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.mat-tree__empty { margin: 0; padding: var(--mat-space-3) var(--mat-space-4); color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
+.mat-tree__empty[hidden] { display: none; }
+/* chosen: a tint behind the whole row, a stronger label and the accent on the icon (COLOR-08); in a tree of several the checked rows are tinted, a row in between is not */
+.mat-tree__item[aria-selected="true"] > .mat-tree__row, .mat-tree__item[aria-checked="true"] > .mat-tree__row { background: var(--mat-accent-soft-strong); }
+.mat-tree__item[aria-selected="true"] > .mat-tree__row .mat-tree__label { font-weight: 650; }
+.mat-tree__item[aria-selected="true"] > .mat-tree__row .mat-tree__icon { color: var(--mat-accent-text); }
+.mat-tree__item[aria-disabled="true"] > .mat-tree__row { opacity: .55; cursor: not-allowed; }
+.mat-tree__item:focus-visible > .mat-tree__row { box-shadow: inset 0 0 0 2px var(--mat-accent); }
+/* actions that only a pointer shows on hover are also there for the focus, for the chosen row and on every touch screen (MOBILE-04) */
+@media (hover: hover) {
+  .mat-tree.is-ready .mat-tree__actions { opacity: 0; }
+  .mat-tree.is-ready .mat-tree__row:hover > .mat-tree__actions, .mat-tree.is-ready .mat-tree__row:focus-within > .mat-tree__actions,
+  .mat-tree.is-ready .mat-tree__item:focus > .mat-tree__row > .mat-tree__actions, .mat-tree.is-ready .mat-tree__item[aria-selected="true"] > .mat-tree__row > .mat-tree__actions { opacity: 1; }
+}
+/* a phone or a touch screen: rows of 44 px (MOBILE-04), a wider level so that the chevron can be hit, and the chevron's own target reaches over the gap */
+@media (max-width: 720px), (pointer: coarse) {
+  .mat-tree { --mat-tree-indent: 28px; --mat-tree-row-h: 44px; }
+  .mat-tree--compact { --mat-tree-row-h: 36px; }
+  .mat-tree__toggle::before { content: ""; position: absolute; inset: 0 -6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mat-tree__row, .mat-tree__toggle > .mat-icon, .mat-tree__check { transition: none; }
+  .mat-tree__item.is-loading > .mat-tree__row > .mat-tree__toggle::after { animation-duration: 3s; }
+}
+
 /* ---- Carousel (LIST-13): a strip of slides that scrolls and snaps; the script adds the bar below it ----
    Without the script it is a strip you scroll. --mat-carousel-per-view is how many slides fit (--2 and --3 from 600 and 900 px); the gap is part of the width of a slide. */
 .mat-carousel { --mat-carousel-per-view: 1; --mat-carousel-gap: var(--mat-space-3); display: flex; flex-direction: column; gap: var(--mat-space-3); min-width: 0; }

@@ -40,6 +40,8 @@ A change that an app can see is written down under **Unreleased** in the pull re
 - Number stepper: `mat-stepper` with `data-stepper` (`FORM-20`).
 - Slider and range slider with two thumbs: `mat-slider` with `data-slider` (`FORM-17`).
 - Code input: `mat-otp` with `data-otp`, for one-time codes and PINs (`FORM-19`).
+- Tree view: `ul.mat-tree[data-tree]` of `li.mat-tree__item` (a row `mat-tree__row` with `mat-tree__icon`, `mat-tree__label`, `mat-tree__count`, `mat-tree__actions`, and a nested `ul.mat-tree__group`) for folders, categories and any hierarchy (`LIST-17`). It follows the ARIA tree pattern (roles, `aria-level`, `aria-setsize`, `aria-posinset`, `aria-expanded`, one Tab stop, the arrow keys, Home, End, `*`, Enter, Space and typing a name), has one chosen item (`aria-selected`) or, with `data-multiple`, boxes with a parent that is in between (`aria-checked="mixed"`), a filter (`data-tree-filter`), open and close all (`data-tree-set`), remembered state (`data-tree-key`), children loaded on demand (`data-lazy`, `mat:tree-load`, `MatUi.tree.setChildren`) and the events `mat:tree-select`, `mat:tree-toggle`, `mat:tree-filter`; script `MatUi.tree`, texts `TR_TEXT` in English and German (`data-tr-<name>`). Modifiers `mat-tree--compact` and `mat-tree--no-lines`.
+- A new icon in the sprite, `folder-open`: the open state of a folder in the tree view (`<svg class="mat-icon"><use href="#mat-i-folder-open"></use></svg>`).
 
 ### Changed
 

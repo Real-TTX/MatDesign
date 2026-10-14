@@ -101,6 +101,14 @@
      data-dismiss                           close the alert around it
      data-view-switch="list|gallery"        switch between the two views of a list (remembered per data-view-key)
      data-shortcut="/"                      key that clicks the element, or focuses it when it is a text field (not while typing)
+     data-tree                              a tree view (LIST-17): <ul class="mat-tree" data-tree aria-label="..."> of <li class="mat-tree__item"> with a nested <ul class="mat-tree__group">; the script gives it
+                                            the roles of the ARIA tree pattern, one tab stop, the keys (arrows, Home, End, * and the first letters), a chevron, and the level of every item.
+                                            data-multiple (a box per item; a parent is in between when some of its children are checked), data-expand-all, data-expanded on an item,
+                                            data-tree-key="key" (what is open is remembered), data-tree-toggle="row" (a click on a parent's row opens it too), data-lazy on an item whose
+                                            children are loaded when it opens (mat:tree-load, answered by MatUi.tree.setChildren), data-tree-id / data-value / data-tree-search / data-tree-fixed (stays as drawn) on an item.
+                                            data-tree-filter="id" on a search field hides the items that do not match and keeps their parents open; data-tree-set="open|closed|toggle" with
+                                            data-tree-target="#id" on a button does it for every parent. Events: mat:tree-select, mat:tree-toggle, mat:tree-load, mat:tree-filter.
+                                            API: MatUi.tree.init / expand / collapse / select / setChildren / setAll / get. The texts: data-tr-<name> on <html>
    ========================================================================== */
 (function () {
   'use strict';
@@ -6004,6 +6012,449 @@
     }
   };
 
+  // ------------------------------------------------------------------------------------------------ tree view (LIST-17, matui.lists.css)
+  // A hierarchy of any depth: folders, categories, areas. The markup is a nested list that works (all open) without the script:
+  //   <ul class="mat-tree" data-tree aria-label="Files"><li class="mat-tree__item"><div class="mat-tree__row">icon, .mat-tree__label, .mat-tree__count, .mat-tree__actions</div>
+  //     <ul class="mat-tree__group"><li class="mat-tree__item">...</li></ul></li></ul>
+  // The script follows the ARIA tree pattern: role tree, treeitem and group; aria-level, aria-setsize and aria-posinset on every item (counted over the items that are shown);
+  // aria-expanded on a parent (the CSS reads it); aria-selected (one chosen) or, with data-multiple, aria-checked true, false or mixed; one tab stop (the item that was used last
+  // has tabindex 0, the others -1, and so have the buttons in .mat-tree__actions of the other rows). The focus is on the item, not on a control in it.
+  // Keys: Down and Up walk the items that are shown, Right opens a parent or goes to its first child, Left closes it or goes to the parent, Home and End, Enter and Space choose
+  // (Space ticks the box with data-multiple), * opens all parents of the level, a letter goes to the next item that starts with what was typed. The level of an item is written into
+  // --mat-tree-level (the CSS makes the indentation and the guide lines of it). With data-multiple a parent is checked when all of its items are, in between when some are, and
+  // checking it checks all of them. Lazy items (data-lazy) fire mat:tree-load when they open and the app answers with MatUi.tree.setChildren(item, html), or with null when it failed.
+  // What the user opened or closed is remembered with data-tree-key (per app, tree and item, like the groups of a table); an item with data-tree-fixed stays as drawn.
+  // The texts are English and German (TR_TEXT: both must have every key); data-tr-<name> on <html> changes one.
+  var TR_KEY = 'mat-tree';
+  var TR_TEXT = {
+    en: { tree: 'Tree', none: 'No matches', one: '1 match', many: '{0} matches', loading: 'Loading {0}', failed: '{0} could not be loaded', empty: '{0} is empty', selected: '{0} selected' },
+    de: { tree: 'Baumansicht', none: 'Keine Treffer', one: '1 Treffer', many: '{0} Treffer', loading: '{0} wird geladen', failed: '{0} konnte nicht geladen werden', empty: '{0} ist leer', selected: '{0} ausgewählt' }
+  };
+
+  function trText(key, a) {
+    var table = TR_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || TR_TEXT.en;
+    var s = root.getAttribute('data-tr-' + key.toLowerCase()) || table[key] || TR_TEXT.en[key] || key;
+    return s.replace('{0}', function () { return a === undefined ? '' : a; });
+  }
+
+  function trChild(el, cls) {
+    for (var c = el.firstElementChild; c; c = c.nextElementSibling) { if (c.classList.contains(cls)) { return c; } }
+    return null;
+  }
+  function trItems(group) {
+    return group ? Array.prototype.filter.call(group.children, function (c) { return c.classList.contains('mat-tree__item'); }) : [];
+  }
+  function trGroup(item) { return trChild(item, 'mat-tree__group'); }
+  function trRow(item) { return trChild(item, 'mat-tree__row'); }
+  function trParent(item) { var up = item.parentElement; return up ? up.closest('.mat-tree__item') : null; }
+  function trTreeOf(el) { var e = el && el.closest ? el.closest('[data-tree]') : null; return e && e._matTree ? e._matTree : null; }
+  function trOpen(item) { return item.getAttribute('aria-expanded') === 'true'; }
+  function trName(item) {
+    var row = trRow(item), l = row && $('.mat-tree__label', row);
+    return l ? l.textContent.replace(/\s+/g, ' ').trim() : '';
+  }
+  function trValue(item) { return item.getAttribute('data-value') || trName(item); }
+  // what is remembered of an item: its own id, or the names from the top down
+  function trId(item) {
+    var own = item.getAttribute('data-tree-id');
+    if (own) { return own; }
+    var parts = [];
+    for (var i = item; i; i = trParent(i)) { parts.unshift(trName(i)); }
+    return parts.join('/');
+  }
+  function trFold(s) { return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').toLowerCase().trim(); }
+  function trSay(t, text) { if (t.live) { t.live.textContent = text; } }
+
+  // the items that can be reached with the arrow keys: not hidden, and every parent above them open
+  function trVisible(el) {
+    var out = [];
+    (function walk(group) {
+      trItems(group).forEach(function (item) {
+        if (item.hidden) { return; }
+        out.push(item);
+        var sub = trGroup(item);
+        if (sub && trOpen(item)) { walk(sub); }
+      });
+    })(el);
+    return out;
+  }
+
+  // the place of an item among the items that are shown next to it (a filter hides some)
+  function trNumber(group) {
+    var shown = trItems(group).filter(function (i) { return !i.hidden; });
+    shown.forEach(function (item, n) {
+      item.setAttribute('aria-setsize', String(shown.length));
+      item.setAttribute('aria-posinset', String(n + 1));
+      var sub = trGroup(item);
+      if (sub) { trNumber(sub); }
+    });
+  }
+
+  // the chevron, the box of several, the name of the item for a screen reader (its label and its count, not what is below it)
+  function trParts(t, item, row) {
+    var label = $('.mat-tree__label', row);
+    if (label) {
+      if (!label.id) { label.id = nextId('mat-tree-l'); }
+      var ids = [label.id];
+      $$('.mat-tree__count', row).forEach(function (c) { if (!c.id) { c.id = nextId('mat-tree-c'); } ids.push(c.id); });
+      item.setAttribute('aria-labelledby', ids.join(' '));
+    }
+    var toggle = trChild(row, 'mat-tree__toggle');
+    if (!toggle) {
+      toggle = doc.createElement('span');
+      toggle.className = 'mat-tree__toggle';
+      toggle.setAttribute('aria-hidden', 'true');
+      toggle.innerHTML = icon('chevron-right');
+      row.insertBefore(toggle, row.firstChild);
+    }
+    if (t.multiple && !trChild(row, 'mat-tree__check')) {
+      var box = doc.createElement('span');
+      box.className = 'mat-tree__check';
+      box.setAttribute('aria-hidden', 'true');
+      box.innerHTML = icon('check').replace('class="mat-icon"', 'class="mat-icon mat-tree__check-on"') + icon('minus').replace('class="mat-icon"', 'class="mat-icon mat-tree__check-mixed"');
+      row.insertBefore(box, toggle.nextSibling);
+    }
+  }
+
+  // the items of a group get their roles and their level; a parent is an item with a group of items or with data-lazy
+  function trPrepare(t, group, level) {
+    trItems(group).forEach(function (item) {
+      var row = trRow(item);
+      var sub = trGroup(item);
+      var kids = trItems(sub);
+      item.setAttribute('role', 'treeitem');
+      item.setAttribute('aria-level', String(level));
+      item.style.setProperty('--mat-tree-level', String(level - 1));
+      item.tabIndex = -1;
+      if (kids.length && item.hasAttribute('data-lazy')) { item.removeAttribute('data-lazy'); }
+      var parent = kids.length > 0 || item.hasAttribute('data-lazy');
+      if (sub) { sub.setAttribute('role', 'group'); }
+      if (!parent) { item.removeAttribute('aria-expanded'); }
+      else if (!item.hasAttribute('aria-expanded')) {
+        item.setAttribute('aria-expanded', !item.hasAttribute('data-lazy') && (item.hasAttribute('data-expanded') || t.expandAll) ? 'true' : 'false');
+      }
+      if (row) { trParts(t, item, row); trControls(item, false); }
+      if (kids.length) { trPrepare(t, sub, level + 1); }
+    });
+  }
+
+  // the buttons in the actions of a row are in the tab order only while their row is the one with the tab stop; a link in the label is reached by Enter on the item
+  function trControls(item, on) {
+    var row = trRow(item);
+    if (!row) { return; }
+    $$('a[href], button, input, select, textarea, [tabindex]', row).forEach(function (c) { c.tabIndex = on && c.closest('.mat-tree__actions') ? 0 : -1; });
+  }
+  function trRove(t, item) {
+    if (t.rover && t.rover !== item) { t.rover.tabIndex = -1; trControls(t.rover, false); }
+    t.rover = item;
+    item.tabIndex = 0;
+    trControls(item, true);
+  }
+  function trFixRoving(t) {
+    var shown = trVisible(t.el);
+    if (t.rover && shown.indexOf(t.rover) >= 0) { return; }
+    var pick = shown.filter(function (i) { return i.getAttribute('aria-selected') === 'true'; })[0] || shown[0];
+    if (pick) { trRove(t, pick); } else if (t.rover) { t.rover.tabIndex = -1; trControls(t.rover, false); t.rover = null; }
+  }
+  function trFocus(t, item) { trRove(t, item); item.focus(); }
+
+  // ---- several: the box of a parent follows what is below it
+  function trCheckDown(item, on) {
+    item.setAttribute('aria-checked', on ? 'true' : 'false');
+    trItems(trGroup(item)).forEach(function (c) { trCheckDown(c, on); });
+  }
+  function trSyncParent(p) {
+    var kids = trItems(trGroup(p));
+    if (!kids.length) { return; }
+    var on = kids.filter(function (k) { return k.getAttribute('aria-checked') === 'true'; }).length;
+    var mixed = kids.some(function (k) { return k.getAttribute('aria-checked') === 'mixed'; });
+    p.setAttribute('aria-checked', on === kids.length ? 'true' : on > 0 || mixed ? 'mixed' : 'false');
+  }
+  function trCheckUp(item) { for (var p = trParent(item); p; p = trParent(p)) { trSyncParent(p); } }
+
+  // the states that the markup says (aria-selected or aria-checked on an item) made complete and consistent
+  function trNormalise(t, scope) {
+    var items = $$('.mat-tree__item', scope);
+    if (!t.multiple) {
+      items.forEach(function (i) { if (i.getAttribute('aria-selected') !== 'true') { i.setAttribute('aria-selected', 'false'); } });
+      return;
+    }
+    items.forEach(function (i) { if (i.getAttribute('aria-checked') === 'true' && trItems(trGroup(i)).length) { trCheckDown(i, true); } });
+    items.forEach(function (i) { if (!trItems(trGroup(i)).length) { i.setAttribute('aria-checked', i.getAttribute('aria-checked') === 'true' ? 'true' : 'false'); } else if (!i.hasAttribute('aria-checked')) { i.setAttribute('aria-checked', 'false'); } });
+    items.slice().reverse().forEach(trSyncParent);
+  }
+
+  function trSelected(t) {
+    return $$(t.multiple ? '.mat-tree__item[aria-checked="true"]' : '.mat-tree__item[aria-selected="true"]', t.el);
+  }
+
+  // choose an item (one), or tick or untick it (several); on: true, false, or undefined (several: the other state)
+  function trChoose(item, on) {
+    var t = trTreeOf(item);
+    if (!t || item.getAttribute('aria-disabled') === 'true') { return; }
+    if (t.multiple) {
+      trCheckDown(item, on === undefined ? item.getAttribute('aria-checked') !== 'true' : on);
+      trCheckUp(item);
+    } else {
+      var next = on !== false;
+      if ((item.getAttribute('aria-selected') === 'true') === next) { return; }
+      $$('.mat-tree__item[aria-selected="true"]', t.el).forEach(function (x) { x.setAttribute('aria-selected', 'false'); });
+      item.setAttribute('aria-selected', next ? 'true' : 'false');
+    }
+    var picked = trSelected(t);
+    if (t.multiple) { trSay(t, trText('selected', picked.filter(function (i) { return !trGroup(i) || i.hasAttribute('data-lazy'); }).length)); }
+    item.dispatchEvent(new CustomEvent('mat:tree-select', { bubbles: true, detail: { tree: t.el, item: item, selected: picked, values: picked.map(trValue) } }));
+  }
+
+  // ---- open and close
+  function trStore() { try { return JSON.parse(localStorage.getItem(TR_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  function trStoreKey(t, item) { return (root.getAttribute('data-app') || '') + ':' + t.key + ':' + trId(item); }
+  function trRemember(t, item, open) {
+    if (!t.key) { return; }
+    var store = trStore();
+    store[trStoreKey(t, item)] = open;
+    try { localStorage.setItem(TR_KEY, JSON.stringify(store)); } catch (e) { /* ignore */ }
+  }
+  function trRestore(t) {
+    if (!t.key) { return; }
+    var store = trStore();
+    $$('.mat-tree__item[aria-expanded]', t.el).forEach(function (item) {
+      var saved = store[trStoreKey(t, item)];
+      if (typeof saved === 'boolean' && !item.hasAttribute('data-lazy') && !item.hasAttribute('data-tree-fixed')) { item.setAttribute('aria-expanded', saved ? 'true' : 'false'); }
+    });
+  }
+
+  // opts.quiet: no event and nothing remembered (a filter opens what holds a match)
+  function trSetOpen(item, open, opts) {
+    var t = trTreeOf(item);
+    if (!t || !item.hasAttribute('aria-expanded') || trOpen(item) === open) { return; }
+    var quiet = opts && opts.quiet;
+    item.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open && item.hasAttribute('data-lazy') && !item._matLoading) { trLoad(t, item); }
+    // the focus was below the item that closes: it goes to the item
+    if (!open && item !== doc.activeElement && item.contains(doc.activeElement)) { trFocus(t, item); }
+    if (!quiet) {
+      if (item._matWas !== undefined) { item._matWas = open; }
+      trRemember(t, item, open);
+      item.dispatchEvent(new CustomEvent('mat:tree-toggle', { bubbles: true, detail: { tree: t.el, item: item, open: open } }));
+    }
+    trFixRoving(t);
+  }
+  // what holds the item opens, without an event and without being remembered (it is not a choice of the user)
+  function trReveal(item) { for (var p = trParent(item); p; p = trParent(p)) { trSetOpen(p, true, { quiet: true }); } }
+  function trSetAll(scope, open) {
+    $$('.mat-tree__item[aria-expanded]', scope).forEach(function (i) { if (!(open && i.hasAttribute('data-lazy'))) { trSetOpen(i, open); } });
+  }
+
+  // ---- lazy children
+  function trLoad(t, item) {
+    item._matLoading = true;
+    item.classList.add('is-loading');
+    item.setAttribute('aria-busy', 'true');
+    trSay(t, trText('loading', trName(item)));
+    item.dispatchEvent(new CustomEvent('mat:tree-load', { bubbles: true, detail: { tree: t.el, item: item, id: trId(item), value: trValue(item) } }));
+  }
+  // the answer to mat:tree-load: the markup of the children (li.mat-tree__item); null when it failed (the item closes and can be tried again), an empty text when there are none
+  function trSetChildren(item, html) {
+    var t = trTreeOf(item);
+    if (!t || !item.classList.contains('mat-tree__item')) { return; }
+    item._matLoading = false;
+    item.classList.remove('is-loading');
+    item.removeAttribute('aria-busy');
+    if (html === null || html === undefined || html === false) {
+      item.setAttribute('aria-expanded', 'false');
+      trSay(t, trText('failed', trName(item)));
+      trFixRoving(t);
+      return;
+    }
+    var sub = trGroup(item);
+    if (!sub) { sub = doc.createElement('ul'); sub.className = 'mat-tree__group'; item.appendChild(sub); }
+    sub.innerHTML = String(html);
+    item.removeAttribute('data-lazy');
+    var kids = trItems(sub);
+    if (!kids.length) {
+      sub.remove();
+      item.removeAttribute('aria-expanded');
+      trSay(t, trText('empty', trName(item)));
+      trFixRoving(t);
+      return;
+    }
+    sub.setAttribute('role', 'group');
+    trPrepare(t, sub, (parseInt(item.getAttribute('aria-level'), 10) || 1) + 1);
+    if (t.multiple && item.getAttribute('aria-checked') === 'true') { kids.forEach(function (k) { trCheckDown(k, true); }); }
+    trNormalise(t, sub);
+    if (t.multiple) { trCheckUp(kids[0]); }
+    trNumber(sub);
+    $$('[data-tree-filter="' + t.el.id + '"]').forEach(function (f) { if (f.value) { trFilter(f); } });
+    trFixRoving(t);
+  }
+
+  // ---- filter: a search field hides the items that do not match and keeps the parents of those that do, open
+  function trEmpty(el) {
+    for (var n = el.nextElementSibling; n && !n.hasAttribute('data-tree'); n = n.nextElementSibling) { if (n.classList.contains('mat-tree__empty')) { return n; } }
+    return null;
+  }
+  function trFilter(field) {
+    var el = doc.getElementById(field.getAttribute('data-tree-filter'));
+    var t = el && el._matTree;
+    if (!t) { return; }
+    var text = trFold(field.value);
+    var matches = 0;
+    var all = $$('.mat-tree__item', el);
+    if (!text) {
+      all.forEach(function (i) {
+        i.hidden = false;
+        if (i._matWas !== undefined) { var was = i._matWas; i._matWas = undefined; trSetOpen(i, was, { quiet: true }); }
+      });
+    } else {
+      (function mark(group) {
+        var any = false;
+        trItems(group).forEach(function (item) {
+          var own = trFold(item.getAttribute('data-tree-search') || trName(item)).indexOf(text) >= 0;
+          var sub = trGroup(item);
+          var below = sub ? mark(sub) : false;
+          if (own) { matches += 1; }
+          item.hidden = !(own || below);
+          if (item.hasAttribute('aria-expanded')) {
+            if (item._matWas === undefined) { item._matWas = trOpen(item); }
+            trSetOpen(item, below ? true : item._matWas, { quiet: true });
+          }
+          if (own || below) { any = true; }
+        });
+        return any;
+      })(el);
+    }
+    trNumber(el);
+    trFixRoving(t);
+    var empty = trEmpty(el);
+    if (empty) {
+      if (!empty.textContent.trim()) { empty.textContent = trText('none'); }
+      empty.hidden = !text || matches > 0;
+    }
+    trSay(t, !text ? '' : matches === 0 ? trText('none') : matches === 1 ? trText('one') : trText('many', matches));
+    el.dispatchEvent(new CustomEvent('mat:tree-filter', { bubbles: true, detail: { tree: el, text: field.value, shown: matches, total: all.length } }));
+  }
+  doc.addEventListener('input', function (e) { if (e.target.matches && e.target.matches('[data-tree-filter]')) { trFilter(e.target); } });
+
+  // ---- the tree
+  function trInit(el) {
+    if (el._matTree) { return; }
+    var t = { el: el, multiple: el.hasAttribute('data-multiple'), expandAll: el.hasAttribute('data-expand-all'), key: el.getAttribute('data-tree-key') || '', rover: null, typed: '', typedAt: 0, live: null };
+    el._matTree = t;
+    el.setAttribute('role', 'tree');
+    if (!el.hasAttribute('aria-label') && !el.hasAttribute('aria-labelledby')) { el.setAttribute('aria-label', trText('tree')); }
+    t.live = doc.createElement('span');
+    t.live.className = 'mat-sr-only';
+    t.live.setAttribute('role', 'status');
+    t.live.setAttribute('aria-live', 'polite');
+    el.parentNode.insertBefore(t.live, el.nextSibling);
+    trPrepare(t, el, 1);
+    trRestore(t);
+    trNormalise(t, el);
+    trNumber(el);
+    trFixRoving(t);
+    el.classList.add('is-ready');
+    $$('[data-tree-filter="' + el.id + '"]').forEach(function (f) { if (f.value) { trFilter(f); } });
+  }
+  function initTrees(scope) {
+    if (scope && scope.matches && scope.matches('[data-tree]')) { trInit(scope); }
+    $$('[data-tree]', scope).forEach(trInit);
+  }
+
+  // a click: the chevron opens, the box ticks, the rest of the row chooses (and, with data-tree-toggle="row", opens); a link in the label is followed as usual
+  doc.addEventListener('click', function (e) {
+    var target = e.target;
+    if (!target.closest) { return; }
+    var all = target.closest('[data-tree-set]');
+    if (all) {
+      var want = all.getAttribute('data-tree-target');
+      var scope = (want && $(want)) || $('[data-tree]');
+      var mode = all.getAttribute('data-tree-set');
+      if (scope) { trSetAll(scope, mode === 'open' ? true : mode === 'closed' ? false : !$$('.mat-tree__item[aria-expanded="true"]', scope).length); }
+      return;
+    }
+    var row = target.closest('.mat-tree__row');
+    var item = row && row.parentNode;
+    var t = item && item.classList && item.classList.contains('mat-tree__item') ? trTreeOf(item) : null;
+    if (!t || target.closest('.mat-tree__actions')) { return; }
+    trRove(t, item);
+    if (target.closest('.mat-tree__toggle')) { item.focus(); trSetOpen(item, !trOpen(item)); return; }
+    if (item.getAttribute('aria-disabled') === 'true') { item.focus(); return; }
+    if (target.closest('.mat-tree__check')) { item.focus(); trChoose(item); return; }
+    item.focus();
+    trChoose(item, t.multiple ? undefined : true);
+    if (t.el.getAttribute('data-tree-toggle') === 'row' && item.hasAttribute('aria-expanded')) { trSetOpen(item, !trOpen(item)); }
+  });
+  doc.addEventListener('dblclick', function (e) {
+    var row = e.target.closest && e.target.closest('.mat-tree__row');
+    var item = row && row.parentNode;
+    var t = item && item.classList && item.classList.contains('mat-tree__item') ? trTreeOf(item) : null;
+    if (!t || t.el.getAttribute('data-tree-toggle') === 'row' || e.target.closest('.mat-tree__actions, .mat-tree__toggle, .mat-tree__check')) { return; }
+    trSetOpen(item, !trOpen(item));
+  });
+  doc.addEventListener('focusin', function (e) {
+    var item = e.target.closest && e.target.closest('.mat-tree__item');
+    var t = item && trTreeOf(item);
+    if (t) { trRove(t, item); }
+  });
+
+  // the keys of the tree pattern; they work only while the focus is on an item (a button in its actions has its own keys)
+  doc.addEventListener('keydown', function (e) {
+    var item = e.target;
+    if (!item.classList || !item.classList.contains('mat-tree__item') || e.altKey || e.ctrlKey || e.metaKey) { return; }
+    var t = trTreeOf(item);
+    if (!t) { return; }
+    var shown = trVisible(t.el);
+    var at = shown.indexOf(item);
+    var rtl = getComputedStyle(t.el).direction === 'rtl';
+    var key = e.key === 'ArrowRight' ? (rtl ? 'ArrowLeft' : 'ArrowRight') : e.key === 'ArrowLeft' ? (rtl ? 'ArrowRight' : 'ArrowLeft') : e.key;
+    var go = null;
+    // a key that is not a letter ends the word that was being typed
+    if (key.length > 1) { t.typed = ''; }
+    if (key === 'ArrowDown') { go = shown[at + 1]; }
+    else if (key === 'ArrowUp') { go = shown[at - 1]; }
+    else if (key === 'Home') { go = shown[0]; }
+    else if (key === 'End') { go = shown[shown.length - 1]; }
+    else if (key === 'ArrowRight') {
+      if (item.hasAttribute('aria-expanded') && !trOpen(item)) { trSetOpen(item, true); } else if (trOpen(item)) { go = trItems(trGroup(item)).filter(function (c) { return !c.hidden; })[0]; }
+    } else if (key === 'ArrowLeft') {
+      if (trOpen(item)) { trSetOpen(item, false); } else { go = trParent(item); }
+    } else if (key === '*') {
+      trItems(item.parentElement).forEach(function (s) { if (!(s.hasAttribute('data-lazy'))) { trSetOpen(s, true); } });
+    } else if (key === 'Enter' || (key === ' ' && !t.typed)) {
+      if (item.getAttribute('aria-disabled') !== 'true') {
+        var link = $('.mat-tree__label[href]', trRow(item) || item);
+        trChoose(item, t.multiple ? undefined : true);
+        if (link && key === 'Enter') { link.click(); }
+        if (t.el.getAttribute('data-tree-toggle') === 'row' && item.hasAttribute('aria-expanded')) { trSetOpen(item, !trOpen(item)); }
+      }
+    } else if (key.length === 1 && key !== ' ' || (key === ' ' && t.typed)) {
+      // the first letters: what is typed within 700 ms is one word; the search starts after this item, or at it while the word grows
+      var now = Date.now();
+      t.typed = (now - t.typedAt < 700 ? t.typed : '') + key;
+      t.typedAt = now;
+      setTimeout(function () { if (Date.now() - t.typedAt >= 690) { t.typed = ''; } }, 700);
+      var word = trFold(t.typed);
+      for (var n = 0; n < shown.length; n += 1) {
+        var cand = shown[(at + (word.length > 1 ? 0 : 1) + n) % shown.length];
+        if (trFold(trName(cand)).indexOf(word) === 0) { go = cand; break; }
+      }
+    } else { return; }
+    e.preventDefault();
+    if (go) { trFocus(t, go); }
+  });
+
+  // MatUi.tree: set up trees added later, open and close, choose, the children of a lazy item, every parent at once, and what is chosen now
+  var tree = {
+    init: initTrees,
+    expand: function (item) { if (item && trTreeOf(item)) { trReveal(item); trSetOpen(item, true); } },
+    collapse: function (item) { if (item && trTreeOf(item)) { trSetOpen(item, false); } },
+    select: function (item, on) { if (item && trTreeOf(item)) { if (on !== false) { trReveal(item); } trChoose(item, on); } },
+    setChildren: trSetChildren,
+    setAll: function (el, open) { if (el && el._matTree) { trSetAll(el, open !== false); } },
+    get: function (el) { var t = el && el._matTree; return t ? { items: trSelected(t), values: trSelected(t).map(trValue) } : null; }
+  };
+
   // ------------------------------------------------------------------------------------------------------- init
   // a meter is filled by data: <div class="mat-meter__fill" data-value="63"> (no inline style in the markup)
   function fillMeters(scope) {
@@ -6038,6 +6489,7 @@
     initCarousels();
     initSchedules();
     initItemLists();
+    initTrees();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
     restoreBranches();
@@ -6083,6 +6535,7 @@
     schedule: schedule,
     groups: { set: function (group, open) { setGroup(group, open !== false, true); }, setAll: function (scope, open) { setAllGroups(scope, open !== false); }, restore: restoreGroups },
     itemlist: { init: initItemLists, close: function () { ilCloseAll(); }, open: function (item, side) { if (item && item._matSlide) { ilOpen(item, side === 'start' ? 'start' : 'end'); } } },
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); restoreGroups(scope); }
+    tree: tree,
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); initTrees(scope); restoreGroups(scope); }
   };
 })();

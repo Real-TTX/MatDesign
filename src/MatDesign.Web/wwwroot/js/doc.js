@@ -227,4 +227,29 @@
     var d = e.detail || {};
     if (window.MatUi) { window.MatUi.toast('New order: ' + (d.order || []).join(', ')); }
   });
+
+  // The "server" of the tree example whose items have data-lazy: it answers mat:tree-load after a moment with the children of the item (a page that answers the event itself
+  // stops it). A child with a second name after the colon has children of its own that are loaded the same way.
+  var TREE_DEMO = {
+    tools: ['Hand tools:hand', 'Power tools:power', 'Ladders'],
+    hand: ['Hammers', 'Saws', 'Screwdrivers'],
+    power: ['Drills', 'Sanders'],
+    garden: ['Pots', 'Seeds', 'Soil']
+  };
+  function treeDemoRows(value) {
+    var sprite = document.documentElement.getAttribute('data-mat-sprite') || '';
+    var icon = function (name) { return '<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="' + sprite + '#mat-i-' + name + '"></use></svg>'; };
+    return (TREE_DEMO[value] || []).map(function (entry) {
+      var parts = entry.split(':');
+      var folder = parts.length > 1;
+      return '<li class="mat-tree__item"' + (folder ? ' data-lazy data-value="' + parts[1] + '"' : '') + '><div class="mat-tree__row">' +
+        '<span class="mat-tree__icon' + (folder ? ' mat-tree__icon--folder' : '') + '">' + icon(folder ? 'folder' : 'tag') + (folder ? icon('folder-open') : '') + '</span>' +
+        '<span class="mat-tree__label">' + parts[0] + '</span></div></li>';
+    }).join('');
+  }
+  document.addEventListener('mat:tree-load', function (e) {
+    var d = e.detail;
+    if (!window.MatUi || !d || !d.tree || d.tree.id !== 'tr-lazy') { return; }
+    setTimeout(function () { window.MatUi.tree.setChildren(d.item, treeDemoRows(d.value)); }, 600);
+  });
 })();
