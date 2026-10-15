@@ -7331,7 +7331,18 @@ function seenAt(page, selector) {
     const heard = () => page.evaluate(() => window.__up);
     const pdf = (name, size) => ({ name, mimeType: 'application/pdf', buffer: Buffer.alloc(size || 100, 1) });
     const choose = async (selector, files, how) => {
-      const [chooser] = await Promise.all([page.waitForEvent('filechooser'), how()]);
+      // a dialog that does not open is reported with what the page looked like (a flaky browser and a covered zone look the same from outside)
+      const waiting = page.waitForEvent('filechooser', { timeout: 10000 });
+      const waited = waiting.catch(() => null);
+      await how();
+      const chooser = await waited;
+      if (!chooser) {
+        const state = await page.evaluate(() => ({
+          focus: document.hasFocus(), visibility: document.visibilityState, active: document.activeElement ? document.activeElement.className || document.activeElement.tagName : null,
+          open: [...document.querySelectorAll('dialog[open]')].map(d => d.id), toasts: document.querySelectorAll('.mat-toast').length, scroll: Math.round(window.scrollY),
+        }));
+        throw new Error('the file dialog did not open: ' + JSON.stringify(state));
+      }
       await chooser.setFiles(files);
       return chooser;
     };
@@ -7652,7 +7663,9 @@ function seenAt(page, selector) {
       const modes = {};
       for (const mode of ['light', 'dark']) {
         await page.evaluate(m => MatUi.theme.set(m), mode);
-        await page.waitForTimeout(300);
+        // the colours fade between the two themes: measure when the transitions have really ended, not after a fixed time (a busy machine needs longer)
+        await page.waitForFunction(() => document.getAnimations().every(a => !(a instanceof CSSTransition) || a.playState !== 'running'), null, { timeout: 5000 });
+        await page.waitForTimeout(50);
         modes[mode] = await measure();
       }
       for (const [mode, m] of Object.entries(modes)) {
@@ -7988,21 +8001,6 @@ function seenAt(page, selector) {
     const { ctx, page } = await open(desktopOptions, '/Studio/Login');
     if (await page.locator('input[type="password"]').count() === 0) {
       console.log('  --    the Studio is off on this site (no data directory): the company checks are skipped');
-  }
-
-  // ---------------------------------------------------------------------------------------------------- brand assets (IDENT-08, stage 13)
-  // Logo, favicon and fonts go through the real form of the Studio (files made in brand-asset-files.js, nothing binary in the repository): a hostile SVG and a program with a picture's name
-  // are refused, the shell shows the logo and the favicon link, the font is really drawn, a restore brings an old state back. It needs the administrator like the Studio blocks above.
-  // Everything is taken away again at the end. With ASSETS_SHOTS=<folder> it also writes screenshots there.
-  console.log('\nBrand assets');
-  {
-    const fixtures = require('./brand-asset-files');
-    const name = process.env.STUDIO_NAME || 'admin';
-    const password = process.env.STUDIO_PASSWORD || 'studio-dev';
-    const shots = process.env.ASSETS_SHOTS || '';
-    const { ctx, page } = await open(desktopOptions, '/Studio/Login');
-    if (await page.locator('input[type="password"]').count() === 0) {
-      console.log('  --    the Studio is off on this site (no data directory): the brand asset checks are skipped');
       await ctx.close();
     } else {
       await page.fill('#Name', name);
@@ -8058,8 +8056,28 @@ function seenAt(page, selector) {
         expectTrue(apps.length > 5, 'the apps after Cancel: ' + apps.length);
       });
       await ctx.close();
+    }
   }
 
+  // ---------------------------------------------------------------------------------------------------- brand assets (IDENT-08, stage 13)
+  // Logo, favicon and fonts go through the real form of the Studio (files made in brand-asset-files.js, nothing binary in the repository): a hostile SVG and a program with a picture's name
+  // are refused, the shell shows the logo and the favicon link, the font is really drawn, a restore brings an old state back. It needs the administrator like the Studio blocks above.
+  // Everything is taken away again at the end. With ASSETS_SHOTS=<folder> it also writes screenshots there.
+  console.log('\nBrand assets');
+  {
+    const fixtures = require('./brand-asset-files');
+    const name = process.env.STUDIO_NAME || 'admin';
+    const password = process.env.STUDIO_PASSWORD || 'studio-dev';
+    const shots = process.env.ASSETS_SHOTS || '';
+    const { ctx, page } = await open(desktopOptions, '/Studio/Login');
+    if (await page.locator('input[type="password"]').count() === 0) {
+      console.log('  --    the Studio is off on this site (no data directory): the brand asset checks are skipped');
+      await ctx.close();
+    } else {
+      await page.fill('#Name', name);
+      await page.fill('#Password', password);
+      await page.click('.mat-auth__card button[type="submit"]');
+      await page.waitForURL('**/Studio**');
       const family = 'E2E Sans';
       const goAssets = () => page.goto(BASE + '/Studio/Brand/Assets', { waitUntil: 'networkidle' });
       // the content scrolls inside the page, so a tall window is what shows all of it

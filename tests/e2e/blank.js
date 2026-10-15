@@ -222,7 +222,8 @@ const MAT_WORDS = ['MatDesign', 'Mat apps', 'Mat family', 'MatMail', 'Mattiverse
     const apps = (await (await sp.request.get(BASE + '/api/apps')).json()).map(a => a.id);
     expectTrue(apps.includes('mattiverse') && apps.includes('matdesign') && apps.includes('acmemail'), 'the apps: ' + apps.join(','));
     await sp.goto(BASE + '/', { waitUntil: 'networkidle' });
-    expect(await sp.textContent('.mat-nav__name'), 'MatDesign', 'the site is the demo again');
+    // the template changes what is built in; the names of the company are kept (docs/STUDIO.md, Company and templates), so the site is still called what the company named it
+    expect(await sp.textContent('.mat-nav__name'), COMPANY + ' Design', 'the demo layer under the name of the company');
     expect(await sp.locator('a.mat-nav__item[href="/Identity/Audit"]').count(), 1, 'Audit in the menu');
     expect(await sp.locator('#Input_Accent').count(), 0, 'accent on the demo');
     await shot(sp, 'home-demo-light');
