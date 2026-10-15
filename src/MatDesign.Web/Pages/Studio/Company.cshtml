@@ -7,6 +7,7 @@
 @{
     var input = Model.Input;
     var blank = Model.Template.Id == DesignTemplates.BlankId;
+    var canManage = Model.Can(Capability.ManageCompany);
     ViewData["Title"] = "Company";
     ViewData["PageSub"] = Model.Origin switch
     {
@@ -41,6 +42,12 @@
         <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>All checks pass.</strong> Nothing was saved yet.</div></div>
     }
 
+    @if (!canManage)
+    {
+        <partial name="_ReadOnly" model="@Model.WhyNot(Capability.ManageCompany)" />
+    }
+
+    <fieldset class="mat-fieldset" disabled="@(!canManage)">
     <section class="mat-card" aria-labelledby="names-title">
         <div class="mat-card__head">@Ui.Icon("briefcase")<h2 class="mat-card__title" id="names-title">The company and the site</h2></div>
         <div class="mat-card__body">
@@ -84,9 +91,14 @@
         </div>
     </section>
 
+    </fieldset>
+
     <div class="mat-btn-row">
-        <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
-        <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        @if (canManage)
+        {
+            <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+            <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        }
         <a class="mat-btn mat-btn--secondary" href="/Studio">@Ui.Icon("back")<span>Back</span></a>
         @if (History.HasHistory(Tenant.Kind, Tenant.ItemId))
         {
@@ -119,11 +131,14 @@
             </div>
         }
     </div>
-    <form class="mat-form" method="post" action="/Studio/Company?handler=Switch" novalidate>
-        @Html.AntiForgeryToken()
-        <div class="mat-btn-row">
-            <button type="submit" class="mat-btn mat-btn--danger" data-confirm="@Model.SwitchQuestion" data-confirm-ok="Switch" data-template-switch="@Model.Other.Id">@Ui.Icon("refresh")<span>Switch to the @Model.Other.Name.ToLowerInvariant() template</span></button>
-        </div>
-        <p class="mat-hint">@Model.SwitchQuestion</p>
-    </form>
+    @if (canManage)
+    {
+        <form class="mat-form" method="post" action="/Studio/Company?handler=Switch" novalidate>
+            @Html.AntiForgeryToken()
+            <div class="mat-btn-row">
+                <button type="submit" class="mat-btn mat-btn--danger" data-confirm="@Model.SwitchQuestion" data-confirm-ok="Switch" data-template-switch="@Model.Other.Id">@Ui.Icon("refresh")<span>Switch to the @Model.Other.Name.ToLowerInvariant() template</span></button>
+            </div>
+            <p class="mat-hint">@Model.SwitchQuestion</p>
+        </form>
+    }
 </section>

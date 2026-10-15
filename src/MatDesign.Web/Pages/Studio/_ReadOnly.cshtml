@@ -1,0 +1,6 @@
+@model string
+@* The reason a page of the Studio is read only for this person (stage 16): said once at the top, where the controls that change something are left out or turned off. *@
+<div class="mat-alert mat-alert--info" role="status" data-read-only>
+    @Ui.Icon("lock")
+    <div class="mat-alert__body"><strong>Read only.</strong> @Model</div>
+</div>

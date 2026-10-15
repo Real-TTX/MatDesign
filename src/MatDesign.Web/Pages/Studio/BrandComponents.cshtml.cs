@@ -11,6 +11,7 @@ namespace MatDesign.Web.Pages.Studio;
 /// today and an input of its type, and the real control of the documentation beside them with a live preview. They belong to the one brand item: the same save, the same history and the same restore as
 /// <see cref="BrandModel"/>; this page keeps the names, the tokens and the colour schemes as they are saved and changes the properties only. What is wrong stays on the page with the form as it was typed.
 /// </summary>
+[RequireCapability(Capability.ViewStudio)]
 public class BrandComponentsModel(StudioService studio, DesignData design, ToolkitFiles toolkit) : StudioPageModel(studio)
 {
     /// <summary>The brand as the form describes it (what was typed, normalised), or the saved one on a GET.</summary>
@@ -45,6 +46,7 @@ public class BrandComponentsModel(StudioService studio, DesignData design, Toolk
     }
 
     /// <summary>Saves, or (with the Check button, <c>check</c>) only shows what the form would give: the problems.</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPost(bool check = false)
     {
         var typed = BrandValidator.Normalize(design.Brand with { Components = BrandForm.Values(Request.Form, "component:") }, toolkit.EditableTokens, toolkit.EditableProperties, toolkit.Schemes);
@@ -58,7 +60,7 @@ public class BrandComponentsModel(StudioService studio, DesignData design, Toolk
         }
 
         var before = design.Brand;
-        Studio.Store.Save(Brand.Kind, Brand.ItemId, typed, Studio.Administrator, design.StudioBrand is null ? "Created: " + BrandForm.What(before, typed) : "Changed " + BrandForm.What(before, typed));
+        Studio.Store.Save(Brand.Kind, Brand.ItemId, typed, Who, design.StudioBrand is null ? "Created: " + BrandForm.What(before, typed) : "Changed " + BrandForm.What(before, typed));
         design.Reload();
         TempData["Flash"] = "The component properties were saved.";
         return RedirectToPage("/Studio/BrandComponents");

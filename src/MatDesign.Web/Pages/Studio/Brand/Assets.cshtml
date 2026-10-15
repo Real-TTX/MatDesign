@@ -17,6 +17,11 @@
 }
 
 <div class="doc-assets">
+    @if (!Model.CanEdit)
+    {
+        <partial name="_ReadOnly" model="@Model.WhyNotEdit" />
+    }
+
     @if (Model.Errors.Count > 0)
     {
         <div class="mat-alert mat-alert--danger" role="alert" data-validation-summary>
@@ -108,13 +113,16 @@
                                         <small class="mat-muted" data-specimen-state role="status">Loading ...</small>
                                     </td>
                                     <td data-label="Remove" class="mat-table__cell-actions">
-                                        <form method="post" action="/Studio/Brand/Assets?handler=RemoveFont" class="mat-table__actions">
-                                            @Html.AntiForgeryToken()
-                                            <input type="hidden" name="family" value="@face.Family" />
-                                            <input type="hidden" name="weight" value="@face.Weight" />
-                                            <input type="hidden" name="style" value="@face.Style" />
-                                            <button type="submit" class="mat-btn mat-btn--ghost mat-btn--icon" aria-label="Remove @face.Family @face.Weight @face.Style" data-tip="Remove" data-confirm="Remove the face @face.Family @face.Weight @face.Style? The file stays on the volume and the history can bring it back." data-confirm-ok="Remove">@Ui.Icon("trash")</button>
-                                        </form>
+                                        @if (Model.CanEdit)
+                                        {
+                                            <form method="post" action="/Studio/Brand/Assets?handler=RemoveFont" class="mat-table__actions">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="family" value="@face.Family" />
+                                                <input type="hidden" name="weight" value="@face.Weight" />
+                                                <input type="hidden" name="style" value="@face.Style" />
+                                                <button type="submit" class="mat-btn mat-btn--ghost mat-btn--icon" aria-label="Remove @face.Family @face.Weight @face.Style" data-tip="Remove" data-confirm="Remove the face @face.Family @face.Weight @face.Style? The file stays on the volume and the history can bring it back." data-confirm-ok="Remove">@Ui.Icon("trash")</button>
+                                            </form>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -130,6 +138,8 @@
                 </p>
             }
 
+            @if (Model.CanEdit)
+            {
             <h3 class="doc-asset__title" id="add-font-title">Add a font face</h3>
             <form class="mat-form" method="post" action="/Studio/Brand/Assets?handler=AddFont" enctype="multipart/form-data" novalidate aria-labelledby="add-font-title">
                 @Html.AntiForgeryToken()
@@ -168,6 +178,7 @@
                     <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("plus")<span>Add the face</span></button>
                 </div>
             </form>
+            }
         </div>
     </section>
 
@@ -177,7 +188,7 @@
         {
             <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl(BrandAssets.Kind, BrandAssets.ItemId)">@Ui.Icon("restore")<span>History</span></a>
         }
-        @if (Model.Source != ItemSource.BuiltIn)
+        @if (Model.Source != ItemSource.BuiltIn && Model.CanEdit)
         {
             <span class="mat-btn-row__spacer"></span>
             <form method="post" action="/Studio/Brand/Assets?handler=Reset">

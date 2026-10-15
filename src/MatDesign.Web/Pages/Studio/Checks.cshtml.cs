@@ -1,9 +1,12 @@
+using MatDesign.Core.Studio;
 using MatDesign.Web.Services;
 using MatDesign.Web.Studio;
+using Microsoft.AspNetCore.Mvc;
 
 namespace MatDesign.Web.Pages.Studio;
 
 /// <summary>What the checks of the design system find, for the data as it is now: the list of checks with their result, and the findings with the toolbar of every list.</summary>
+[RequireCapability(Capability.ViewStudio)]
 public class ChecksModel(StudioService studio, DesignChecks checks) : StudioPageModel(studio)
 {
     private const int PageSize = 25;
@@ -17,6 +20,15 @@ public class ChecksModel(StudioService studio, DesignChecks checks) : StudioPage
     public IReadOnlyList<(DesignCheck Check, Finding Finding)> Items { get; private set; } = [];
 
     public string? UrlOf(Finding finding) => checks.UrlOf(finding);
+
+    /// <summary>Runs every check again now (they are also run by themselves when the data or the people change) and shows the result.</summary>
+    [RequireCapability(Capability.RunChecks)]
+    public IActionResult OnPostRun()
+    {
+        var report = checks.Refresh();
+        TempData["Flash"] = report.Passed ? "The checks were run again: all pass." : $"The checks were run again: {StudioFormat.Count(report.Errors, "error")}.";
+        return RedirectToPage("/Studio/Checks");
+    }
 
     public void OnGet()
     {

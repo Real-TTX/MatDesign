@@ -9,6 +9,7 @@ namespace MatDesign.Web.Pages.Studio;
 /// The history of one item (an app, a rule or a component): every revision with who, when and why, what changed between any two, and a button that restores an old one. A restore
 /// is a new revision that copies the old one, and only goes through when the old revision would be accepted as it is today (the same checks as for a save).
 /// </summary>
+[RequireCapability(Capability.ViewStudio)]
 public class HistoryModel(StudioService studio, StudioHistory history) : StudioPageModel(studio)
 {
     private static readonly JsonElement NoData = JsonDocument.Parse("{}").RootElement.Clone();
@@ -42,6 +43,9 @@ public class HistoryModel(StudioService studio, StudioHistory history) : StudioP
 
     public bool ItemExists { get; private set; }
 
+    /// <summary>Whether the person may restore a revision of this item: the role must allow restoring, and changing the item.</summary>
+    public bool CanRestore => Can(Capability.RestoreHistory) && StudioHistory.IsKind(Kind) && Can(StudioHistory.RestoreCapability(Kind!));
+
     public string BackUrl => ItemExists ? StudioHistory.EditUrl(Kind!, Id!) : StudioHistory.ListUrl(Kind!);
 
     public static string Describe(Revision revision) => StudioFormat.What(revision);
@@ -74,8 +78,15 @@ public class HistoryModel(StudioService studio, StudioHistory history) : StudioP
 
     public IActionResult OnGet() => Load() ? Page() : NotFound();
 
+    [RequireCapability(Capability.RestoreHistory)]
     public IActionResult OnPostRestore(string kind, string id, int revision)
     {
+        // a restore writes the item, so it needs what changing the item needs (an editor cannot restore the company or the white label setting)
+        if (StudioHistory.IsKind(kind) && !Can(StudioHistory.RestoreCapability(kind)))
+        {
+            return Forbidden(StudioHistory.RestoreCapability(kind));
+        }
+
         Kind = kind;
         Id = id;
         if (!Load())
@@ -97,7 +108,7 @@ public class HistoryModel(StudioService studio, StudioHistory history) : StudioP
             return Page();
         }
 
-        var restored = history.Restore(kind, id, revision);
+        var restored = history.Restore(kind, id, revision, Who);
         TempData["Flash"] = $"Revision {revision} of {Title} was restored as revision {restored.Number}.";
         return RedirectToPage("/Studio/History", new { kind, id });
     }

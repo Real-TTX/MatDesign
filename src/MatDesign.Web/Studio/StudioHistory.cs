@@ -19,6 +19,17 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
 
     public static bool IsKind(string? kind) => kind is not null && Kinds.Contains(kind);
 
+    /// <summary>
+    /// What restoring a revision of this kind needs besides <see cref="Capability.RestoreHistory"/>: a restore writes the item, so it needs what changing the item needs. An editor cannot bring back
+    /// an old company or an old white label setting any more than change them.
+    /// </summary>
+    public static Capability RestoreCapability(string kind) => kind switch
+    {
+        Tenant.Kind => Capability.ManageCompany,
+        WhiteLabelSetting.Kind => Capability.ManageWhiteLabel,
+        _ => Capability.EditDesign,
+    };
+
     public static string Singular(string kind) => kind switch { "apps" => "App", "rules" => "Rule", Brand.Kind => "Brand", Tenant.Kind => "Company", WhiteLabelSetting.Kind => "White label setting", BrandAssets.Kind => "Brand assets", _ => "Component" };
 
     public static string Plural(string kind) => kind switch { "apps" => "Apps", "rules" => "Rules", Brand.Kind => "Brand", Tenant.Kind => "Company", WhiteLabelSetting.Kind => "White label", BrandAssets.Kind => "Brand/Assets", _ => "Components" };
@@ -140,9 +151,9 @@ public sealed class StudioHistory(StudioService studio, DesignData design, Toolk
     }
 
     /// <summary>Appends a copy of the revision as the newest one and reads the items again. <see cref="CanRestore"/> must have said yes.</summary>
-    public Revision Restore(string kind, string id, int number)
+    public Revision Restore(string kind, string id, int number, string by)
     {
-        var revision = studio.Store.Restore(kind, id, number, studio.Administrator);
+        var revision = studio.Store.Restore(kind, id, number, by);
         design.Reload();
         return revision;
     }

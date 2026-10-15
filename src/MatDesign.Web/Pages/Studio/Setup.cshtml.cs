@@ -89,8 +89,9 @@ public class SetupModel(StudioService studio, DesignData design) : PageModel
         }
 
         design.Reload();
-        await StudioSession.SignInAsync(HttpContext, studio);
-        TempData["Flash"] = $"The Studio is set up. You are signed in as {studio.Administrator}.";
+        var first = studio.Users.ByName(Name)!;
+        await StudioSession.SignInAsync(HttpContext, first);
+        TempData["Flash"] = $"The Studio is set up. You are signed in as {first.Name}, the administrator.";
         return LocalRedirect("/Studio");
     }
 }

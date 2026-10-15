@@ -105,7 +105,8 @@
             </div>
             <p class="mat-muted">
                 Whoever opens this page first becomes the administrator, so do it right after the start. The password is kept as a salted hash
-                in <code>admin.json</code> in the data volume; if you ever lose it, delete that file, restart the container, and this page shows again.
+                in <code>users.json</code> in the data volume, and the administrator adds the other people (editors and viewers) later. If you ever lose the only administrator's password,
+                delete that file, restart the container, and this page shows again.
             </p>
         </form>
     }

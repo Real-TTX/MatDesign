@@ -1,5 +1,6 @@
 @page "/Studio/History"
 @model MatDesign.Web.Pages.Studio.HistoryModel
+@using MatDesign.Core.Studio
 @using MatDesign.Web.Studio
 @{
     var kind = Model.Kind!;
@@ -28,6 +29,11 @@
     </div>
 }
 
+@if (!Model.CanRestore)
+{
+    <partial name="_ReadOnly" model="@Model.WhyNot(StudioHistory.IsKind(kind) ? StudioHistory.RestoreCapability(kind) : Capability.EditDesign)" />
+}
+
 <section class="mat-section" aria-labelledby="revisions-title">
     <div class="mat-section__head"><h2 id="revisions-title">Revisions</h2></div>
     <div class="mat-table-wrap">
@@ -51,7 +57,7 @@
                         <td data-label="Actions" class="mat-table__cell-actions">
                             <div class="mat-table__actions">
                                 <a class="mat-btn mat-btn--ghost mat-btn--sm" href="@StudioHistory.HistoryUrl(kind, id)&amp;b=@revision.Number#changes-title" aria-label="What changed in revision @revision.Number">@Ui.Icon("eye")<span>Changes</span></a>
-                                @if (revision.Number != newest)
+                                @if (revision.Number != newest && Model.CanRestore)
                                 {
                                     <form method="post" action="/Studio/History?handler=Restore">
                                         @Html.AntiForgeryToken()

@@ -18,7 +18,10 @@
                 <span class="mat-empty__icon">@Ui.Icon("rocket")</span>
                 <div class="mat-empty__title">Nothing has been released yet</div>
                 <p>A release runs every check, numbers the data of the Studio, builds the toolkit files and publishes them.</p>
-                <a class="mat-btn mat-btn--primary" href="/Studio/Releases/New">@Ui.Icon("rocket")<span>Make the first release</span></a>
+                @if (Model.CanRelease)
+                {
+                    <a class="mat-btn mat-btn--primary" href="/Studio/Releases/New">@Ui.Icon("rocket")<span>Make the first release</span></a>
+                }
             </div>
         }
         else if (Model.Items.Count == 0)
@@ -62,7 +65,10 @@
         <partial name="_Pager" model="Model.Pager" />
 
         <div class="mat-actions">
-            <a class="mat-btn mat-btn--primary" href="/Studio/Releases/New">@Ui.Icon("rocket")<span>New release</span></a>
+            @if (Model.CanRelease)
+            {
+                <a class="mat-btn mat-btn--primary" href="/Studio/Releases/New">@Ui.Icon("rocket")<span>New release</span></a>
+            }
             <a class="mat-btn mat-btn--secondary" href="/releases/latest.json">@Ui.Icon("code")<span>latest.json</span></a>
             <a class="mat-btn mat-btn--secondary" href="/Studio/Releases/WhiteLabel">@Ui.Icon("layers")<span>White label</span></a>
         </div>

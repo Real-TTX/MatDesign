@@ -14,14 +14,14 @@ before apps can take it. It is what makes MatDesign a CI/CD studio *for the desi
   the id of a built-in entry **replaces** it, the same way a file in `/data/catalog` replaces a built-in entry of Mattiverse. Deleting such an item brings the built-in one back.
 - **Storage is an append-only log per item**: `studio/<kind>/<id>/<revision>.json` holds who, when, why and the whole item (or a deletion mark). The current
   state is the newest revision; history, diff and restore need nothing else. Writes go to a temporary file and are renamed.
-- **One administrator, created by the setup assistant.** A Studio that has none leads every visitor to `/Studio/Setup`: a name and a password (at least 10 characters, typed twice).
-  The account is a name and a salted PBKDF2 hash in `<data>/admin.json`, written once and never overwritten (two visitors at the same moment cannot both win), and the new
-  administrator is signed in at once. **Whoever opens the page first becomes the administrator**, so it is done right after the start; that is the price of needing no password
-  in the compose file. A file that cannot be read switches the Studio off with the reason instead of offering the assistant to a stranger. A cookie session, a short delay and a
-  lock after repeated failures protect the sign-in; the page does not say whether the name or the password was wrong.
-  If the password is lost: delete `admin.json` in the volume and restart the container, and the assistant shows again.
-  `MATDESIGN_ADMIN_PASSWORD` is an optional shortcut for automation (CI, a throwaway stack): when it is set it is the password of the administrator `admin`, the assistant is skipped,
-  nothing is written, and it wins over the account in the volume.
+- **People with roles, the first one created by the setup assistant** (stage 16, "People and roles" below). A Studio that has nobody leads every visitor to `/Studio/Setup`: a name and a password (at least 10 characters, typed twice).
+  The accounts are in `<data>/users.json`: a name, a role and a salted PBKDF2 hash each, written to a temporary file that replaces the old one under a lock (the file is whole or it is the old one). The assistant
+  creates the first user, **always an administrator**, and signs them in at once (the file is written once; two visitors at the same moment cannot both win). **Whoever opens the page first becomes the administrator**, so it is done right
+  after the start; that is the price of needing no password in the compose file. A file that cannot be read switches the Studio off with the reason instead of offering the assistant to a stranger. A cookie session, a short delay and a
+  lock after repeated failures (per name and per address) protect the sign-in; the page does not say whether the name or the password was wrong, or whether the account exists or is disabled.
+  If the only administrator's password is lost: delete `users.json` in the volume and restart the container, and the assistant shows again (the other people have to be created again; the history keeps their names).
+  `MATDESIGN_ADMIN_PASSWORD` is an optional shortcut for automation (CI, a throwaway stack): when it is set, a built-in administrator named `admin` has that password, the assistant is skipped, that user is not written to
+  the volume, and it wins over a stored user of the same name. A data directory from before stage 16 has an `admin.json`: it becomes the first user (see "Migration from admin.json").
 - **The checks of the pipeline are the checks of the tests** (classes that exist, icons that exist, labelled cells, unique ids, contrast of every accent,
   rules that exist). They live in one place and are used by both.
 
@@ -100,6 +100,7 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 12 | **Token editor per component, per app and per colour scheme** (docs/PRODUCT.md, stage 12): the 68 component properties next to the real control with a live preview, overrides on `[data-app]`, tokens inside each colour scheme, the 44 px rule for touch targets | **done** |
 | 14 | **Demo data and templates** (docs/PRODUCT.md, stage 14): the item `tenant`, the setup assistant's company and template steps, the Company page, the template layer under `DesignData`, a site that names itself after its company, `IDENT-09` | **done** |
 | 15 | **White label build** (docs/PRODUCT.md, stage 15): the item `whitelabel` (prefix and product name), the renamer, the Build stage with checks on the renamed copy, a trial build, history, restore and a check | **done** |
+| 16 | **People and roles** (docs/PRODUCT.md, stage 16): `users.json` (more than one user, a role each), the three roles and their capabilities, a capability declared by every page and every handler that changes something and checked on the server, the people page, the account page, a lock-out per name and address, sessions that follow the person, history and activity that name them, a check, `CODE-10` | **done** |
 
 | 13 | **Brand assets** (docs/PRODUCT.md, stage 13): the item `assets`, files in the volume under their SHA-256, logo, word mark, favicon, app icon and fonts checked by content, served under `/ui/brand/`, `@font-face` in `matui.css`, `brand/` in every release and the archive, history, restore and checks | **done** |
 
@@ -234,6 +235,64 @@ With the script it shows one step at a time (Next checks the step it leaves, Bac
 together with the administrator. A post that has only the name and the password (a script, an old client) creates the administrator and leaves the site what the environment says, the demo by default. The release `docker-compose.yml` still has no variable; `MATDESIGN_TEMPLATE` and `MATDESIGN_COMPANY` are for automation (a throwaway stack, the browser checks):
 they are where the assistant starts, and what the site is when it never runs (`MATDESIGN_ADMIN_PASSWORD` skips it).
 
+### People and roles
+
+More than one person works in an instance (docs/PRODUCT.md, stage 16; rule `CODE-10`). The decisions: **who may change what is decided on the server, from a role**; the role is read again on every request; and no secret enters the history.
+
+**Users.** `<data>/users.json` (`UserStore` in `MatDesign.Core`, `StudioUser`): per person a stable `Id` (the slug of the name and six hex digits, a valid folder name), a `Name`, a `Role`, the salted PBKDF2 hash (`Salt`, `Hash`, `Iterations`: the scheme
+`AdminAccount.HashPassword` always had, 210,000 iterations of SHA-256, so an old hash verifies), `MustChange`, `Created`, `CreatedBy`, `LastSignIn`, `Disabled` and a `SessionStamp`. The file also holds `Retired`: the names of removed people.
+A name is 2 to 40 letters (also with accents), digits, single spaces, dots, dashes, underscores or `@`, starts with a letter or digit, ends without a space, is unique **without regard to case**, and **never given again** once a person with it was removed
+(the history names people, so a name has to mean one person). A name cannot change. Writes are atomic (a temporary file, flushed, then moved over the old one, under a lock, a few tries when a scanner holds the file); readers open the file so that a writer may replace it.
+**A file that cannot be read is an error, never an empty list**: the Studio then stays off with the reason (an empty list would show the setup assistant to the first visitor), and the check `users` reads the file again and reports it if it changes into nonsense, or is gone,
+while the Studio runs. A password is at least 10 characters, not the name, not one of 100 common ones (`PasswordPolicy`), at most 200; the same rule holds for the setup assistant, a new person, a reset and a change. It is shown nowhere, never logged and compared in constant time
+(also for a name that does not exist: a dummy hash is computed).
+
+**Roles** (`StudioRole`, `Capability`, `StudioRole.Can(role, capability)`: data in code, one function decides; a role that does not exist, or none, may do nothing):
+
+| Capability | What it is | Administrator | Editor | Viewer |
+|---|---|:-:|:-:|:-:|
+| `ViewStudio` | open and read every page except the people | yes | yes | yes |
+| `EditDesign` | create, change and delete apps, rules, components, the brand and its files | yes | yes | no |
+| `RestoreHistory` | restore an old revision (of an item the person may edit: an editor cannot restore the company or the white label setting) | yes | yes | no |
+| `RunChecks` | run the checks again | yes | yes | no |
+| `ManageReleases` | make a release (it publishes files that apps copy: administrators only, by decision) | yes | no | no |
+| `ManageVersions` | write down which release an app uses | yes | no | no |
+| `ManageCompany` | the company, its names, the template | yes | no | no |
+| `ManageWhiteLabel` | the class prefix and product name of the releases (and the rename endpoint) | yes | no | no |
+| `ManageUsers` | the people | yes | no | no |
+
+**Enforcement.** Every page model of the Studio carries `[RequireCapability(...)]` (what opening it needs) and every `OnPost*` handler its own (what the change needs); `StudioPageModel` checks them on the server before the handler runs, together with
+`ViewStudio`, from the person as the people have them now, and answers a person who lacks one with the page `_Forbidden` (the shell, one h1, which role would do, the way out; **status 403**), never the handler and never a bare error. A GET of an empty form for a new item needs
+the right to create it. The minimal endpoint that writes (the renamer of the white label build) uses `RequireCapability(...)` on the route (403 too, an unauthenticated request is sent to the sign-in). The anti-forgery check of Razor Pages runs first and stays.
+A control the person may not use is **left out or turned off with the reason**: the lists draw no New button, a form of the design is a `fieldset disabled` with the notice `data-read-only` ("Read only. You are signed in as ..., viewer. This needs the role editor.") and no Save, Check or Delete;
+the menu holds every page the role may open (the people only for administrators). **Hiding is never the protection**: the tests post every changing address as each role. The tests that keep it so: `StudioCapabilityDeclarationTests` reads the assembly (every page model has a class-level declaration, every
+`OnPost*` handler exactly one of its own, the list of what each needs is written out in the test, every endpoint that is not a page and changes something declares one), and `StudioAccessTests` crawls every page and every changing address as an administrator, an editor and a viewer
+(a 403 for the roles that lack the capability, and the data directory byte for byte as it was).
+
+**Session.** The cookie carries **the id of the person and the stamp of the account** (and the name, for the shell and the anti-forgery token), no role (`StudioSession.PrincipalOf`). On every request `StudioService.CurrentUser` reads the person again: a role that changed takes effect at once (also in a session that is open), a person who is disabled or removed is
+out at the next click, and a changed password, a reset or a disabled account changes the stamp, so every older session ends (a person who changes their own password is signed in again with the new stamp). A person whose password an administrator chose (`MustChange`) lands on `/Studio/Account` after the sign-in and
+nothing else opens until they have chosen their own (the account page and signing out are the only things open to them; the endpoint that changes something refuses them with 403). The **lock-out** counts failures per user name **and** remote address (five in a minute lock that pair for a minute, as before) and per address alone
+(thirty): one person cannot lock another out by guessing a name from another address, and a name that does not exist is counted the same, so the lock does not tell whether it exists. The message of a failed sign-in is one sentence for a wrong name, a wrong password and a disabled account.
+
+**The pages.** `/Studio/Users` (administrators): the list with the toolbar of every list (search, filter by role and state, sort), name, role as a pill and as text, last sign-in, state (*Active*, *Must change password*, *Disabled*), a pager, and a table of what each role allows. `/Studio/Users/Edit`: a new person (name, role, a first password: **Generate**
+fills a random one in the browser, `wwwroot/js/users.js`, `crypto.getRandomValues`, four groups of four characters, with a Copy button; it is shown only there and has to be changed at the first sign-in), or an existing one with a form per change: the role, the password (a reset: every session of the person ends, `MustChange` is set), disable or enable, remove (`data-confirm`).
+**The guards are the store's, the page leaves out what would be refused and says why:** the last active administrator cannot be deleted, disabled or demoted (not even by themselves), nobody can delete or disable themselves, nobody changes their own role or resets their own password here, the built-in administrator of the environment cannot be changed.
+`/Studio/Account` (every role, also while the password must change): who you are, your role and what it allows (every capability in words, *Allowed* or *Not allowed*), change the password (the current one is required; the new one is held to the policy and differs from the old; every other session ends) and sign out. The shell shows the name and role (user menu, "Your account"),
+the overview says who is signed in.
+
+**History and activity.** Each change to the people is an entry in the append-only store, kind `users`, one item per person (`StudioPeople` pairs each change with its entry, so a page cannot change a person without leaving one): *Created as editor*, *Role changed from editor to viewer*, *Disabled*, *Enabled*, *Password reset by an administrator*,
+*Changed their own password*, *Deleted the user ...*. **Who did it is `by`, whom is the item and the note; the data holds only the id, the name, the role and whether the account is disabled: never a password, a hash, a salt or a stamp** (a test scans the volume, the pages and the log after a scenario). The activity list filters by kind and by person, and shows the name of a
+person for these items. What a person saved stays under their name when they are removed. A release names who started it (`by`) as before.
+
+**The check `users`** (area Studio; the menu badge and the release pipeline read it like every check): nobody can sign in (the Studio waits for its setup), no active administrator, a file that cannot be read or is gone, a password hash that is not of the known format, a role that does not exist. An error stops a release at Check.
+
+### Migration from admin.json
+
+A data directory from before stage 16 has `admin.json` (name, salt, hash, iterations, created). When the Studio starts and finds no `users.json`, it turns that file into the first user: an **administrator**, the same name, the **same hash** (nobody changes a password), `Created` kept, `CreatedBy` "migration from admin.json".
+`users.json` is written first, then `admin.json` is renamed to `admin.json.migrated` and never read again, so the hash is never lost and a later `admin.json` is not taken for an account; the activity list gets the entry "Migrated from admin.json" by `migration`. A broken `admin.json` is an error, as a broken `users.json` is.
+Sessions from before the upgrade carry no id: everybody signs in once. **Going back to a release from before stage 16 is not supported** (that program would find no `admin.json` and offer its setup assistant). While `MATDESIGN_ADMIN_PASSWORD` is set the old file is left alone, as before. The browser checks and the other automation that sign in as `admin` / `studio-dev`
+work unchanged: through the setup assistant (the first user is an administrator) or through the variable (a built-in administrator).
+
 ## Releases in practice
 
 **Making one:** Studio → Releases → New release. The form suggests the next patch number (0.1.0 for the first), checks the version before anything runs (three numbers, not released yet, higher than the last
@@ -259,9 +318,13 @@ versions, and every page at the width of a phone. **Each run of the browser chec
 `docker compose -f docker-compose.dev.yml down -v` followed by `up -d --build` starts it clean.
 `tests/e2e/blank.js` is the blank start in a second site (`MATDESIGN_TEMPLATE=blank MATDESIGN_COMPANY=Acme`, its own port and an empty data directory): the assistant's three steps by the real form, the shell saying the company and no Mat app anywhere, a first app, and the Company page switching to the demo and back.
 `run.js` goes through the same steps for the demo (`STUDIO_COMPANY`, default Mat, and `STUDIO_TEMPLATE`, default demo) and has a short block for the Company page.
+The block **People and roles** of `run.js` makes an editor, a viewer and an administrator through the form, signs each in in a browser of its own (separate contexts) and sees what each sees and cannot do (real forbidden requests give 403 and save nothing), a role that changes at the next click of an open session, a disabled person out at once,
+the first password that must be changed, a password change that ends the other sessions, the guards for oneself and the activity that names them, at 390 px too; it removes what it made (`PEOPLE_SHOTS=<folder>` writes screenshots). The unit tests add the whole role matrix, the store (atomic writes, corruption, migration from an `admin.json` of the old code, names, guards, passwords), the lock-out,
+the reflection test of the declarations and the crawl as each role (`StudioRoleTests`, `UserStoreTests`, `StudioCapabilityDeclarationTests`, `StudioAccessTests`, `StudioPeopleTests`).
 
 ## What it does not do
 
 - It does not build, test or deploy the apps (that is their repositories' workflow). Its release is the design system: the CSS, the script, the sprite and the rules.
 - It is not an editor for the toolkit's CSS and script: those are files in the repository, reviewed and tested there. The Studio edits **data**: apps, rules, components, examples.
-- It has no users beyond the one administrator, and no roles. It has no page to change the password either: to start over, delete `admin.json` (see above).
+- It has three fixed roles and no more: a role cannot be edited, nobody can be given a single capability, and there is no "owner" above the administrators, no groups, no two-factor sign-in and no single sign-on. It does not
+  send a message to a new person (the administrator hands the first password over), and there is no "forgot my password" mail: an administrator sets a new one, and the only administrator starts over with `users.json` (see above).

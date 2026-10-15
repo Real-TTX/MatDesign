@@ -22,6 +22,7 @@ public sealed class BrandInput
 /// live preview. Saving checks everything <see cref="BrandValidator"/> holds a brand to (kind and limits of every value, the contrast of the surfaces and of every app's accent, <c>COLOR-11</c>); what
 /// is wrong stays on the page with the form as it was typed. Deleting the saved brand brings the built-in one back.
 /// </summary>
+[RequireCapability(Capability.ViewStudio)]
 public class BrandModel(StudioService studio, DesignData design, ToolkitFiles toolkit) : StudioPageModel(studio)
 {
     private static readonly JsonSerializerOptions Web = new(JsonSerializerDefaults.Web);
@@ -119,6 +120,7 @@ public class BrandModel(StudioService studio, DesignData design, ToolkitFiles to
     }
 
     /// <summary>Saves, or (with the Check button, <c>check</c>) only shows what the form would give: the problems and the contrast.</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPost(bool check = false)
     {
         var typed = Describe();
@@ -133,13 +135,14 @@ public class BrandModel(StudioService studio, DesignData design, ToolkitFiles to
         }
 
         var before = design.Brand;
-        Studio.Store.Save(Brand.Kind, Brand.ItemId, typed, Studio.Administrator, design.StudioBrand is null ? "Created: " + BrandForm.What(before, typed) : "Changed " + BrandForm.What(before, typed));
+        Studio.Store.Save(Brand.Kind, Brand.ItemId, typed, Who, design.StudioBrand is null ? "Created: " + BrandForm.What(before, typed) : "Changed " + BrandForm.What(before, typed));
         design.Reload();
         TempData["Flash"] = "The brand was saved.";
         return RedirectToPage("/Studio/Brand");
     }
 
     /// <summary>Resets the brand: the saved item is deleted and the built-in brand is back.</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPostReset()
     {
         if (design.StudioBrand is null)
@@ -147,7 +150,7 @@ public class BrandModel(StudioService studio, DesignData design, ToolkitFiles to
             return RedirectToPage("/Studio/Brand");
         }
 
-        Studio.Store.Delete(Brand.Kind, Brand.ItemId, Studio.Administrator, "Reset to the built-in brand");
+        Studio.Store.Delete(Brand.Kind, Brand.ItemId, Who, "Reset to the built-in brand");
         design.Reload();
         TempData["Flash"] = "The built-in brand is back.";
         return RedirectToPage("/Studio/Brand");

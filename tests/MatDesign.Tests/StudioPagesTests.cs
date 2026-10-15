@@ -65,6 +65,8 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
         // the white label setting (stage 15), after the releases so that they stay what the other tests expect
         _studio.Store.Save("whitelabel", "whitelabel", new MatDesign.Core.Studio.WhiteLabelSetting("acme", "AcmeUi"), "admin", "Created");
         _studio.Design.Reload();
+        // a person besides the built-in administrator, so that the people have a list and a page of one
+        Assert.True(_studio.Service.People.Create("Pat Person", "editor", "a password for pat 1", _studio.Service.Users.ById("env-admin")!).Ok);
     }
 
     private IEnumerable<string> Pages()
@@ -100,6 +102,12 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
         yield return "/Studio/History?kind=whitelabel&id=whitelabel";
         yield return "/Studio/Brand/Assets";
         yield return "/Studio/History?kind=assets&id=assets";
+        // the people and roles (stage 16)
+        yield return "/Studio/Account";
+        yield return "/Studio/Users";
+        yield return "/Studio/Users/Edit";
+        yield return $"/Studio/Users/Edit?id={_studio.Service.Users.ByName("Pat Person")?.Id}";
+        yield return "/Studio/Activity?kind=users";
     }
 
     [Fact]

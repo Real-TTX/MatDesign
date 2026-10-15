@@ -58,7 +58,10 @@
 
     <partial name="_Pager" model="Model.Pager" />
 
-    <div class="mat-actions">
-        <a class="mat-btn mat-btn--primary" href="/Studio/Rules/Edit">@Ui.Icon("plus")<span>New rule</span></a>
-    </div>
+    @if (Model.CanEdit)
+    {
+        <div class="mat-actions">
+            <a class="mat-btn mat-btn--primary" href="/Studio/Rules/Edit">@Ui.Icon("plus")<span>New rule</span></a>
+        </div>
+    }
 </div>

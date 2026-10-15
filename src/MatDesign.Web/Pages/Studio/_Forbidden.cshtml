@@ -1,0 +1,23 @@
+@model MatDesign.Web.Studio.ForbiddenInfo
+@using MatDesign.Core.Studio
+@{
+    // The page a person gets, with status 403, when their role does not include what a page or a change needs (stage 16). It is a page of the Studio like any other: the shell, one title, the way out.
+    var role = Model.User.RoleInfo?.Name ?? Model.User.Role;
+    ViewData["Title"] = "Not allowed";
+    ViewData["PageSub"] = "Your role does not include this.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Not allowed", null));
+    ViewData["Width"] = "narrow";
+    // the page of the people is in no menu but the administrators': a refusal stays in the menu of the Studio (the overview is the open item)
+    ViewData["ActiveHref"] = "/Studio";
+}
+
+<div class="mat-empty" data-forbidden="@Model.Capability">
+    <span class="mat-empty__icon">@Ui.Icon("lock")</span>
+    <div class="mat-empty__title">This needs the role @Model.Needed.Name.ToLowerInvariant()</div>
+    <p>You are signed in as <strong>@Model.User.Name</strong>, @role.ToLowerInvariant(). What was asked: @StudioRole.Describe(Model.Capability).ToLowerInvariant(). Nothing was changed.</p>
+    <p class="mat-muted">An administrator can give you another role on the page of the people.</p>
+    <div class="mat-btn-row mat-btn-row--plain">
+        <a class="mat-btn mat-btn--primary" href="/Studio">@Ui.Icon("home")<span>Back to the overview</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/Studio/Account">@Ui.Icon("user")<span>Your account</span></a>
+    </div>
+</div>

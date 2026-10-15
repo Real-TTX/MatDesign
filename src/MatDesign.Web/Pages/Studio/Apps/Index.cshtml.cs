@@ -1,10 +1,12 @@
 using MatDesign.Core;
+using MatDesign.Core.Studio;
 using MatDesign.Web.Services;
 using MatDesign.Web.Studio;
 
 namespace MatDesign.Web.Pages.Studio.Apps;
 
 /// <summary>The apps of the family as the Studio keeps them: toolbar above (search, filter, sort as dialogs), table, pagination, and the action to add one below.</summary>
+[RequireCapability(Capability.ViewStudio)]
 public class IndexModel(StudioService studio, DesignData design) : StudioPageModel(studio)
 {
     private const int PageSize = 20;

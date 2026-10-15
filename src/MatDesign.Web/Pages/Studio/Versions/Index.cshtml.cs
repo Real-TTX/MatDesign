@@ -1,9 +1,11 @@
+using MatDesign.Core.Studio;
 using MatDesign.Web.Services;
 using MatDesign.Web.Studio;
 
 namespace MatDesign.Web.Pages.Studio.Versions;
 
 /// <summary>Which release of MatUi each app uses and where that stands: toolbar above (search, filter, sort as dialogs), table, pagination.</summary>
+[RequireCapability(Capability.ViewStudio)]
 public class IndexModel(StudioService studio, VersionTracker tracker) : StudioPageModel(studio)
 {
     private const int PageSize = 25;

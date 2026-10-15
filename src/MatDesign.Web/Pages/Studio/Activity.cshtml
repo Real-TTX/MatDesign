@@ -39,7 +39,7 @@
                     @foreach (var item in Model.Items)
                     {
                         <tr>
-                            <td data-label="Item"><div class="mat-table__name"><span>@if (StudioHistory.IsKind(item.Kind)) { <a href="@StudioHistory.HistoryUrl(item.Kind, item.Id)">@item.Id</a> } else { @item.Id }<small>@StudioFormat.KindName(item.Kind), revision @item.Revision.Number</small></span></div></td>
+                            <td data-label="Item"><div class="mat-table__name"><span>@if (StudioHistory.IsKind(item.Kind)) { <a href="@StudioHistory.HistoryUrl(item.Kind, item.Id)">@item.Id</a> } else { @StudioFormat.ItemTitle(item) }<small>@StudioFormat.KindName(item.Kind), revision @item.Revision.Number</small></span></div></td>
                             <td data-label="Change">@StudioFormat.What(item.Revision)</td>
                             <td data-label="When">@StudioFormat.When(item.Revision.At)</td>
                             <td data-label="By" class="mat-hide-sm">@item.Revision.By</td>

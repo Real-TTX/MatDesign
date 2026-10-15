@@ -1,9 +1,11 @@
+using MatDesign.Core.Studio;
 using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MatDesign.Web.Pages.Studio.Releases;
 
 /// <summary>One run of the pipeline: what every stage did, line by line.</summary>
+[RequireCapability(Capability.ViewStudio)]
 public class RunModel(StudioService studio, ReleaseService releases) : StudioPageModel(studio)
 {
     public PipelineRun Run { get; private set; } = null!;

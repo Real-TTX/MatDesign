@@ -31,6 +31,6 @@ public static class WhiteLabelEndpoints
             using var reader = new StreamReader(request.Body, System.Text.Encoding.UTF8);
             var text = await reader.ReadToEndAsync();
             return Results.Text(WhiteLabel.Rename(text, setting), "text/plain; charset=utf-8");
-        }).RequireAuthorization().DisableAntiforgery();
+        }).RequireCapability(Capability.ManageWhiteLabel).DisableAntiforgery();
     }
 }

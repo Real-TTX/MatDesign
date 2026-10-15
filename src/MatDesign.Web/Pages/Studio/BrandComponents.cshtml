@@ -37,6 +37,11 @@
     }
 </form>
 
+@if (!Model.CanEdit)
+{
+    <partial name="_ReadOnly" model="@Model.WhyNotEdit" />
+}
+
 <div class="doc-brand-comps" data-brand-editor>
     <section class="mat-section" aria-labelledby="how-title">
         <div class="mat-section__head">
@@ -55,7 +60,7 @@
     @foreach (var group in Model.Groups)
     {
         var groupId = "group-" + group.Component.Id;
-        var editor = new PropertyGroupEditor(group, Model.ValueOf, Model.ProblemFor, "component", "components-form");
+        var editor = new PropertyGroupEditor(group, Model.ValueOf, Model.ProblemFor, "component", "components-form", ReadOnly: !Model.CanEdit);
         <section class="mat-card" aria-labelledby="@groupId" id="@("component-group-" + group.Component.Id)">
             <div class="mat-card__head">
                 <h3 class="mat-card__title" id="@groupId">@group.Component.Title</h3>
@@ -68,8 +73,11 @@
     }
 
     <div class="mat-btn-row">
-        <button type="submit" class="mat-btn mat-btn--primary" form="components-form">@Ui.Icon("save")<span>Save</span></button>
-        <button type="submit" class="mat-btn mat-btn--secondary" form="components-form" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        @if (Model.CanEdit)
+        {
+            <button type="submit" class="mat-btn mat-btn--primary" form="components-form">@Ui.Icon("save")<span>Save</span></button>
+            <button type="submit" class="mat-btn mat-btn--secondary" form="components-form" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        }
         <a class="mat-btn mat-btn--secondary" href="/Studio">@Ui.Icon("back")<span>Back</span></a>
         @if (History.HasHistory(Brand.Kind, Brand.ItemId))
         {

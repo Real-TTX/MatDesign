@@ -248,7 +248,7 @@ public sealed partial class StudioSiteTests : IClassFixture<WebApplicationFactor
         var one = Service("one");
         var two = Service("two");
 
-        Assert.NotEqual(one.Stamp, two.Stamp);
+        Assert.NotEqual(one.Users.ById(MatDesign.Core.Studio.UserStore.BuiltinId)!.SessionStamp, two.Users.ById(MatDesign.Core.Studio.UserStore.BuiltinId)!.SessionStamp);
         Assert.True(one.SignsIn("admin", "one"));
         Assert.False(one.SignsIn("admin", "two"));
         Assert.False(one.SignsIn("someone", "one"));
