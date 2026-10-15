@@ -8248,8 +8248,9 @@ function seenAt(page, selector) {
           return out;
         }, family);
         expectTrue(used.family.replace(/"/g, '').startsWith(family), 'the font family of the page: ' + used.family);
-        // every character of the test font is a block 0.7 em wide: four of them
-        expectTrue(Math.abs(used.width - 4 * 0.7 * used.size) < 1.5, `four characters are ${used.width} px wide at ${used.size} px, a block font makes ${4 * 0.7 * used.size}`);
+        // every character of the test font is a block 0.7 em wide: four of them. Some platforms round the width of a glyph to whole pixels (4 x 10 px instead of 4 x 10.5 px), so a pixel
+        // per character is allowed; a fallback font would make about a third of that width, which is what this check is there to tell apart
+        expectTrue(Math.abs(used.width - 4 * 0.7 * used.size) <= 4, `four characters are ${used.width} px wide at ${used.size} px, a block font makes ${4 * 0.7 * used.size}`);
         await shot('assets-all-light.png');
         await page.evaluate(() => MatUi.theme.set('dark'));
         await shot('assets-all-dark.png');
