@@ -12,6 +12,9 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+### Added
+
+- The colour of a new app, MatIdentity (the single sign-on of the family): `[data-app="matidentity"]` sets `--mat-app-accent: #a21a50` (white text on it passes AA). Nothing to do for the other apps but copy the files.
 
 ## [0.2.0] - 2026-10-15
 ### Added

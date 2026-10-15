@@ -14,6 +14,7 @@ const apps = {
   mattiverse: { dir: 'Mattiverse/src/Mattiverse.Web' },
   matos: { dir: 'MatOS/src/MatOS.Web' },
   matdesign: { dir: 'MatDesign/src/MatDesign.Web', extra: ['MatDesign/src/MatUi'] },
+  matidentity: { dir: null, note: 'New app (2026-10-15), still being built: not scanned yet.' },
   matdock: { dir: 'MatDock/src/MatDock.Web' },
   matcad: { dir: 'Matcad/src/Matcad' },
   matddns: { dir: 'Matddns/src' },

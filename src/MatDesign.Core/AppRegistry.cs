@@ -74,6 +74,9 @@ public static class AppRegistry
         new("matdesign", "MatDesign", "Design and identity of all Mat apps", Platform, "#d6336c", "palette", "MatDesign",
             Port: 8060, CssPrefix: "mat-", TokenScheme: "--mat-*",
             Notes: "This site. Its toolkit (MatUi) is the reference."),
+        new("matidentity", "MatIdentity", "Single sign-on for all Mat apps", Platform, "#a21a50", "key", "MatIdentity",
+            Port: 2300, CssPrefix: "mat-", TokenScheme: "--mat-*",
+            Notes: "New app (2026-10-15): built on MatUi from the start. Its logo is a keyhole whose top is a head (identity + lock) on the flat accent tile."),
 
         new("matdock", "MatDock", "Advanced Docker management", Infrastructure, "#1d78be", "whale", "MatDock",
             FoundAccent: "#2496ed", LogoColor: "#2496ed", Port: 4455, CssPrefix: "mat-", TokenScheme: "--accent, --bg, --surface"),

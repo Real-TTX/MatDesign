@@ -396,7 +396,7 @@ src/MatDesign.Web      ASP.NET Core 10 Razor Pages: the site, drawn with MatUi i
 tests/MatDesign.Tests  xUnit: colours, the rulebook, the CSS and the script against the rules, the catalogues, the whole site in memory.
 tests/e2e              The behaviour in a real browser against a running site (Playwright).
 tools/                 icons.js (builds the sprite), iconlib.js (builds the icon library from tools/iconlib/), audit.js (scans the other repositories).
-docs/                  ARCHITECTURE.md, ADOPTING.md, STUDIO.md
+docs/                  ARCHITECTURE.md, ADOPTING.md, STUDIO.md, PLATFORM.md
 ```
 
 - **ASP.NET Core 10** (Razor Pages), plain CSS and plain JavaScript – no framework, no build step, no database
@@ -406,7 +406,8 @@ docs/                  ARCHITECTURE.md, ADOPTING.md, STUDIO.md
 - The Studio keeps revisions as append-only JSON files on a volume; the site works without it
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) records the decisions, [docs/ADOPTING.md](docs/ADOPTING.md) is the
-checklist for an app, [docs/STUDIO.md](docs/STUDIO.md) describes the Studio.
+checklist for an app, [docs/STUDIO.md](docs/STUDIO.md) describes the Studio, [docs/PLATFORM.md](docs/PLATFORM.md) is the platform
+contract of the family (what every app offers besides its pages, and the sign-in through MatIdentity).
 
 The site is in **English**; the apps keep the language of their own interface. The audit is a static scan of the other
 repositories (a snapshot in `src/MatDesign.Web/Data/audit.json`): it finds what is written in the files and cannot tell

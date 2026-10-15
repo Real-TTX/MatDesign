@@ -274,6 +274,68 @@
    }
   },
   {
+   "id": "matidentity",
+   "layout": "",
+   "results": {
+    "shell.menu-left": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "shell.breadcrumb": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "shell.theme": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "shell.user": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "shell.version": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "dialog.native": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "dialog.used": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "color.tokens": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "code.inline": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "code.external": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "type.system": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "icon.inline": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "mobile.query": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    },
+    "a11y.motion": {
+     "state": "unknown",
+     "note": "New app (2026-10-15), still being built: not scanned yet."
+    }
+   }
+  },
+  {
    "id": "matdock",
    "layout": "MatDock/src/MatDock.Web/Pages/Shared/_Layout.cshtml",
    "results": {
