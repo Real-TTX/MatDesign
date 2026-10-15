@@ -601,11 +601,11 @@ public sealed partial class TenantStudioTests : IClassFixture<WebApplicationFact
         await _studio.SignIn();
         await _studio.Post("/Studio/Company", "/Studio/Company", Names());
 
-        var run = _studio.Releases.Execute("0.1.0", "For the company.", "admin");
+        var run = _studio.Releases.Execute(Ver.First, "For the company.", "admin");
 
         Assert.True(run.Succeeded, string.Join("\n", run.Stages.SelectMany(s => s.Log)));
         Assert.Contains(run.Stages.SelectMany(s => s.Log), l => l.StartsWith("Acme Design: ", StringComparison.Ordinal));
-        var directory = Path.Combine(_studio.DataDirectory, "releases", "0.1.0");
+        var directory = Path.Combine(_studio.DataDirectory, "releases", Ver.First);
 
         var manifest = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(Path.Combine(directory, "manifest.json")));
         Assert.Equal("Acme Industries", manifest.GetProperty("company").GetString());
@@ -618,11 +618,11 @@ public sealed partial class TenantStudioTests : IClassFixture<WebApplicationFact
         Assert.Equal(0, design.GetProperty("apps").GetArrayLength());
 
         var styleguide = await File.ReadAllTextAsync(Path.Combine(directory, "styleguide.html"));
-        Assert.Contains("<title>Acme Design: MatUi 0.1.0 – styleguide</title>", styleguide);
+        Assert.Contains($"<title>Acme Design: MatUi {Ver.First} – styleguide</title>", styleguide);
         Assert.Contains("The design system of Acme Industries.", styleguide);
         Assert.Contains("This release has no apps yet.", styleguide);
 
-        using var zip = ZipFile.OpenRead(Path.Combine(directory, "matui-0.1.0.zip"));
+        using var zip = ZipFile.OpenRead(Path.Combine(directory, $"matui-{Ver.First}.zip"));
         using var reader = new StreamReader(zip.GetEntry("matui/README.txt")!.Open());
         var readme = await reader.ReadToEndAsync();
         Assert.Contains("Made by Acme Design", readme);
@@ -639,11 +639,11 @@ public sealed partial class TenantStudioTests : IClassFixture<WebApplicationFact
         var demo = new StudioHarness(_factory, new Dictionary<string, string> { ["MATDESIGN_TEMPLATE"] = "demo" });
         try
         {
-            var run = demo.Releases.Execute("0.1.0", string.Empty, "admin");
+            var run = demo.Releases.Execute(Ver.First, string.Empty, "admin");
             Assert.True(run.Succeeded, string.Join("\n", run.Stages.SelectMany(s => s.Log)));
-            var directory = Path.Combine(demo.DataDirectory, "releases", "0.1.0");
+            var directory = Path.Combine(demo.DataDirectory, "releases", Ver.First);
             var styleguide = await File.ReadAllTextAsync(Path.Combine(directory, "styleguide.html"));
-            Assert.Contains("<title>MatUi 0.1.0 – styleguide</title>", styleguide);
+            Assert.Contains($"<title>MatUi {Ver.First} – styleguide</title>", styleguide);
             Assert.DoesNotContain("The design system of", styleguide);
             var design = JsonSerializer.Deserialize<JsonElement>(await File.ReadAllTextAsync(Path.Combine(directory, "design.json")));
             Assert.Equal("MatDesign", design.GetProperty("tenant").GetProperty("siteName").GetString());
@@ -742,7 +742,7 @@ public sealed partial class TenantStudioTests : IClassFixture<WebApplicationFact
         await _studio.SignIn();
         await _studio.Post("/Studio/Company", "/Studio/Company", Names());
         await _studio.Post("/Studio/Apps/Edit", "/Studio/Apps/Edit", StudioHarness.AppForm());
-        Assert.True(_studio.Releases.Execute("0.1.0", "For the page tests.", "admin").Succeeded);
+        Assert.True(_studio.Releases.Execute(Ver.First, "For the page tests.", "admin").Succeeded);
         var run = _studio.Releases.Runs(1)[0].Id;
 
         var problems = await Crawl(Pages().Concat(["/Studio/Apps/Edit?id=matx", "/Studio/History?kind=apps&id=matx", $"/Studio/Releases/Run?id={run}", "/Studio/Versions/Edit?id=matx"]));

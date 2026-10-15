@@ -109,7 +109,7 @@ public sealed class VersionToolsTests(WebApplicationFactory<Program> factory) : 
 
             ## [Unreleased]
 
-            ## [3.0.0] - 2026-12-01
+            ## [{Ver.NextMajor}] - 2026-12-01
 
             ### Breaking
 
@@ -133,14 +133,14 @@ public sealed class VersionToolsTests(WebApplicationFactory<Program> factory) : 
         // the copy is the one of the build; the changelog knows a newer version, so it is behind
         var behind = Node(Tool("matui-check.js"), app, "--changelog", log)!.Value;
         Assert.Equal(2, behind.Code);
-        Assert.Contains("3.0.0", behind.Output);
+        Assert.Contains(Ver.NextMajor, behind.Output);
         Assert.Contains("BREAKING", behind.Output);
         Assert.Contains("breaks: The class `mat-old` is gone.", behind.Output);
         Assert.Contains("do:     Replace `mat-old` by `mat-new`.", behind.Output);
-        Assert.Contains("1 newer version: copy ALL the files of 3.0.0 again and do the steps above.", behind.Output);
+        Assert.Contains($"1 newer version: copy ALL the files of {Ver.NextMajor} again and do the steps above.", behind.Output);
 
         // a newer version that breaks nothing is advice (1)
-        var soft = ChangelogWith($"## [{AppVersion.MatUi.Split('.')[0]}.{AppVersion.MatUi.Split('.')[1]}.{int.Parse(AppVersion.MatUi.Split('.')[2]) + 1}] - 2026-12-01\n\n### Fixed\n\n- A bug.\n\n## [{AppVersion.MatUi}]\n\n### Added\n\n- The start.\n");
+        var soft = ChangelogWith($"## [{Ver.Next(1)}] - 2026-12-01\n\n### Fixed\n\n- A bug.\n\n## [{AppVersion.MatUi}]\n\n### Added\n\n- The start.\n");
         var advice = Node(Tool("matui-check.js"), app, "--changelog", soft)!.Value;
         Assert.Equal(1, advice.Code);
         Assert.DoesNotContain("BREAKING", advice.Output);
@@ -151,7 +151,7 @@ public sealed class VersionToolsTests(WebApplicationFactory<Program> factory) : 
     {
         var app = await AppWithCopy();
         var script = Path.Combine(app, "wwwroot", "matui.js");
-        File.WriteAllText(script, File.ReadAllText(script).Replace($"Version {AppVersion.MatUi} of the toolkit MatUi", "Version 0.0.9 of the toolkit MatUi").Replace($"version: '{AppVersion.MatUi}'", "version: '0.0.9'"));
+        File.WriteAllText(script, File.ReadAllText(script).Replace($"Version {AppVersion.MatUi} of the toolkit MatUi", $"Version {Ver.Next(7)} of the toolkit MatUi").Replace($"version: '{AppVersion.MatUi}'", $"version: '{Ver.Next(7)}'"));
         if (Node(Tool("matui-check.js"), app) is not { } mixed)
         {
             return;
@@ -247,7 +247,8 @@ public sealed class VersionToolsTests(WebApplicationFactory<Program> factory) : 
         var patchOfBreak = Repository("### Breaking\n\n- A class is gone.\n\n### Migration\n\n- Use the other.\n");
         var patch = Node(Tool("bump.js"), "patch", "--root", patchOfBreak)!.Value;
         Assert.Equal(1, patch.Code);
-        Assert.Contains("at least a new minor", patch.Output);
+        // what a break asks for depends on the toolkit: before 1.0 a new minor, from 1.0 on a new major
+        Assert.Contains(AppVersion.MatUi.StartsWith("0.", StringComparison.Ordinal) ? "at least a new minor" : "that is a major version", patch.Output);
 
         var dry = Repository("### Fixed\n\n- A bug.\n");
         var before = File.ReadAllText(Path.Combine(dry, "CHANGELOG.md"));

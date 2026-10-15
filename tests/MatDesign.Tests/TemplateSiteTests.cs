@@ -29,6 +29,10 @@ public sealed partial class TemplateSiteTests : IClassFixture<WebApplicationFact
     [GeneratedRegex(@"(?:local|nightly)-[\w-]*\d{8}|\d+\.\d+\.\d+-\d{8}")]
     private static partial Regex Build();
 
+    // the version of the toolkit (and the example versions on the pages) change with every release of it: none of them says anything about a tenant
+    [GeneratedRegex(@"(?<![\w.])\d+\.\d+\.\d+(?!\w)")]
+    private static partial Regex SemVer();
+
     [GeneratedRegex(@"https?://[^/""'<\s]+")]
     private static partial Regex Host();
 
@@ -57,7 +61,7 @@ public sealed partial class TemplateSiteTests : IClassFixture<WebApplicationFact
     private static partial Regex InlineStyle();
 
     /// <summary>
-    /// A page without what changes for a reason that has nothing to do with a tenant: the icon sprite, the hash of the files, the build, the host, the numbers (a rule more in the rulebook
+    /// A page without what changes for a reason that has nothing to do with a tenant: the icon sprite, the hash of the files, the build, the version of the toolkit, the host, the numbers (a rule more in the rulebook
     /// changes a count), the anti-forgery token, and the white space between tags (the indentation of the source).
     /// </summary>
     public static string Normalize(string html)
@@ -67,6 +71,7 @@ public sealed partial class TemplateSiteTests : IClassFixture<WebApplicationFact
         html = html.Replace("<!-- sprite -->\n", "<!-- sprite -->");
         html = AssetVersion().Replace(html, "?v=HASH");
         html = Build().Replace(html, "BUILD");
+        html = SemVer().Replace(html, "VERSION");
         html = Host().Replace(html, "http://HOST");
         html = Hash().Replace(html, "HASH");
         html = Number().Replace(html, "N");

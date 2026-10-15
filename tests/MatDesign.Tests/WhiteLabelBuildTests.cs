@@ -69,7 +69,7 @@ public sealed class WhiteLabelBuildTests(WebApplicationFactory<Program> factory)
 
         foreach (var expected in new[]
         {
-            "acmeui.css", "acmeui.js", "acmeui.boot.js", "acmeui-icons.svg", "CHANGELOG.md", "acmeui-0.1.0.zip", "iconlib/acmeui-iconlib.svg", "iconlib/iconlib.json", "iconlib/LICENSE.txt",
+            "acmeui.css", "acmeui.js", "acmeui.boot.js", "acmeui-icons.svg", "CHANGELOG.md", $"acmeui-{Ver.First}.zip", "iconlib/acmeui-iconlib.svg", "iconlib/iconlib.json", "iconlib/LICENSE.txt",
             "design.json", "styleguide.html", "styleguide.css", "sample.svg",
         })
         {
@@ -173,7 +173,7 @@ public sealed class WhiteLabelBuildTests(WebApplicationFactory<Program> factory)
     public void The_archive_is_renamed_inside_and_out_with_a_manifest_of_the_renamed_files()
     {
         var result = Trial(Acme);
-        var zip = new ZipArchive(new MemoryStream(result.Files.Single(f => f.Path == "acmeui-0.1.0.zip").Bytes));
+        var zip = new ZipArchive(new MemoryStream(result.Files.Single(f => f.Path == $"acmeui-{Ver.First}.zip").Bytes));
         string Read(string name)
         {
             using var reader = new StreamReader(zip.GetEntry(name)!.Open(), Encoding.UTF8);
@@ -218,7 +218,7 @@ public sealed class WhiteLabelBuildTests(WebApplicationFactory<Program> factory)
         Assert.Contains("<link rel=\"stylesheet\" href=\"acmeui.css\">", page);
         Assert.Contains("<script src=\"acmeui.boot.js\"></script>", page);
         Assert.Contains("<script src=\"acmeui.js\" defer></script>", page);
-        Assert.Contains("<title>AcmeUi 0.1.0", page);
+        Assert.Contains($"<title>AcmeUi {Ver.First}", page);
         Assert.Contains("<symbol id=\"acme-i-check\"", page);
         Assert.Contains("class=\"acme-btn", page);
         Assert.DoesNotContain("mat-btn", page);
@@ -262,7 +262,7 @@ public sealed class WhiteLabelBuildTests(WebApplicationFactory<Program> factory)
 
         Assert.Empty(result.Findings);
         Assert.Contains(result.Files, f => f.Path == $"{name.ToLowerInvariant()}.css");
-        Assert.Contains(result.Files, f => f.Path == $"{name.ToLowerInvariant()}-0.1.0.zip");
+        Assert.Contains(result.Files, f => f.Path == $"{name.ToLowerInvariant()}-{Ver.First}.zip");
         Assert.Contains($"window.{name} = {{", Text(result, $"{name.ToLowerInvariant()}.js"));
     }
 
@@ -381,7 +381,7 @@ public sealed class WhiteLabelBuildTests(WebApplicationFactory<Program> factory)
     [Fact]
     public void A_bundle_that_is_not_named_after_the_product_is_found()
     {
-        var first = Findings(Trial(Acme), "acmeui.css", t => "/* Other 0.1.0 */" + t[t.IndexOf('\n')..]);
+        var first = Findings(Trial(Acme), "acmeui.css", t => $"/* Other {Ver.First} */" + t[t.IndexOf('\n')..]);
         Assert.Contains(first, f => f.Check == WhiteLabelChecks.Names && f.Message.Contains("first line", StringComparison.Ordinal));
 
         var files = Trial(Acme).Report.Where(f => f.Path != "acmeui.css").ToList();

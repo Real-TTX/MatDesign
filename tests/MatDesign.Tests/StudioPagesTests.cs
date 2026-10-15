@@ -58,10 +58,10 @@ public sealed partial class StudioPagesTests : IClassFixture<WebApplicationFacto
             Logo: new(assetStore.Put(svg, ".svg"), 64, 64, svg.Length), LogoDark: new(assetStore.Put(darkSvg, ".svg"), 64, 64, darkSvg.Length), LogoAlt: "Acme",
             Favicon: new(assetStore.Put(svg, ".svg"), 64, 64, svg.Length), Fonts: [new("Acme Sans", 400, "normal", assetStore.Put(font, ".woff2"), font.Length)]), "admin", "Created");
         _studio.Design.Reload();
-        Assert.True(_studio.Releases.Execute("0.1.0", "For the page tests.", "admin").Succeeded);
-        _studio.Factory.Services.GetRequiredService<VersionTracker>().Set("matmail", "0.1.0", "A note.", "admin");
+        Assert.True(_studio.Releases.Execute(Ver.First, "For the page tests.", "admin").Succeeded);
+        _studio.Factory.Services.GetRequiredService<VersionTracker>().Set("matmail", Ver.First, "A note.", "admin");
         // a second app and a second release, so that something is behind
-        Assert.True(_studio.Releases.Execute("0.1.1", string.Empty, "admin").Succeeded);
+        Assert.True(_studio.Releases.Execute(Ver.Next(1), string.Empty, "admin").Succeeded);
         // the white label setting (stage 15), after the releases so that they stay what the other tests expect
         _studio.Store.Save("whitelabel", "whitelabel", new MatDesign.Core.Studio.WhiteLabelSetting("acme", "AcmeUi"), "admin", "Created");
         _studio.Design.Reload();

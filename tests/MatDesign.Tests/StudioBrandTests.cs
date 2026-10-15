@@ -324,22 +324,22 @@ public sealed class StudioBrandTests : IClassFixture<WebApplicationFactory<Progr
         await _studio.SignIn();
         await SaveOk(Form(new() { ["--mat-radius"] = "10px" }, new() { ["--mat-bg"] = "#101010" }, tagline: "Anvils"));
 
-        var run = _studio.Releases.Execute("0.1.0", "With a brand.", "admin");
+        var run = _studio.Releases.Execute(Ver.First, "With a brand.", "admin");
         Assert.True(run.Succeeded, string.Join("\n", run.Stages.SelectMany(s => s.Log)));
 
-        var css = await _studio.Get("/releases/0.1.0/matui.css");
-        Assert.StartsWith("/* MatUi 0.1.0 (", css);
+        var css = await _studio.Get($"/releases/{Ver.First}/matui.css");
+        Assert.StartsWith($"/* MatUi {Ver.First} (", css);
         Assert.Contains(":root {\n  --mat-radius: 10px;\n}", css);
         Assert.Contains(":root[data-theme=\"dark\"] {\n  --mat-bg: #101010;\n}", css);
-        Assert.Contains("--mat-radius: 10px;", await _studio.Get("/releases/0.1.0/css/matui.apps.css"));
-        using var zip = new ZipArchive(new MemoryStream(await _studio.Client.GetByteArrayAsync("/releases/0.1.0/matui-0.1.0.zip")));
+        Assert.Contains("--mat-radius: 10px;", await _studio.Get($"/releases/{Ver.First}/css/matui.apps.css"));
+        using var zip = new ZipArchive(new MemoryStream(await _studio.Client.GetByteArrayAsync($"/releases/{Ver.First}/matui-{Ver.First}.zip")));
         foreach (var name in new[] { "matui/matui.css", "matui/css/matui.apps.css" })
         {
             using var reader = new StreamReader(zip.GetEntry(name)!.Open());
             Assert.Contains("--mat-radius: 10px;", await reader.ReadToEndAsync());
         }
 
-        var design = JsonDocument.Parse(await _studio.Get("/releases/0.1.0/design.json")).RootElement.GetProperty("brand");
+        var design = JsonDocument.Parse(await _studio.Get($"/releases/{Ver.First}/design.json")).RootElement.GetProperty("brand");
         Assert.Equal("Acme", design.GetProperty("company").GetString());
         Assert.Equal("Anvils", design.GetProperty("tagline").GetString());
         Assert.Equal("10px", design.GetProperty("light").GetProperty("--mat-radius").GetString());
@@ -358,7 +358,7 @@ public sealed class StudioBrandTests : IClassFixture<WebApplicationFactory<Progr
         _studio.Store.Save("brand", "brand", Brand.BuiltIn with { Light = new Dictionary<string, string> { ["--mat-text"] = "#cccccc" }, Dark = new Dictionary<string, string>() }, "admin", "Edited by hand");
         _studio.Design.Reload();
 
-        var run = _studio.Releases.Execute("0.1.0", string.Empty, "admin");
+        var run = _studio.Releases.Execute(Ver.First, string.Empty, "admin");
         Assert.False(run.Succeeded);
         Assert.Equal(StageStatus.Failed, run.Stages[0].Status);
         Assert.Contains(run.Stages[0].Log, l => l.Contains("Text on the page (light)", StringComparison.Ordinal));

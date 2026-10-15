@@ -105,18 +105,18 @@ public sealed partial class StyleguideTests(WebApplicationFactory<Program> facto
     {
         using var studio = new StudioHarness(factory);
         await studio.SignIn();
-        var response = await studio.Post("/Studio/Releases/New", "/Studio/Releases/New", new Dictionary<string, string> { ["Version"] = "0.1.0", ["Note"] = "" });
+        var response = await studio.Post("/Studio/Releases/New", "/Studio/Releases/New", new Dictionary<string, string> { ["Version"] = Ver.First, ["Note"] = "" });
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
 
-        var page = await studio.Client.GetAsync("/releases/0.1.0/styleguide.html");
+        var page = await studio.Client.GetAsync($"/releases/{Ver.First}/styleguide.html");
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         Assert.Equal("text/html", page.Content.Headers.ContentType!.MediaType);
         var html = await page.Content.ReadAsStringAsync();
-        Assert.Contains("MatUi 0.1.0 – styleguide", html);
+        Assert.Contains($"MatUi {Ver.First} – styleguide", html);
         Assert.Contains("id=\"tabs\"", html);
-        Assert.Equal(HttpStatusCode.OK, (await studio.Client.GetAsync("/releases/0.1.0/styleguide.css")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await studio.Client.GetAsync($"/releases/{Ver.First}/styleguide.css")).StatusCode);
 
-        using var data = JsonDocument.Parse(await studio.Get("/releases/0.1.0/design.json"));
+        using var data = JsonDocument.Parse(await studio.Get($"/releases/{Ver.First}/design.json"));
         var tabs = data.RootElement.GetProperty("components").EnumerateArray().Single(c => c.GetProperty("id").GetString() == "tabs");
         Assert.True(tabs.GetProperty("examples").GetArrayLength() >= 2);
         Assert.Contains("role=\"tablist\"", tabs.GetProperty("examples")[0].GetProperty("html").GetString());

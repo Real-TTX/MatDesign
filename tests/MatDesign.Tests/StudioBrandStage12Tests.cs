@@ -321,7 +321,7 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
         Assert.Contains(report.Findings, f => f.Check == "brand" && f.Message.Contains("Component:--mat-card-pad", StringComparison.Ordinal));
         Assert.DoesNotContain("--mat-btn-height: 20px", await _studio.Get("/ui/matui.css"));
 
-        var run = _studio.Releases.Execute("0.1.0", string.Empty, "admin");
+        var run = _studio.Releases.Execute(Ver.First, string.Empty, "admin");
         Assert.False(run.Succeeded);
         Assert.Equal(StageStatus.Failed, run.Stages[0].Status);
         Assert.Empty(_studio.Releases.Releases());
@@ -334,7 +334,7 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
         HandEditBrand(Brand.BuiltIn with { Schemes = new Dictionary<string, SchemeValues> { ["paper"] = new(new Dictionary<string, string> { ["--mat-text"] = "#c8c8c0" }, new Dictionary<string, string>()) } });
         var report = _studio.Checks.Run();
         Assert.Contains(report.Findings, f => f.Check == "brand" && f.Message.Contains("In the paper scheme", StringComparison.Ordinal));
-        Assert.False(_studio.Releases.Execute("0.1.0", string.Empty, "admin").Succeeded);
+        Assert.False(_studio.Releases.Execute(Ver.First, string.Empty, "admin").Succeeded);
     }
 
     [Fact]
@@ -357,10 +357,10 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
         await SaveComponentsOk(new() { ["--mat-btn-radius"] = "0", ["--mat-btn-height"] = "36px" });
         await SaveAppOk(new() { ["light:--mat-radius"] = "2px", ["property:--mat-card-pad"] = "1rem" });
 
-        var run = _studio.Releases.Execute("0.1.0", "Stage 12.", "admin");
+        var run = _studio.Releases.Execute(Ver.First, "Stage 12.", "admin");
         Assert.True(run.Succeeded, string.Join("\n", run.Stages.SelectMany(s => s.Log)));
 
-        var css = await _studio.Get("/releases/0.1.0/matui.css");
+        var css = await _studio.Get($"/releases/{Ver.First}/matui.css");
         Assert.Contains("  --mat-btn-radius: 0px;", css);
         Assert.Contains("@media (pointer: fine) {\n  :root {\n    --mat-btn-height: 36px;", css);
         Assert.Contains(":root[data-scheme=\"paper\"] {\n  --mat-bg: #fbf6ea;", css);
@@ -368,7 +368,7 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
         Assert.Contains("[data-app=\"matx\"] {\n  --mat-card-pad: 1rem;\n}", css);
         // brand first, then the app
         Assert.True(css.IndexOf("Component properties of the brand", StringComparison.Ordinal) < css.IndexOf("Overrides of apps set in the Studio", StringComparison.Ordinal));
-        using var zip = new ZipArchive(new MemoryStream(await _studio.Client.GetByteArrayAsync("/releases/0.1.0/matui-0.1.0.zip")));
+        using var zip = new ZipArchive(new MemoryStream(await _studio.Client.GetByteArrayAsync($"/releases/{Ver.First}/matui-{Ver.First}.zip")));
         foreach (var name in new[] { "matui/matui.css", "matui/css/matui.apps.css" })
         {
             using var reader = new StreamReader(zip.GetEntry(name)!.Open());
@@ -377,7 +377,7 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
             Assert.Contains("[data-app=\"matx\"]", text);
         }
 
-        var design = JsonDocument.Parse(await _studio.Get("/releases/0.1.0/design.json")).RootElement;
+        var design = JsonDocument.Parse(await _studio.Get($"/releases/{Ver.First}/design.json")).RootElement;
         var brand = design.GetProperty("brand");
         Assert.Equal("0px", brand.GetProperty("components").GetProperty("--mat-btn-radius").GetString());
         Assert.Equal("#fbf6ea", brand.GetProperty("schemes").GetProperty("paper").GetProperty("light").GetProperty("--mat-bg").GetString());
@@ -390,7 +390,7 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
         Assert.Contains(_studio.Releases.Latest!.Changelog, l => l.StartsWith("Brand brand:", StringComparison.Ordinal) && l.Contains("component --mat-btn-radius", StringComparison.Ordinal));
         Assert.Contains(_studio.Releases.Latest!.Changelog, l => l.StartsWith("App matx:", StringComparison.Ordinal));
         // the manifest holds the hash of the part that carries all of it
-        var directory = Path.Combine(_studio.DataDirectory, "releases", "0.1.0");
+        var directory = Path.Combine(_studio.DataDirectory, "releases", Ver.First);
         var manifest = JsonSerializer.Deserialize<ReleaseManifest>(File.ReadAllText(Path.Combine(directory, "manifest.json")), new JsonSerializerOptions(JsonSerializerDefaults.Web))!;
         var entry = manifest.Files.Single(f => f.Path == "css/matui.apps.css");
         Assert.Equal(Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(Path.Combine(directory, "css", "matui.apps.css")))).ToLowerInvariant(), entry.Sha256);
@@ -563,7 +563,7 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
         _studio.Design.Reload();
         var report = _studio.Checks.Run();
         Assert.Contains(report.Findings, f => f.Check == "apps" && f.Id == "matx" && f.Message.Contains("Property --mat-btn-height", StringComparison.Ordinal) && f.Message.Contains("MOBILE-04", StringComparison.Ordinal));
-        Assert.False(_studio.Releases.Execute("0.1.0", string.Empty, "admin").Succeeded);
+        Assert.False(_studio.Releases.Execute(Ver.First, string.Empty, "admin").Succeeded);
     }
 
     [Fact]

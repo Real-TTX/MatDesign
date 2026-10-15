@@ -223,15 +223,15 @@ public sealed class WhiteLabelStudioTests : IClassFixture<WebApplicationFactory<
     public async Task A_release_without_a_setting_is_what_it_was_before_byte_for_byte()
     {
         await _studio.SignIn();
-        var run = await Released("0.1.0");
+        var run = await Released(Ver.First);
         Assert.True(run.Succeeded);
         Assert.DoesNotContain(run.Stages[2].Log, l => l.Contains("White label", StringComparison.Ordinal));
 
-        var dir = Dir("0.1.0");
+        var dir = Dir(Ver.First);
         void Same(string path, string expected) => Assert.True(File.ReadAllBytes(Path.Combine(dir, path)).AsSpan().SequenceEqual(Bytes(expected)), path + " is not what the toolkit gives");
-        Same("matui.css", Toolkit.ReleaseBundle("0.1.0"));
-        Same("matui.js", Toolkit.ReleaseScript("0.1.0"));
-        Same("matui.boot.js", Toolkit.ReleaseBootScript("0.1.0"));
+        Same("matui.css", Toolkit.ReleaseBundle(Ver.First));
+        Same("matui.js", Toolkit.ReleaseScript(Ver.First));
+        Same("matui.boot.js", Toolkit.ReleaseBootScript(Ver.First));
         Same("matui-icons.svg", Toolkit.Sprite);
         Same("CHANGELOG.md", Changelog.LoadText());
         foreach (var part in ToolkitFiles.CssParts)
@@ -244,11 +244,11 @@ public sealed class WhiteLabelStudioTests : IClassFixture<WebApplicationFactory<
         Same("iconlib/LICENSE.txt", Icons.License);
         Same(Styleguide.CssName, Styleguide.Css());
         Same(Styleguide.SampleName, Styleguide.SampleImage());
-        Same(Styleguide.HtmlName, Styleguide.Html(_studio.Design, Toolkit, "0.1.0", Toolkit.Hash));
+        Same(Styleguide.HtmlName, Styleguide.Html(_studio.Design, Toolkit, Ver.First, Toolkit.Hash));
 
         // the archive: the same entries with the same content as the archive the toolkit builds
-        using var released = new ZipArchive(File.OpenRead(Path.Combine(dir, "matui-0.1.0.zip")));
-        using var expectedZip = new ZipArchive(new MemoryStream(Toolkit.ReleaseZip("0.1.0")));
+        using var released = new ZipArchive(File.OpenRead(Path.Combine(dir, $"matui-{Ver.First}.zip")));
+        using var expectedZip = new ZipArchive(new MemoryStream(Toolkit.ReleaseZip(Ver.First)));
         Assert.Equal(expectedZip.Entries.Select(e => e.FullName), released.Entries.Select(e => e.FullName));
         foreach (var entry in expectedZip.Entries)
         {
@@ -270,25 +270,25 @@ public sealed class WhiteLabelStudioTests : IClassFixture<WebApplicationFactory<
     public async Task A_setting_that_renames_nothing_gives_the_same_release_as_none()
     {
         await _studio.SignIn();
-        await Released("0.1.0");
+        await Released(Ver.First);
         await SaveOk("mat", "MatUi");
-        var run = await Released("0.1.1");
+        var run = await Released(Ver.Next(1));
         Assert.True(run.Succeeded);
 
-        foreach (var file in Directory.EnumerateFiles(Dir("0.1.0"), "*", SearchOption.AllDirectories))
+        foreach (var file in Directory.EnumerateFiles(Dir(Ver.First), "*", SearchOption.AllDirectories))
         {
-            var relative = Path.GetRelativePath(Dir("0.1.0"), file).Replace('\\', '/');
-            if (relative is "manifest.json" or "matui-0.1.0.zip" or "matui.css" or "matui.js" or "matui.boot.js" or "styleguide.html" or "matui.manifest.json")
+            var relative = Path.GetRelativePath(Dir(Ver.First), file).Replace('\\', '/');
+            if (relative == Ver.Zip(Ver.First) || relative is "manifest.json" or "matui.css" or "matui.js" or "matui.boot.js" or "styleguide.html" or "matui.manifest.json")
             {
                 continue;
             }
 
-            Assert.True(File.ReadAllBytes(file).AsSpan().SequenceEqual(File.ReadAllBytes(Path.Combine(Dir("0.1.1"), relative))), relative + " differs");
+            Assert.True(File.ReadAllBytes(file).AsSpan().SequenceEqual(File.ReadAllBytes(Path.Combine(Dir(Ver.Next(1)), relative))), relative + " differs");
         }
 
-        Assert.False(File.Exists(Path.Combine(Dir("0.1.1"), "acmeui.css")));
-        Assert.DoesNotContain("whiteLabel", File.ReadAllText(Path.Combine(Dir("0.1.1"), "manifest.json")));
-        Assert.Contains("/* MatUi 0.1.1 (", File.ReadAllText(Path.Combine(Dir("0.1.1"), "matui.css")));
+        Assert.False(File.Exists(Path.Combine(Dir(Ver.Next(1)), "acmeui.css")));
+        Assert.DoesNotContain("whiteLabel", File.ReadAllText(Path.Combine(Dir(Ver.Next(1)), "manifest.json")));
+        Assert.Contains($"/* MatUi {Ver.Next(1)} (", File.ReadAllText(Path.Combine(Dir(Ver.Next(1)), "matui.css")));
     }
 
     [Fact]
@@ -296,7 +296,7 @@ public sealed class WhiteLabelStudioTests : IClassFixture<WebApplicationFactory<
     {
         await _studio.SignIn();
         await SaveOk("acme", "AcmeUi");
-        var run = await Released("0.1.0");
+        var run = await Released(Ver.First);
 
         Assert.True(run.Succeeded, string.Join("\n", run.Stages.SelectMany(s => s.Log)));
         var build = run.Stages[2].Log;
@@ -308,10 +308,10 @@ public sealed class WhiteLabelStudioTests : IClassFixture<WebApplicationFactory<
         Assert.Contains(build, l => l.StartsWith("acmeui.css  ", StringComparison.Ordinal));
         Assert.DoesNotContain(build, l => l.StartsWith("matui", StringComparison.Ordinal));
 
-        var dir = Dir("0.1.0");
+        var dir = Dir(Ver.First);
         var names = Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(dir, f).Replace('\\', '/')).ToList();
         Assert.Contains("acmeui.css", names);
-        Assert.Contains("acmeui-0.1.0.zip", names);
+        Assert.Contains($"acmeui-{Ver.First}.zip", names);
         Assert.Contains("css/acmeui.tokens.css", names);
         Assert.Contains("iconlib/acmeui-iconlib.svg", names);
         Assert.DoesNotContain(names, n => n.Contains("matui", StringComparison.Ordinal));
@@ -321,7 +321,7 @@ public sealed class WhiteLabelStudioTests : IClassFixture<WebApplicationFactory<
         Assert.Contains("\"whiteLabel\"", File.ReadAllText(Path.Combine(dir, "manifest.json")));
         Assert.NotEqual(Toolkit.Hash, manifest.Hash);
         var css = File.ReadAllText(Path.Combine(dir, "acmeui.css"));
-        Assert.StartsWith($"/* AcmeUi 0.1.0 ({manifest.Hash}) - build ", css);
+        Assert.StartsWith($"/* AcmeUi {Ver.First} ({manifest.Hash}) - build ", css);
         Assert.Contains(".acme-btn", css);
         Assert.DoesNotContain("mat-btn", css);
         foreach (var file in manifest.Files)
@@ -332,7 +332,7 @@ public sealed class WhiteLabelStudioTests : IClassFixture<WebApplicationFactory<
         }
 
         // the archive and its own manifest
-        using var zip = new ZipArchive(File.OpenRead(Path.Combine(dir, "acmeui-0.1.0.zip")));
+        using var zip = new ZipArchive(File.OpenRead(Path.Combine(dir, $"acmeui-{Ver.First}.zip")));
         using var inner = new StreamReader(zip.GetEntry("acmeui/acmeui.manifest.json")!.Open());
         var innerManifest = JsonDocument.Parse(inner.ReadToEnd()).RootElement;
         Assert.Equal("AcmeUi", innerManifest.GetProperty("name").GetString());
@@ -340,10 +340,10 @@ public sealed class WhiteLabelStudioTests : IClassFixture<WebApplicationFactory<
         Assert.Equal(File.ReadAllText(Path.Combine(dir, "acmeui.js")), new StreamReader(zip.GetEntry("acmeui/acmeui.js")!.Open()).ReadToEnd());
 
         // served, and the list of releases links the archive by its name
-        Assert.StartsWith("/* AcmeUi 0.1.0 (", await _studio.Get("/releases/0.1.0/acmeui.css"));
-        Assert.Equal(HttpStatusCode.NotFound, (await _studio.Client.GetAsync("/releases/0.1.0/matui.css")).StatusCode);
-        Assert.Contains("href=\"/releases/0.1.0/acmeui-0.1.0.zip\"", await _studio.Get("/Studio/Releases"));
-        Assert.Contains("<script src=\"acmeui.js\" defer></script>", await _studio.Get("/releases/0.1.0/styleguide.html"));
+        Assert.StartsWith($"/* AcmeUi {Ver.First} (", await _studio.Get($"/releases/{Ver.First}/acmeui.css"));
+        Assert.Equal(HttpStatusCode.NotFound, (await _studio.Client.GetAsync($"/releases/{Ver.First}/matui.css")).StatusCode);
+        Assert.Contains($"href=\"/releases/{Ver.First}/acmeui-{Ver.First}.zip\"", await _studio.Get("/Studio/Releases"));
+        Assert.Contains("<script src=\"acmeui.js\" defer></script>", await _studio.Get($"/releases/{Ver.First}/styleguide.html"));
         Assert.Contains("\"whiteLabel\"", await _studio.Get("/releases/latest.json"));
     }
 
@@ -352,18 +352,18 @@ public sealed class WhiteLabelStudioTests : IClassFixture<WebApplicationFactory<
     {
         await _studio.SignIn();
         await SaveOk("acme", "AcmeUi");
-        await Released("0.1.0");
-        var before = File.ReadAllBytes(Path.Combine(Dir("0.1.0"), "acmeui.css"));
+        await Released(Ver.First);
+        var before = File.ReadAllBytes(Path.Combine(Dir(Ver.First), "acmeui.css"));
         var reset = await _studio.Post(Page, Page + "?handler=Reset", new Dictionary<string, string>());
         Assert.Equal(HttpStatusCode.Redirect, reset.StatusCode);
 
-        var run = await Released("0.1.1");
+        var run = await Released(Ver.Next(1));
 
         Assert.True(run.Succeeded);
-        Assert.True(File.Exists(Path.Combine(Dir("0.1.1"), "matui.css")));
-        Assert.False(File.Exists(Path.Combine(Dir("0.1.1"), "acmeui.css")));
-        Assert.True(File.ReadAllBytes(Path.Combine(Dir("0.1.0"), "acmeui.css")).AsSpan().SequenceEqual(before));
-        Assert.Equal(["0.1.1", "0.1.0"], _studio.Releases.Releases().Select(m => m.Version));
+        Assert.True(File.Exists(Path.Combine(Dir(Ver.Next(1)), "matui.css")));
+        Assert.False(File.Exists(Path.Combine(Dir(Ver.Next(1)), "acmeui.css")));
+        Assert.True(File.ReadAllBytes(Path.Combine(Dir(Ver.First), "acmeui.css")).AsSpan().SequenceEqual(before));
+        Assert.Equal([Ver.Next(1), Ver.First], _studio.Releases.Releases().Select(m => m.Version));
     }
 
     [Fact]
@@ -376,13 +376,13 @@ public sealed class WhiteLabelStudioTests : IClassFixture<WebApplicationFactory<
 
         var result = _studio.Checks.Run();
         Assert.Contains(result.Results.Single(r => r.Check.Id == "whitelabel").Findings, f => f.Severity == Severity.Error && f.Kind == "whitelabel");
-        var run = await Released("0.1.0");
+        var run = await Released(Ver.First);
 
         Assert.False(run.Succeeded);
         Assert.Equal(StageStatus.Failed, run.Stages[0].Status);
         Assert.Contains(run.Stages[0].Log, l => l.Contains("White label setting", StringComparison.Ordinal) || l.Contains("white label", StringComparison.OrdinalIgnoreCase));
         Assert.Equal(StageStatus.Skipped, run.Stages[2].Status);
-        Assert.False(Directory.Exists(Dir("0.1.0")));
+        Assert.False(Directory.Exists(Dir(Ver.First)));
         Assert.Contains("/Studio/Releases/WhiteLabel", (await _studio.Get("/Studio/Checks")));
     }
 

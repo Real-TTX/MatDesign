@@ -682,7 +682,7 @@ public sealed partial class StudioAssetsTests : IClassFixture<WebApplicationFact
         var report = _studio.Checks.Run();
         Assert.False(report.Passed);
         Assert.Contains(report.Findings, f => f.Check == "assets" && f.Message.Contains("<script>", StringComparison.Ordinal));
-        var run = _studio.Releases.Execute("0.1.0", string.Empty, "admin");
+        var run = _studio.Releases.Execute(Ver.First, string.Empty, "admin");
         Assert.False(run.Succeeded);
         Assert.Equal(StageStatus.Failed, run.Stages[0].Status);
         Assert.Contains(run.Stages[0].Log, l => l.Contains("files of the brand", StringComparison.Ordinal));
@@ -707,7 +707,7 @@ public sealed partial class StudioAssetsTests : IClassFixture<WebApplicationFact
         await UploadOk("logo", GoodSvg, "logo.svg", "image/svg+xml", "Acme Anvils");
         await UploadOk("favicon", AssetFixtures.Png(32, 32), "favicon.png", "image/png");
         await AddFontOk("Acme Sans", 400, "normal", AssetFixtures.Woff2());
-        var run = _studio.Releases.Execute("0.1.0", "With assets.", "admin");
+        var run = _studio.Releases.Execute(Ver.First, "With assets.", "admin");
         Assert.True(run.Succeeded, string.Join("\n", run.Stages.SelectMany(s => s.Log)));
         Assert.Contains(run.Stages.Single(s => s.Name == "Build").Log, l => l.StartsWith("Brand assets: 3 file(s)", StringComparison.Ordinal));
         Assert.Contains(run.Stages.Single(s => s.Name == "Check").Log, l => l.Contains("The files of the brand are valid", StringComparison.Ordinal));
@@ -715,11 +715,11 @@ public sealed partial class StudioAssetsTests : IClassFixture<WebApplicationFact
         var assets = _studio.Design.Assets!;
         var logo = "brand/" + BrandAssets.PublicName("logo", assets.Logo!);
         var font = "brand/" + BrandAssets.PublicName(assets.Faces[0]);
-        var directory = _studio.Releases.DirectoryOf("0.1.0");
+        var directory = _studio.Releases.DirectoryOf(Ver.First);
         Assert.Equal(GoodSvg, File.ReadAllBytes(Path.Combine(directory, logo)));
         Assert.True(File.Exists(Path.Combine(directory, font)));
 
-        var manifest = _studio.Releases.Get("0.1.0")!;
+        var manifest = _studio.Releases.Get(Ver.First)!;
         foreach (var path in new[] { logo, font, "brand/" + BrandAssets.PublicName("favicon", assets.Favicon!) })
         {
             var entry = manifest.Files.Single(f => f.Path == path);
@@ -727,26 +727,26 @@ public sealed partial class StudioAssetsTests : IClassFixture<WebApplicationFact
         }
 
         // served by the release address with the headers of a brand file
-        var served = await _studio.Client.GetAsync("/releases/0.1.0/" + logo);
+        var served = await _studio.Client.GetAsync($"/releases/{Ver.First}/" + logo);
         Assert.Equal("image/svg+xml", served.Content.Headers.ContentType!.MediaType);
         Assert.Equal("default-src 'none'; style-src 'none'", served.Headers.GetValues("Content-Security-Policy").Single());
         Assert.Equal("nosniff", served.Headers.GetValues("X-Content-Type-Options").Single());
-        Assert.Equal("font/woff2", (await _studio.Client.GetAsync("/releases/0.1.0/" + font)).Content.Headers.ContentType!.MediaType);
-        Assert.Equal("image/png", (await _studio.Client.GetAsync("/releases/0.1.0/brand/" + BrandAssets.PublicName("favicon", assets.Favicon!))).Content.Headers.ContentType!.MediaType);
+        Assert.Equal("font/woff2", (await _studio.Client.GetAsync($"/releases/{Ver.First}/" + font)).Content.Headers.ContentType!.MediaType);
+        Assert.Equal("image/png", (await _studio.Client.GetAsync($"/releases/{Ver.First}/brand/" + BrandAssets.PublicName("favicon", assets.Favicon!))).Content.Headers.ContentType!.MediaType);
 
         // the stylesheets of the release point to the fonts relative to themselves
-        Assert.Contains($"url(\"{font}\")", await _studio.Get("/releases/0.1.0/matui.css"));
-        Assert.Contains($"url(\"../{font}\")", await _studio.Get("/releases/0.1.0/css/matui.apps.css"));
+        Assert.Contains($"url(\"{font}\")", await _studio.Get($"/releases/{Ver.First}/matui.css"));
+        Assert.Contains($"url(\"../{font}\")", await _studio.Get($"/releases/{Ver.First}/css/matui.apps.css"));
 
         // design.json names the files as they lie in the release, with the alt text
-        var design = JsonDocument.Parse(await _studio.Get("/releases/0.1.0/design.json")).RootElement.GetProperty("assets");
+        var design = JsonDocument.Parse(await _studio.Get($"/releases/{Ver.First}/design.json")).RootElement.GetProperty("assets");
         Assert.Equal(logo, design.GetProperty("logo").GetProperty("file").GetString());
         Assert.Equal("Acme Anvils", design.GetProperty("logo").GetProperty("alt").GetString());
         Assert.Equal(font, design.GetProperty("fonts")[0].GetProperty("file").GetString());
         Assert.Equal("Acme Sans", design.GetProperty("fonts")[0].GetProperty("family").GetString());
 
         // the archive has the files under matui/brand/, their hashes in its manifest, and says how to use them
-        using var zip = new ZipArchive(new MemoryStream(await _studio.Client.GetByteArrayAsync("/releases/0.1.0/matui-0.1.0.zip")));
+        using var zip = new ZipArchive(new MemoryStream(await _studio.Client.GetByteArrayAsync($"/releases/{Ver.First}/matui-{Ver.First}.zip")));
         using (var data = new MemoryStream())
         {
             await zip.GetEntry("matui/" + logo)!.Open().CopyToAsync(data);
@@ -782,17 +782,17 @@ public sealed partial class StudioAssetsTests : IClassFixture<WebApplicationFact
     public async Task A_release_without_assets_has_no_brand_folder_no_assets_in_its_design_data_and_the_archive_it_always_had()
     {
         await _studio.SignIn();
-        var run = _studio.Releases.Execute("0.1.0", string.Empty, "admin");
+        var run = _studio.Releases.Execute(Ver.First, string.Empty, "admin");
         Assert.True(run.Succeeded);
         Assert.Contains(run.Stages.Single(s => s.Name == "Build").Log, l => l.Contains("No brand assets saved", StringComparison.Ordinal));
-        Assert.False(Directory.Exists(Path.Combine(_studio.Releases.DirectoryOf("0.1.0"), "brand")));
-        Assert.DoesNotContain(_studio.Releases.Get("0.1.0")!.Files, f => f.Path.StartsWith("brand/", StringComparison.Ordinal));
-        Assert.False(JsonDocument.Parse(await _studio.Get("/releases/0.1.0/design.json")).RootElement.TryGetProperty("assets", out _));
-        using var zip = new ZipArchive(new MemoryStream(await _studio.Client.GetByteArrayAsync("/releases/0.1.0/matui-0.1.0.zip")));
+        Assert.False(Directory.Exists(Path.Combine(_studio.Releases.DirectoryOf(Ver.First), "brand")));
+        Assert.DoesNotContain(_studio.Releases.Get(Ver.First)!.Files, f => f.Path.StartsWith("brand/", StringComparison.Ordinal));
+        Assert.False(JsonDocument.Parse(await _studio.Get($"/releases/{Ver.First}/design.json")).RootElement.TryGetProperty("assets", out _));
+        using var zip = new ZipArchive(new MemoryStream(await _studio.Client.GetByteArrayAsync($"/releases/{Ver.First}/matui-{Ver.First}.zip")));
         Assert.DoesNotContain(zip.Entries, e => e.FullName.StartsWith("matui/brand", StringComparison.Ordinal));
         Assert.DoesNotContain("brand/", new StreamReader(zip.GetEntry("matui/README.txt")!.Open()).ReadToEnd());
-        Assert.DoesNotContain("@font-face", await _studio.Get("/releases/0.1.0/matui.css"));
-        Assert.Equal((await _studio.Get("/releases/0.1.0/css/matui.apps.css")).Length, TestPaths.ReadToolkit("css/matui.apps.css").Length);
+        Assert.DoesNotContain("@font-face", await _studio.Get($"/releases/{Ver.First}/matui.css"));
+        Assert.Equal((await _studio.Get($"/releases/{Ver.First}/css/matui.apps.css")).Length, TestPaths.ReadToolkit("css/matui.apps.css").Length);
     }
 
     [Fact]

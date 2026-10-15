@@ -53,7 +53,7 @@ public sealed partial class StudioAccessTests : IClassFixture<WebApplicationFact
         var again = StudioHarness.AppForm("matx", "matx");
         again["Input.Tagline"] = "A tagline that changed";
         await _studio.Post("/Studio/Apps/Edit", "/Studio/Apps/Edit", again);
-        Assert.True(_studio.Releases.Execute("0.1.0", "For the access tests.", "admin").Succeeded);
+        Assert.True(_studio.Releases.Execute(Ver.First, "For the access tests.", "admin").Succeeded);
         _runId = _studio.Releases.Runs(1)[0].Id;
         _studio.AddUser("Eddie", "editor");
         _studio.AddUser("Vera", "viewer");
@@ -335,7 +335,7 @@ public sealed partial class StudioAccessTests : IClassFixture<WebApplicationFact
         yield return new("/Studio/Releases/WhiteLabel?handler=Check", Capability.ManageWhiteLabel, new Dictionary<string, string> { ["Input.Prefix"] = "acme", ["Input.Name"] = "AcmeUi" });
         yield return new("/Studio/Releases/WhiteLabel?handler=Reset", Capability.ManageWhiteLabel, none);
         yield return new("/Studio/Releases/New", Capability.ManageReleases, new Dictionary<string, string> { ["Version"] = "9.9.9", ["Note"] = "refused" });
-        yield return new("/Studio/Versions/Edit", Capability.ManageVersions, new Dictionary<string, string> { ["Input.AppId"] = "matmail", ["Input.Version"] = "0.1.0" });
+        yield return new("/Studio/Versions/Edit", Capability.ManageVersions, new Dictionary<string, string> { ["Input.AppId"] = "matmail", ["Input.Version"] = Ver.First });
         yield return new("/Studio/Versions/Edit?handler=Latest", Capability.ManageVersions, new Dictionary<string, string> { ["Input.AppId"] = "matmail" });
         yield return new("/Studio/Versions/Edit?handler=Forget", Capability.ManageVersions, new Dictionary<string, string> { ["Input.AppId"] = "matmail" });
         yield return new("/Studio/Users/Edit?handler=Create", Capability.ManageUsers, new Dictionary<string, string> { ["Name"] = "Mallory", ["Role"] = "administrator", ["Password"] = "mallory takes over 1" });
