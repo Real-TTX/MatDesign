@@ -1,3 +1,4 @@
+using MatDesign.Core.Studio;
 using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +8,7 @@ namespace MatDesign.Web.Pages.Studio.Releases;
 /// The form that starts the pipeline: a version (the next one is suggested) and a note. The version is checked before anything runs, so a typo does not leave a run behind; the checks of the data
 /// are shown, and a run with errors is allowed (it stops at Check, and the run is kept). The pipeline is fast, so it runs in the request and the page leads to the run.
 /// </summary>
+[RequireCapability(Capability.ManageReleases)]
 public class NewModel(StudioService studio, ReleaseService releases, DesignChecks checks) : StudioPageModel(studio)
 {
     [BindProperty]
@@ -33,6 +35,7 @@ public class NewModel(StudioService studio, ReleaseService releases, DesignCheck
         return Page();
     }
 
+    [RequireCapability(Capability.ManageReleases)]
     public IActionResult OnPost()
     {
         var version = (Version ?? string.Empty).Trim();
@@ -53,7 +56,7 @@ public class NewModel(StudioService studio, ReleaseService releases, DesignCheck
         PipelineRun run;
         try
         {
-            run = releases.Execute(version, note, Studio.Administrator);
+            run = releases.Execute(version, note, Who);
         }
         catch (InvalidOperationException ex)
         {

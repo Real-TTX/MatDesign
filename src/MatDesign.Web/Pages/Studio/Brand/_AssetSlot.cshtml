@@ -66,6 +66,8 @@
         </ul>
     }
 
+    @if (v.CanEdit)
+    {
     <form class="mat-form" method="post" action="/Studio/Brand/Assets?handler=Save" enctype="multipart/form-data" novalidate>
         @Html.AntiForgeryToken()
         <input type="hidden" name="slot" value="@id" />
@@ -94,4 +96,5 @@
             }
         </div>
     </form>
+    }
 </div>

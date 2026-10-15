@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using MatDesign.Core;
+using MatDesign.Core.Studio;
+using MatDesign.Web.Studio;
 
 namespace MatDesign.Web.Services;
 
@@ -181,8 +183,26 @@ public static class Navigation
     /// </summary>
     public static NavSet StudioSet { get; } = StudioMenu(NavFacts.BuiltIn);
 
-    /// <summary>The menu of the Studio; the badge of Checks says how many checks fail (a dot when none does), once they have been run.</summary>
-    public static NavSet StudioMenu(NavFacts facts) => new("studio", "Studio", "wrench",
+    /// <summary>
+    /// The menu of the Studio; the badge of Checks says how many checks fail (a dot when none does), once they have been run. For a <paramref name="user"/> it holds only the pages their role may open
+    /// (stage 16: the people are for administrators; every other page can be read by every role, and its buttons are drawn only for the roles that may use them); without one it is the whole menu.
+    /// </summary>
+    public static NavSet StudioMenu(NavFacts facts, StudioUser? user = null)
+    {
+        var menu = StudioMenuOf(facts);
+        if (user is null)
+        {
+            return menu;
+        }
+
+        var groups = menu.Groups
+            .Select(g => g with { Items = [.. g.Items.Where(i => i.Href is null || user.Can(StudioAccess.ViewCapabilityOf(i.Href)))] })
+            .Where(g => g.Title is null || g.Items.Count > 0)
+            .ToList();
+        return menu with { Groups = groups };
+    }
+
+    private static NavSet StudioMenuOf(NavFacts facts) => new("studio", "Studio", "wrench",
     [
         new(null, [new("Overview", "/Studio", "home")]),
         new("Maintain",
@@ -207,10 +227,11 @@ public static class Navigation
             new("White label", "/Studio/Releases/WhiteLabel", "layers"),
             new("Versions", "/Studio/Versions", "tag"),
         ]),
+        new("Access", [new("People", "/Studio/Users", "users")]),
     ], Href: "/Studio");
 
-    /// <summary>The menus a visitor sees: the two of the site, and the Studio for the signed-in administrator.</summary>
-    public static IReadOnlyList<NavSet> For(NavFacts facts, bool studio) => studio ? [.. Create(facts), StudioMenu(facts)] : Create(facts);
+    /// <summary>The menus a visitor sees: the two of the site, and the Studio for the person who is signed in (with only the pages their role may open).</summary>
+    public static IReadOnlyList<NavSet> For(NavFacts facts, bool studio, StudioUser? user = null) => studio ? [.. Create(facts), StudioMenu(facts, user)] : Create(facts);
 
     /// <summary>Every page of every menu (no parents), the Studio's included.</summary>
     public static IEnumerable<NavItem> Pages => Sets.Append(StudioSet).SelectMany(s => s.Pages);

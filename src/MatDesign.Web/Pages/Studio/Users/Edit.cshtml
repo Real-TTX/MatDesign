@@ -1,0 +1,199 @@
+@page "/Studio/Users/Edit"
+@model MatDesign.Web.Pages.Studio.Users.EditModel
+@using MatDesign.Core.Studio
+@using MatDesign.Web.Studio
+@{
+    var person = Model.Person;
+    var isNew = Model.IsNew;
+    var title = isNew ? "New person" : person!.Name;
+    ViewData["Title"] = title;
+    ViewData["PageSub"] = isNew
+        ? "A person gets a name, one role and a first password that you hand over. They change it at their first sign-in."
+        : "Change the role, set a new password, disable the account or remove the person. What they did stays in the history under their name.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("People", "/Studio/Users"), (title, null));
+    ViewData["Width"] = "narrow";
+
+    string Field(string name) => Model.ProblemFor(name) is null ? string.Empty : " is-invalid";
+}
+
+<div class="mat-alert mat-alert--danger" role="alert" data-validation-summary hidden="@(Model.Error is null)">
+    @Ui.Icon("x-circle")
+    <div class="mat-alert__body">
+        <strong>Nothing was changed.</strong>
+        <ul class="mat-alert__list"><li>@Model.Error</li></ul>
+    </div>
+</div>
+
+@if (isNew)
+{
+    <form class="mat-form" method="post" action="/Studio/Users/Edit?handler=Create" novalidate>
+        @Html.AntiForgeryToken()
+        <section class="mat-card" aria-labelledby="person-title">
+            <div class="mat-card__head">@Ui.Icon("user")<h2 class="mat-card__title" id="person-title">The person</h2></div>
+            <div class="mat-card__body">
+                <div class="mat-form__grid">
+                    <div class="mat-field@(Field("Name"))">
+                        <label class="mat-label" for="Name">Name <span class="mat-req" aria-hidden="true">*</span></label>
+                        <input class="mat-input" id="Name" name="Name" value="@Model.Name" maxlength="@UserStore.MaxNameLength" autocomplete="off" required data-msg-required="Please give the person a name." />
+                        <span class="mat-error" aria-live="polite">@Model.ProblemFor("Name")</span>
+                        <span class="mat-hint">2 to @UserStore.MaxNameLength characters: letters, digits, spaces, dots, dashes, underscores or @@. It is the name in the history, so it is never given to another person, and it cannot change.</span>
+                    </div>
+                    <div class="mat-field@(Field("Role"))">
+                        <label class="mat-label" for="Role">Role</label>
+                        <select class="mat-select" id="Role" name="Role">
+                            @foreach (var role in StudioRole.All)
+                            {
+                                <option value="@role.Id" selected="@(role.Id == Model.Role)">@role.Name</option>
+                            }
+                        </select>
+                        <span class="mat-error" aria-live="polite">@Model.ProblemFor("Role")</span>
+                        <span class="mat-hint">Administrator, editor or viewer. What each allows is listed on the page of the people.</span>
+                    </div>
+                    <div class="mat-field mat-field--full@(Field("Password"))">
+                        <label class="mat-label" for="Password">First password <span class="mat-req" aria-hidden="true">*</span></label>
+                        <div class="mat-input-group">
+                            <input class="mat-input mat-mono" id="Password" name="Password" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" required data-msg-required="Please type a password, or generate one." />
+                            <button type="button" class="mat-btn mat-btn--secondary" data-generate-password="#Password">@Ui.Icon("refresh")<span>Generate</span></button>
+                            <button type="button" class="mat-btn mat-btn--secondary" data-copy="#Password">@Ui.Icon("copy")<span>Copy</span></button>
+                        </div>
+                        <span class="mat-error" aria-live="polite">@Model.ProblemFor("Password")</span>
+                        <span class="mat-hint">At least @Model.MinLength characters. It is shown here only, so copy it and tell the person. They have to change it at the first sign-in; it is never shown again.</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <div class="mat-btn-row">
+            <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("plus")<span>Add the person</span></button>
+            <a class="mat-btn mat-btn--secondary" href="/Studio/Users">@Ui.Icon("back")<span>Back</span></a>
+        </div>
+    </form>
+}
+else
+{
+    <section class="mat-card" aria-labelledby="who-title">
+        <div class="mat-card__head">@Ui.Icon("user")<h2 class="mat-card__title" id="who-title">The person</h2></div>
+        <div class="mat-card__body">
+            <dl class="mat-kv">
+                <dt>Name</dt>
+                <dd>@person!.Name@(Model.IsSelf ? " (you)" : string.Empty)</dd>
+                <dt>Role</dt>
+                <dd><span class="mat-pill @IndexModel.RolePill(person)">@IndexModel.RoleOf(person)</span></dd>
+                <dt>State</dt>
+                <dd><span class="mat-pill @IndexModel.StatePill(person)">@IndexModel.State(person)</span></dd>
+                <dt>Created</dt>
+                <dd>@UserStore.When(person.Created), by @person.CreatedBy</dd>
+                <dt>Last sign-in</dt>
+                <dd>@UserStore.When(person.LastSignIn)</dd>
+            </dl>
+        </div>
+    </section>
+
+    <form class="mat-form" method="post" action="/Studio/Users/Edit?handler=Role&amp;id=@person.Id" novalidate>
+        @Html.AntiForgeryToken()
+        <section class="mat-card" aria-labelledby="role-title">
+            <div class="mat-card__head">@Ui.Icon("shield")<h2 class="mat-card__title" id="role-title">Role</h2></div>
+            <div class="mat-card__body">
+                <div class="mat-field@(Field("Role"))">
+                    <label class="mat-label" for="Role">Role</label>
+                    <select class="mat-select" id="Role" name="Role" disabled="@(!Model.CanChangeRole)">
+                        @foreach (var role in StudioRole.All)
+                        {
+                            <option value="@role.Id" selected="@(role.Id == Model.Role)">@role.Name</option>
+                        }
+                    </select>
+                    <span class="mat-error" aria-live="polite">@Model.ProblemFor("Role")</span>
+                    <span class="mat-hint">
+                        @if (Model.IsSelf) { <text>You cannot change your own role. Another administrator can.</text> }
+                        else if (Model.IsLastAdministrator) { <text>This is the last active administrator: the role cannot be taken away. Make somebody else an administrator first.</text> }
+                        else { <text>It takes effect at the person's next click, also in a session that is open.</text> }
+                    </span>
+                </div>
+            </div>
+        </section>
+        @if (Model.CanChangeRole)
+        {
+            <div class="mat-btn-row">
+                <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save the role</span></button>
+            </div>
+        }
+    </form>
+
+    @if (!Model.IsSelf)
+    {
+        <form class="mat-form" method="post" action="/Studio/Users/Edit?handler=Reset&amp;id=@person.Id" novalidate>
+            @Html.AntiForgeryToken()
+            <section class="mat-card" aria-labelledby="password-title">
+                <div class="mat-card__head">@Ui.Icon("key")<h2 class="mat-card__title" id="password-title">Password</h2></div>
+                <div class="mat-card__body">
+                    <div class="mat-field@(Field("Password"))">
+                        <label class="mat-label" for="Password">New password</label>
+                        <div class="mat-input-group">
+                            <input class="mat-input mat-mono" id="Password" name="Password" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" required data-msg-required="Please type a password, or generate one." />
+                            <button type="button" class="mat-btn mat-btn--secondary" data-generate-password="#Password">@Ui.Icon("refresh")<span>Generate</span></button>
+                            <button type="button" class="mat-btn mat-btn--secondary" data-copy="#Password">@Ui.Icon("copy")<span>Copy</span></button>
+                        </div>
+                        <span class="mat-error" aria-live="polite">@Model.ProblemFor("Password")</span>
+                        <span class="mat-hint">For a person who has lost theirs. Every session of @person.Name ends, and they change this password at the next sign-in. It is shown here only, so copy it and tell them.</span>
+                    </div>
+                </div>
+            </section>
+            <div class="mat-btn-row">
+                <button type="submit" class="mat-btn mat-btn--secondary" data-confirm="Set a new password for @person.Name? Every session of @person.Name ends." data-confirm-ok="Set the password">@Ui.Icon("key")<span>Set the password</span></button>
+            </div>
+        </form>
+    }
+
+    <section class="mat-card" aria-labelledby="account-title">
+        <div class="mat-card__head">@Ui.Icon("lock")<h2 class="mat-card__title" id="account-title">Account</h2></div>
+        <div class="mat-card__body">
+            @if (Model.IsSelf)
+            {
+                <p class="mat-muted">This is you. You cannot disable or remove your own account, and you change your own password on <a href="/Studio/Account">your account page</a>.</p>
+            }
+            else if (Model.IsLastAdministrator)
+            {
+                <p class="mat-muted">This is the last active administrator: the account cannot be disabled or removed. Make somebody else an administrator first.</p>
+            }
+            else
+            {
+                <p class="mat-muted">A disabled person cannot sign in and is signed out at their next click. Removing a person is for good: their name stays in the history, and is never given to another person.</p>
+            }
+        </div>
+    </section>
+    @if (Model.CanDisable || Model.CanDelete)
+    {
+        <div class="mat-btn-row">
+            @if (Model.CanDisable)
+            {
+                <form method="post" action="/Studio/Users/Edit?handler=Disable&amp;id=@person.Id&amp;disable=@(person.Disabled ? "false" : "true")">
+                    @Html.AntiForgeryToken()
+                    @if (person.Disabled)
+                    {
+                        <button type="submit" class="mat-btn mat-btn--secondary">@Ui.Icon("check-circle")<span>Enable the account</span></button>
+                    }
+                    else
+                    {
+                        <button type="submit" class="mat-btn mat-btn--secondary" data-confirm="Disable @person.Name? They are signed out at their next click and cannot sign in." data-confirm-ok="Disable">@Ui.Icon("lock")<span>Disable the account</span></button>
+                    }
+                </form>
+            }
+            @if (Model.CanDelete)
+            {
+                <span class="mat-btn-row__spacer"></span>
+                <form method="post" action="/Studio/Users/Edit?handler=Delete&amp;id=@person.Id">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="mat-btn mat-btn--danger" data-confirm="Remove @person.Name? What they did stays in the history under their name, and the name is never given to another person." data-confirm-ok="Remove">@Ui.Icon("trash")<span>Remove the person</span></button>
+                </form>
+            }
+        </div>
+    }
+
+    <div class="mat-btn-row">
+        <a class="mat-btn mat-btn--secondary" href="/Studio/Users">@Ui.Icon("back")<span>Back</span></a>
+        <a class="mat-btn mat-btn--ghost" href="/Studio/Activity?q=@Uri.EscapeDataString(person.Name)">@Ui.Icon("activity")<span>In the activity</span></a>
+    </div>
+}
+
+@section Scripts {
+    <script src="/js/users.js"></script>
+}

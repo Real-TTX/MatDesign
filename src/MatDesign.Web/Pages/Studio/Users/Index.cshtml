@@ -1,0 +1,98 @@
+@page "/Studio/Users"
+@model MatDesign.Web.Pages.Studio.Users.IndexModel
+@using MatDesign.Core.Studio
+@{
+    ViewData["Title"] = "People";
+    ViewData["PageSub"] = "Who may sign in to the Studio, and what each role allows. Administrators only.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("People", null));
+}
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Toolbar.Total == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("users")</span>
+            <div class="mat-empty__title">Nobody yet</div>
+            <p>Add the first person: a name, a role and a first password to hand over.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Users/Edit">@Ui.Icon("plus")<span>Add a person</span></a>
+        </div>
+    }
+    else if (Model.Items.Count == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">Nobody matches</div>
+            <p>Change the search or the filters, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Studio/Users">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">People of the Studio</caption>
+                <thead>
+                    <tr><th scope="col">Name</th><th scope="col">Role</th><th scope="col" class="mat-hide-sm">Last sign-in</th><th scope="col">State</th><th scope="col"><span class="mat-sr-only">Actions</span></th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in Model.Items)
+                    {
+                        <tr>
+                            <td data-label="Name">
+                                <div class="mat-table__name">
+                                    <span class="mat-avatar" aria-hidden="true">@Ui.Initials(user.Name)</span>
+                                    <span>
+                                        @if (user.Builtin) { @user.Name }
+                                        else { <a href="/Studio/Users/Edit?id=@user.Id">@user.Name</a> }
+                                        <small>@(user.Id == Model.Me.Id ? "You" : user.Builtin ? "Built in: MATDESIGN_ADMIN_PASSWORD" : "Created " + UserStore.When(user.Created))</small>
+                                    </span>
+                                </div>
+                            </td>
+                            <td data-label="Role"><span class="mat-pill @IndexModel.RolePill(user)">@IndexModel.RoleOf(user)</span></td>
+                            <td data-label="Last sign-in" class="mat-hide-sm">@UserStore.When(user.LastSignIn)</td>
+                            <td data-label="State"><span class="mat-pill @IndexModel.StatePill(user)">@IndexModel.State(user)</span></td>
+                            <td data-label="Actions" class="mat-table__cell-actions">
+                                <div class="mat-table__actions">
+                                    @if (!user.Builtin)
+                                    {
+                                        <a class="mat-btn mat-btn--ghost mat-btn--icon mat-btn--sm" href="/Studio/Users/Edit?id=@user.Id" aria-label="Edit @user.Name" data-tip="Edit">@Ui.Icon("edit")</a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    @if (Model.Toolbar.Total > 0)
+    {
+        <div class="mat-actions">
+            <a class="mat-btn mat-btn--primary" href="/Studio/Users/Edit">@Ui.Icon("plus")<span>New person</span></a>
+        </div>
+    }
+</div>
+
+<section class="mat-section" aria-labelledby="roles-title">
+    <div class="mat-section__head"><h2 id="roles-title">What each role allows</h2></div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">The roles of the Studio</caption>
+            <thead><tr><th scope="col">Role</th><th scope="col">What it allows</th></tr></thead>
+            <tbody>
+                @foreach (var role in StudioRole.All)
+                {
+                    <tr>
+                        <td data-label="Role"><span class="mat-pill @(role.Id == StudioRole.AdministratorId ? "mat-pill--info" : "mat-pill--plain")">@role.Name</span></td>
+                        <td data-label="What it allows">@role.Summary</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>

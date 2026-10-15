@@ -51,6 +51,12 @@
                 <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>All checks pass.</strong> Nothing was saved yet.</div></div>
             }
 
+            @if (!Model.CanEdit)
+            {
+                <partial name="_ReadOnly" model="@Model.WhyNotEdit" />
+            }
+
+            <fieldset class="mat-fieldset" disabled="@(!Model.CanEdit)">
             <section class="mat-card" aria-labelledby="names-title">
                 <div class="mat-card__head">@Ui.Icon("tag")<h2 class="mat-card__title" id="names-title">The company</h2></div>
                 <div class="mat-card__body">
@@ -314,16 +320,21 @@
                 </ul>
             </section>
 
+            </fieldset>
+
             <div class="mat-btn-row">
-                <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
-                <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+                @if (Model.CanEdit)
+                {
+                    <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+                    <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+                }
                 <a class="mat-btn mat-btn--secondary" href="/Studio">@Ui.Icon("back")<span>Back</span></a>
                 <a class="mat-btn mat-btn--ghost" href="/Studio/Brand/Assets">@Ui.Icon("image")<span>Logo and fonts</span></a>
                 @if (History.HasHistory(Brand.Kind, Brand.ItemId))
                 {
                     <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl(Brand.Kind, Brand.ItemId)">@Ui.Icon("restore")<span>History</span></a>
                 }
-                @if (Model.Source != ItemSource.BuiltIn)
+                @if (Model.Source != ItemSource.BuiltIn && Model.CanEdit)
                 {
                     <span class="mat-btn-row__spacer"></span>
                     <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Reset" data-confirm="Reset the brand to the built-in one? Your names and tokens are gone from the site; the history stays." data-confirm-ok="Reset">@Ui.Icon("restore")<span>Reset to built-in</span></button>

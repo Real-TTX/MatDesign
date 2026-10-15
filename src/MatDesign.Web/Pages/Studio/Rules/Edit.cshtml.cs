@@ -34,6 +34,7 @@ public sealed class RuleInput
 /// back. The id and the area of a rule that exists cannot change, because rules are cited by id in reviews, commits and the catalogue. Who checks a rule is not typed:
 /// a rule from the Studio is checked by a reviewer, a built-in rule keeps what the code says.
 /// </summary>
+[RequireCapability(Capability.ViewStudio)]
 public class EditModel(StudioService studio, DesignData design) : StudioPageModel(studio)
 {
     [BindProperty]
@@ -62,6 +63,11 @@ public class EditModel(StudioService studio, DesignData design) : StudioPageMode
     {
         if (id is null)
         {
+            if (!CanEdit)
+            {
+                return Forbidden(Capability.EditDesign);
+            }
+
             var chosen = RuleBook.Areas.FirstOrDefault(a => a.Id == area)?.Id ?? RuleBook.Areas[0].Id;
             Input = new RuleInput { Area = chosen, Id = RuleValidator.NextId(chosen, design.Rules), Level = nameof(RuleLevel.Should), Source = RuleBook.Studio };
             Preview = null;
@@ -85,6 +91,7 @@ public class EditModel(StudioService studio, DesignData design) : StudioPageMode
     }
 
     /// <summary>Saves, or (with the Check button, <c>check</c>) only shows what the form would give: the problems and how the rule reads.</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPost(bool check = false)
     {
         var original = design.Rule(Input.Original);
@@ -106,13 +113,14 @@ public class EditModel(StudioService studio, DesignData design) : StudioPageMode
         }
 
         var note = original is null ? "Created" : "Changed " + string.Join(", ", What(original, rule));
-        Studio.Store.Save("rules", rule.Id, rule, Studio.Administrator, note);
+        Studio.Store.Save("rules", rule.Id, rule, Who, note);
         design.Reload();
         TempData["Flash"] = original is null ? $"{rule.Id} was added." : $"{rule.Id} was saved.";
         return RedirectToPage("/Studio/Rules/Index");
     }
 
     /// <summary>Deletes a rule that was added, or resets a built-in rule that was changed (the built-in rule is back).</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPostDelete()
     {
         var rule = design.Rule(Input.Original);
@@ -140,7 +148,7 @@ public class EditModel(StudioService studio, DesignData design) : StudioPageMode
             }
         }
 
-        Studio.Store.Delete("rules", rule.Id, Studio.Administrator, source == ItemSource.Added ? "Deleted" : "Reset to the built-in rule");
+        Studio.Store.Delete("rules", rule.Id, Who, source == ItemSource.Added ? "Deleted" : "Reset to the built-in rule");
         design.Reload();
         TempData["Flash"] = source == ItemSource.Added ? $"{rule.Id} was deleted." : $"{rule.Id} is the built-in rule again.";
         return RedirectToPage("/Studio/Rules/Index");

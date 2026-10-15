@@ -61,30 +61,46 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
 {
     private readonly object _gate = new();
     private CheckReport? _report;
+    private long _peopleVersion = -1;
 
     [GeneratedRegex(@"^(?:mat|is)-")]
     private static partial Regex ToolkitClassName();
 
-    /// <summary>The report for the design data as it is now. It is computed once for each version of the data.</summary>
+    /// <summary>The version of the people (a change of a person, a role or a password); the check of the people is run again when it moves.</summary>
+    private long PeopleVersion => studio.Enabled ? studio.Users.Version : 0;
+
+    /// <summary>The report for the design data and the people as they are now. It is computed once for each version of them.</summary>
     public CheckReport Report
     {
         get
         {
             var current = _report;
-            if (current is not null && current.Version == design.Version)
+            if (current is not null && current.Version == design.Version && _peopleVersion == PeopleVersion)
             {
                 return current;
             }
 
             lock (_gate)
             {
-                if (_report is null || _report.Version != design.Version)
+                if (_report is null || _report.Version != design.Version || _peopleVersion != PeopleVersion)
                 {
+                    _peopleVersion = PeopleVersion;
                     _report = Run();
                 }
 
                 return _report;
             }
+        }
+    }
+
+    /// <summary>Runs every check again now and keeps the result as the report (the Checks page does this for a person who may run the checks).</summary>
+    public CheckReport Refresh()
+    {
+        lock (_gate)
+        {
+            _peopleVersion = PeopleVersion;
+            _report = Run();
+            return _report;
         }
     }
 
@@ -144,6 +160,7 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
         new("tokens", "Toolkit", "Every token is described", "Every custom property says what it is for, and every colour token has a dark value or is derived from one that has.", Tokens),
         new("naming", "Toolkit", "The toolkit follows its naming", "Every class of the stylesheets starts with mat- (or is a state such as is-active) (CODE-04).", Naming),
         new("menu", "Site", "The menus are well formed", "Every menu has at most one level of submenus, its ids are unique, and so are its addresses.", Menus),
+        new("users", "Studio", "People can sign in and an administrator exists", "The Studio is not waiting for its setup, there is an active administrator, the file of the people can be read, and every password hash is of the scheme the Studio writes and every role is one that exists (CODE-10).", PeopleValid),
         new("volume", "Studio", "Nothing on the volume is left out", "Every item the Studio saved is read back by the site; an item that was edited by hand into something unsafe or wrong is not, and is reported here.", Volume),
         new("whitelabel", "Release", "The white label setting builds", "The prefix and the name of the white label setting pass what a save holds them to, and a trial build with them (the renamer and the checks of the toolkit on the renamed copy) finds nothing: a release with a setting that fails is refused (CODE-09).", WhiteLabelBuilds),
         new("assets", "Brand", "The files of the brand are valid", "Every file of the brand (logo, word mark, favicon, app icon, fonts) is on the volume, still has the hash in its name, is still the type and the size its slot allows (judged by its content, an SVG by an allowlist), the alt texts are there, the fonts are named by families the toolkit does not use, and the files together are within the budget (IDENT-08).", AssetsValid),
@@ -387,6 +404,19 @@ public sealed partial class DesignChecks(DesignData design, ToolkitFiles toolkit
         foreach (var twice in sets.SelectMany(s => s.Pages).GroupBy(i => i.Href).Where(g => g.Count() > 1))
         {
             yield return new Finding("menu", Severity.Error, $"The address {twice.Key} is in the menus {twice.Count()} times.");
+        }
+    }
+
+    private static IEnumerable<Finding> PeopleValid(CheckContext c)
+    {
+        if (!c.Studio.Enabled)
+        {
+            yield break;
+        }
+
+        foreach (var problem in c.Studio.Users.Problems())
+        {
+            yield return new Finding("users", Severity.Error, problem.Message, Link: "/Studio/Users");
         }
     }
 

@@ -1,9 +1,11 @@
+using MatDesign.Core.Studio;
 using MatDesign.Web.Services;
 using MatDesign.Web.Studio;
 
 namespace MatDesign.Web.Pages.Studio.Releases;
 
 /// <summary>The releases of the design system, newest first, with the toolbar of every list, and below them the last runs of the pipeline (a run that failed is kept too).</summary>
+[RequireCapability(Capability.ViewStudio)]
 public class IndexModel(StudioService studio, ReleaseService releases) : StudioPageModel(studio)
 {
     private const int PageSize = 20;

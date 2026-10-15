@@ -33,7 +33,7 @@
                             </td>
                             <td data-label="Value">
                                 <div class="mat-field@(Model.ProblemFor(fieldName) is null ? string.Empty : " is-invalid")">
-                                    <input class="mat-input mat-mono" id="@id" name="@(Model.Prefix):@property.Name" form="@form" value="@Model.ValueOf(property)" placeholder="@property.Resolved" maxlength="@BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-prop-input aria-label="Value of @property.Name" />
+                                    <input class="mat-input mat-mono" id="@id" name="@(Model.Prefix):@property.Name" form="@form" value="@Model.ValueOf(property)" placeholder="@property.Resolved" maxlength="@BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-prop-input aria-label="Value of @property.Name" disabled="@Model.ReadOnly" />
                                     <span class="mat-error" aria-live="polite">@Model.ProblemFor(fieldName)</span>
                                     <span class="mat-hint">Default <code>@property.Resolved</code>@if (property.FallsBackToToken) { <text> (<span class="mat-mono">@property.Property.Fallback</span>)</text> }</span>
                                     @if (property.Touch)
@@ -44,7 +44,7 @@
                             </td>
                             <td data-label="Reset" class="mat-table__cell-actions">
                                 <div class="mat-table__actions">
-                                    <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" data-prop-reset aria-label="Reset @property.Name to the default" data-tip="Reset">@Ui.Icon("restore")</button>
+                                    <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" data-prop-reset aria-label="Reset @property.Name to the default" data-tip="Reset" disabled="@Model.ReadOnly">@Ui.Icon("restore")</button>
                                 </div>
                             </td>
                         </tr>

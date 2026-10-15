@@ -6,9 +6,10 @@ using System.Text.RegularExpressions;
 namespace MatDesign.Core.Studio;
 
 /// <summary>
-/// The administrator of the Studio: a name and a salted PBKDF2 hash of the password, never the password itself. The setup assistant writes it once to
-/// <c>admin.json</c> in the data directory (the file is created, never overwritten, so two visitors cannot both become the administrator), and the sign-in
-/// checks against it. To start over, delete the file: the assistant shows again.
+/// The administrator of the Studio before stage 16: a name and a salted PBKDF2 hash of the password, never the password itself, in <c>admin.json</c>. Since the people and roles of stage 16
+/// the accounts live in <c>users.json</c> (<see cref="UserStore"/>); this type stays for two things: it is the old file, which <see cref="UserStore"/> turns into the first user (an
+/// administrator, the password unchanged) and renames to <c>admin.json.migrated</c>, and it is the one place that hashes and checks a password (<see cref="HashPassword"/>,
+/// <see cref="VerifyHash"/>), for every user.
 /// </summary>
 public sealed partial record AdminAccount(string Name, string Salt, string Hash, int Iterations, DateTimeOffset Created)
 {
@@ -29,14 +30,51 @@ public sealed partial record AdminAccount(string Name, string Salt, string Hash,
 
     public static AdminAccount Create(string name, string password)
     {
+        var (salt, hash, iterations) = HashPassword(password);
+        return new AdminAccount(name, salt, hash, iterations, DateTimeOffset.UtcNow);
+    }
+
+    /// <summary>A salted PBKDF2 hash of a password: the salt and the hash in Base64 and the number of iterations, which is stored with the hash.</summary>
+    public static (string Salt, string Hash, int Iterations) HashPassword(string password)
+    {
         var salt = RandomNumberGenerator.GetBytes(16);
-        return new AdminAccount(name, Convert.ToBase64String(salt), Convert.ToBase64String(Derive(password, salt, DefaultIterations)), DefaultIterations, DateTimeOffset.UtcNow);
+        return (Convert.ToBase64String(salt), Convert.ToBase64String(Derive(password, salt, DefaultIterations)), DefaultIterations);
+    }
+
+    /// <summary>
+    /// Compares a password with a stored hash in constant time, so neither the length of the password nor where it differs shows in the time it takes. A hash that is not of a known format
+    /// (<see cref="IsKnownHashFormat"/>) never matches.
+    /// </summary>
+    public static bool VerifyHash(string? password, string? salt, string? hash, int iterations)
+    {
+        if (string.IsNullOrEmpty(password) || !IsKnownHashFormat(salt, hash, iterations))
+        {
+            return false;
+        }
+
+        return CryptographicOperations.FixedTimeEquals(Convert.FromBase64String(hash!), Derive(password, Convert.FromBase64String(salt!), iterations));
+    }
+
+    /// <summary>The scheme of <see cref="HashPassword"/>: a salt of 8 bytes or more and a hash of 32 bytes, both Base64, and between 1,000 and 10,000,000 iterations.</summary>
+    public static bool IsKnownHashFormat(string? salt, string? hash, int iterations)
+    {
+        if (string.IsNullOrEmpty(salt) || string.IsNullOrEmpty(hash) || iterations is < 1_000 or > 10_000_000)
+        {
+            return false;
+        }
+
+        try
+        {
+            return Convert.FromBase64String(salt).Length >= 8 && Convert.FromBase64String(hash).Length == 32;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
     /// <summary>Compares the hashes in constant time, so neither the length of the password nor where it differs shows in the time it takes.</summary>
-    public bool Verify(string? password)
-        => !string.IsNullOrEmpty(password)
-           && CryptographicOperations.FixedTimeEquals(Convert.FromBase64String(Hash), Derive(password, Convert.FromBase64String(Salt), Iterations));
+    public bool Verify(string? password) => VerifyHash(password, Salt, Hash, Iterations);
 
     /// <summary>The name is compared without regard to case, the password exactly. The hash is computed even for a wrong name, so the time does not tell which one was wrong.</summary>
     public bool SignsInWith(string? name, string? password)
@@ -55,13 +93,9 @@ public sealed partial record AdminAccount(string Name, string Salt, string Hash,
             problems["Name"] = "Use 2 to 32 letters, digits, dots, dashes or underscores, starting with a letter or digit.";
         }
 
-        if (string.IsNullOrEmpty(password) || password.Length < MinPasswordLength)
+        if (PasswordPolicy.Check(password, trimmed) is { } passwordProblem)
         {
-            problems["Password"] = $"At least {MinPasswordLength} characters. A sentence of a few words is easy to remember and hard to guess.";
-        }
-        else if (string.Equals(password, trimmed, StringComparison.OrdinalIgnoreCase))
-        {
-            problems["Password"] = "Not the same as the name.";
+            problems["Password"] = passwordProblem;
         }
         else if (password != repeat)
         {

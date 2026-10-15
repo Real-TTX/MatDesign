@@ -44,6 +44,12 @@
         <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>All checks pass.</strong> Nothing was saved yet.</div></div>
     }
 
+    @if (!Model.CanEdit)
+    {
+        <partial name="_ReadOnly" model="@Model.WhyNotEdit" />
+    }
+
+    <fieldset class="mat-fieldset" disabled="@(!Model.CanEdit)">
     <section class="mat-card" aria-labelledby="rule-title">
         <div class="mat-card__head">@Ui.Icon("book")<h2 class="mat-card__title" id="rule-title">The rule</h2></div>
         <div class="mat-card__body">
@@ -154,9 +160,14 @@
         </section>
     }
 
+    </fieldset>
+
     <div class="mat-btn-row">
-        <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
-        <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        @if (Model.CanEdit)
+        {
+            <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+            <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        }
         <a class="mat-btn mat-btn--secondary" href="/Studio/Rules">@Ui.Icon("back")<span>Back</span></a>
         @if (!isNew && !string.IsNullOrEmpty(input.Id))
         {
@@ -166,7 +177,7 @@
         {
             <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl("rules", input.Id!)">@Ui.Icon("restore")<span>History</span></a>
         }
-        @if (!isNew && Model.Source != ItemSource.BuiltIn)
+        @if (!isNew && Model.Source != ItemSource.BuiltIn && Model.CanEdit)
         {
             <span class="mat-btn-row__spacer"></span>
             @if (Model.Source == ItemSource.Added)

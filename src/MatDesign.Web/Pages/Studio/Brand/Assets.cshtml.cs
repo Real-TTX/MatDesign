@@ -36,6 +36,9 @@ public sealed class SlotView
 
     public string? Error { get; init; }
 
+    /// <summary>False for a person who may read the files but not change them: the form is not drawn.</summary>
+    public bool CanEdit { get; init; }
+
     /// <summary>The public name of the file (below <c>brand/</c>) and its address on the site.</summary>
     public string Name => File is null ? string.Empty : BrandAssets.PublicName(Slot, File);
 
@@ -49,6 +52,7 @@ public sealed class SlotView
 /// </summary>
 [RequestSizeLimit(MaxRequestBytes)]
 [RequestFormLimits(MultipartBodyLengthLimit = MaxRequestBytes)]
+[RequireCapability(Capability.ViewStudio)]
 public class AssetsModel(StudioService studio, DesignData design, ToolkitFiles toolkit) : StudioPageModel(studio)
 {
     /// <summary>The most a request to this page may carry: the biggest file (a PNG of 500 KB) and a form around it, with room for nothing else.</summary>
@@ -113,6 +117,7 @@ public class AssetsModel(StudioService studio, DesignData design, ToolkitFiles t
             File = file,
             Checks = file is null ? [] : ChecksOf(file, kind, slot),
             Error = _errors.GetValueOrDefault(slot),
+            CanEdit = CanEdit,
         };
     }
 
@@ -181,6 +186,7 @@ public class AssetsModel(StudioService studio, DesignData design, ToolkitFiles t
     public IActionResult OnGet() => Page();
 
     /// <summary>Sets the file of a slot, and the alt text of a logo or a word mark (a form with an alt text and no file changes only the text).</summary>
+    [RequireCapability(Capability.EditDesign)]
     public async Task<IActionResult> OnPostSaveAsync(string slot)
     {
         if (!BrandAssets.Slots.Contains(slot))
@@ -239,6 +245,7 @@ public class AssetsModel(StudioService studio, DesignData design, ToolkitFiles t
     }
 
     /// <summary>Empties a slot. The file stays on the volume (the history refers to it).</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPostRemove(string slot)
     {
         if (!BrandAssets.Slots.Contains(slot) || design.AssetsOrEmpty.In(slot) is null)
@@ -250,6 +257,7 @@ public class AssetsModel(StudioService studio, DesignData design, ToolkitFiles t
     }
 
     /// <summary>Adds one face of a font family: family, weight, style and a WOFF2 or WOFF file.</summary>
+    [RequireCapability(Capability.EditDesign)]
     public async Task<IActionResult> OnPostAddFontAsync()
     {
         var family = Request.Form["family"].ToString().Trim();
@@ -278,6 +286,7 @@ public class AssetsModel(StudioService studio, DesignData design, ToolkitFiles t
     }
 
     /// <summary>Removes one face (the file stays on the volume).</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPostRemoveFont(string family, int weight, string style)
     {
         var assets = design.AssetsOrEmpty;
@@ -291,6 +300,7 @@ public class AssetsModel(StudioService studio, DesignData design, ToolkitFiles t
     }
 
     /// <summary>Takes every asset away: the item is deleted and the brand is the built-in look again. Files and history stay.</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPostReset()
     {
         if (design.Assets is null)
@@ -298,7 +308,7 @@ public class AssetsModel(StudioService studio, DesignData design, ToolkitFiles t
             return RedirectToPage("/Studio/Brand/Assets");
         }
 
-        Studio.Store.Delete(BrandAssets.Kind, BrandAssets.ItemId, Studio.Administrator, "Removed every asset");
+        Studio.Store.Delete(BrandAssets.Kind, BrandAssets.ItemId, Who, "Removed every asset");
         design.Reload();
         TempData["Flash"] = "The assets were removed. The built-in look is back.";
         return RedirectToPage("/Studio/Brand/Assets");
@@ -337,7 +347,7 @@ public class AssetsModel(StudioService studio, DesignData design, ToolkitFiles t
             return RedirectToPage("/Studio/Brand/Assets");
         }
 
-        Studio.Store.Save(BrandAssets.Kind, BrandAssets.ItemId, assets, Studio.Administrator, design.Assets is null ? "Created: " + note : note);
+        Studio.Store.Save(BrandAssets.Kind, BrandAssets.ItemId, assets, Who, design.Assets is null ? "Created: " + note : note);
         design.Reload();
         TempData["Flash"] = flash;
         return RedirectToPage("/Studio/Brand/Assets");

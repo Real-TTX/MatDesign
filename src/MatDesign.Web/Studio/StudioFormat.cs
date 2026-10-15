@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 using MatDesign.Core.Studio;
 
 namespace MatDesign.Web.Studio;
@@ -9,6 +10,12 @@ public static class StudioFormat
     /// <summary>What a revision did, in a word.</summary>
     public static string What(Revision revision)
         => revision.Deleted ? "Deleted" : revision.Number == 1 ? "Created" : revision.Note.StartsWith("Restored", StringComparison.Ordinal) ? "Restored" : "Changed";
+
+    /// <summary>What the activity list calls an item: the id, and for a person (kind <c>users</c>) their name, because the id is only a stable handle.</summary>
+    public static string ItemTitle(StoredItem item)
+        => item.Kind == UserEvent.Kind && item.Revision.Data.ValueKind == JsonValueKind.Object && item.Revision.Data.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String
+            ? name.GetString()!
+            : item.Id;
 
     /// <summary>"1 item", "2 items".</summary>
     public static string Count(int number, string noun) => number == 1 ? $"1 {noun}" : $"{number} {noun}s";
@@ -27,6 +34,7 @@ public static class StudioFormat
         "brand" => "Brand",
         "whitelabel" => "White label",
         "assets" => "Brand assets",
+        "users" => "Person",
         _ => char.ToUpperInvariant(kind[0]) + kind[1..],
     };
 }

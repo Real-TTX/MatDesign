@@ -40,6 +40,7 @@ public sealed class AppInput
 /// wrong stays on the page with the form as it was typed. A built-in app that is saved becomes a changed one (the item replaces it); deleting that item brings
 /// the built-in app back.
 /// </summary>
+[RequireCapability(Capability.ViewStudio)]
 public class EditModel(StudioService studio, DesignData design, ToolkitFiles toolkit) : StudioPageModel(studio)
 {
     [BindProperty]
@@ -102,6 +103,12 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
     {
         if (id is null)
         {
+            // an empty form is for a person who may create an app; everyone else can read the apps that exist
+            if (!CanEdit)
+            {
+                return Forbidden(Capability.EditDesign);
+            }
+
             Input = new AppInput { Category = AppRegistry.Productivity, Accent = "#2f6feb", Glyph = "apps" };
             Preview = Describe(Input, null, null);
             return Page();
@@ -124,6 +131,7 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
     }
 
     /// <summary>Saves, or (with the Check button, <c>check</c>) only shows what the form would give: the problems and the contrast report.</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPost(bool check = false)
     {
         var original = design.App(Input.Original);
@@ -144,13 +152,14 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
         }
 
         var note = original is null ? "Created" : "Changed " + string.Join(", ", What(original, app));
-        Studio.Store.Save("apps", app.Id, app, Studio.Administrator, note);
+        Studio.Store.Save("apps", app.Id, app, Who, note);
         design.Reload();
         TempData["Flash"] = original is null ? $"{app.Name} was added." : $"{app.Name} was saved.";
         return RedirectToPage("/Studio/Apps/Index");
     }
 
     /// <summary>Deletes an app that was added, or resets a built-in app that was changed (the built-in app is back).</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPostDelete()
     {
         var app = design.App(Input.Original);
@@ -165,7 +174,7 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
             return BadRequest("A built-in app cannot be deleted.");
         }
 
-        Studio.Store.Delete("apps", app.Id, Studio.Administrator, source == ItemSource.Added ? "Deleted" : "Reset to the built-in app");
+        Studio.Store.Delete("apps", app.Id, Who, source == ItemSource.Added ? "Deleted" : "Reset to the built-in app");
         design.Reload();
         TempData["Flash"] = source == ItemSource.Added ? $"{app.Name} was deleted." : $"{app.Name} is the built-in app again.";
         return RedirectToPage("/Studio/Apps/Index");

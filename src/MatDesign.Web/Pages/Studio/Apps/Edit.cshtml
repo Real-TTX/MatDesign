@@ -43,6 +43,12 @@
         <div class="mat-alert mat-alert--success" role="status">@Ui.Icon("check-circle")<div class="mat-alert__body"><strong>All checks pass.</strong> Nothing was saved yet.</div></div>
     }
 
+    @if (!Model.CanEdit)
+    {
+        <partial name="_ReadOnly" model="@Model.WhyNotEdit" />
+    }
+
+    <fieldset class="mat-fieldset" disabled="@(!Model.CanEdit)">
     <section class="mat-card" aria-labelledby="app-title">
         <div class="mat-card__head">@Ui.Icon("apps")<h2 class="mat-card__title" id="app-title">The app</h2></div>
         <div class="mat-card__body">
@@ -160,6 +166,7 @@
             </div>
         </div>
     </section>
+    </fieldset>
 
     @* What the app sets for itself on top of the brand. The marker tells the server that this section was sent, so that a post without it leaves the overrides alone. *@
     <input type="hidden" name="overrides-present" value="1" />
@@ -191,20 +198,20 @@
                                         <td data-label="Brand and toolkit"><span class="doc-brand__default"><code>@token.Light</code></span></td>
                                         <td data-label="Value">
                                             <div class="mat-field@(Field(fieldName))">
-                                                <input class="mat-input mat-mono" id="@EditModel.TokenId(token, false)" name="light:@token.Name" value="@Model.TokenValue(token, false)" placeholder="@token.Light" maxlength="@MatDesign.Core.Studio.BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-brand-input="light" aria-label="Value of @token.Name" />
+                                                <input class="mat-input mat-mono" id="@EditModel.TokenId(token, false)" name="light:@token.Name" value="@Model.TokenValue(token, false)" placeholder="@token.Light" maxlength="@MatDesign.Core.Studio.BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-brand-input="light" aria-label="Value of @token.Name" disabled="@(!Model.CanEdit)" />
                                                 <span class="mat-error" aria-live="polite">@Model.ProblemFor(fieldName)</span>
                                             </div>
                                             @if (token.HasDark)
                                             {
                                                 var darkName = "Dark:" + token.Name;
                                                 <div class="mat-field@(Field(darkName))">
-                                                    <input class="mat-input mat-mono" id="@EditModel.TokenId(token, true)" name="dark:@token.Name" value="@Model.TokenValue(token, true)" placeholder="@token.Dark" maxlength="@MatDesign.Core.Studio.BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-brand-input="dark" aria-label="Dark value of @token.Name" />
+                                                    <input class="mat-input mat-mono" id="@EditModel.TokenId(token, true)" name="dark:@token.Name" value="@Model.TokenValue(token, true)" placeholder="@token.Dark" maxlength="@MatDesign.Core.Studio.BrandValidator.MaxValueLength" autocomplete="off" spellcheck="false" data-brand-input="dark" aria-label="Dark value of @token.Name" disabled="@(!Model.CanEdit)" />
                                                     <span class="mat-error" aria-live="polite">@Model.ProblemFor(darkName)</span>
                                                 </div>
                                             }
                                         </td>
                                         <td data-label="Reset" class="mat-table__cell-actions">
-                                            <div class="mat-table__actions"><button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" data-brand-reset aria-label="Reset @token.Name to the brand's value" data-tip="Reset">@Ui.Icon("restore")</button></div>
+                                            <div class="mat-table__actions"><button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" data-brand-reset aria-label="Reset @token.Name to the brand's value" data-tip="Reset" disabled="@(!Model.CanEdit)">@Ui.Icon("restore")</button></div>
                                         </td>
                                     </tr>
                                 }
@@ -218,7 +225,7 @@
             <div class="mat-accordion">
                 @foreach (var group in Model.PropertyGroups)
                 {
-                    var editor = new PropertyGroupEditor(group, Model.PropertyValue, Model.ProblemFor, "property", null, string.IsNullOrEmpty(input.Id) || isNew ? null : input.Id, Stacked: true);
+                    var editor = new PropertyGroupEditor(group, Model.PropertyValue, Model.ProblemFor, "property", null, string.IsNullOrEmpty(input.Id) || isNew ? null : input.Id, Stacked: true, ReadOnly: !Model.CanEdit);
                     var count = Model.SetIn(group);
                     <details class="mat-accordion__item" id="override-@group.Component.Id" open="@(count > 0 || Model.Problems.Any(p => group.Properties.Any(x => p.Field == "Property:" + x.Name)))">
                         <summary>@group.Component.Title<span class="mat-muted"> (@(count == 0 ? group.Properties.Count + " properties" : count + " set"))</span>@Ui.Icon("chevron-down", "mat-accordion__chev")</summary>
@@ -230,8 +237,11 @@
     </section>
 
     <div class="mat-btn-row">
-        <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
-        <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        @if (Model.CanEdit)
+        {
+            <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+            <button type="submit" class="mat-btn mat-btn--secondary" formaction="?check=true">@Ui.Icon("check-circle")<span>Check</span></button>
+        }
         <a class="mat-btn mat-btn--secondary" href="/Studio/Apps">@Ui.Icon("back")<span>Back</span></a>
         @if (!isNew && !string.IsNullOrEmpty(input.Id))
         {
@@ -241,7 +251,7 @@
         {
             <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl("apps", input.Id!)">@Ui.Icon("restore")<span>History</span></a>
         }
-        @if (!isNew && Model.Source != ItemSource.BuiltIn)
+        @if (!isNew && Model.Source != ItemSource.BuiltIn && Model.CanEdit)
         {
             <span class="mat-btn-row__spacer"></span>
             @if (Model.Source == ItemSource.Added)

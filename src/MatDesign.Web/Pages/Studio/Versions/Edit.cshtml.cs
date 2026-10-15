@@ -1,3 +1,4 @@
+using MatDesign.Core.Studio;
 using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,6 +18,7 @@ public sealed class VersionInput
 /// Writes down which release of MatUi an app uses, with a note. One button takes the latest release over (the usual case after the app copied it), another takes the record away. An empty
 /// version means "not written down".
 /// </summary>
+[RequireCapability(Capability.ViewStudio)]
 public class EditModel(StudioService studio, VersionTracker tracker) : StudioPageModel(studio)
 {
     [BindProperty]
@@ -43,9 +45,11 @@ public class EditModel(StudioService studio, VersionTracker tracker) : StudioPag
         return Page();
     }
 
+    [RequireCapability(Capability.ManageVersions)]
     public IActionResult OnPost() => Save(useLatest: false);
 
     /// <summary>Takes the latest release as the version, whatever is typed in the field.</summary>
+    [RequireCapability(Capability.ManageVersions)]
     public IActionResult OnPostLatest() => Save(useLatest: true);
 
     private IActionResult Save(bool useLatest)
@@ -70,12 +74,13 @@ public class EditModel(StudioService studio, VersionTracker tracker) : StudioPag
             return Page();
         }
 
-        tracker.Set(row.App.Id, version, note, Studio.Administrator);
+        tracker.Set(row.App.Id, version, note, Who);
         TempData["Flash"] = string.IsNullOrWhiteSpace(version) ? $"The version of {row.App.Name} is not written down." : $"{row.App.Name} uses {version.Trim()}.";
         return RedirectToPage("/Studio/Versions/Index");
     }
 
     /// <summary>Takes the record away; the app is "not written down" again.</summary>
+    [RequireCapability(Capability.ManageVersions)]
     public IActionResult OnPostForget()
     {
         var row = tracker.Of(Input.AppId);
@@ -84,7 +89,7 @@ public class EditModel(StudioService studio, VersionTracker tracker) : StudioPag
             return NotFound();
         }
 
-        tracker.Forget(row.App.Id, Studio.Administrator);
+        tracker.Forget(row.App.Id, Who);
         TempData["Flash"] = $"The record of {row.App.Name} was taken away.";
         return RedirectToPage("/Studio/Versions/Index");
     }

@@ -177,7 +177,7 @@ public sealed class ShellModel
     /// <paramref name="studioOn"/> says whether there is a Studio to sign in to, <paramref name="needsSetup"/> that it has no administrator yet (the way in is the setup assistant);
     /// <paramref name="design"/> is the data as the Studio left it (the built-in data when empty).
     /// </summary>
-    public static ShellModel Site(bool studioOn = false, bool signedIn = false, MatDesign.Web.Studio.DesignData? design = null, MatDesign.Web.Studio.DesignChecks? checks = null, bool needsSetup = false)
+    public static ShellModel Site(bool studioOn = false, bool signedIn = false, MatDesign.Web.Studio.DesignData? design = null, MatDesign.Web.Studio.DesignChecks? checks = null, bool needsSetup = false, StudioUser? user = null)
     {
         var facts = design?.NavFacts ?? NavFacts.BuiltIn;
         if (signedIn && checks is not null)
@@ -191,12 +191,12 @@ public sealed class ShellModel
         {
             App = design?.SiteApp ?? AppRegistry.Get("matdesign")!,
             Tagline = tenant.Tagline,
-            Menus = Navigation.For(facts, signedIn),
+            Menus = Navigation.For(facts, signedIn, user),
             // the site has its switcher at the foot of the menu, directly above the user (SHELL-15); an app may choose SwitcherPlace.Top or Both instead
             SwitcherPlace = SwitcherPlace.Bottom,
-            UserName = signedIn ? "Admin" : "Visitor",
-            UserRole = signedIn ? "Studio" : "Guest",
-            UserLine = signedIn ? "Signed in to the Studio" : needsSetup ? "Set up the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",
+            UserName = signedIn ? user?.Name ?? "Studio" : "Visitor",
+            UserRole = signedIn ? user?.RoleInfo?.Name ?? "Studio" : "Guest",
+            UserLine = signedIn ? "Signed in to the Studio" + (user?.RoleInfo is { } role ? ", " + role.Name.ToLowerInvariant() : string.Empty) : needsSetup ? "Set up the Studio" : studioOn ? "Sign in to maintain the design" : "The Studio is off",
             UserMenu = SiteUserMenu(signedIn, needsSetup),
             Version = $"{tenant.SiteName} {AppVersion.Current}",
         };
@@ -213,6 +213,8 @@ public sealed class ShellModel
         };
         if (signedIn)
         {
+            // your own account: who you are, what your role allows, your password (stage 16)
+            items.Insert(1, new("Your account", "/Studio/Account", "user"));
             items.Add(new("Sign out", "/Studio/Logout", "logout", Danger: true, SeparatorBefore: true, Post: true));
         }
 

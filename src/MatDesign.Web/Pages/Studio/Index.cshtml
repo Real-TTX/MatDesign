@@ -16,6 +16,8 @@
     <div class="mat-section__head"><h2 id="state-title">What is here</h2></div>
     <div class="mat-card"><div class="mat-card__body">
         <dl class="mat-kv">
+            <dt>Signed in as</dt>
+            <dd><a href="/Studio/Account" data-me>@Model.Me.Name</a><span class="mat-muted">, @Model.RoleName.ToLowerInvariant()</span></dd>
             <dt>Built in</dt>
             <dd>@Design.Apps.Count apps, @Design.Rules.Count rules, @Design.Components.Count components, @Toolkit.Tokens.Count tokens</dd>
             <dt>Saved in the Studio</dt>
@@ -96,6 +98,15 @@
                 <span class="doc-index__body"><span class="mat-muted">Give a company's releases their own class prefix and product name. The build renames a copy of the toolkit and checks the copy before it is published.</span></span>
             </a>
         </li>
+        @if (Model.Can(MatDesign.Core.Studio.Capability.ManageUsers))
+        {
+            <li>
+                <a class="doc-index__row" href="/Studio/Users">
+                    <span class="doc-index__key"><strong class="doc-index__title">People</strong></span>
+                    <span class="doc-index__body"><span class="mat-muted">Who may sign in to the Studio, as an administrator, an editor or a viewer. Create people, change a role, disable an account or set a new password. Now: @Model.PeopleCount.</span></span>
+                </a>
+            </li>
+        }
         <li>
             <a class="doc-index__row" href="/Studio/Checks">
                 <span class="doc-index__key"><strong class="doc-index__title">Checks</strong></span>
@@ -137,7 +148,7 @@
                     @foreach (var item in Model.Recent)
                     {
                         <tr>
-                            <td data-label="Item"><div class="mat-table__name"><span>@item.Id<small>@StudioFormat.KindName(item.Kind)</small></span></div></td>
+                            <td data-label="Item"><div class="mat-table__name"><span>@StudioFormat.ItemTitle(item)<small>@StudioFormat.KindName(item.Kind)</small></span></div></td>
                             <td data-label="Change">@StudioFormat.What(item.Revision)</td>
                             <td data-label="When">@StudioFormat.When(item.Revision.At)</td>
                             <td data-label="By" class="mat-hide-sm">@item.Revision.By</td>

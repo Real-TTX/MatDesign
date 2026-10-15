@@ -37,6 +37,19 @@
             </tbody>
         </table>
     </div>
+    <div class="mat-actions">
+        @if (Model.Can(MatDesign.Core.Studio.Capability.RunChecks))
+        {
+            <form method="post" action="/Studio/Checks?handler=Run">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="mat-btn mat-btn--secondary">@Ui.Icon("refresh")<span>Run the checks again</span></button>
+            </form>
+        }
+        else
+        {
+            <partial name="_ReadOnly" model="@Model.WhyNot(MatDesign.Core.Studio.Capability.RunChecks)" />
+        }
+    </div>
 </section>
 
 <section class="mat-section" aria-labelledby="findings-title">

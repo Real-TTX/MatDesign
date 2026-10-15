@@ -195,7 +195,7 @@ public sealed partial class TenantSetupTests : IClassFixture<WebApplicationFacto
         Assert.Contains($"data-setup-first=\"{step}\"", html);
         Assert.Contains(field == "Company" ? "name=\"Company\"" : "name=\"Template\"", html);
         Assert.False(File.Exists(Path.Combine(directory, Tenant.FileName)));
-        Assert.False(File.Exists(AdminAccount.PathIn(directory)));
+        Assert.False(File.Exists(UserStore.PathIn(directory)));
         Assert.DoesNotContain($"value=\"{Password}", html);
     }
 
@@ -225,7 +225,7 @@ public sealed partial class TenantSetupTests : IClassFixture<WebApplicationFacto
         var response = await Setup(Client(factory), new Dictionary<string, string> { ["Name"] = "matthias", ["Password"] = Password, ["Repeat"] = Password });
 
         Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.True(File.Exists(AdminAccount.PathIn(directory)));
+        Assert.True(File.Exists(UserStore.PathIn(directory)));
         Assert.False(File.Exists(Path.Combine(directory, Tenant.FileName)));
         var design = factory.Services.GetRequiredService<DesignData>();
         Assert.Equal(TenantOrigin.Default, design.TenantOrigin);

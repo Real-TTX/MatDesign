@@ -5,8 +5,9 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 namespace MatDesign.Web.Pages.Studio;
 
 /// <summary>
-/// The sign-in of the Studio: the one administrator, by name and password. A Studio that has no administrator yet leads to the setup assistant instead.
-/// A wrong name or password costs half a second, and five of them in a minute lock the client out for a minute (the page does not say which one was wrong).
+/// The sign-in of the Studio: a person, by name and password. A Studio that has nobody yet leads to the setup assistant instead.
+/// A wrong name or password costs half a second, and five of them in a minute for the same name from the same address lock that pair out for a minute (the page does not say which one was wrong,
+/// nor whether the name exists, nor whether the account is disabled). A person whose password has to be changed lands on their account page.
 /// When the Studio is off the page says what is missing instead of showing a form that cannot work.
 /// </summary>
 public class LoginModel(StudioService studio) : PageModel
@@ -36,7 +37,7 @@ public class LoginModel(StudioService studio) : PageModel
             return RedirectToPage("/Studio/Setup");
         }
 
-        return studio.Enabled && User.Identity?.IsAuthenticated == true ? LocalRedirect(Target) : Page();
+        return studio.Enabled && studio.CurrentUser(User) is not null ? LocalRedirect(Target) : Page();
     }
 
     public async Task<IActionResult> OnPostAsync()
@@ -52,23 +53,24 @@ public class LoginModel(StudioService studio) : PageModel
         }
 
         var client = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-        if (studio.LockedFor(client) is { } wait)
+        if (studio.LockedFor(Name, client) is { } wait)
         {
             Error = $"Too many attempts. Try again in {Math.Ceiling(wait.TotalSeconds)} seconds.";
             return Page();
         }
 
-        if (!studio.SignsIn(Name, Password))
+        if (studio.SignIn(Name, Password) is not { } user)
         {
-            studio.Failed(client);
+            studio.Failed(Name, client);
             await Task.Delay(500);
             Error = "The name or the password is not right.";
             Password = null;
             return Page();
         }
 
-        studio.Succeeded(client);
-        await StudioSession.SignInAsync(HttpContext, studio);
-        return LocalRedirect(Target);
+        studio.Succeeded(Name, client);
+        studio.Users.RecordSignIn(user.Id);
+        await StudioSession.SignInAsync(HttpContext, user);
+        return LocalRedirect(user.MustChange ? "/Studio/Account" : Target);
     }
 }

@@ -50,9 +50,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.ReturnUrlParameter = "returnUrl";
     options.Events.OnValidatePrincipal = async context =>
     {
-        // A session ends when the Studio is switched off or its password changes.
+        // A session ends when the Studio is switched off, when the person is disabled or removed, or when their password changes (another stamp). The cookie carries the id of the
+        // person and no role: the role is read from the people on every request, so a change of it takes effect at once.
         var service = context.HttpContext.RequestServices.GetRequiredService<StudioService>();
-        if (!service.Enabled || context.Principal?.FindFirst(StudioService.StampClaim)?.Value != service.Stamp)
+        if (!service.Enabled || service.CurrentUser(context.Principal) is null)
         {
             context.RejectPrincipal();
             await context.HttpContext.SignOutAsync();

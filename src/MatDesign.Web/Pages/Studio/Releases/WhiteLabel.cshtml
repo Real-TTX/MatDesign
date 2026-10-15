@@ -15,6 +15,7 @@
     var shown = valid ? Model.Current : WhiteLabelSetting.None;
     string Field(string name) => Model.ProblemFor(name) is null ? string.Empty : " is-invalid";
     var trial = Model.Trial;
+    var canManage = Model.Can(Capability.ManageWhiteLabel);
 }
 
 <form class="mat-form" method="post" action="/Studio/Releases/WhiteLabel" novalidate data-white-label data-reserved="@string.Join(",", WhiteLabel.ReservedPrefixes)">
@@ -47,6 +48,12 @@
         <div class="mat-alert mat-alert--info" role="status">@Ui.Icon("info")<div class="mat-alert__body">This setting renames nothing (the prefix mat and the name MatUi are the toolkit's own), so there is nothing to build or check.</div></div>
     }
 
+    @if (!canManage)
+    {
+        <partial name="_ReadOnly" model="@Model.WhyNot(Capability.ManageWhiteLabel)" />
+    }
+
+    <fieldset class="mat-fieldset" disabled="@(!canManage)">
     <section class="mat-card" aria-labelledby="setting-title">
         <div class="mat-card__head">@Ui.Icon("layers")<h2 class="mat-card__title" id="setting-title">The setting</h2>
             @if (saved is null) { <span class="mat-pill mat-pill--plain">Not set</span> }
@@ -80,6 +87,7 @@
             </div>
         </div>
     </section>
+    </fieldset>
 
     <section class="mat-section" aria-labelledby="examples-title">
         <div class="mat-section__head">
@@ -180,14 +188,17 @@
     }
 
     <div class="mat-btn-row">
-        <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
-        <button type="submit" class="mat-btn mat-btn--secondary" formaction="?handler=Check">@Ui.Icon("check-circle")<span>Check a trial build</span></button>
+        @if (canManage)
+        {
+            <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Save</span></button>
+            <button type="submit" class="mat-btn mat-btn--secondary" formaction="?handler=Check">@Ui.Icon("check-circle")<span>Check a trial build</span></button>
+        }
         <a class="mat-btn mat-btn--secondary" href="/Studio/Releases">@Ui.Icon("back")<span>Back</span></a>
         @if (History.HasHistory(WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId))
         {
             <a class="mat-btn mat-btn--ghost" href="@StudioHistory.HistoryUrl(WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId)">@Ui.Icon("restore")<span>History</span></a>
         }
-        @if (saved is not null)
+        @if (saved is not null && canManage)
         {
             <span class="mat-btn-row__spacer"></span>
             <button type="submit" class="mat-btn mat-btn--danger" formaction="?handler=Reset" formnovalidate data-confirm="Take the setting away? Releases carry the toolkit's own names again; the history stays." data-confirm-ok="Reset">@Ui.Icon("restore")<span>Reset</span></button>

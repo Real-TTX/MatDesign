@@ -112,7 +112,7 @@ public sealed record PropertyGroupView(MatDesign.Core.PropertyComponent Componen
 /// <see cref="Prefix"/> of the fields (<c>component</c> for the brand, <c>property</c> for an app: <c>component:--mat-btn-radius</c>), the form the inputs belong to when they sit outside it,
 /// the app whose <c>data-app</c> the preview wears (null for the brand) and whether the preview is stacked above the table (a narrow page) instead of beside it.
 /// </summary>
-public sealed record PropertyGroupEditor(PropertyGroupView Group, Func<MatDesign.Core.Studio.PropertyToken, string> ValueOf, Func<string, string?> ProblemFor, string Prefix, string? FormId = null, string? AppId = null, bool Stacked = false)
+public sealed record PropertyGroupEditor(PropertyGroupView Group, Func<MatDesign.Core.Studio.PropertyToken, string> ValueOf, Func<string, string?> ProblemFor, string Prefix, string? FormId = null, string? AppId = null, bool Stacked = false, bool ReadOnly = false)
 {
     /// <summary>The id of the input of a property: <c>component-mat-btn-radius</c>.</summary>
     public string IdOf(MatDesign.Core.Studio.PropertyToken property) => Prefix + "-" + property.Key;

@@ -50,6 +50,7 @@ public sealed class ComponentInput
 /// the page shows the examples live next to the form, so a fault is seen before it is saved. A built-in component that is saved becomes a changed one; deleting that item brings the
 /// built-in component back. Examples are added and removed by buttons that answer with the form as it is, nothing saved.
 /// </summary>
+[RequireCapability(Capability.ViewStudio)]
 public class EditModel(StudioService studio, DesignData design, ToolkitFiles toolkit) : StudioPageModel(studio)
 {
     [BindProperty]
@@ -79,6 +80,11 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
     {
         if (id is null)
         {
+            if (!CanEdit)
+            {
+                return Forbidden(Capability.EditDesign);
+            }
+
             var chosen = ComponentCatalog.Groups.Contains(group ?? string.Empty) ? group! : "Content";
             Input = new ComponentInput { Group = chosen, Icon = "toggle", Examples = [new ExampleInput()] };
             return Page();
@@ -102,6 +108,7 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
     }
 
     /// <summary>Saves, or (with the Check button, <c>check</c>) only shows what the form would give: the problems and the examples live.</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPost(bool check = false)
     {
         var original = design.Component(Input.Original);
@@ -123,13 +130,14 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
         }
 
         var note = original is null ? "Created" : "Changed " + string.Join(", ", What(original, doc));
-        Studio.Store.Save("components", doc.Id, doc, Studio.Administrator, note);
+        Studio.Store.Save("components", doc.Id, doc, Who, note);
         design.Reload();
         TempData["Flash"] = original is null ? $"{doc.Name} was added." : $"{doc.Name} was saved.";
         return RedirectToPage("/Studio/Components/Index");
     }
 
     /// <summary>Adds an empty example to the form. Nothing is saved.</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPostAddExample()
     {
         Input.Examples.Add(new ExampleInput());
@@ -138,6 +146,7 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
     }
 
     /// <summary>Takes an example out of the form. Nothing is saved; the component keeps it until Save.</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPostRemoveExample(int index)
     {
         if (index >= 0 && index < Input.Examples.Count)
@@ -150,6 +159,7 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
     }
 
     /// <summary>Deletes a component that was added, or resets a built-in component that was changed (the built-in component is back).</summary>
+    [RequireCapability(Capability.EditDesign)]
     public IActionResult OnPostDelete()
     {
         var doc = design.Component(Input.Original);
@@ -164,7 +174,7 @@ public class EditModel(StudioService studio, DesignData design, ToolkitFiles too
             return BadRequest("A built-in component cannot be deleted.");
         }
 
-        Studio.Store.Delete("components", doc.Id, Studio.Administrator, source == ItemSource.Added ? "Deleted" : "Reset to the built-in component");
+        Studio.Store.Delete("components", doc.Id, Who, source == ItemSource.Added ? "Deleted" : "Reset to the built-in component");
         design.Reload();
         TempData["Flash"] = source == ItemSource.Added ? $"{doc.Name} was deleted." : $"{doc.Name} is the built-in component again.";
         return RedirectToPage("/Studio/Components/Index");

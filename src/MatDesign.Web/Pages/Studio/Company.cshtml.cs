@@ -24,6 +24,7 @@ public sealed class CompanyInput
 /// Saving the names checks them like the setup assistant did (<see cref="TenantValidator"/>) and writes a revision of the item <c>tenant</c> with a history of its own. Switching the template is a
 /// separate form with a question first: nothing is deleted, the items the Studio saved stay, and switching back brings the other layer back.
 /// </summary>
+[RequireCapability(Capability.ViewStudio)]
 public class CompanyModel(StudioService studio, DesignData design) : StudioPageModel(studio)
 {
     [BindProperty]
@@ -71,6 +72,7 @@ public class CompanyModel(StudioService studio, DesignData design) : StudioPageM
     }
 
     /// <summary>Saves, or (with the Check button, <c>check</c>) only shows what the form would give.</summary>
+    [RequireCapability(Capability.ManageCompany)]
     public IActionResult OnPost(bool check = false)
     {
         var current = design.Tenant;
@@ -91,6 +93,7 @@ public class CompanyModel(StudioService studio, DesignData design) : StudioPageM
     }
 
     /// <summary>Switches to the other template: the names stay, the accent of the site is the template's own when there is none, and the built-in layer changes.</summary>
+    [RequireCapability(Capability.ManageCompany)]
     public IActionResult OnPostSwitch()
     {
         var current = design.Tenant;
@@ -115,7 +118,7 @@ public class CompanyModel(StudioService studio, DesignData design) : StudioPageM
         var what = What(before, tenant);
         // the first save of a company that was named in the setup (or by the environment) changes nothing yet: say what it is
         var note = what == "nothing" && prefix.StartsWith("Created", StringComparison.Ordinal) ? "Created from " + (design.TenantOrigin == TenantOrigin.Setup ? "the setup" : "the defaults") : prefix + what;
-        Studio.Store.Save(Tenant.Kind, Tenant.ItemId, tenant, Studio.Administrator, note);
+        Studio.Store.Save(Tenant.Kind, Tenant.ItemId, tenant, Who, note);
         design.Reload();
     }
 

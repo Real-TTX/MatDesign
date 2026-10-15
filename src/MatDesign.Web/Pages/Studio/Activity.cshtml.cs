@@ -5,6 +5,7 @@ using MatDesign.Web.Studio;
 namespace MatDesign.Web.Pages.Studio;
 
 /// <summary>Every change made in the Studio as a list: toolbar above (search, filter, sort as dialogs), table, pagination.</summary>
+[RequireCapability(Capability.ViewStudio)]
 public class ActivityModel(StudioService studio) : StudioPageModel(studio)
 {
     private const int PageSize = 20;
@@ -32,6 +33,7 @@ public class ActivityModel(StudioService studio) : StudioPageModel(studio)
         if (q is not null)
         {
             rows = rows.Where(r => r.Id.Contains(q, StringComparison.OrdinalIgnoreCase)
+                || StudioFormat.ItemTitle(r).Contains(q, StringComparison.OrdinalIgnoreCase)
                 || r.Revision.Note.Contains(q, StringComparison.OrdinalIgnoreCase)
                 || r.Revision.By.Contains(q, StringComparison.OrdinalIgnoreCase));
         }

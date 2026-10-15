@@ -1,0 +1,118 @@
+@page "/Studio/Account"
+@model MatDesign.Web.Pages.Studio.AccountModel
+@using MatDesign.Core.Studio
+@{
+    var me = Model.Me;
+    ViewData["Title"] = "Your account";
+    ViewData["PageSub"] = "Who you are in the Studio, what your role allows, and your password.";
+    ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Your account", null));
+    ViewData["Width"] = "narrow";
+
+    string Field(string name) => Model.ProblemFor(name) is null ? string.Empty : " is-invalid";
+}
+
+@if (me.MustChange)
+{
+    <div class="mat-alert mat-alert--warning" role="status" data-must-change>
+        @Ui.Icon("key")
+        <div class="mat-alert__body"><strong>Choose your own password.</strong> An administrator chose the one you signed in with. Nothing else in the Studio opens until you have changed it.</div>
+    </div>
+}
+
+<div class="mat-alert mat-alert--danger" role="alert" data-validation-summary hidden="@(Model.Error is null)">
+    @Ui.Icon("x-circle")
+    <div class="mat-alert__body">
+        <strong>Your password was not changed.</strong>
+        <ul class="mat-alert__list"><li>@Model.Error</li></ul>
+    </div>
+</div>
+
+<section class="mat-card" aria-labelledby="me-title">
+    <div class="mat-card__head">@Ui.Icon("user")<h2 class="mat-card__title" id="me-title">You</h2></div>
+    <div class="mat-card__body">
+        <dl class="mat-kv">
+            <dt>Name</dt>
+            <dd>@me.Name</dd>
+            <dt>Role</dt>
+            <dd><span class="mat-pill @(me.Role == StudioRole.AdministratorId ? "mat-pill--info" : "mat-pill--plain")">@Model.RoleName</span></dd>
+            <dt>Last sign-in</dt>
+            <dd>@UserStore.When(me.LastSignIn)</dd>
+        </dl>
+        <p class="mat-muted">@(me.RoleInfo?.Summary)</p>
+    </div>
+</section>
+
+<section class="mat-card" aria-labelledby="allows-title">
+    <div class="mat-card__head">@Ui.Icon("shield")<h2 class="mat-card__title" id="allows-title">What your role allows</h2></div>
+    <div class="mat-card__body">
+        <div class="mat-table-wrap">
+            <table class="mat-table" data-capabilities>
+                <caption class="mat-sr-only">What the role @Model.RoleName allows</caption>
+                <thead><tr><th scope="col">What</th><th scope="col">For you</th></tr></thead>
+                <tbody>
+                    @foreach (var (capability, text, allowed) in Model.Capabilities)
+                    {
+                        <tr data-capability="@capability" data-allowed="@(allowed ? "true" : "false")">
+                            <td data-label="What">@text</td>
+                            <td data-label="For you"><span class="mat-pill @(allowed ? "mat-pill--ok" : "mat-pill--plain")">@(allowed ? "Allowed" : "Not allowed")</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@if (me.Builtin)
+{
+    <section class="mat-card" aria-labelledby="password-title">
+        <div class="mat-card__head">@Ui.Icon("key")<h2 class="mat-card__title" id="password-title">Password</h2></div>
+        <div class="mat-card__body">
+            <p class="mat-muted">You are the built-in administrator: your password is the value of <code>MATDESIGN_ADMIN_PASSWORD</code> and is changed there, not here.</p>
+        </div>
+    </section>
+}
+else
+{
+    <form class="mat-form" method="post" action="/Studio/Account?handler=Password" novalidate>
+        @Html.AntiForgeryToken()
+        <section class="mat-card" aria-labelledby="password-title">
+            <div class="mat-card__head">@Ui.Icon("key")<h2 class="mat-card__title" id="password-title">Change your password</h2></div>
+            <div class="mat-card__body">
+                <div class="mat-form__grid">
+                    <div class="mat-field mat-field--full@(Field("Current"))">
+                        <label class="mat-label" for="Current">Current password <span class="mat-req" aria-hidden="true">*</span></label>
+                        <input class="mat-input" id="Current" name="Current" type="password" autocomplete="current-password" required data-msg-required="Please type your current password." />
+                        <span class="mat-error" aria-live="polite">@Model.ProblemFor("Current")</span>
+                    </div>
+                    <div class="mat-field@(Field("Password"))">
+                        <label class="mat-label" for="Password">New password <span class="mat-req" aria-hidden="true">*</span></label>
+                        <input class="mat-input" id="Password" name="Password" type="password" autocomplete="new-password" required data-msg-required="Please choose a new password." />
+                        <span class="mat-error" aria-live="polite">@Model.ProblemFor("Password")</span>
+                        <span class="mat-hint">At least @Model.MinLength characters, not your name, not a common password. A sentence of a few words is easy to remember and hard to guess.</span>
+                    </div>
+                    <div class="mat-field@(Field("Repeat"))">
+                        <label class="mat-label" for="Repeat">New password again <span class="mat-req" aria-hidden="true">*</span></label>
+                        <input class="mat-input" id="Repeat" name="Repeat" type="password" autocomplete="new-password" required data-msg-required="Please type the new password again." />
+                        <span class="mat-error" aria-live="polite">@Model.ProblemFor("Repeat")</span>
+                    </div>
+                </div>
+                <p class="mat-hint">Every other session of yours ends when the password changes.</p>
+            </div>
+        </section>
+        <div class="mat-btn-row">
+            <button type="submit" class="mat-btn mat-btn--primary">@Ui.Icon("save")<span>Change the password</span></button>
+        </div>
+    </form>
+}
+
+<div class="mat-btn-row">
+    <form method="post" action="/Studio/Logout">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="mat-btn mat-btn--secondary">@Ui.Icon("logout")<span>Sign out</span></button>
+    </form>
+    @if (!me.MustChange)
+    {
+        <a class="mat-btn mat-btn--ghost" href="/Studio">@Ui.Icon("back")<span>Back to the overview</span></a>
+    }
+</div>

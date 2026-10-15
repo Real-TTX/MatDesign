@@ -18,6 +18,7 @@ public sealed class WhiteLabelInput
 /// and runs a trial build (the renamer and the checks on the files of the next release, nothing published) before the setting is saved: a setting whose trial fails is not saved, and the same trial is the
 /// <c>whitelabel</c> check of the Studio. Resetting deletes the item, and releases carry the toolkit's own names again.
 /// </summary>
+[RequireCapability(Capability.ViewStudio)]
 public class WhiteLabelModel(StudioService studio, DesignData design, ReleaseService releases) : StudioPageModel(studio)
 {
     [BindProperty]
@@ -49,6 +50,7 @@ public class WhiteLabelModel(StudioService studio, DesignData design, ReleaseSer
     }
 
     /// <summary>Saves the setting, unless it is not valid or its trial build fails.</summary>
+    [RequireCapability(Capability.ManageWhiteLabel)]
     public IActionResult OnPost()
     {
         var typed = Describe();
@@ -68,13 +70,14 @@ public class WhiteLabelModel(StudioService studio, DesignData design, ReleaseSer
         }
 
         var before = Saved;
-        Studio.Store.Save(WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId, typed, Studio.Administrator, before is null ? $"Created: {Summary(typed)}" : $"Changed to {Summary(typed)}");
+        Studio.Store.Save(WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId, typed, Who, before is null ? $"Created: {Summary(typed)}" : $"Changed to {Summary(typed)}");
         design.Reload();
         TempData["Flash"] = typed.IsNoOp ? "The setting was saved: it renames nothing, releases carry the toolkit's own names." : "The white label setting was saved. The next release carries it.";
         return RedirectToPage("/Studio/Releases/WhiteLabel");
     }
 
     /// <summary>Runs the trial build on what is typed and shows the result; nothing is saved.</summary>
+    [RequireCapability(Capability.ManageWhiteLabel)]
     public IActionResult OnPostCheck()
     {
         Checked = true;
@@ -89,11 +92,12 @@ public class WhiteLabelModel(StudioService studio, DesignData design, ReleaseSer
     }
 
     /// <summary>Deletes the setting: releases carry the names of the toolkit again.</summary>
+    [RequireCapability(Capability.ManageWhiteLabel)]
     public IActionResult OnPostReset()
     {
         if (Saved is not null)
         {
-            Studio.Store.Delete(WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId, Studio.Administrator, "Reset: releases carry the toolkit's own names");
+            Studio.Store.Delete(WhiteLabelSetting.Kind, WhiteLabelSetting.ItemId, Who, "Reset: releases carry the toolkit's own names");
             design.Reload();
             TempData["Flash"] = "The setting is gone: releases carry the toolkit's own names.";
         }

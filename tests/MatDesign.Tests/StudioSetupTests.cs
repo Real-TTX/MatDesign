@@ -252,7 +252,7 @@ public sealed partial class StudioSetupTests : IClassFixture<WebApplicationFacto
         Assert.Contains(message, html);
         Assert.Contains("is-invalid", html);
         Assert.DoesNotContain($"value=\"{password}", html);
-        Assert.False(File.Exists(AdminAccount.PathIn(directory)));
+        Assert.False(File.Exists(UserStore.PathIn(directory)));
         Assert.False(response.Headers.TryGetValues("Set-Cookie", out var cookies) && cookies.Any(c => c.StartsWith("matdesign.studio=", StringComparison.Ordinal)));
         Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/Studio/Setup")).StatusCode);
     }
@@ -273,9 +273,9 @@ public sealed partial class StudioSetupTests : IClassFixture<WebApplicationFacto
         var html = await studio.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.OK, studio.StatusCode);
         Assert.Contains("Signed in to the Studio", html);
-        Assert.Contains("The Studio is set up. You are signed in as matthias.", html);
+        Assert.Contains("The Studio is set up. You are signed in as matthias, the administrator.", html);
 
-        var file = await File.ReadAllTextAsync(AdminAccount.PathIn(directory));
+        var file = await File.ReadAllTextAsync(UserStore.PathIn(directory));
         Assert.Contains("matthias", file);
         Assert.DoesNotContain(Password, file);
     }
@@ -288,7 +288,7 @@ public sealed partial class StudioSetupTests : IClassFixture<WebApplicationFacto
         await Setup(client, "Matthias.S");
 
         var studio = (StudioService)factory.Services.GetService(typeof(StudioService))!;
-        Assert.Equal("Matthias.S", studio.Administrator);
+        Assert.Equal("Matthias.S", studio.Users.ByName("matthias.s")!.Name);
     }
 
     [Fact]
@@ -354,7 +354,7 @@ public sealed partial class StudioSetupTests : IClassFixture<WebApplicationFacto
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
         Assert.Contains("type=\"password\"", await login.Content.ReadAsStringAsync());
         Assert.Equal(HttpStatusCode.Redirect, (await client.GetAsync("/Studio/Setup")).StatusCode);
-        Assert.False(File.Exists(AdminAccount.PathIn(directory)));
+        Assert.False(File.Exists(UserStore.PathIn(directory)));
         Assert.Equal(HttpStatusCode.Redirect, (await SignIn(client, "admin", "set from outside")).StatusCode);
     }
 
@@ -370,10 +370,10 @@ public sealed partial class StudioSetupTests : IClassFixture<WebApplicationFacto
 
         Assert.Single(results, r => r.Done);
         Assert.False(studio.NeedsSetup);
-        var winner = AdminAccount.Read(directory)!;
+        var winner = studio.Users.All.Single();
         Assert.StartsWith("visitor", winner.Name);
-        Assert.Equal(winner.Name, studio.Administrator);
-        Assert.Single(Directory.GetFiles(directory, "admin.json*"));
+
+        Assert.Single(Directory.GetFiles(directory, "users.json*"));
     }
 
     [Fact]
