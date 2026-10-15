@@ -80,13 +80,10 @@ builder.Services.AddSingleton<ToolkitFiles>();
 builder.Services.AddSingleton<IconLibrary>();
 builder.Services.AddSingleton<AuditData>();
 
-// Behind a TLS-terminating reverse proxy (Matcad) the scheme and host come from the X-Forwarded-* headers.
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost;
-    options.KnownIPNetworks.Clear();
-    options.KnownProxies.Clear();
-});
+// Behind a TLS-terminating reverse proxy (Matcad) the scheme, the host and the address of the client come from the X-Forwarded-* headers: from a proxy that is known, never from anybody (TrustedProxies).
+var trustedProxies = TrustedProxies.Parse(Environment.GetEnvironmentVariable(TrustedProxies.Variable));
+builder.Services.AddSingleton(trustedProxies);
+builder.Services.Configure<ForwardedHeadersOptions>(trustedProxies.Apply);
 
 var app = builder.Build();
 

@@ -303,6 +303,7 @@ None of them is needed to run it – the image has the right defaults.
 | `MATDESIGN_DATA` | `/data` (in the image) | Data directory of the Studio; it must be writable. Without it the Studio is off and the site is read-only |
 | `MATDESIGN_ADMIN_PASSWORD` | – | Optional, for automation (CI, a throwaway stack): the password of a built-in administrator `admin`, which skips the setup assistant and is not written to the volume. It wins over a person of the same name in the volume |
 | `MATDESIGN_TEMPLATE` / `MATDESIGN_COMPANY` | – | Optional, for automation (a throwaway stack, the browser checks): the template (`demo` or `blank`) and the company where the setup assistant starts, and what the site is when no assistant ever ran. Without them: the demo |
+| `MATDESIGN_TRUSTED_PROXIES` | loopback and the private networks | Optional: the proxies whose `X-Forwarded-For/-Proto/-Host` are believed (the lock-out of the sign-in counts by that address): addresses and networks, `172.18.0.2, 10.0.0.0/8`, or `none`; a value that cannot be read stops the start |
 | `ASPNETCORE_URLS` | `http://+:8060` | Address inside the container |
 
 ### The `/data` volume

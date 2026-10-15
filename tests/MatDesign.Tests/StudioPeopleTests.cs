@@ -492,9 +492,9 @@ public sealed partial class StudioPeopleTests : IClassFixture<WebApplicationFact
         await _studio.SignIn();
         _studio.AddUser("Eddie", "editor");
         var attacker = _studio.NewClient();
-        attacker.DefaultRequestHeaders.Add("X-Forwarded-For", "10.1.1.1");
+        attacker.DefaultRequestHeaders.Add(TestSenderStartupFilter.Header, "10.1.1.1");
         var friend = _studio.NewClient();
-        friend.DefaultRequestHeaders.Add("X-Forwarded-For", "10.2.2.2");
+        friend.DefaultRequestHeaders.Add(TestSenderStartupFilter.Header, "10.2.2.2");
 
         for (var i = 0; i < 5; i++)
         {
@@ -528,7 +528,7 @@ public sealed partial class StudioPeopleTests : IClassFixture<WebApplicationFact
 
         // five tries at a name that does not exist lock it exactly like one that does
         var client = _studio.NewClient();
-        client.DefaultRequestHeaders.Add("X-Forwarded-For", "10.3.3.3");
+        client.DefaultRequestHeaders.Add(TestSenderStartupFilter.Header, "10.3.3.3");
         for (var i = 0; i < 5; i++)
         {
             await _studio.SignInAs(client, "Nobody", "wrong " + i);

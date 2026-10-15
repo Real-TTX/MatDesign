@@ -34,6 +34,9 @@ public sealed partial class StudioHarness : IDisposable
             {
                 builder.UseSetting(key, value);
             }
+
+            // the sender of a request, for the tests of the lock-out (X-Test-Sender)
+            builder.ConfigureServices(services => services.AddTransient<Microsoft.AspNetCore.Hosting.IStartupFilter, TestSenderStartupFilter>());
         });
         Client = Factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
     }
