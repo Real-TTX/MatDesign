@@ -1506,6 +1506,20 @@
       updateSelection(box);
     }
   });
+  // A tap on the cell around the check of a row is a tap on the check: the check is 18 px, the cell is the target of 44 px on a touch screen (MOBILE-04).
+  doc.addEventListener('click', function (e) {
+    var cell = e.target.closest && e.target.closest('.mat-table__select');
+    if (!cell || e.target.closest('input, label, a, button') || !cell.closest('[data-selectable]')) { return; }
+    var check = $('input[data-select-row], input[data-select-all]', cell);
+    if (check && !check.disabled) { check.click(); }
+  });
+  // The same for a row of a list that is a field (a label and a .mat-item__input in a .mat-item__main): a tap on the row, not only on the line of the field, puts the focus in it.
+  doc.addEventListener('click', function (e) {
+    var main = e.target.closest && e.target.closest('.mat-item__main');
+    if (!main || e.target.closest('input, select, textarea, label, a, button')) { return; }
+    var field = $('.mat-item__input', main);
+    if (field && !field.disabled && !field.readOnly) { field.focus(); }
+  });
 
   // ------------------------------------------------------------------------------------------------ groups in a table (LIST-16, matui.lists.css)
   // <table data-groups="key"> holds <tbody class="mat-group" data-group="name"> whose first row (.mat-group__head) has the toggle button (data-group-toggle,
@@ -6131,20 +6145,42 @@
       body.className = 'mat-rating__body';
       ratBody(r, body);
       el.appendChild(body);
-      r.stars.addEventListener('pointermove', function (e) { if (e.pointerType !== 'touch') { ratPreview(r, ratAt(r, e.clientX)); } });
+      r.stars.addEventListener('pointermove', function (e) { if (e.pointerType !== 'touch') { ratPreview(r, ratAt(r, e.clientX, e.clientY)); } });
       r.stars.addEventListener('pointerleave', function () { ratPreview(r, null); });
-      r.stars.addEventListener('click', function (e) { ratPick(r, ratAt(r, e.clientX)); });
+      r.stars.addEventListener('click', function (e) { ratPick(r, ratAt(r, e.clientX, e.clientY)); });
+      if (typeof ResizeObserver === 'function') { new ResizeObserver(function () { ratFit(r); }).observe(el); }
     }
     el.style.setProperty('--mat-rating-max', String(max));
     el._matRating = r;
     el.classList.add('is-ready');
     ratSync(r);
+    ratFit(r);
+  }
+  // On a touch screen every shape is a target as high as it is wide (MOBILE-04), so a row that has no room for that many of them is set in two rows (is-wrapped, --mat-rating-cols):
+  // the row is measured as one row (its cells shrink when it does not fit), and again when the width of the field changes.
+  function ratFit(r) {
+    if (r.readonly || !r.stars) { return; }
+    var el = r.root, width = el.clientWidth, cell = r.stars.querySelector('.mat-rating__cell');
+    if (!width || !cell || width === r.fitWidth) { return; }
+    el.classList.remove('is-wrapped');
+    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches && cell.getBoundingClientRect().width < parseFloat(getComputedStyle(cell).height) - 0.5) {
+      el.style.setProperty('--mat-rating-cols', String(Math.ceil(r.max / 2)));
+      el.classList.add('is-wrapped');
+    }
+    r.fitWidth = el.clientWidth;
   }
   function initRatings(scope) { $$('[data-rating]', scope).forEach(ratInit); }
 
   // the value under the pointer: the first value that can be chosen at or above its place in the row (the left half of a star is the half value where there is one)
-  function ratAt(r, x) {
-    var box = r.stars.getBoundingClientRect(), raw = box.width ? Math.max(0, Math.min(1, (x - box.left) / box.width)) * r.max : 0, i;
+  // (set in two rows, y tells the row: the first half of the height is the first row)
+  function ratAt(r, x, y) {
+    var box = r.stars.getBoundingClientRect(), raw = 0, i;
+    if (box.width && r.root.classList.contains('is-wrapped')) {
+      var cols = Math.ceil(r.max / 2), row = box.height && y !== undefined && y - box.top >= box.height / 2 ? 1 : 0;
+      raw = row * cols + Math.max(0, Math.min(1, (x - box.left) / box.width)) * cols;
+    } else if (box.width) {
+      raw = Math.max(0, Math.min(1, (x - box.left) / box.width)) * r.max;
+    }
     for (i = 0; i < r.values.length; i += 1) { if (r.values[i] >= raw - 1e-9) { return r.values[i]; } }
     return r.values[r.values.length - 1];
   }

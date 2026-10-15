@@ -3,6 +3,7 @@
 // The unit tests read the script and the CSS; this is where the rules are seen to hold: a drawer that shows the logo, dialogs that fill a phone,
 // the button order, the theme button, dependent fields, the keyboard. Exit code 1 when a check fails.
 const { chromium } = require('playwright-core');
+const { installTouchHit } = require('./touch-hit');
 
 const BASE = (process.argv[2] || process.env.BASE || 'http://localhost:8060').replace(/\/$/, '');
 const results = [];
@@ -4470,7 +4471,7 @@ function seenAt(page, selector) {
           dotSize: Math.round(c.querySelector('.mat-carousel__dot').getBoundingClientRect().width),
         };
       });
-      expect(s, { dots: 5, oneAtATime: true, inert: 'false,true,true,true,true', sideways: false, dotSize: 36 }, 'the phone');
+      expect(s, { dots: 5, oneAtATime: true, inert: 'false,true,true,true,true', sideways: false, dotSize: 44 }, 'the phone');
       await page.click(`${apps} .mat-carousel__next`);
       await page.waitForTimeout(700);
       expect(await page.$eval(apps, c => [...c.querySelectorAll('.mat-carousel__dot')].findIndex(d => d.getAttribute('aria-current') === 'true')), 1, 'the page after Next');
@@ -8318,6 +8319,201 @@ function seenAt(page, selector) {
       });
       await clean.ctx.close();
     }
+  }
+
+  // ---------------------------------------------------------------------------------------------------- touch targets (MOBILE-04)
+  // The same measure as touch-audit.js (touch-hit.js), in a touch context of 390 px: for a control, the area that really receives the tap (walked out from inside the control
+  // with elementFromPoint, so padding on a label and an ::after count and the drawn mark does not). 44 px for everything, 36 px for the compact variants (--sm) that the rule allows.
+  console.log('\nTouch targets (MOBILE-04)');
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components');
+    await page.evaluate(installTouchHit);
+    // the first `limit` elements of the selector that are on show (a closed panel, a hidden tab, the crumbs a phone leaves out are not)
+    const hits = (selector, limit) => page.evaluate(({ selector, limit }) => [...document.querySelectorAll(selector)].filter(e => {
+      const t = e.matches('input') && e.closest('label') ? e.closest('label') : e;
+      return t.checkVisibility({ checkVisibilityCSS: true }) && !t.closest('[hidden], [inert]') && t.getBoundingClientRect().width > 0;
+    }).slice(0, limit).map(el => {
+      const h = window.__touchHit(el, 44);
+      return h ? { w: Math.round(h.w), h: Math.round(h.h), covered: h.covered || '' } : null;
+    }), { selector, limit });
+    const holds = async (selector, limit, min = 44) => {
+      const list = await hits(selector, limit);
+      expectTrue(list.length > 0, 'no element matches ' + selector);
+      list.forEach((h, i) => {
+        expectTrue(h, `${selector} no. ${i + 1} is not on show`);
+        expectTrue(!h.covered && h.w + .5 >= min && h.h + .5 >= min, `${selector} no. ${i + 1} is ${h.w} x ${h.h} px${h.covered ? ', covered by ' + h.covered : ''}`);
+      });
+    };
+    expectTrue(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'the context is not a touch screen');
+
+    await check('a switch, a check and a radio button are targets of 44 px: the label, not the drawn mark', async () => {
+      await holds('.mat-switch:not(.mat-switch--bare) input', 4);
+      await holds('.mat-switch--bare input', 2);
+      await holds('.mat-check:not(.mat-card__head .mat-check) input[type="checkbox"]', 6);
+      await holds('.mat-check input[type="radio"]', 5);
+      await holds('.mat-card__head .mat-check input', 3);
+    });
+    await check('the mark itself is still what --mat-check-size and --mat-switch-* say: the target is its own size', async () => {
+      const marks = await page.evaluate(() => {
+        const sw = document.querySelector('.mat-switch__track').getBoundingClientRect();
+        const check = document.querySelector('.mat-check input').getBoundingClientRect();
+        return { track: [Math.round(sw.width), Math.round(sw.height)], check: [Math.round(check.width), Math.round(check.height)] };
+      });
+      expect(marks, { track: [42, 24], check: [18, 18] }, 'the drawn marks');
+      await page.evaluate(() => { document.documentElement.style.setProperty('--mat-check-size', '26px'); document.documentElement.style.setProperty('--mat-switch-height', '30px'); });
+      const bigger = await page.evaluate(() => ({ check: Math.round(document.querySelector('.mat-check input').getBoundingClientRect().width), track: Math.round(document.querySelector('.mat-switch__track').getBoundingClientRect().height) }));
+      expect(bigger, { check: 26, track: 30 }, 'the marks follow the properties');
+      await holds('.mat-switch:not(.mat-switch--bare) input', 2);
+      await holds('.mat-check input[type="checkbox"]', 2);
+      await page.evaluate(() => { document.documentElement.style.removeProperty('--mat-check-size'); document.documentElement.style.removeProperty('--mat-switch-height'); });
+    });
+    await check('every shape of a rating is a target of its own height: ten dots on a phone are set in two rows, and a tap in the second row chooses a value there', async () => {
+      await holds('.mat-rating.is-ready:not(.mat-rating--readonly):not(.mat-rating--sm) .mat-rating__layer--empty .mat-rating__cell', 12);
+      await holds('.mat-rating.is-ready:not(.mat-rating--readonly).mat-rating--sm .mat-rating__layer--empty .mat-rating__cell', 12, 36);
+      const wrapped = await page.evaluate(() => [...document.querySelectorAll('.mat-rating.is-wrapped')].map(r => ({ cols: r.style.getPropertyValue('--mat-rating-cols'), max: r._matRating.max, rows: new Set([...r.querySelectorAll('.mat-rating__layer--empty .mat-rating__cell')].map(c => Math.round(c.getBoundingClientRect().top))).size })));
+      expectTrue(wrapped.length >= 1 && wrapped.every(w => w.rows === 2 && Number(w.cols) === Math.ceil(w.max / 2)), 'the rows of the wrapped ratings: ' + JSON.stringify(wrapped));
+      const tapped = await page.evaluate(() => {
+        const r = [...document.querySelectorAll('.mat-rating.is-wrapped')].find(x => x._matRating.max === 10);
+        r.scrollIntoView({ block: 'center' });
+        const cells = [...r.querySelectorAll('.mat-rating__layer--empty .mat-rating__cell')];
+        const q = cells[cells.length - 1].getBoundingClientRect();
+        return { id: r.id, x: q.left + q.width / 2, y: q.top + q.height / 2, name: r.querySelector('input').name };
+      });
+      await page.touchscreen.tap(tapped.x, tapped.y);
+      expect(await page.evaluate((n) => { const c = document.querySelector('.mat-rating.is-wrapped input[name="' + n + '"]:checked'); return c ? c.value : null; }, tapped.name), '10', 'the tap on the last dot of the second row');
+      const filled = await page.evaluate((n) => { const r = document.querySelector('.mat-rating.is-wrapped:has(input[name="' + n + '"])'); return getComputedStyle(r).getPropertyValue('--mat-rating-bottom').trim(); }, tapped.name);
+      expectTrue(filled.length > 0, 'the filled part of the second row is not computed');
+    });
+    await check('the remove buttons of chips and tags, the pager, the tabs, the segmented control, the carousel dots and the sort links are targets of 44 px', async () => {
+      await holds('.mat-chip__x', 5);
+      await holds('.mat-tagfield:not(.mat-tagfield--sm) .mat-chip__x', 3);
+      await holds('.mat-pager__btn', 8);
+      await holds('.mat-tab', 14);
+      await holds('.mat-seg__btn', 8);
+      await holds('.mat-carousel__dot', 6);
+      await holds('.mat-alert__close', 1);
+    });
+    await check('the rows of a tree, the rows of a list, their handles and the cell around the check of a table row are targets of 44 px', async () => {
+      await holds('.mat-tree:not(.mat-tree--compact) .mat-tree__row', 8);
+      await holds('.mat-tree:not(.mat-tree--compact) .mat-tree__toggle', 4);
+      await holds('.mat-itemlist:not(.mat-itemlist--compact) .mat-item__main', 10);
+      await holds('.mat-item__handle', 5);
+      await holds('.mat-item__input', 4);
+      await holds('td.mat-table__select input', 3);
+    });
+    await check('a tap on the cell around the check of a row ticks it, and a tap on a row that is a field puts the focus in the field', async () => {
+      const ticked = await page.evaluate(() => {
+        const cell = document.querySelector('td.mat-table__select');
+        const input = cell.querySelector('input');
+        cell.scrollIntoView({ block: 'center' });
+        const before = input.checked;
+        const r = cell.getBoundingClientRect();
+        return { before, x: r.right - 3, y: r.top + r.height / 2 };
+      });
+      await page.touchscreen.tap(ticked.x, ticked.y);
+      expect(await page.evaluate(() => document.querySelector('td.mat-table__select input').checked), !ticked.before, 'the check after a tap beside it');
+      const focused = await page.evaluate(() => {
+        const field = document.querySelector('.mat-item__input');
+        const main = field.closest('.mat-item__main');
+        main.scrollIntoView({ block: 'center' });
+        const r = main.getBoundingClientRect();
+        return { x: r.right - 6, y: r.bottom - 5, id: field.id };
+      });
+      await page.touchscreen.tap(focused.x, focused.y);
+      expect(await page.evaluate(() => document.activeElement && document.activeElement.id), focused.id, 'the focus after a tap on the row');
+    });
+    await check('steppers, slider thumbs, the days of a calendar and the boxes of a code are targets of 44 px (the boxes of a code of eight or more shrink in width, never in height)', async () => {
+      await holds('.mat-stepper:not(:has(> .mat-input--sm)) .mat-stepper__btn', 6);
+      await holds('.mat-stepper:has(> .mat-input--sm) .mat-stepper__btn', 2, 36);
+      await holds('.mat-slider:not(.mat-slider--sm) .mat-slider__thumb', 6);
+      // a month in the framed example of a phone is 274 px wide, so its days are as wide as seven columns of it (the panel of a date picker, which is the screen, is checked below)
+      const days = await hits('.mat-calendar .mat-cal__day:not(.is-absent)', 14);
+      expectTrue(days.length > 0 && days.every(h => h && h.h >= 43.5 && h.w >= 29), 'the days of an inline calendar: ' + JSON.stringify(days));
+      await holds('.mat-otp[data-length="4"]:not(.mat-otp--sm) .mat-otp__box', 4);
+      const heights = await hits('.mat-otp:not(.mat-otp--sm) .mat-otp__box', 40);
+      expectTrue(heights.every(h => h && h.h >= 43.5), 'the boxes of a code are not 44 px high: ' + JSON.stringify(heights.filter(h => !h || h.h < 43.5)));
+    });
+    await check('the upload zone and the remove button of a chosen file, the rows of the menu, the close X of a dialog and of a toast are targets of 44 px', async () => {
+      await holds('.mat-upload:not(.mat-upload--compact):not(.is-disabled) .mat-upload__browse', 2);
+      await page.locator('#up-docs').setInputFiles({ name: 'touch.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF touch') });
+      await page.waitForSelector('.mat-upload__remove');
+      await holds('.mat-upload__remove', 1);
+      await page.evaluate(() => { MatUi.toast('Touch', { timeout: 30000 }); });
+      await holds('.mat-toast .mat-alert__close', 1);
+      await page.click('[data-dialog-open="toc-dialog"]');
+      await page.waitForSelector('dialog[open]');
+      await holds('dialog[open] .mat-dialog__close', 1);
+      await holds('dialog[open] .mat-toc__link', 6);
+      await page.keyboard.press('Escape');
+    });
+    await check('the panels of the pickers are 44 px: options, days, hours and minutes, the clear button, the swatches of the colour picker and its hue slider', async () => {
+      for (const trigger of ['.mat-picker[data-picker="select"] .mat-picker__trigger', '.mat-picker[data-picker="date"] .mat-picker__trigger', '.mat-picker[data-picker="time"] .mat-picker__trigger', '.mat-picker[data-picker="colour"] .mat-picker__trigger']) {
+        await page.locator(trigger).first().scrollIntoViewIfNeeded();
+        await page.locator(trigger).first().click();
+        await page.waitForSelector('dialog[open], .mat-picker__panel:not([hidden])');
+        const kind = await page.evaluate((o) => document.querySelector(o).closest('.mat-picker').getAttribute('data-picker'), trigger);
+        if (kind === 'select') { await holds('.mat-picker__panel:not([hidden]) .mat-picker__option', 4); }
+        if (kind === 'date') { await holds('.mat-picker__panel:not([hidden]) .mat-cal__day:not(.is-absent)', 10); }
+        if (kind === 'time') { await holds('.mat-picker__panel:not([hidden]) .mat-timecol__item', 6); }
+        if (kind === 'colour') { await holds('.mat-picker__panel:not([hidden]) .mat-colour__swatch', 8); await holds('.mat-picker__panel:not([hidden]) .mat-colour__hue', 1); }
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(200);
+      }
+      await holds('.mat-picker__clear', 2);
+    });
+    await ctx.close();
+
+    // a tablet (768 px, touch): the table keeps its header, so its sort links are there, and the picker panels are popups
+    const tablet = await open({ viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true }, '/Components');
+    await tablet.page.evaluate(installTouchHit);
+    await check('on a tablet the sort links of a table, the options of a picker and the days of its calendar are 44 px', async () => {
+      const list = await tablet.page.evaluate(() => [...document.querySelectorAll('.mat-table__sort')].filter(e => e.getBoundingClientRect().width > 0).slice(0, 3).map(el => { const h = window.__touchHit(el, 44); return h ? { w: Math.round(h.w), h: Math.round(h.h), covered: h.covered || '' } : null; }));
+      expectTrue(list.length > 0 && list.every(h => h && !h.covered && h.w >= 43.5 && h.h >= 43.5), 'the sort links: ' + JSON.stringify(list));
+      await tablet.page.locator('.mat-picker[data-picker="select"] .mat-picker__trigger').first().scrollIntoViewIfNeeded();
+      await tablet.page.locator('.mat-picker[data-picker="select"] .mat-picker__trigger').first().click();
+      await tablet.page.waitForSelector('.mat-picker__panel:not([hidden]) .mat-picker__option');
+      const options = await tablet.page.evaluate(() => [...document.querySelectorAll('.mat-picker__panel:not([hidden]) .mat-picker__option')].slice(0, 4).map(el => { const h = window.__touchHit(el, 44); return h ? { w: Math.round(h.w), h: Math.round(h.h) } : null; }));
+      expectTrue(options.length > 0 && options.every(h => h && h.h >= 43.5), 'the options: ' + JSON.stringify(options));
+      await tablet.page.keyboard.press('Escape');
+      await tablet.page.locator('.mat-picker[data-picker="date"] .mat-picker__trigger').first().click();
+      await tablet.page.waitForSelector('.mat-picker__panel:not([hidden]) .mat-cal__day');
+      const days = await tablet.page.evaluate(() => [...document.querySelectorAll('.mat-picker__panel:not([hidden]) .mat-cal__day:not(.is-absent)')].slice(0, 10).map(el => { const h = window.__touchHit(el, 44); return h ? { w: Math.round(h.w), h: Math.round(h.h) } : null; }));
+      expectTrue(days.length > 0 && days.every(h => h && h.w >= 43.5 && h.h >= 43.5), 'the days: ' + JSON.stringify(days));
+    });
+    await tablet.ctx.close();
+
+    const menu = await open(phoneOptions, '/Preview?app=matmail&view=list');
+    await menu.page.evaluate(installTouchHit);
+    await check('in the drawer of the menu every item, a submenu item and the foot are 44 px; the crumbs, the footer links and the toolbar buttons too', async () => {
+      const holdsOn = async (selector, limit, min = 44) => {
+        const list = await menu.page.evaluate(({ selector, limit }) => [...document.querySelectorAll(selector)].filter(e => e.checkVisibility({ checkVisibilityCSS: true }) && e.getBoundingClientRect().width > 0).slice(0, limit).map(el => { const h = window.__touchHit(el, 44); return h ? { w: Math.round(h.w), h: Math.round(h.h), covered: h.covered || '' } : null; }), { selector, limit });
+        expectTrue(list.length > 0, 'no element matches ' + selector);
+        list.forEach((h, i) => expectTrue(h && !h.covered && h.w + .5 >= min && h.h + .5 >= min, `${selector} no. ${i + 1} is ${h ? h.w + ' x ' + h.h + (h.covered ? ', covered by ' + h.covered : '') : 'not on show'}`));
+      };
+      await holdsOn('.mat-crumbs a', 2);
+      await holdsOn('.mat-footer__links a', 3);
+      await menu.page.click('[data-nav-toggle]');
+      await menu.page.waitForTimeout(400);
+      await holdsOn('.mat-nav__item', 12);
+      await holdsOn('.mat-nav__item--sub', 4);
+      await holdsOn('.mat-nav__foot .mat-theme', 1);
+      await holdsOn('.mat-nav__foot .mat-user', 1);
+    });
+    await menu.ctx.close();
+
+    const desktop = await open(desktopOptions, '/Components');
+    await check('with a mouse nothing changes: the checks, the switches and the pager are the sizes of the compact tokens, the crumbs links are a line of text', async () => {
+      const sizes = await desktop.page.evaluate(() => ({
+        check: getComputedStyle(document.querySelector('.mat-check')).minHeight,
+        sw: getComputedStyle(document.querySelector('.mat-switch')).minHeight,
+        pager: document.querySelector('.mat-pager__btn').getBoundingClientRect().height,
+        chipX: getComputedStyle(document.querySelector('.mat-chip__x'), '::after').content,
+        swatch: getComputedStyle(document.querySelector('.mat-seg__btn'), '::after').content,
+        rating: document.querySelectorAll('.mat-rating.is-wrapped').length,
+      }));
+      expect(sizes, { check: '32px', sw: '32px', pager: 32, chipX: 'none', swatch: 'none', rating: 0 }, 'the sizes with a mouse');
+    });
+    await desktop.ctx.close();
   }
 
   // ---------------------------------------------------------------------------------------------------- the end

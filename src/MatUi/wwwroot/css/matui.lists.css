@@ -157,6 +157,8 @@ a.mat-pager__btn:hover { background: var(--mat-surface-3); text-decoration: none
 .mat-pager__btn.is-current { background: var(--mat-accent); border-color: var(--mat-accent); color: var(--mat-on-accent); }
 .mat-pager__btn.is-disabled { opacity: .45; pointer-events: none; }
 .mat-pager__gap { display: inline-grid; place-items: center; min-width: 20px; color: var(--mat-text-muted); }
+/* A button of the pager is a control of its own on a touch screen (MOBILE-04): 44 px, and the rows of a pager that wraps are as far apart. */
+@media (pointer: coarse) { .mat-pager__btn { min-width: 44px; height: 44px; } }
 
 /* ---- Gallery ---- */
 .mat-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: var(--mat-gap); }
@@ -563,7 +565,7 @@ a.mat-tree__label:hover { text-decoration: none; }
 @media (max-width: 720px), (pointer: coarse) {
   .mat-tree { --mat-tree-indent: 28px; --mat-tree-row-h: 44px; }
   .mat-tree--compact { --mat-tree-row-h: 36px; }
-  .mat-tree__toggle::before { content: ""; position: absolute; inset: 0 -6px; }
+  .mat-tree__toggle::before { content: ""; position: absolute; inset: 0 -8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .mat-tree__row, .mat-tree__toggle > .mat-icon, .mat-tree__check { transition: none; }
@@ -814,3 +816,20 @@ a.mat-tree__label:hover { text-decoration: none; }
 .mat-schedule__d.is-today { box-shadow: inset 0 0 0 2px var(--mat-text); font-weight: 700; }
 .mat-schedule__hint { margin: 0; padding: var(--mat-space-2) var(--mat-space-4) var(--mat-space-3); color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
 @media (prefers-reduced-motion: reduce) { .mat-schedule__body.is-from-next > *, .mat-schedule__body.is-from-prev > * { animation: none; } .mat-schedule__event { transition: none; } }
+
+/* ---- Touch targets (MOBILE-04): on a touch screen what is pressed in a list is 44 px. The rows and the buttons of a pager grow; a sort link and the cell around the check of a row
+   (a tap on the cell is a tap on the check, matui.js) take the room that the cell has; a small link in a field keeps its look and gets a centred ::after. ---- */
+@media (pointer: coarse) {
+  .mat-toc__link { min-height: 44px; }
+  .mat-tabs--pills .mat-tab { min-height: 44px; }
+  .mat-carousel__dot { width: 44px; height: 44px; }
+  .mat-table__sort { min-width: 44px; padding-block: 12px; margin-block: -12px; }
+  .mat-table th.mat-table__select, .mat-table td.mat-table__select { min-width: 44px; }
+  /* a link in a cell is as high as its row: the line of the link has its padding in the row (the cell has room for a line of 44 px), so the layout does not move; a link that is alone
+     in its cell is 44 px wide at least */
+  .mat-table :is(td, th) a:not(.mat-btn):not(.mat-table__sort) { padding-block: 13px; margin-block: -13px; }
+  .mat-table :is(td, th) a:not(.mat-btn):not(.mat-table__sort):only-child { display: inline-block; min-width: 44px; }
+  a.mat-pill, button.mat-pill { position: relative; }
+  a.mat-pill::after, button.mat-pill::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%); }
+}
+@media (pointer: coarse) and (max-width: 720px) { .mat-table td.mat-table__select { min-height: 44px; align-items: center; } }

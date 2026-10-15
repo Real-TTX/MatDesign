@@ -456,7 +456,7 @@ public static class RuleBook
             "Dialogs are full screen (DIALOG-03), tables become cards (TABLE-02).",
             RuleLevel.Must, Owner),
         new("MOBILE-04", "MOBILE", "Touch",
-            "Targets are at least 44 px (36 px for compact controls), there is no information that only a hover shows, and the safe areas of notches and home indicators are respected.",
+            "Targets are at least 44 px (36 px for compact controls), there is no information that only a hover shows, and the safe areas of notches and home indicators are respected. What is 44 px is the hit area, the part of the screen that takes the tap, not the drawn mark: a check, a switch, the X of a chip or a dot sits in a label, a padding or an area of 44 px around it, which moves nothing and does not depend on the size of the mark. A row of shapes that has no room for them at that size (a rating of ten on a phone) goes on a second row, and a month of days that has to fit a narrow box and a code of many boxes (FORM-19) are only narrower, never lower. A link inside a sentence is exempt.",
             RuleLevel.Must, Matthix),
         new("MOBILE-05", "MOBILE", "Installable",
             "An app that people use daily is a PWA: manifest, `theme-color`, icons and a service worker that caches the shell.",

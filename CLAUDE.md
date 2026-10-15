@@ -104,7 +104,7 @@ src/MatDesign.Web          the site
   Pages/Studio/Brand/        Assets.cshtml(.cs) = `/Studio/Brand/Assets` (a card per slot, uploads, fonts, specimen), `_AssetSlot.cshtml`; its pages are in the namespace `MatDesign.Web.Pages.StudioBrandAssets` (a namespace called Brand would hide the type Brand);
                              wwwroot/js/brand-assets.js the font specimens; `ToolkitFiles.AssetsOverlay` the @font-face rules; `Ui.BrandImage` / `Ui.AppIconLink` the logo and the icon links of the shell
 tests/MatDesign.Tests      unit tests + the site in memory
-tests/e2e                  run.js: the behaviour in a real browser against a running site; blank.js: a blank start on a second site (see Build / run / test)
+tests/e2e                  run.js: the behaviour in a real browser against a running site; blank.js: a blank start on a second site (see Build / run / test); touch-audit.js + touch-hit.js: every control of every page measured for a hit area of 44 px on a touch screen
   Pages/Studio/Releases/WhiteLabel  the white label page (CODE-09): prefix and name with live validation (wwwroot/js/whitelabel.js), before and after, the trial build, save and reset; Studio/WhiteLabelBuild.cs (WhiteLabelStore; WhiteLabelBuild.Apply renames the files of a release, the JSON and the archive, writes the hash of the copy and runs the checks), Studio/WhiteLabelEndpoints.cs (POST .../WhiteLabel/rename: the renamer as an address, for the browser checks)
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
@@ -129,6 +129,9 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   the scrollbar, **never an accent token**; its selectors start with `:root[data-scheme=...]` (so `CssTokens.Tokens` never reads them as base tokens or as the dark set; `CssTokens.Schemes` does), its dark values are written
   twice and identical, it sets in dark every token it sets in light, and `oled` has no light values (light = standard). Links follow the surfaces through `--mat-accent-text-keep`. `SchemeTests` holds every scheme, mode, app and
   accent preset to AA; the standard look is unchanged and the pairings it was never held to are shown as advice. `MatUi.scheme`, `data-scheme-set`, `data-scheme-save-url`, `mat-scheme` in localStorage, `matui.boot.js`.
+- Touch targets (`MOBILE-04`): the **hit area** is 44 px on `(pointer: coarse)`, never the drawn mark. A small mark (check, switch, the X of a chip, a dot) sits in a label with `min-height: 44px` and padding, or a centred `::before` of
+  44 px, or the script forwards the tap; everything of it is written inside `@media (pointer: coarse)` so a mouse sees no change, and it never reads `--mat-check-size` or `--mat-switch-*`. Only `--sm` and `--compact` variants stay at 36 px.
+  A new control: run `node tests/e2e/touch-audit.js <url>` (0 findings outside its allowlist, each exception with a reason) and add it to the "Touch targets" block of `run.js`; `TouchTargetTests` holds the rules of the CSS.
 - Order inside a button row, a list block and the toolbar is enforced by CSS (`order`), not by the author. A selector in a later part must be more specific than a base class it
   overrides (the bundle puts `controls` after `shell`).
 - Validation (`FORM-05`): the script checks `form.mat-form` and `form[data-validate]` on submit and writes the messages itself. A submit button with `formnovalidate` skips the check (`e.submitter`), also after a
