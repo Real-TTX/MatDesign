@@ -348,3 +348,21 @@
 .mat-slot__note { font-size: var(--mat-fs-xs); line-height: 1.1; color: var(--mat-text-muted); }
 .mat-slots__summary { flex: 1 1 100%; margin: 0; font-weight: 650; }
 .mat-slots__summary.is-empty { font-weight: 400; color: var(--mat-text-muted); }
+
+/* ---- Touch targets (MOBILE-04): in the panels of the pickers everything that is pressed is 44 px on a touch screen. The rows and cells grow; a small button inside a field keeps
+   its look and gets a centred ::before as its target; a swatch is drawn in the middle of its 44 px cell; the hue slider is 44 px high and draws its 14 px track in the middle. ---- */
+@media (pointer: coarse) {
+  .mat-picker__option, .mat-picker__all { min-height: 44px; }
+  .mat-picker__clear::before { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+  .mat-cal__day { height: 44px; }
+  .mat-cal__title--button { min-height: 44px; }
+  .mat-timecol__item { height: 44px; }
+  .mat-colour__swatches { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 0; }
+  .mat-colour__swatch { aspect-ratio: auto; height: 44px; background: transparent; box-shadow: none; }
+  .mat-colour__swatch::before { content: ""; position: absolute; inset: 7px; border-radius: var(--mat-radius-sm); background: var(--mat-swatch); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--mat-text) 20%, transparent); }
+  .mat-colour__swatch > .mat-icon { position: relative; }
+  .mat-colour__swatch:focus-visible { box-shadow: none; }
+  .mat-colour__swatch:focus-visible::before { box-shadow: 0 0 0 2px var(--mat-surface), 0 0 0 4px var(--mat-text); }
+  .mat-colour__hue { box-sizing: border-box; height: 44px; padding-block: 15px; background-clip: content-box; }
+}
+@media (pointer: coarse) and (min-width: 641px) { .mat-cal__month { min-width: 308px; } }

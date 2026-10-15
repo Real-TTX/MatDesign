@@ -108,9 +108,17 @@ input[type="file"].mat-input { padding: 6px; }
 .mat-check { display: flex; align-items: flex-start; gap: var(--mat-check-gap, var(--mat-space-3)); min-height: var(--mat-control-h-sm); cursor: pointer; }
 .mat-check input { width: var(--mat-check-size, 18px); height: var(--mat-check-size, 18px); margin: 2px 0 0; accent-color: var(--mat-accent); flex: none; cursor: pointer; }
 .mat-check__text { display: flex; flex-direction: column; gap: 2px; }
+/* On a touch screen the label is the target and it is 44 px high (MOBILE-04), whatever --mat-check-size draws: the mark stays on the first line of the text, the label gets the
+   space above and below it (half of what the line lacks of 44 px). A check without text (in a card head) takes the space with a negative margin, so nothing around it moves. */
+@media (pointer: coarse) {
+  .mat-check { min-height: 44px; padding-block: max(0px, calc((44px - 1lh) / 2)); }
+  .mat-card__head .mat-check { min-height: 0; padding: 13px; margin: -13px; }
+}
 
 .mat-switch { display: flex; align-items: center; gap: var(--mat-space-3); min-height: var(--mat-control-h-sm); cursor: pointer; }
 .mat-switch input { position: absolute; opacity: 0; pointer-events: none; }
+/* On a touch screen the label is the target: 44 px high, and 44 px wide where it is only the track (a switch without text). The track stays centred and keeps its size. */
+@media (pointer: coarse) { .mat-switch { min-height: 44px; } .mat-switch--bare { min-width: 44px; justify-content: center; } }
 /* The knob sits centred in the track: its distance from the edge is half of what the track has more than the knob, so the way it travels is the width less the height. */
 /* @prop switch | --mat-switch-width | length | 42px | Length of the track of a switch. */
 /* @prop switch | --mat-switch-height | length | 24px | Height of the track of a switch. */
@@ -147,6 +155,11 @@ input[type="file"].mat-input { padding: 6px; }
   font-weight: 600; cursor: pointer; text-decoration: none;
 }
 .mat-seg__btn:hover { color: var(--mat-text); text-decoration: none; }
+/* On a touch screen a button is 44 px wide at least, and 44 px high: the ::before reaches over the padding of the track (MOBILE-04); the track keeps its size. */
+@media (pointer: coarse) {
+  .mat-seg__btn { position: relative; min-width: 44px; justify-content: center; }
+  .mat-seg__btn::before { content: ""; position: absolute; inset: min(0px, calc((var(--mat-control-h) - 8px - 44px) / 2)) 0; }
+}
 .mat-seg__btn[aria-pressed="true"], .mat-seg__btn.is-active { background: var(--mat-surface); color: var(--mat-accent-text); box-shadow: var(--mat-shadow-1); }
 
 /* ---- Sizes (a small field for dense places such as a toolbar or a table row, a large one for the main field of a page) ---- */
@@ -571,6 +584,16 @@ fieldset.mat-rating:not(.is-ready) > .mat-hint, fieldset.mat-rating:not(.is-read
 .mat-rating__cell { display: flex; align-items: center; justify-content: center; height: var(--mat-rating-h); min-width: 0; }
 .mat-rating__icon { width: var(--mat-rating-icon); height: var(--mat-rating-icon); stroke-width: 1.75; vertical-align: top; }
 .mat-rating__layer--fill .mat-rating__icon { fill: currentColor; }
+/* On a touch screen a shape is a target as wide as it is high (MOBILE-04). A row that has no room for that many (ten dots on a phone) is set in two rows: the script
+   sets is-wrapped and --mat-rating-cols (half of the shapes, rounded up), and the filled part is the first row up to its share and the second row up to its share. */
+@media (pointer: coarse) {
+  .mat-rating.is-wrapped {
+    --mat-rating-top: min(100%, calc(var(--mat-rating-fill) * var(--mat-rating-max) / var(--mat-rating-cols)));
+    --mat-rating-bottom: max(0%, calc(var(--mat-rating-fill) * var(--mat-rating-max) / var(--mat-rating-cols) - 100%));
+  }
+  .mat-rating.is-wrapped .mat-rating__layer { grid-template-columns: repeat(var(--mat-rating-cols), minmax(0, var(--mat-rating-w))); }
+  .mat-rating.is-wrapped .mat-rating__layer--fill { clip-path: polygon(0 0, var(--mat-rating-top) 0, var(--mat-rating-top) 50%, var(--mat-rating-bottom) 50%, var(--mat-rating-bottom) 100%, 0 100%); }
+}
 /* a heart and a dot fill their square more than a star does: drawn a little smaller they look as large */
 .mat-rating--heart .mat-rating__icon { width: calc(var(--mat-rating-icon) * .9); height: calc(var(--mat-rating-icon) * .9); }
 .mat-rating--dot .mat-rating__icon { width: calc(var(--mat-rating-icon) * .8); height: calc(var(--mat-rating-icon) * .8); }

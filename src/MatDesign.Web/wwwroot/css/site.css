@@ -366,3 +366,12 @@ ol.doc-changes > li { list-style: decimal; }
 .doc-assets__faces td { vertical-align: top; }
 .doc-assets__specimen { display: block; font-size: var(--mat-fs-xl); line-height: var(--mat-lh-tight); overflow-wrap: anywhere; }
 .doc-assets__stack { display: inline-block; margin-right: var(--mat-space-3); }
+
+/* ---- Touch targets (MOBILE-04): the small links and buttons of the documentation keep their look and are 44 px on a touch screen (a centred ::after, no layout moves) ---- */
+@media (pointer: coarse) {
+  .doc-api__more { position: relative; }
+  .doc-api__more::after { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 44px); height: 44px; transform: translate(-50%, -50%); }
+  /* the chip of a rule is drawn by a ::before inside the 44 px that its link takes, so that two lines of chips do not take each other's targets */
+  .doc-rule-id { position: relative; z-index: 0; display: inline-flex; align-items: center; min-height: 44px; background: transparent; }
+  .doc-rule-id::before { content: ""; position: absolute; z-index: -1; inset: 11px 0; border-radius: var(--mat-radius-xs); background: var(--mat-surface-3); }
+}

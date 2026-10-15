@@ -511,3 +511,11 @@ html.mat-lock { overflow: hidden; }
 }
 .mat-auth__brand { display: flex; flex-direction: column; align-items: center; gap: var(--mat-space-3); text-align: center; }
 .mat-auth__brand .mat-logo { width: 56px; height: 56px; }
+
+/* ---- Touch targets (MOBILE-04): what the shell has that is smaller than 44 px with a mouse is 44 px on a touch screen. The look is the same, there is more room around it. ---- */
+@media (pointer: coarse) {
+  .mat-nav__item--sub, .mat-menu .mat-menu__item--sub { min-height: 44px; }
+  .mat-crumbs a { display: block; min-width: 44px; line-height: 44px; text-align: center; }
+  .mat-footer__links { row-gap: 0; }
+  .mat-footer__links a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
+}

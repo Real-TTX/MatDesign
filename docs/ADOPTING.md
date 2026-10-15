@@ -313,6 +313,11 @@ changes a shape, never a colour or a shadow (`COLOR-01`, `SPACE-03`). The accent
 at the end of `matui.css` (the apps part), so an app that copies the files needs to do nothing. The order in which values win is **the toolkit's defaults, the brand, the app (`[data-app="id"]`), and, last, a colour scheme the user chose**
 (`data-scheme` is a more specific selector). Ranges that the editor holds a value to: a radius 0 to 24 px, padding and gaps 0 to 48 px, a border 0 to 4 px, the width of a dialog or a toast 200 to 960 px, a weight 100 to 900, small text 11 px and up (table and breadcrumb 12 px).
 **Touch targets:** a height of 44 px or more is written for everyone; a height under 44 px (never under 32 px) is written inside `@media (pointer: fine)` and so applies with a mouse only, while a touch screen keeps the 44 px of `--mat-control-h`.
+**The hit area is 44 px, not the mark:** on a touch screen what takes the tap is at least 44 px in width and in height (`MOBILE-04`), whatever the drawn mark is. The toolkit does it for its own controls inside
+`@media (pointer: coarse)` only (with a mouse nothing moves): the label of a check or a switch is 44 px high and the mark keeps following `--mat-check-size` and `--mat-switch-*`; a small button inside something larger
+(the X of a chip, the clear button of a field) has a centred `::before` of 44 px (the `::after` of an element with `data-tip` is its tooltip); a row of shapes that does not fit at that size (a rating of ten on a phone) goes on a second row. Do the same for a small control of your own:
+a padding on its label or a `::before` (`content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%)` on an element with `position: relative`) in a `(pointer: coarse)` block, and
+check it in a touch-emulating browser (`tests/e2e/touch-audit.js` of this repository measures a whole site: `node touch-audit.js <url>`). Only the `--sm` and `--compact` variants stay at 36 px, and a link inside a sentence is exempt.
 Do the same in an app's own CSS (the example above). `(pointer: fine)` is the device's primary pointer: a laptop with a touch screen counts as a mouse. A brand can also change, inside a colour scheme, the colours that scheme sets, and an app its radii, spacing, type and motion tokens on `[data-app]`.
 
 ## 5. Dialogs (`DIALOG-*`)

@@ -114,7 +114,9 @@ internal static class CodeInputComponents
                         <div class="mat-btn-row mat-btn-row--plain">
                           <button type="submit" class="mat-btn mat-btn--primary mat-btn--block" id="otp-signin-go">Verify and sign in</button>
                         </div>
-                        <p class="mat-muted"><a href="#code-input">Use a recovery code instead</a></p>
+                        <div class="mat-btn-row mat-btn-row--plain">
+                          <a class="mat-btn mat-btn--ghost" href="#code-input">Use a recovery code instead</a>
+                        </div>
                       </form>
                     </div>
                     """, "`data-submit=\"#otp-signin-go\"` clicks that button when the code is complete, so what the button does (a loading state, a script) happens as if the person had pressed it. `mat-otp--center` centres the boxes."),
