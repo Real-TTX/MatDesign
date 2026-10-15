@@ -5899,9 +5899,10 @@ function seenAt(page, selector) {
         await page.click('.mat-nav__foot .mat-switcher');
         expect(await page.locator('#nav-switch-menu [data-nav-set]').evaluateAll(els => els.map(e => e.getAttribute('data-nav-set'))), ['design', 'toolkit', 'studio'], 'menus in the switcher');
         await page.keyboard.press('Escape');
-        expect(await page.textContent('.mat-user__name'), 'Admin', 'the user');
+        expect(await page.textContent('.mat-user__name'), process.env.STUDIO_NAME || 'admin', 'the user');
+        expect(await page.textContent('.mat-user__role'), 'Administrator', 'the role of the user');
         const names = await page.locator('.mat-nav__scroll:not([hidden]) .mat-nav__item').evaluateAll(els => els.map(e => { const c = e.cloneNode(true); c.querySelectorAll('.mat-nav__badge').forEach(b => b.remove()); return c.textContent.trim(); }));
-        expect(names, ['Overview', 'Apps', 'Company', 'Brand', 'Logo and fonts', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'White label', 'Versions'], 'items of the Studio menu');
+        expect(names, ['Overview', 'Apps', 'Company', 'Brand', 'Logo and fonts', 'Rules', 'Components', 'Activity', 'Checks', 'Releases', 'White label', 'Versions', 'People'], 'items of the Studio menu');
       });
       await check('choosing the Studio in the switcher loads its overview (a start page); the other menus swap the items', async () => {
         await page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
@@ -8317,6 +8318,409 @@ function seenAt(page, selector) {
         expectTrue(!(await (await clean.page.request.get(BASE + '/ui/matui.css')).text()).includes('@font-face'), 'no @font-face');
       });
       await clean.ctx.close();
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------------- people and roles (CODE-10, stage 16)
+  // The administrator creates an editor and a viewer through the real form, each signs in in a browser of their own, and the checks see what each of them sees and cannot do (a real forbidden
+  // request gives 403 and saves nothing), that a role that changes works at the next click of a session that is open, that a disabled person is out at once, that a password an administrator
+  // chose has to be changed first, that a password change ends the other sessions, and the guards for oneself. Everything it makes is taken away at the end (the names carry a tag of the run,
+  // because the name of a removed person is never given again). It needs the administrator like the Studio blocks above. With PEOPLE_SHOTS=<folder> it also writes screenshots there.
+  console.log('\nPeople and roles');
+  {
+    const adminName = process.env.STUDIO_NAME || 'admin';
+    const adminPassword = process.env.STUDIO_PASSWORD || 'studio-dev';
+    const shots = process.env.PEOPLE_SHOTS || '';
+    const tag = Date.now().toString(36);
+    const who = { editor: 'e2e-editor-' + tag, viewer: 'e2e-viewer-' + tag, boss: 'e2e-boss-' + tag };
+    const viewerFirst = 'a first e2e password ' + tag;
+    const bossFirst = 'the boss first e2e ' + tag;
+    const own = (name) => 'my own e2e sentence for ' + name;
+    const signIn = async (page, name, password) => {
+      await page.fill('#Name', name);
+      await page.fill('#Password', password);
+      await page.click('.mat-auth__card button[type="submit"]');
+      await page.waitForLoadState('networkidle');
+    };
+    const { ctx, page } = await open(desktopOptions, '/Studio/Login');
+    if (await page.locator('input[type="password"]').count() === 0) {
+      console.log('  --    the Studio is off on this site (no data directory): the checks of people and roles are skipped');
+      await ctx.close();
+    } else {
+      await signIn(page, adminName, adminPassword);
+      await page.waitForURL('**/Studio**');
+      const toast = () => page.waitForSelector('.mat-toast');
+      const confirmDialog = async () => { await page.click('dialog[open] button[value="ok"]'); await page.waitForLoadState('networkidle'); };
+      const idOf = async (name) => (await page.getAttribute(`td[data-label="Name"] a:text-is("${name}")`, 'href')).split('id=')[1];
+      // a person's browser: the pages it deliberately gets refused (403) would be errors in the console of the checks, so only script errors are collected
+      const personContext = async (name, password, options) => { const c = await browser.newContext(options || desktopOptions); const p = await c.newPage(); p.on('pageerror', e => consoleErrors.push('people: ' + e.message)); await p.goto(BASE + '/Studio/Login', { waitUntil: 'networkidle' }); await signIn(p, name, password); return { ctx: c, page: p }; };
+      // a person who has to change the password they got changes it on the account page and lands in the Studio
+      const choose = async (p, current, next) => {
+        await p.fill('#Current', current);
+        await p.fill('#Password', next);
+        await p.fill('#Repeat', next);
+        await p.click('main form button.mat-btn--primary');
+        await p.waitForURL(u => new URL(u).pathname === '/Studio');
+      };
+      const token = (p) => p.locator('input[name="__RequestVerificationToken"]').first().inputValue();
+      const shot = async (p, file) => { if (shots) { await p.setViewportSize({ width: 1360, height: 1500 }); await p.screenshot({ path: shots + '/' + file }); await p.setViewportSize({ width: 1360, height: 900 }); } };
+      // every person this block (or an earlier run of it that stopped halfway) made is removed: their names carry the prefix e2e-
+      const removeAll = async () => {
+        for (;;) {
+          await page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' });
+          const left = (await page.locator('td[data-label="Name"] a').allTextContents()).find(n => n.startsWith('e2e-'));
+          if (!left) { return; }
+          await page.goto(BASE + '/Studio/Users/Edit?id=' + await idOf(left), { waitUntil: 'networkidle' });
+          await page.click('button:has-text("Remove the person")');
+          await page.waitForSelector('dialog[open]');
+          await confirmDialog();
+          await toast();
+        }
+      };
+      await removeAll();
+      let editorGenerated = '';
+      const created = {};
+
+      await check('the page of the people has the shell, one h1, a toolbar, a table with the role as text and as a pill, the roles explained and the menu item is the current one', async () => {
+        await page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' });
+        expect(await page.locator('main h1').count(), 1, 'h1');
+        expect(await page.textContent('main h1'), 'People', 'the title');
+        expect(await page.locator('a.mat-nav__item.is-active[href="/Studio/Users"]').count(), 1, 'the menu item');
+        expectTrue(await page.locator('.mat-toolbar').count() > 0, 'the toolbar of the list');
+        expectTrue(await page.locator('table.mat-table td[data-label="Role"] .mat-pill').count() >= 1, 'the role as a pill');
+        expectTrue((await page.locator('td[data-label="Role"] .mat-pill').first().textContent()).trim() === 'Administrator', 'the role as text');
+        expect(await page.locator('#roles-title').count(), 1, 'the roles are explained');
+        expect(await page.locator('[style]').count(), 0, 'inline styles');
+        const unlabelled = await page.evaluate(() => [...document.querySelectorAll('td')].filter(td => !td.hasAttribute('data-label') && !td.classList.contains('mat-table__cell-actions')).length);
+        expect(unlabelled, 0, 'cells without a label');
+        await shot(page, 'people-users.png');
+      });
+
+      await check('a person is created through the form: Generate fills a password to copy, a name that is taken or a password that is weak is refused at the field, the list shows the person', async () => {
+        await page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' });
+        await page.click('a.mat-btn--primary[href="/Studio/Users/Edit"]');
+        await page.waitForSelector('#Name');
+        expect(await page.locator('main h1').textContent(), 'New person', 'the title');
+        await page.fill('#Name', who.editor);
+        await page.selectOption('#Role', 'editor');
+        await page.fill('#Password', 'short');
+        await page.click('main form button.mat-btn--primary');
+        expectTrue((await page.locator('.mat-field:has(#Password) .mat-error').textContent()).length > 0 || await page.locator('.mat-field.is-invalid').count() > 0, 'the weak password is refused');
+        await page.click('[data-generate-password]');
+        editorGenerated = await page.inputValue('#Password');
+        expectTrue(/^[a-z2-9]{4}(-[a-z2-9]{4}){3}$/.test(editorGenerated), 'the generated password: ' + editorGenerated);
+        expect(await page.locator('[data-copy="#Password"]').count(), 1, 'the copy button');
+        await shot(page, 'people-new.png');
+        await page.click('main form button.mat-btn--primary');
+        await page.waitForURL(u => new URL(u).pathname === '/Studio/Users');
+        await toast();
+        expect(await page.locator('.mat-toasts').textContent().then(t => t.includes(who.editor + ' was added as editor')), true, 'the toast');
+        const row = page.locator('tr', { hasText: who.editor });
+        expect((await row.locator('td[data-label="Role"]').textContent()).trim(), 'Editor', 'the role of the new person');
+        expect((await row.locator('td[data-label="State"]').textContent()).trim(), 'Must change password', 'the state');
+        // the same name again, in other capitals: refused at the field
+        await page.goto(BASE + '/Studio/Users/Edit', { waitUntil: 'networkidle' });
+        await page.fill('#Name', who.editor.toUpperCase());
+        await page.fill('#Password', 'a long enough other password');
+        await page.click('main form button.mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await page.textContent('[data-validation-summary]')).includes('already'), 'the second name is refused');
+        expect(await page.inputValue('#Password'), '', 'the typed password is not written back into the page');
+      });
+      await check('a viewer and an administrator are created with a typed first password', async () => {
+        for (const [key, role, password] of [['viewer', 'viewer', viewerFirst], ['boss', 'administrator', bossFirst]]) {
+          await page.goto(BASE + '/Studio/Users/Edit', { waitUntil: 'networkidle' });
+          await page.fill('#Name', who[key]);
+          await page.selectOption('#Role', role);
+          await page.fill('#Password', password);
+          await page.click('main form button.mat-btn--primary');
+          await page.waitForURL(u => new URL(u).pathname === '/Studio/Users');
+        }
+        await page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' });
+        for (const key of ['editor', 'viewer', 'boss']) { created[key] = await idOf(who[key]); expectTrue(created[key].length > 3, 'the id of ' + key); }
+      });
+
+      // ---- the editor, in a browser of their own
+      const editor = await personContext(who.editor, editorGenerated);
+      await check('a person who got a password from an administrator lands on their account page and nothing else opens until they have chosen their own', async () => {
+        expect(new URL(editor.page.url()).pathname, '/Studio/Account', 'the page after the sign-in');
+        expect(await editor.page.locator('[data-must-change]').count(), 1, 'the notice');
+        for (const url of ['/Studio', '/Studio/Apps', '/Studio/Checks']) {
+          await editor.page.goto(BASE + url, { waitUntil: 'networkidle' });
+          expect(new URL(editor.page.url()).pathname, '/Studio/Account', url + ' leads back to the account page');
+        }
+        // a password that is too weak, then one that is right
+        await editor.page.fill('#Current', editorGenerated);
+        await editor.page.fill('#Password', 'password123');
+        await editor.page.fill('#Repeat', 'password123');
+        await editor.page.click('main form button.mat-btn--primary');
+        await editor.page.waitForLoadState('networkidle');
+        expectTrue((await editor.page.textContent('[data-validation-summary]')).includes('guessed'), 'the weak password is refused');
+        expect(await editor.page.inputValue('#Password'), '', 'nothing typed is written back');
+        await choose(editor.page, editorGenerated, own(who.editor));
+        await editor.page.waitForSelector('.mat-toast');
+        expect(await editor.page.locator('main h1').textContent(), 'Studio', 'the overview opens');
+      });
+      await check('the editor sees the pages of the design with the buttons to change them, and no People in the menu', async () => {
+        await editor.page.goto(BASE + '/Studio/Apps', { waitUntil: 'networkidle' });
+        expect(await editor.page.locator('.mat-user__name').textContent(), who.editor, 'the name in the shell');
+        expect(await editor.page.locator('.mat-user__role').textContent(), 'Editor', 'the role in the shell');
+        expect(await editor.page.locator('a.mat-btn--primary[href="/Studio/Apps/Edit"]').count(), 1, 'New app');
+        expect(await editor.page.locator('a.mat-nav__item[href="/Studio/Users"]').count(), 0, 'People in the menu');
+        for (const href of ['/Studio/Company', '/Studio/Releases', '/Studio/Releases/WhiteLabel', '/Studio/Versions', '/Studio/Checks']) {
+          expect(await editor.page.locator(`a.mat-nav__item[href="${href}"]`).count(), 1, 'menu ' + href);
+        }
+        await editor.page.goto(BASE + '/Studio/Rules/Edit?id=SHELL-01', { waitUntil: 'networkidle' });
+        expect(await editor.page.locator('main form button.mat-btn--primary:has(span:text-is("Save"))').count(), 1, 'Save for the editor');
+        expect(await editor.page.locator('[data-read-only]').count(), 0, 'no read-only notice');
+        await editor.page.goto(BASE + '/Studio/Checks', { waitUntil: 'networkidle' });
+        expect(await editor.page.locator('button:has-text("Run the checks again")').count(), 1, 'the editor runs the checks');
+      });
+      await check('what an editor may not change is there to read but not to save: company, white label, versions, releases', async () => {
+        for (const url of ['/Studio/Company', '/Studio/Releases/WhiteLabel', '/Studio/Versions/Edit?id=matmail']) {
+          await editor.page.goto(BASE + url, { waitUntil: 'networkidle' });
+          expect(await editor.page.locator('[data-read-only]').count(), 1, url + ': the reason');
+          expect(await editor.page.locator('main form button.mat-btn--primary:has(span:text-is("Save"))').count(), 0, url + ': Save');
+          expectTrue((await editor.page.locator('[data-read-only]').textContent()).includes('This needs the role administrator'), url + ': which role');
+          expectTrue(await editor.page.locator('fieldset[disabled] input').count() > 0, url + ': the fields are turned off');
+        }
+        await editor.page.goto(BASE + '/Studio/Releases', { waitUntil: 'networkidle' });
+        expect(await editor.page.locator('a[href="/Studio/Releases/New"]').count(), 0, 'New release');
+        const forbidden = await editor.page.goto(BASE + '/Studio/Releases/New', { waitUntil: 'networkidle' });
+        expect(forbidden.status(), 403, 'the page that starts a release');
+      });
+      await check('a page that is refused is a page of the shell that says which role would do, with the way out', async () => {
+        const response = await editor.page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' });
+        expect(response.status(), 403, 'status');
+        expect(await editor.page.locator('main h1').count(), 1, 'one h1');
+        expect(await editor.page.textContent('main h1'), 'Not allowed', 'the title');
+        expectTrue((await editor.page.textContent('[data-forbidden]')).includes('This needs the role administrator'), 'the role that is needed');
+        expect(await editor.page.locator('.mat-nav').count(), 1, 'the menu is there');
+        expect(await editor.page.locator('main a[href="/Studio"]').count() > 0 && await editor.page.locator('main a[href="/Studio/Account"]').count() > 0, true, 'the way out');
+        await shot(editor.page, 'people-forbidden.png');
+      });
+      await check('a real request that the role may not make is refused with 403 and saves nothing: a person, the company, a release, the white label setting, a rename', async () => {
+        await editor.page.goto(BASE + '/Studio/Account', { waitUntil: 'networkidle' });
+        const t = await token(editor.page);
+        const post = async (url, form) => (await editor.ctx.request.post(BASE + url, { form: { __RequestVerificationToken: t, ...form }, failOnStatusCode: false, maxRedirects: 0 })).status();
+        expect(await post('/Studio/Users/Edit?handler=Create', { Name: 'e2e-mallory-' + tag, Role: 'administrator', Password: 'mallory takes over ' + tag }), 403, 'create a person');
+        expect(await post('/Studio/Company', { 'Input.Company': 'Hijacked', 'Input.ShortName': 'Hi', 'Input.SiteName': 'Hijacked Design' }), 403, 'the company');
+        expect(await post('/Studio/Releases/New', { Version: '99.0.0', Note: 'refused' }), 403, 'a release');
+        expect(await post('/Studio/Releases/WhiteLabel', { 'Input.Prefix': 'evil', 'Input.Name': 'EvilUi' }), 403, 'the white label setting');
+        expect(await post('/Studio/Versions/Edit', { 'Input.AppId': 'matmail', 'Input.Version': '0.0.1' }), 403, 'a version');
+        expect((await editor.ctx.request.post(BASE + '/Studio/Releases/WhiteLabel/rename?prefix=acme&name=AcmeUi', { data: 'mat-btn', failOnStatusCode: false })).status(), 403, 'the rename endpoint');
+        // the same request without the token is a bad request: the check of the token stays
+        expect((await editor.ctx.request.post(BASE + '/Studio/Apps/Edit', { form: {}, failOnStatusCode: false })).status(), 400, 'without a token');
+        // and what is allowed is not refused
+        expectTrue((await post('/Studio/Checks?handler=Run', {})) < 400, 'the editor runs the checks');
+        // seen from the administrator: nothing of it is there
+        await page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' });
+        expect(await page.locator('tr', { hasText: 'mallory' }).count(), 0, 'Mallory');
+        await page.goto(BASE + '/Studio/Company', { waitUntil: 'networkidle' });
+        expectTrue((await page.inputValue('#Input_Company')) !== 'Hijacked', 'the company');
+        expect(await (await page.request.get(BASE + '/api/releases')).json().then(r => r.some(x => x.version === '99.0.0')), false, 'the release');
+      });
+
+      // ---- the viewer
+      const viewer = await personContext(who.viewer, viewerFirst);
+      await check('a viewer opens every page and reads it: the controls are turned off or left out and the page says why; every request that changes something is refused', async () => {
+        expect(new URL(viewer.page.url()).pathname, '/Studio/Account', 'the first password has to change');
+        await choose(viewer.page, viewerFirst, own(who.viewer));
+        for (const url of ['/Studio', '/Studio/Apps', '/Studio/Rules', '/Studio/Components', '/Studio/Brand', '/Studio/Brand/Components', '/Studio/Brand/Assets', '/Studio/Company', '/Studio/Checks', '/Studio/Releases', '/Studio/Releases/WhiteLabel', '/Studio/Versions', '/Studio/Activity']) {
+          const response = await viewer.page.goto(BASE + url, { waitUntil: 'networkidle' });
+          if (response.status() === 404) { continue; }
+          expect(response.status(), 200, url);
+          expect(await viewer.page.locator('main h1').count(), 1, url + ': h1');
+          expect(await viewer.page.locator('main form button.mat-btn--primary:has(span:text-is("Save"))').count(), 0, url + ': a Save button');
+        }
+        await viewer.page.goto(BASE + '/Studio/Apps/Edit?id=matmail', { waitUntil: 'networkidle' });
+        expect(await viewer.page.locator('[data-read-only]').count(), 1, 'the reason');
+        expectTrue((await viewer.page.textContent('[data-read-only]')).includes('You are signed in as ' + who.viewer + ', viewer. This needs the role editor.'), 'the reason names the person and the role');
+        const enabled = await viewer.page.evaluate(() => [...document.querySelectorAll('main form input:not([type="hidden"]):not([readonly]), main form select, main form textarea')].filter(e => !e.matches(':disabled') && !e.closest('[data-brand-preview]')).length);
+        expect(enabled, 0, 'fields that are not turned off');
+        expect(await viewer.page.locator('main form > .mat-btn-row button:has-text("Delete"), main form > .mat-btn-row button:has-text("Reset to built-in")').count(), 0, 'delete buttons');
+        expect(await viewer.page.locator('a.mat-nav__item[href="/Studio/Users"]').count(), 0, 'People in the menu');
+        expect((await viewer.page.goto(BASE + '/Studio/Apps/Edit', { waitUntil: 'networkidle' })).status(), 403, 'an empty form for a new app');
+        await viewer.page.goto(BASE + '/Studio/Account', { waitUntil: 'networkidle' });
+        const t = await token(viewer.page);
+        const post = async (url, form) => (await viewer.ctx.request.post(BASE + url, { form: { __RequestVerificationToken: t, ...form }, failOnStatusCode: false, maxRedirects: 0 })).status();
+        expect(await post('/Studio/Apps/Edit', { 'Input.Id': 'matviewer', 'Input.Name': 'MatViewer', 'Input.Accent': '#0f766e', 'Input.Glyph': 'apps', 'Input.Category': 'Productivity' }), 403, 'a new app');
+        expect(await post('/Studio/Rules/Edit?handler=Delete', { 'Input.Original': 'FORM-01' }), 403, 'a rule');
+        expect(await post('/Studio/Checks?handler=Run', {}), 403, 'the checks');
+        expect(await post('/Studio/History?handler=Restore', { kind: 'apps', id: 'matmail', revision: '1' }), 403, 'a restore');
+        expect((await (await page.request.get(BASE + '/api/apps')).json()).some(a => a.id === 'matviewer'), false, 'the app');
+        await shot(viewer.page, 'people-readonly.png');
+      });
+
+      await check('the account page says who you are, your role and what it allows in words, allowed or not', async () => {
+        await viewer.page.goto(BASE + '/Studio/Account', { waitUntil: 'networkidle' });
+        expect(await viewer.page.locator('main h1').textContent(), 'Your account', 'the title');
+        const rows = await viewer.page.locator('[data-capabilities] tbody tr').evaluateAll(trs => trs.map(tr => [tr.getAttribute('data-capability'), tr.getAttribute('data-allowed'), tr.textContent.includes(tr.getAttribute('data-allowed') === 'true' ? 'Allowed' : 'Not allowed')]));
+        expect(rows.length, 9, 'every capability is listed');
+        expect(rows.filter(r => r[1] === 'true').map(r => r[0]), ['ViewStudio'], 'what a viewer may do');
+        expectTrue(rows.every(r => r[2]), 'the words follow the state');
+        await shot(viewer.page, 'people-account.png');
+      });
+
+      await check('a role that is changed takes effect at the next click of a session that is open', async () => {
+        await editor.page.goto(BASE + '/Studio/Apps', { waitUntil: 'networkidle' });
+        expect(await editor.page.locator('.mat-user__role').textContent(), 'Editor', 'before');
+        await page.goto(BASE + '/Studio/Users/Edit?id=' + created.editor, { waitUntil: 'networkidle' });
+        await page.selectOption('#Role', 'viewer');
+        await page.click('main form button:has-text("Save the role")');
+        await page.waitForLoadState('networkidle');
+        await toast();
+        const [response] = await Promise.all([editor.page.waitForNavigation(), editor.page.click('a.mat-btn--primary[href="/Studio/Apps/Edit"]')]);
+        expect(response.status(), 403, 'the click on New app, with the old page still open');
+        expectTrue((await editor.page.textContent('[data-forbidden]')).includes('This needs the role editor'), 'the page says which role');
+        expect(await editor.page.locator('.mat-user__role').textContent(), 'Viewer', 'the role in the shell');
+        // and back
+        await page.selectOption('#Role', 'editor');
+        await page.click('main form button:has-text("Save the role")');
+        await page.waitForLoadState('networkidle');
+        expect((await editor.page.goto(BASE + '/Studio/Apps/Edit', { waitUntil: 'networkidle' })).status(), 200, 'an editor again');
+      });
+
+      await check('a person who is disabled is out at the next click and cannot sign in; enabled again they sign in anew', async () => {
+        await viewer.page.goto(BASE + '/Studio/Rules', { waitUntil: 'networkidle' });
+        await page.goto(BASE + '/Studio/Users/Edit?id=' + created.viewer, { waitUntil: 'networkidle' });
+        await page.click('button:has-text("Disable the account")');
+        await page.waitForSelector('dialog[open]');
+        await confirmDialog();
+        await toast();
+        await Promise.all([viewer.page.waitForNavigation(), viewer.page.click('a.mat-nav__item[href="/Studio/Components"]')]);
+        expect(new URL(viewer.page.url()).pathname, '/Studio/Login', 'the click ends at the sign-in');
+        const again = await open(desktopOptions, '/Studio/Login');
+        await signIn(again.page, who.viewer, own(who.viewer));
+        expectTrue((await again.page.textContent('.mat-alert--danger')).includes('The name or the password is not right.'), 'the answer does not say that the account is disabled');
+        await page.goto(BASE + '/Studio/Users/Edit?id=' + created.viewer, { waitUntil: 'networkidle' });
+        await page.click('button:has-text("Enable the account")');
+        await page.waitForLoadState('networkidle');
+        await signIn(again.page, who.viewer, own(who.viewer));
+        expect(new URL(again.page.url()).pathname, '/Studio', 'the person signs in again');
+        // the session from before the account was disabled does not come back with it
+        await viewer.page.goto(BASE + '/Studio/Rules', { waitUntil: 'networkidle' });
+        expect(new URL(viewer.page.url()).pathname, '/Studio/Login', 'the old session');
+        await again.ctx.close();
+      });
+
+      await check('a password change ends the other sessions of the person and not the one that changed it', async () => {
+        const other = await personContext(who.editor, own(who.editor));
+        expect(new URL(other.page.url()).pathname, '/Studio', 'a second session');
+        await editor.page.goto(BASE + '/Studio/Account', { waitUntil: 'networkidle' });
+        await editor.page.fill('#Current', own(who.editor));
+        await editor.page.fill('#Password', own(who.editor) + ' again');
+        await editor.page.fill('#Repeat', own(who.editor) + ' again');
+        await editor.page.click('main form button.mat-btn--primary');
+        await editor.page.waitForURL(u => new URL(u).pathname === '/Studio/Account');
+        await toast().catch(() => {});
+        expect((await editor.page.goto(BASE + '/Studio/Apps', { waitUntil: 'networkidle' })).status(), 200, 'the session that changed it goes on');
+        await other.page.goto(BASE + '/Studio/Rules', { waitUntil: 'networkidle' });
+        expect(new URL(other.page.url()).pathname, '/Studio/Login', 'the other session is out');
+        await other.ctx.close();
+      });
+
+      await check('a password that an administrator sets ends the sessions of the person, has to be changed, and the old one no longer works', async () => {
+        await page.goto(BASE + '/Studio/Users/Edit?id=' + created.editor, { waitUntil: 'networkidle' });
+        await page.click('[data-generate-password]');
+        const reset = await page.inputValue('#Password');
+        await page.click('main form button:has-text("Set the password")');
+        await page.waitForSelector('dialog[open]');
+        await confirmDialog();
+        await toast();
+        await editor.page.goto(BASE + '/Studio/Rules', { waitUntil: 'networkidle' });
+        expect(new URL(editor.page.url()).pathname, '/Studio/Login', 'the session of the person is out');
+        await signIn(editor.page, who.editor, own(who.editor) + ' again');
+        expectTrue((await editor.page.textContent('.mat-alert--danger')).includes('not right'), 'the old password is refused');
+        await signIn(editor.page, who.editor, reset);
+        expect(new URL(editor.page.url()).pathname, '/Studio/Account', 'the new one leads to the account page');
+        await choose(editor.page, reset, own(who.editor) + ' third');
+      });
+
+      // ---- the guards, as the administrator they protect
+      const boss = await personContext(who.boss, bossFirst);
+      await check('nobody removes themselves or changes their own role: the page leaves the controls out and says why, and a request made anyway is refused', async () => {
+        await choose(boss.page, bossFirst, own(who.boss));
+        await boss.page.goto(BASE + '/Studio/Users/Edit?id=' + created.boss, { waitUntil: 'networkidle' });
+        expect(await boss.page.locator('button:has-text("Remove the person"), button:has-text("Disable the account")').count(), 0, 'the buttons');
+        expect(await boss.page.locator('#Role').isDisabled(), true, 'the role of oneself');
+        const text = await boss.page.textContent('main');
+        expectTrue(text.includes('You cannot change your own role') && text.includes('your account page'), 'the reasons are on the page');
+        const t = await token(boss.page);
+        const post = async (url, form) => { const r = await boss.ctx.request.post(BASE + url, { form: { __RequestVerificationToken: t, ...form }, failOnStatusCode: false, maxRedirects: 0 }); return [r.status(), await r.text()]; };
+        for (const [url, form] of [[`/Studio/Users/Edit?handler=Delete&id=${created.boss}`, {}], [`/Studio/Users/Edit?handler=Disable&id=${created.boss}&disable=true`, {}], [`/Studio/Users/Edit?handler=Role&id=${created.boss}`, { Role: 'viewer' }]]) {
+          const [status, html] = await post(url, form);
+          expect(status, 200, url);
+          expectTrue(html.includes('Nothing was changed.'), url + ': ' + html.slice(0, 80));
+        }
+        await boss.page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' });
+        expect(await boss.page.locator('tr', { hasText: who.boss }).locator('td[data-label="Role"]').textContent().then(s => s.trim()), 'Administrator', 'still an administrator');
+        expectTrue(await boss.page.locator('tr', { hasText: who.boss }).textContent().then(s => s.includes('You')), 'the list says which one is you');
+      });
+
+      await check('the activity names who did what to whom, and a removed person stays in it under their name; the question before the removal can be cancelled', async () => {
+        await page.goto(BASE + '/Studio/Users/Edit?id=' + created.editor, { waitUntil: 'networkidle' });
+        await page.click('button:has-text("Remove the person")');
+        await page.waitForSelector('dialog[open]');
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(() => !document.querySelector('dialog[open]'));
+        expect(await page.locator('#who-title').count(), 1, 'cancelling keeps the person');
+        await page.click('button:has-text("Remove the person")');
+        await page.waitForSelector('dialog[open]');
+        await confirmDialog();
+        await toast();
+        await page.goto(BASE + '/Studio/Activity?kind=users&q=' + who.editor, { waitUntil: 'networkidle' });
+        const text = await page.textContent('main table');
+        for (const part of ['Created as editor', 'Role changed from editor to viewer', 'Role changed from viewer to editor', 'Password reset by an administrator', 'Changed their own password', 'Deleted the user ' + who.editor]) {
+          expectTrue(text.includes(part), 'the activity lacks: ' + part);
+        }
+        expectTrue(text.includes(adminName) && text.includes(who.editor), 'who and whom');
+        expectTrue(!/[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}/.test(await page.textContent('main')), 'a generated password is nowhere on the page');
+        await page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' });
+        expect(await page.locator('tr', { hasText: who.editor }).count(), 0, 'the person is gone from the list');
+        // the name is not given to another person
+        await page.goto(BASE + '/Studio/Users/Edit', { waitUntil: 'networkidle' });
+        await page.fill('#Name', who.editor);
+        await page.fill('#Password', 'a long enough other password');
+        await page.click('main form button.mat-btn--primary');
+        await page.waitForLoadState('networkidle');
+        expectTrue((await page.textContent('[data-validation-summary]')).includes('removed'), 'the name of a removed person is not given again');
+      });
+
+      await check('on a phone the pages of the people do not scroll sideways, the fields and buttons are 44 px high and the refused page is whole', async () => {
+        const phone = await personContext(adminName, adminPassword, phoneOptions);
+        for (const url of ['/Studio/Users', '/Studio/Users/Edit', '/Studio/Users/Edit?id=' + created.boss, '/Studio/Account']) {
+          await phone.page.goto(BASE + url, { waitUntil: 'networkidle' });
+          const size = await phone.page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+          expectTrue(size.page <= size.window, `${url}: the page is ${size.page} px wide in a window of ${size.window} px`);
+          // the list has the toolbar of every list; the forms of one person and of the account are held to the 44 px of a touch screen
+          const small = url === '/Studio/Users' ? [] : await phone.page.evaluate(() => [...document.querySelectorAll('main form .mat-btn, main form input.mat-input, main form select.mat-select')].filter(e => e.offsetParent !== null).map(e => Math.round(e.getBoundingClientRect().height)).filter(h => h < 43));
+          expect(small, [], url + ': targets under 44 px');
+          expect(await phone.page.locator('main h1').count(), 1, url + ': h1');
+        }
+        if (shots) { await phone.page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' }); await phone.page.screenshot({ path: shots + '/people-users-phone.png', fullPage: true }); await phone.page.goto(BASE + '/Studio/Users/Edit?id=' + created.boss, { waitUntil: 'networkidle' }); await phone.page.screenshot({ path: shots + '/people-edit-phone.png', fullPage: true }); }
+        await phone.ctx.close();
+        // the refusal is what a viewer meets on a phone (the viewer's old session ended when the account was disabled: signing in anew)
+        const v = await personContext(who.viewer, own(who.viewer), phoneOptions);
+        const response = await v.page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' });
+        expect(response.status(), 403, 'status');
+        const size = await v.page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+        expectTrue(size.page <= size.window, 'the refused page is ' + size.page + ' px wide');
+        expectTrue((await v.page.evaluate(() => [...document.querySelectorAll('main .mat-btn')].map(e => Math.round(e.getBoundingClientRect().height)))).every(h => h >= 43), 'the buttons of the refused page');
+        if (shots) { await v.page.screenshot({ path: shots + '/people-forbidden-phone.png', fullPage: true }); }
+        await v.ctx.close();
+      });
+
+      // ---- clean up: everything this block made is removed again (the names stay in the history)
+      await check('everything this block made is taken away again', async () => {
+        await editor.ctx.close();
+        await viewer.ctx.close();
+        await boss.ctx.close();
+        await removeAll();
+        await page.goto(BASE + '/Studio/Users', { waitUntil: 'networkidle' });
+        expect(await page.locator('tr', { hasText: 'e2e-' }).count(), 0, 'people that are left');
+      });
+      await ctx.close();
     }
   }
 

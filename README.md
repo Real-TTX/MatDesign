@@ -29,7 +29,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **129 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **130 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -71,6 +71,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 - **Brand**: the company's names and the tokens of the toolkit it sets, light and dark, within limits that keep it usable (touch targets, body text, line height, radii), with a live preview and a contrast check (AA) before it is saved or released
 - **Logo and fonts** (`IDENT-08`): the company's logo, word mark, favicon, app icon and font files, judged by what is inside them (an SVG against an allowlist, no script, no outside reference), kept in the volume under their SHA-256, served from the site, shown in the shell and written into every release under `brand/`, with `@font-face` for the fonts
 - **Versions**: which release of MatUi each app carries, and which one is behind
+- **People and roles** (`CODE-10`): administrators, editors and viewers, decided on the server for every page and every change (a viewer reads everything and changes nothing, an editor maintains the design, only administrators make releases or manage people); each person signs in with their own name, a password an administrator chose has to be changed first, and the activity list names who did what to whom, never a secret
 - **Company and templates**: the instance belongs to one company, whose names the site, its releases and the archive carry; it starts from the **demo** (the Mat apps) or a **blank** brand with no apps
 - **Component properties and overrides**: the 68 `--mat-<component>-*` properties are editable next to the real control with a live preview, per brand, per app (`[data-app]`) and, for the surfaces, inside each colour scheme; a height under 44 px is written for a mouse only, so a touch screen keeps its 44 px; the order is toolkit, brand, app, scheme
 
@@ -186,7 +187,7 @@ The sample app is built from nothing but MatUi, in the accent of one of the apps
 | **Patterns** | The page types (list, gallery, edit, settings, dashboard, sign-in) in real frames, on a desktop and a phone. |
 | **Builder** | Try an accent: what the toolkit derives from it, contrast in both modes, the real screens in that colour. |
 | **Download** | MatUi as an archive or file by file, and the design system as JSON (`/api/rules`, `/api/tokens` …). |
-| **Studio** | Behind a sign-in; the first visit creates the administrator in a setup assistant – see [docs/STUDIO.md](docs/STUDIO.md). |
+| **Studio** | Behind a sign-in; the first visit creates the first user, an administrator, in a setup assistant; administrators add editors and viewers – see [docs/STUDIO.md](docs/STUDIO.md). |
 
 ## Quick start
 
@@ -235,8 +236,8 @@ docker run -d --name matdesign --restart unless-stopped -p 8060:8060 \
 The **Studio** is where apps, rules and components are maintained and a change becomes a release. Open
 **http://localhost:8060/Studio** right after the start: the **setup assistant** asks in three steps for your **company**, for
 the **template** the site starts from, and for the first administrator – a name and a password (at least 10 characters, typed
-twice) – signs you in and leads into the Studio. From then on the Studio asks for that name and password (repeated failures
-lock the client out for a while).
+twice) – signs you in and leads into the Studio. From then on the Studio asks for a name and a password (repeated failures
+lock that name out from that address for a while). Administrators then add the other people under **People**: an **editor** maintains the design, a **viewer** reads everything and changes nothing, an **administrator** can also make releases, change the company and the white label setting and manage the people.
 
 ![The setup assistant, step 2: the template the site starts from](docs/images/studio-setup.png)
 
@@ -249,8 +250,8 @@ and switching back brings the other layer back.
 
 Whoever opens the page first becomes the administrator, so do it right after the start. The password is kept as a salted hash
 in the `matdesign-data` volume, which also keeps everything the Studio saves; an update is just
-`docker compose pull && docker compose up -d`. If you lose the password, delete `admin.json` in the volume and restart
-(`docker exec matdesign rm /data/admin.json && docker restart matdesign`): the assistant shows again.
+`docker compose pull && docker compose up -d`. A volume from before the people and roles keeps working: its `admin.json` becomes the first administrator, with the same password. If you lose the only administrator's password, delete `users.json` in the volume and restart
+(`docker exec matdesign rm /data/users.json && docker restart matdesign`): the assistant shows again, and the other people are created again.
 [docs/STUDIO.md](docs/STUDIO.md) describes what the Studio does and what it deliberately does not.
 
 ### 3. Use the toolkit in an app
@@ -300,7 +301,7 @@ None of them is needed to run it – the image has the right defaults.
 | Variable | Default | Meaning |
 |---|---|---|
 | `MATDESIGN_DATA` | `/data` (in the image) | Data directory of the Studio; it must be writable. Without it the Studio is off and the site is read-only |
-| `MATDESIGN_ADMIN_PASSWORD` | – | Optional, for automation (CI, a throwaway stack): the password of the administrator `admin`, which skips the setup assistant. It wins over the account in the volume |
+| `MATDESIGN_ADMIN_PASSWORD` | – | Optional, for automation (CI, a throwaway stack): the password of a built-in administrator `admin`, which skips the setup assistant and is not written to the volume. It wins over a person of the same name in the volume |
 | `MATDESIGN_TEMPLATE` / `MATDESIGN_COMPANY` | – | Optional, for automation (a throwaway stack, the browser checks): the template (`demo` or `blank`) and the company where the setup assistant starts, and what the site is when no assistant ever ran. Without them: the demo |
 | `ASPNETCORE_URLS` | `http://+:8060` | Address inside the container |
 
@@ -308,7 +309,7 @@ None of them is needed to run it – the image has the right defaults.
 
 ```
 /data
-├─ admin.json     the administrator: a name and a salted hash of the password (written by the setup assistant)
+├─ users.json     the people of the Studio: a name, a role and a salted hash of the password each (the first one written by the setup assistant; an old admin.json is kept as admin.json.migrated)
 ├─ tenant.json    the company and the template, as the setup assistant wrote them (changes are items in studio/)
 ├─ studio/        what the Studio saves: one append-only log of revisions per item
 │                 (apps, rules, components, brand, company, assets, releases, runs, versions in use)
@@ -335,6 +336,7 @@ place that could.
 | Setup | The **setup assistant** creates the first administrator; the release compose has no variables and no `.env` file | ✅ |
 | Company | The setup assistant asks for the **company** and the **template** (demo or blank); the site, its releases and the archive carry the company's names; a **Company** page; rule `IDENT-09` | ✅ |
 | White label | A release can carry the toolkit under a company's own **class prefix and product name** (`acme-btn`, `window.AcmeUi`, `acmeui.css`): renamed on token boundaries in the Build stage, held to nine checks, a trial build in the Studio; rule `CODE-09` | ✅ |
+| People and roles | **Users with roles** (administrator, editor, viewer) per instance: `users.json` (an old `admin.json` becomes the first administrator), a capability declared by every page and handler and checked on the server, a People page, an account page, a lock-out per name and address, the activity list that names them; rule `CODE-10` | ✅ |
 | Icon library | 1,925 icons in 54 categories, **Home automation** with its areas, search, single files, archive, in a release | ✅ |
 | Documentation | **Code beside every example**, a real page per group, a styleguide in every release | ✅ |
 | Releases | The real sample pages in a release (today: code and live examples only) | open |
@@ -381,7 +383,7 @@ Other tools: `node tools/icons.js` rebuilds the icon sprite from `tools/icons.ba
   inline style; every list page has its toolbar above the table; no link leads nowhere
 - every example in the catalogue uses classes the toolkit ships, icons the sprite has, labelled table cells, typed
   buttons and unique ids – the Studio holds an example it saves to the same code
-- the Studio: the store of revisions, the sign-in and its lock-out, every validator, the checks, the pipeline and the
+- the Studio: the store of revisions, the sign-in and its lock-out (per name and address), the roles (the whole matrix, every handler declares its capability, a crawl as each role), every validator, the checks, the pipeline and the
   hashes of a release, and every page of the Studio against the shell rules
 
 ## How it is built

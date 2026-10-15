@@ -7,6 +7,8 @@
     ViewData["PageSub"] = "Your role does not include this.";
     ViewData["Crumbs"] = Crumbs.Of(("Studio", "/Studio"), ("Not allowed", null));
     ViewData["Width"] = "narrow";
+    // the page of the people is in no menu but the administrators': a refusal stays in the menu of the Studio (the overview is the open item)
+    ViewData["ActiveHref"] = "/Studio";
 }
 
 <div class="mat-empty" data-forbidden="@Model.Capability">

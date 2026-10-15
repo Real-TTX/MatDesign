@@ -18,6 +18,9 @@ public sealed partial record AdminAccount(string Name, string Salt, string Hash,
 
     public const int MinPasswordLength = 10;
 
+    /// <summary>The longest text that is compared with a hash at all.</summary>
+    private const int MaxVerifiedLength = 1024;
+
     private const string FileName = "admin.json";
 
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
@@ -47,7 +50,8 @@ public sealed partial record AdminAccount(string Name, string Salt, string Hash,
     /// </summary>
     public static bool VerifyHash(string? password, string? salt, string? hash, int iterations)
     {
-        if (string.IsNullOrEmpty(password) || !IsKnownHashFormat(salt, hash, iterations))
+        // a password is at most 200 characters (PasswordPolicy): a longer text is never a password, and is not hashed (a megabyte would cost the server a second)
+        if (string.IsNullOrEmpty(password) || password.Length > MaxVerifiedLength || !IsKnownHashFormat(salt, hash, iterations))
         {
             return false;
         }

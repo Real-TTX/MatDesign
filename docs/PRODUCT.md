@@ -9,11 +9,11 @@ branding, its own CI/CD for it and its own toolkit**. Mat is the first company t
 |---|---|---|
 | **Branding** | Names itself, chooses accent, shape, type, density and logo, and gets the checks (AA contrast, touch targets) that keep a brand from breaking its own UI | **stages 10, 12, 13 and 14 done** (a brand item and a token editor with limits and AA checks, the properties of single controls, overrides per app and per colour scheme; logo, word mark, favicon and fonts as checked files of the brand; a company with its own names, a site that says them, a blank start) |
 | **Toolkit** | Takes the controls (CSS, one script, icon sprite) with its brand applied, its rules and its documented components | **the brand reaches them** (stages 10 to 12): tokens, component properties, per app and per scheme |
-| **CI/CD** | Versions, changelog, checks and a release pipeline that publishes the files and tells the apps | **done** (stages 7 and 8 of the Studio) |
+| **CI/CD** | Versions, changelog, checks and a release pipeline that publishes the files and tells the apps | **done** (stages 7 and 8 of the Studio); people with roles work in it since stage 16 |
 
 ## Decisions
 
-- **One instance per company.** Each company runs its own container with its own volume and its own administrator (as today: one service, one volume, no secret in
+- **One instance per company.** Each company runs its own container with its own volume and its own people (an administrator from the setup assistant, then editors and viewers; stage 16; as before: one service, one volume, no secret in
   the compose file). The data model is built so that everything of a company lies under one place, so that a service for many companies stays possible later. It is not
   built now.
 - **The same repository is the product.** Nothing moves out. Mat becomes the first tenant: its apps, accents and rules are the sample data and the template, no longer
@@ -39,7 +39,7 @@ Each stage ends with the build clean, the tests and browser checks green, the co
 | 13 | **Assets** (done) | Logo, word mark and favicon (uploaded, checked: type, size, no script in an SVG) and the fonts of a brand as files that are served and released; `@font-face` generated, `font-display: swap`. |
 | 14 | **Demo data and templates** (done) | The setup assistant asks for the company and starts from a template: **Demo** (the current Mat data, unchanged), or a **Blank** start (no apps, no audit, a neutral brand); the site's own name, logo and menu come from the company (the item `tenant`: company, short name, site name, tagline, template) and no longer say MatDesign, unless the company is the demo. The Company page changes them and switches the template (nothing is deleted); an instance with no tenant is the demo, byte for byte. `ITemplate` is the built-in layer under `DesignData`; rule `IDENT-09`. What still says Mat on a blank site is the toolkit's own: the text of the rules and of the components, `MatUi` and `mat-` (stage 15). docs/STUDIO.md, "Company and templates". |
 | 15 | **White label build** | **Done:** a release can rename the toolkit for the company (`mat-` to its prefix, `MatUi` to its name) in the Build stage, with the tests of the toolkit run on the result. A `whitelabel` item (prefix and name) in the Studio, the renamer `WhiteLabel` (token boundaries, one pass, files, JSON and the archive), nine checks on the renamed copy that fail the stage, a trial build, history, restore and a check (docs/STUDIO.md, "White label"; `CODE-09`). |
-| 16 | **People and roles** | More than one user per instance with roles (administrator, editor, viewer) and the activity list that names them. |
+| 16 | **People and roles** (done) | More than one user per instance with a role each (administrator, editor, viewer), checked on the server for every page and every handler that changes something (`CODE-10`); `users.json` replaces `admin.json` (an old file becomes the first administrator, same password); the people page and the account page (a password an administrator chose has to be changed first, a password change ends the other sessions); a lock-out per name and address; the activity list names who did what to whom and never a secret; a check of the people. Releases, versions, company, white label and the people stay with administrators. docs/STUDIO.md, "People and roles". |
 
 The order is a dependency: stage 11 gives the editor of stage 12 its handles, stage 13 completes a brand, stage 14 removes the last thing that says Mat.
 

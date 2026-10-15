@@ -29,14 +29,14 @@
 
 <section class="mat-card" aria-labelledby="me-title">
     <div class="mat-card__head">@Ui.Icon("user")<h2 class="mat-card__title" id="me-title">You</h2></div>
-    <div class="mat-card__body">
+    <div class="mat-card__body mat-stack">
         <dl class="mat-kv">
             <dt>Name</dt>
             <dd>@me.Name</dd>
             <dt>Role</dt>
             <dd><span class="mat-pill @(me.Role == StudioRole.AdministratorId ? "mat-pill--info" : "mat-pill--plain")">@Model.RoleName</span></dd>
             <dt>Last sign-in</dt>
-            <dd>@UserStore.When(me.LastSignIn)</dd>
+            <dd>@(me.Builtin ? "Not recorded" : UserStore.When(me.LastSignIn))</dd>
         </dl>
         <p class="mat-muted">@(me.RoleInfo?.Summary)</p>
     </div>

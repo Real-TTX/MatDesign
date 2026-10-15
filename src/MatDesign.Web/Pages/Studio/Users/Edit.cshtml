@@ -51,10 +51,9 @@
                     </div>
                     <div class="mat-field mat-field--full@(Field("Password"))">
                         <label class="mat-label" for="Password">First password <span class="mat-req" aria-hidden="true">*</span></label>
-                        <div class="mat-input-group">
+                        <div class="mat-stack">
                             <input class="mat-input mat-mono" id="Password" name="Password" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" required data-msg-required="Please type a password, or generate one." />
-                            <button type="button" class="mat-btn mat-btn--secondary" data-generate-password="#Password">@Ui.Icon("refresh")<span>Generate</span></button>
-                            <button type="button" class="mat-btn mat-btn--secondary" data-copy="#Password">@Ui.Icon("copy")<span>Copy</span></button>
+                            <div class="mat-btn-row mat-btn-row--plain"><button type="button" class="mat-btn mat-btn--secondary" data-generate-password="#Password">@Ui.Icon("refresh")<span>Generate</span></button><button type="button" class="mat-btn mat-btn--secondary" data-copy="#Password">@Ui.Icon("copy")<span>Copy</span></button></div>
                         </div>
                         <span class="mat-error" aria-live="polite">@Model.ProblemFor("Password")</span>
                         <span class="mat-hint">At least @Model.MinLength characters. It is shown here only, so copy it and tell the person. They have to change it at the first sign-in; it is never shown again.</span>
@@ -127,10 +126,9 @@ else
                 <div class="mat-card__body">
                     <div class="mat-field@(Field("Password"))">
                         <label class="mat-label" for="Password">New password</label>
-                        <div class="mat-input-group">
+                        <div class="mat-stack">
                             <input class="mat-input mat-mono" id="Password" name="Password" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" required data-msg-required="Please type a password, or generate one." />
-                            <button type="button" class="mat-btn mat-btn--secondary" data-generate-password="#Password">@Ui.Icon("refresh")<span>Generate</span></button>
-                            <button type="button" class="mat-btn mat-btn--secondary" data-copy="#Password">@Ui.Icon("copy")<span>Copy</span></button>
+                            <div class="mat-btn-row mat-btn-row--plain"><button type="button" class="mat-btn mat-btn--secondary" data-generate-password="#Password">@Ui.Icon("refresh")<span>Generate</span></button><button type="button" class="mat-btn mat-btn--secondary" data-copy="#Password">@Ui.Icon("copy")<span>Copy</span></button></div>
                         </div>
                         <span class="mat-error" aria-live="polite">@Model.ProblemFor("Password")</span>
                         <span class="mat-hint">For a person who has lost theirs. Every session of @person.Name ends, and they change this password at the next sign-in. It is shown here only, so copy it and tell them.</span>

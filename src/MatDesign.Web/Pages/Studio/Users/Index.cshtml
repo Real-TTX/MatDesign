@@ -51,7 +51,7 @@
                                 </div>
                             </td>
                             <td data-label="Role"><span class="mat-pill @IndexModel.RolePill(user)">@IndexModel.RoleOf(user)</span></td>
-                            <td data-label="Last sign-in" class="mat-hide-sm">@UserStore.When(user.LastSignIn)</td>
+                            <td data-label="Last sign-in" class="mat-hide-sm">@(user.Builtin ? "Not recorded" : UserStore.When(user.LastSignIn))</td>
                             <td data-label="State"><span class="mat-pill @IndexModel.StatePill(user)">@IndexModel.State(user)</span></td>
                             <td data-label="Actions" class="mat-table__cell-actions">
                                 <div class="mat-table__actions">
