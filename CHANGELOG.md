@@ -13,6 +13,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-15
 ### Added
 
 - A new icon in the sprite, `mail-m` (an envelope whose flap is an M): the glyph of the MatMail logo (`IDENT-03`, one glyph per app logo). `<svg class="mat-icon"><use href="#mat-i-mail-m"></use></svg>`. Nothing to do for an app but copy the files; the envelope `mail` stays.
