@@ -350,12 +350,19 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
       const da = read(ia), db = read(ib);
       // a pixel is "different" when a colour channel is off by more than 4 of 255 ("loud"); a smaller difference is the anti-aliasing of an edge, which the very same page does not repeat exactly either
       // (the original against the original differs there too), and it is counted on its own ("exact")
-      let exact = 0, loud = 0;
+      let exact = 0, loud = 0, box = null;
       for (let i = 0; i < da.length; i += 4) {
         const m = Math.max(Math.abs(da[i] - db[i]), Math.abs(da[i + 1] - db[i + 1]), Math.abs(da[i + 2] - db[i + 2]), Math.abs(da[i + 3] - db[i + 3]));
-        if (m > 0) { exact++; if (m > 4) { loud++; } }
+        if (m > 0) {
+          exact++;
+          if (m > 4) {
+            loud++;
+            const px = (i / 4) % ia.width, py = Math.floor(i / 4 / ia.width);
+            box = box ? [Math.min(box[0], px), Math.min(box[1], py), Math.max(box[2], px), Math.max(box[3], py)] : [px, py, px, py];
+          }
+        }
       }
-      return { size: [ia.width, ia.height], exact, loud, total: ia.width * ia.height };
+      return { size: [ia.width, ia.height], exact, loud, total: ia.width * ia.height, box };
     }, [a.toString('base64'), b.toString('base64')]);
 
     // The documentation shows the names of the classes and of the product as text. The original page gets the same text as the renamed one (the text nodes go through the same rules, the classes and the
@@ -388,7 +395,7 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
       compared += d.total;
       exactTotal += Math.max(d.exact, 0);
       loudTotal += Math.max(d.loud, 0);
-      expect(d.loud, 0, `${what}: pixels that differ by more than 4 levels, of ${d.total} (${JSON.stringify(d.size)})`);
+      expect(d.loud, 0, `${what}: pixels that differ by more than 4 levels, of ${d.total} (${JSON.stringify(d.size)}${d.box ? ', at x ' + d.box[0] + '-' + d.box[2] + ', y ' + d.box[1] + '-' + d.box[3] : ''})`);
     }
     for (const [label, options] of looks) {
       for (const scene of scenes) {
