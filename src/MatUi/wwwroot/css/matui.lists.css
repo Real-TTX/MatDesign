@@ -57,6 +57,15 @@
   border-radius: var(--mat-table-radius, var(--mat-radius-lg));
   box-shadow: var(--mat-shadow-1);
 }
+/* The empty state takes the place of the table or the gallery in a list: the same frame, so a list without rows keeps its shape and the way to fill it
+   stands where the rows will be (LIST-11). Outside a list mat-empty--framed gives it the frame; in a card it needs none (the card is the frame). */
+.mat-list > .mat-empty,
+.mat-empty--framed {
+  background: var(--mat-surface);
+  border: 1px solid var(--mat-border);
+  border-radius: var(--mat-table-radius, var(--mat-radius-lg));
+  box-shadow: var(--mat-shadow-1);
+}
 .mat-table { width: 100%; border-collapse: collapse; font-size: var(--mat-table-font-size, var(--mat-fs-sm)); }
 .mat-table caption { text-align: left; padding: var(--mat-table-pad-y, var(--mat-space-3)) var(--mat-table-pad-x, var(--mat-space-4)); color: var(--mat-text-muted); }
 .mat-table th {

@@ -562,6 +562,14 @@ public static class ComponentCatalog
                       <a class="mat-btn mat-btn--primary" href="#">{I("refresh")}<span>Reset the tools</span></a>
                     </div>
                     """),
+                new("Framed, outside a list", $"""
+                    <div class="mat-empty mat-empty--framed">
+                      <span class="mat-empty__icon">{I("plus")}</span>
+                      <div class="mat-empty__title">No accounts yet</div>
+                      <p>Add the first account; it shows up here.</p>
+                      <a class="mat-btn mat-btn--primary" href="#">{I("plus")}<span>Add an account</span></a>
+                    </div>
+                    """, "In a list (.mat-list) the empty state gets this frame by itself: the frame of the table whose place it takes. Outside a list, on a start page say, mat-empty--framed gives it the same frame; in a card leave it out."),
             ],
             ["An empty list without any tool in effect offers the primary action instead (\"Add your first account\")."]),
 

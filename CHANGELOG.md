@@ -16,6 +16,10 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 - The colour of a new app, MatIdentity (the single sign-on of the family): `[data-app="matidentity"]` sets `--mat-app-accent: #a21a50` (white text on it passes AA). Nothing to do for the other apps but copy the files.
 
+### Changed
+
+- The empty state of a list has the frame of the table whose place it takes (`LIST-11`): `.mat-list > .mat-empty` gets the surface, the line, the radius (`--mat-table-radius`) and the shadow of `.mat-table-wrap`, so a list without rows keeps its shape. Outside a list the new modifier `mat-empty--framed` gives an empty state the same frame; in a card it stays without one. Nothing to do for an app but copy the files; an app that drew its own frame around an empty state in a list can drop it.
+
 ## [0.2.0] - 2026-10-15
 ### Added
 

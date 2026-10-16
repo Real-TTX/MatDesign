@@ -202,7 +202,8 @@ public static class RuleBook
             "Where a collection can be shown both ways, a segmented control in the toolbar switches between list and gallery. The choice is remembered per list.",
             RuleLevel.May, Design),
         new("LIST-11", "LIST", "The empty state",
-            "An empty list shows an icon, a title, a sentence and the primary action that fills it. An empty result of a search says so and offers to reset the tools.",
+            "An empty list shows an icon, a title, a sentence and the primary action that fills it. An empty result of a search says so and offers to reset the tools. " +
+            "The empty state stands where the rows would be, in the same frame as the table (`.mat-list > .mat-empty`); outside a list `mat-empty--framed` gives it that frame, inside a card it has none.",
             RuleLevel.Should, MatSplit),
         new("LIST-12", "LIST", "Counts",
             "The toolbar shows how many items the list has (and how many match, when a tool is in effect).",
