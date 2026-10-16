@@ -228,6 +228,7 @@ Optional for every app, on as soon as the environment names MatIdentity:
 | `MATIDENTITY_AUTHORITY` | the address of MatIdentity (`https://id.example.com`). Set = sign-in through MatIdentity |
 | `MATIDENTITY_CLIENT_ID` | the client of this app in MatIdentity (default: the app id) |
 | `MATIDENTITY_CLIENT_SECRET` | its secret |
+| `MATIDENTITY_INTERNAL_URL` | optional: where the app reaches MatIdentity from inside Docker (`http://mattiverse-matidentity-matidentity:2300`). The browser keeps using `MATIDENTITY_AUTHORITY`; the app sends its own server-to-server calls (discovery, keys, token, user info) to this address with the same path. MatIdentity has its public address as a fixed issuer and names it for every endpoint in its discovery document, also when it is read here |
 | `MAT_API_KEY` | the key for `/api/*` (see Access) |
 
 - **Auto login:** with `MATIDENTITY_AUTHORITY` set, a person who is not signed in goes straight to MatIdentity (OpenID Connect, authorization code with PKCE) and comes back signed in;
@@ -242,7 +243,8 @@ Optional for every app, on as soon as the environment names MatIdentity:
   own role management when it is not.
 - **Sign-out** ends the session in the app and at MatIdentity (end-session endpoint).
 - **Machines:** Mattiverse and the other apps get tokens with client credentials (see above); `X-Api-Key` stays as the way without MatIdentity.
-- Mattiverse sets these variables when it installs an app and MatIdentity is installed; the client is created in MatIdentity through its API at the same time.
+- Mattiverse sets these variables when it installs or updates an app and MatIdentity is installed (the catalog entry says `identity: {}`, and `platform: true` for `MAT_API_KEY`); the client is created in MatIdentity through its API at the same time (`managedBy: mattiverse`, client id = the slug of the app) and removed with the app. When MatIdentity comes or goes, Mattiverse connects or disconnects every such app and redeploys it. Mattiverse signs in through MatIdentity itself too (client `mattiverse`).
+- The local sign-in stays at `?local=1` (`1` or `true`) in every app.
 
 ## What an app has to do (definition of done)
 
