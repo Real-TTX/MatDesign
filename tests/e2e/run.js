@@ -4,6 +4,7 @@
 // the button order, the theme button, dependent fields, the keyboard. Exit code 1 when a check fails.
 const { chromium } = require('playwright-core');
 const { installTouchHit } = require('./touch-hit');
+const { annotate } = require('./annotate');
 
 const BASE = (process.argv[2] || process.env.BASE || 'http://localhost:8060').replace(/\/$/, '');
 const results = [];
@@ -16,6 +17,7 @@ async function check(name, fn) {
   } catch (e) {
     results.push({ name, ok: false, why: e.message });
     console.log('  FAIL  ' + name + '\n        ' + e.message.split('\n')[0]);
+    annotate(__filename, name + ': ' + e.message.split('\n')[0]);
   }
 }
 
@@ -8932,4 +8934,4 @@ function seenAt(page, selector) {
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} checks passed.`);
   process.exit(failed.length === 0 ? 0 : 1);
-})().catch(e => { console.error('FAILED to run:', e.message); process.exit(2); });
+})().catch(e => { console.error('FAILED to run:', e.message); annotate(__filename, 'FAILED to run: ' + e.message.split('\n')[0]); process.exit(2); });

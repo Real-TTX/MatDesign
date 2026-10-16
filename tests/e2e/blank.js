@@ -6,6 +6,7 @@
 //   cd tests/e2e && node blank.js http://localhost:8189
 // STUDIO_NAME / STUDIO_PASSWORD (default admin / studio-dev) are the administrator it creates. SHOTS=<directory> also writes screenshots of what it sees.
 const { chromium } = require('playwright-core');
+const { annotate } = require('./annotate');
 
 const BASE = (process.argv[2] || process.env.BASE || 'http://localhost:8189').replace(/\/$/, '');
 const SHOTS = process.env.SHOTS || '';
@@ -22,6 +23,7 @@ async function check(name, fn) {
   } catch (e) {
     results.push({ name, ok: false, why: e.message });
     console.log('  FAIL  ' + name + '\n        ' + e.message.split('\n')[0]);
+    annotate(__filename, name + ': ' + e.message.split('\n')[0]);
   }
 }
 
@@ -273,4 +275,4 @@ const MAT_WORDS = ['MatDesign', 'Mat apps', 'Mat family', 'MatMail', 'Mattiverse
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} checks passed.`);
   process.exit(failed.length === 0 ? 0 : 1);
-})().catch(e => { console.error('FAILED to run:', e.message); process.exit(2); });
+})().catch(e => { console.error('FAILED to run:', e.message); annotate(__filename, 'FAILED to run: ' + e.message.split('\n')[0]); process.exit(2); });

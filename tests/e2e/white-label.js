@@ -9,6 +9,7 @@
 // The site has to have the Studio on with an administrator (STUDIO_NAME / STUDIO_PASSWORD, default admin / studio-dev; the setup assistant is used when there is none).
 const { chromium } = require('playwright-core');
 const crypto = require('crypto');
+const { annotate } = require('./annotate');
 
 const BASE = (process.argv[2] || process.env.BASE || 'http://localhost:8060').replace(/\/$/, '');
 const PREFIX = 'acme';
@@ -24,6 +25,7 @@ async function check(name, fn) {
   } catch (e) {
     results.push({ name, ok: false, why: e.message });
     console.log('  FAIL  ' + name + '\n        ' + e.message.split('\n')[0]);
+    annotate(__filename, name + ': ' + e.message.split('\n')[0]);
   }
 }
 function expect(actual, expected, what) {
@@ -454,4 +456,4 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
   const failed = results.filter(r => !r.ok);
   console.log(`\n${results.length - failed.length} of ${results.length} checks passed.`);
   process.exit(failed.length === 0 ? 0 : 1);
-})().catch(e => { console.error('FAILED to run:', e.message); process.exit(2); });
+})().catch(e => { console.error('FAILED to run:', e.message); annotate(__filename, 'FAILED to run: ' + e.message.split('\n')[0]); process.exit(2); });
