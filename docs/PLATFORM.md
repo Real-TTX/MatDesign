@@ -97,6 +97,8 @@ with MatUi, so an app looks the same inside Mattiverse as on its own.
     { "id": "clearCache", "label": "Clear cache", "icon": "trash", "kind": "post", "confirm": "Clear the cache now?", "danger": true }
   ],
 
+  "roles": [ { "key": "admin", "label": "Administrator" }, { "key": "member", "label": "Member" } ],
+
   "provides": [ { "capability": "mail.send", "version": 1 } ],
   "consumes": [ { "capability": "files.store", "version": 1, "optional": true } ]
 }
@@ -134,6 +136,9 @@ Rule of thumb: at most ten fields. A field: `key`, `label`, `type` (`text`, `num
 values: dependent fields only when they are needed), `restart: true` (takes effect after a restart).
 
 **`actions`:** `id` (camelCase), `label`, `icon`, `kind` = `link` (open `url`, relative to the app) or `post` (`POST /api/actions/{id}`), optional `confirm` (asked first) and `danger`.
+
+**`roles`:** the roles of the app, the most powerful first (`key` is the value of the claim `role`, small letters, digits, `-` and `_`). MatIdentity offers them when an
+administrator gives the app to people or groups. Optional: an app that decides its roles itself, or has none, leaves it out.
 
 **`provides` / `consumes`:** see "Apps talking to each other".
 
@@ -229,7 +234,12 @@ Optional for every app, on as soon as the environment names MatIdentity:
   there is no local sign-in form in the way. The local sign-in stays reachable at `/login?local=1` for the administrator (a way in when MatIdentity is down).
 - Without the variable the app behaves exactly as before: its own users and its own sign-in.
 - **The person:** matched by the claim `sub`; the first sign-in creates the local user (name, e-mail from the claims) or links the one with the same e-mail. The app keeps its own
-  table of users (for its foreign keys and its own data) and its own roles; the claim `role` (values like `admin`, `user`) sets the role at each sign-in when MatIdentity sends it.
+  table of users (for its foreign keys and its own data).
+- **Who may come in:** MatIdentity decides before the app sees anyone. An app is open only to the people and groups an administrator gave it to (and to the
+  administrators of MatIdentity), unless it is opened to everyone. Someone else never reaches the app; taking the app away ends their sign-in at the next renewal.
+- **The role:** per app the administrator chooses *Admin* (MatIdentity gives each person or group one of the app's `roles`; the claim `role` carries it and the
+  app follows it at every sign-in) or *Managed by the app* (no claim `role`; the app gives rights itself, as before). An app reads `role` when it is there and keeps its
+  own role management when it is not.
 - **Sign-out** ends the session in the app and at MatIdentity (end-session endpoint).
 - **Machines:** Mattiverse and the other apps get tokens with client credentials (see above); `X-Api-Key` stays as the way without MatIdentity.
 - Mattiverse sets these variables when it installs an app and MatIdentity is installed; the client is created in MatIdentity through its API at the same time.
