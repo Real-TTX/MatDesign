@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- MatPlatform: the platform contract of the Mat apps for .NET (docs/PLATFORM.md). Apps COPY these files (CODE-03), with tools/matplatform-copy.js;
+       this project is where they are built and tested. The files must compile in any app, so each one names its usings. -->
+  <PropertyGroup>
+    <RootNamespace>MatPlatform</RootNamespace>
+    <AssemblyName>MatPlatform</AssemblyName>
+    <IsPackable>false</IsPackable>
+    <!-- The version of the package (semantic versioning). Change it together with MatPlatformInfo.Version (a test holds them equal). -->
+    <MatPlatformVersion>1.0.0</MatPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="10.0.13" />
+  </ItemGroup>
+
+</Project>

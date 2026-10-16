@@ -255,6 +255,12 @@ Optional for every app, on as soon as the environment names MatIdentity:
    a secret never sent back, `401` without key), the sign-in with and without MatIdentity.
 5. A catalog entry in Mattiverse (`src/Mattiverse.Core/Catalog/apps/<app>.yml`) that passes `MAT_API_KEY` and, when present, the `MATIDENTITY_*` variables.
 
-**Shared code.** For .NET apps the endpoints, the key check, the validation of the definition and the OIDC wiring come as one package (`MatPlatform`), so that an app only
-describes its pages and supplies its values: `builder.AddMatPlatform(def => def.Tile(...).Field(...).Action(...))`, `app.MapMatPlatform()`. The same C# types read a definition on the
-consumer's side (Mattiverse). MatDesign publishes the JSON Schema of the MatApiDefinition and a page that checks the `/api` of a running app against it.
+**Shared code.** For .NET apps the endpoints, the key check, the checks of the settings, the validation of the definition and the OIDC wiring come as one package,
+**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 1.0.0), so that an app only describes its pages and supplies its values:
+`builder.AddMatPlatform<AppPlatform>(AppPlatform.Describe)` (a description with `o.App(...)`, `o.Page(...)`, `o.Tile(...)`, `o.Field(...)`, `o.LinkAction(...)` / `o.PostAction(...)`,
+`o.Role(...)`), the values from the interfaces `IMatPlatformState`, `IMatPlatformConfiguration`, `IMatPlatformActions` and `IMatPlatformHealth`, `.AddMatIdentitySignIn<AppUsers>(...)` with
+`IMatIdentityUsers` for the local user, and `app.MapMatPlatform()`. `MatPlatformValidator` checks a definition in the app's tests (keys of the sections, `showIf`, unique ids,
+kinds, icons of the sprite). Like MatUi it is **copied** (`CODE-03`): `node tools/matplatform-copy.js <web project of the app>` writes the files to `<app>/MatPlatform/` with a
+first line that names the version, and `matplatform.version`. The first app on it is MatSplit. The same types (`MatApiDefinition` and its records, `MatApiDefinition.Json`) read
+a definition on the consumer's side; Mattiverse (`PlatformClient`) and MatIdentity still carry their own copies. Not there yet: a JSON Schema of the MatApiDefinition and a page
+of MatDesign that checks the `/api` of a running app.

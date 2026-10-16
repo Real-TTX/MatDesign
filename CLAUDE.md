@@ -41,12 +41,23 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
   `import-lucide.js <checkout>` when Lucide is updated), `custom.json` (icons drawn for MatDesign: one line each, with tags and categories; look at them on a contact sheet before keeping one) and `categories.json`
   (General, Home automation and its areas as curated lists). An icon can be in any number of categories. Nothing in `matui.css`/`matui.js` may refer to the library (a test checks); CI fails when the committed files are stale.
 - **Versions of the toolkit:** `node tools/bump.js <patch|minor|major>` turns Unreleased of `CHANGELOG.md` into the next version and writes the number where it is kept (docs/VERSIONING.md); `node tools/matui-check.js <folder of an app>` shows how an app's copy stands against the changelog (and whether a file was changed by hand).
+- **MatPlatform** (the platform contract for .NET apps, `src/MatPlatform/README.md`): apps copy it with `node tools/matplatform-copy.js <web project folder of the app>` (rule `CODE-03`); never edit a copy in an app.
+  A change here needs a test in `tests/MatPlatform.Tests` and, when an app can see it, a new `MatPlatformVersion` (in `MatPlatform.csproj`) together with `MatPlatformInfo.Version`. Its JSON is read by Mattiverse and MatIdentity: a change of a name or a shape raises the contract version of docs/PLATFORM.md. It is not part of the site or its image.
 - **Audit:** `node tools/audit.js [folder with the repositories]` rewrites `src/MatDesign.Web/Data/audit.json`, a snapshot of how close the other apps are to the rules.
 
 ## Map
 
 ```
 src/MatUi                  Razor class library = the toolkit. wwwroot/css (10 parts), js/matui.js + matui.boot.js, img/matui-icons.svg
+src/MatPlatform            the platform contract for .NET apps (docs/PLATFORM.md, README.md there), COPIED into the apps by tools/matplatform-copy.js; no app type in it, every file names its ASP.NET usings (System.* come from ImplicitUsings)
+  MatApiDefinition.cs        the types of the contract and MatApiDefinition.Json (camelCase, nulls left out except a state value, letters not escaped)
+  MatPlatformBuilder.cs      the description (App, Page, Tile, Field, LinkAction, PostAction, Role, Provides, Consumes; T(de, en)), MatPlatformOptions (language, CheckValues, rate limit)
+  MatPlatformValues.cs       what the app implements: IMatPlatformState, IMatPlatformConfiguration, IMatPlatformActions, IMatPlatformHealth; MatPlatformCall
+  MatPlatformEndpoints.cs    AddMatPlatform<TApp>, AddMatPlatformValues<TApp>, MapMatPlatform (the endpoints, secrets as {isSet}, 304, 503, 401, 404, 409)
+  MatApiAccess.cs            X-Api-Key in constant time or a bearer token of MatIdentity (audience = client id); MatPlatformSettings.cs the MAT_API_KEY / MATIDENTITY_* variables
+  MatValueChecker.cs         the checks of PUT /api/configure from the definition; MatPlatformValidator.cs the checks of a definition (for the apps' tests)
+  MatIdentitySignIn.cs       AddMatIdentitySignIn<TUsers> (OIDC code + PKCE, JWT bearer), IMatIdentityUsers, SignOutAtIdentity; MatIdentityBackchannelHandler.cs (MATIDENTITY_INTERNAL_URL)
+  MatPlatformInfo.cs         the version (= MatPlatformVersion in MatPlatform.csproj, a test holds them equal)
 src/MatDesign.Core         no web types
   Colors.cs                  OKLab, mixing like CSS color-mix, WCAG contrast, distance
   AppRegistry.cs             the apps and their accent, AccentPresets
@@ -111,8 +122,10 @@ tests/e2e                  run.js: the behaviour in a real browser against a run
   Pages/Studio/Releases/WhiteLabel  the white label page (CODE-09): prefix and name with live validation (wwwroot/js/whitelabel.js), before and after, the trial build, save and reset; Studio/WhiteLabelBuild.cs (WhiteLabelStore; WhiteLabelBuild.Apply renames the files of a release, the JSON and the archive, writes the hash of the copy and runs the checks), Studio/WhiteLabelEndpoints.cs (POST .../WhiteLabel/rename: the renamer as an address, for the browser checks)
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
+tests/MatPlatform.Tests    MatPlatform: a demo app in memory (TestServer, DemoApp.cs), the endpoints, the sign-in, the validator, the backchannel, the package files
 tests/e2e                  run.js: the behaviour in a real browser against a running site; white-label.js: the white label build (the Studio page, the renamed toolkit behind the renamer of the site, the look of the original and the copy compared pixel by pixel)
-tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js, bump.js (makes a version of the toolkit), matui-check.js (checks an app's copy of it)
+tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js, bump.js (makes a version of the toolkit), matui-check.js (checks an app's copy of it),
+                           matplatform-copy.js (+ .ps1: copies MatPlatform into an app)
 ```
 
 ## Conventions
