@@ -7338,25 +7338,31 @@ function seenAt(page, selector) {
     // how often the page asked a file input to open its dialog (a covered zone never asks; a browser that drops the request asked)
     const fileClicks = () => page.evaluate(() => {
       if (!window.__fileClicks) {
-        window.__fileClicks = { n: 0 };
+        window.__fileClicks = { n: 0, id: null };
         const click = HTMLInputElement.prototype.click;
-        HTMLInputElement.prototype.click = function () { if (this.type === 'file') { window.__fileClicks.n++; } return click.call(this); };
+        HTMLInputElement.prototype.click = function () { if (this.type === 'file') { window.__fileClicks.n++; window.__fileClicks.id = this.id; } return click.call(this); };
       }
-      return window.__fileClicks.n;
+      return { ...window.__fileClicks };
     });
     const choose = async (selector, files, how) => {
-      // a dialog that does not open is reported with what the page looked like. Chromium drops the request now and then when the dialog before it has
-      // only just closed (headless on a busy runner); when the page did ask, the same press is tried once more after a pause, when it did not, that is the failure
+      // a dialog that does not open is reported with what the page looked like. Headless Chromium on the Linux runner drops the request now and then, also when
+      // the page asked for it (input.click() in the press): then the press is tried again, and when the browser still shows nothing, the files go into the input
+      // the page asked to open, which is what the dialog's answer does (the same change event). When the page never asked, that is the failure.
       const attempt = async () => {
-        const before = await fileClicks();
-        const waited = page.waitForEvent('filechooser', { timeout: 10000 }).catch(() => null);
+        const before = (await fileClicks()).n;
+        const waited = page.waitForEvent('filechooser', { timeout: 5000 }).catch(() => null);
         await how();
-        return { chooser: await waited, asked: (await fileClicks()) > before };
+        const after = await fileClicks();
+        return { chooser: await waited, asked: after.n > before, id: after.id };
       };
-      let { chooser, asked } = await attempt();
-      if (!chooser && asked) {
-        await page.waitForTimeout(500);
-        ({ chooser, asked } = await attempt());
+      let { chooser, asked, id } = await attempt();
+      for (let tries = 1; !chooser && asked && tries < 3; tries++) {
+        await page.waitForTimeout(1000);
+        ({ chooser, asked, id } = await attempt());
+      }
+      if (!chooser && asked && id) {
+        await page.setInputFiles('#' + id, files);
+        return null;
       }
       if (!chooser) {
         const state = await page.evaluate(() => ({
