@@ -234,8 +234,14 @@ Optional for every app, on as soon as the environment names MatIdentity:
 - **Auto login:** with `MATIDENTITY_AUTHORITY` set, a person who is not signed in goes straight to MatIdentity (OpenID Connect, authorization code with PKCE) and comes back signed in;
   there is no local sign-in form in the way. The local sign-in stays reachable at `/login?local=1` for the administrator (a way in when MatIdentity is down).
 - Without the variable the app behaves exactly as before: its own users and its own sign-in.
-- **The person:** matched by the claim `sub`; the first sign-in creates the local user (name, e-mail from the claims) or links the one with the same e-mail. The app keeps its own
-  table of users (for its foreign keys and its own data).
+- **The person:** matched by the claim `sub`; the first sign-in creates the local user (name, e-mail from the claims). The app keeps its own table of users (for its foreign keys and
+  its own data). **Linking an existing account needs proof of both identities:** MatIdentity proves the person (its e-mail is set by its administrators), but the address of a local
+  account proves nothing (a user may type any address into their own profile, or register with it as a user name), so an account whose e-mail (or, without an e-mail column, user
+  name) matches is **never linked by the address alone** and no second account is made beside it. The app keeps a short-lived pending link (10 minutes, a protected cookie of the
+  app) and shows its local sign-in (`?local=1&link=1`: an account with this address exists here; sign in once with its password to connect it, or cancel); only when exactly
+  that account signs in there (with its second factor, if the app has one) does it get the `sub`, and the app writes it to its activity log. Another account signing in links
+  nothing; several matches or a match linked to another `sub` are refused; no match creates the user. In .NET apps MatPlatform does this (`MatIdentitySignInResult.LinkRequired`,
+  `MatIdentityPendingLink`).
 - **Who may come in:** MatIdentity decides before the app sees anyone. An app is open only to the people and groups an administrator gave it to (and to the
   administrators of MatIdentity), unless it is opened to everyone. Someone else never reaches the app; taking the app away ends their sign-in at the next renewal.
 - **The role:** per app the administrator chooses *Admin* (MatIdentity gives each person or group one of the app's `roles`; the claim `role` carries it and the
@@ -256,7 +262,7 @@ Optional for every app, on as soon as the environment names MatIdentity:
 5. A catalog entry in Mattiverse (`src/Mattiverse.Core/Catalog/apps/<app>.yml`) that passes `MAT_API_KEY` and, when present, the `MATIDENTITY_*` variables.
 
 **Shared code.** For .NET apps the endpoints, the key check, the checks of the settings, the validation of the definition and the OIDC wiring come as one package,
-**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 1.0.0), so that an app only describes its pages and supplies its values:
+**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 1.1.0), so that an app only describes its pages and supplies its values:
 `builder.AddMatPlatform<AppPlatform>(AppPlatform.Describe)` (a description with `o.App(...)`, `o.Page(...)`, `o.Tile(...)`, `o.Field(...)`, `o.LinkAction(...)` / `o.PostAction(...)`,
 `o.Role(...)`), the values from the interfaces `IMatPlatformState`, `IMatPlatformConfiguration`, `IMatPlatformActions` and `IMatPlatformHealth`, `.AddMatIdentitySignIn<AppUsers>(...)` with
 `IMatIdentityUsers` for the local user, and `app.MapMatPlatform()`. `MatPlatformValidator` checks a definition in the app's tests (keys of the sections, `showIf`, unique ids,

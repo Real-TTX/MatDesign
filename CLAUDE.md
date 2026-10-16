@@ -56,7 +56,8 @@ src/MatPlatform            the platform contract for .NET apps (docs/PLATFORM.md
   MatPlatformEndpoints.cs    AddMatPlatform<TApp>, AddMatPlatformValues<TApp>, MapMatPlatform (the endpoints, secrets as {isSet}, 304, 503, 401, 404, 409)
   MatApiAccess.cs            X-Api-Key in constant time or a bearer token of MatIdentity (audience = client id); MatPlatformSettings.cs the MAT_API_KEY / MATIDENTITY_* variables
   MatValueChecker.cs         the checks of PUT /api/configure from the definition; MatPlatformValidator.cs the checks of a definition (for the apps' tests)
-  MatIdentitySignIn.cs       AddMatIdentitySignIn<TUsers> (OIDC code + PKCE, JWT bearer), IMatIdentityUsers, SignOutAtIdentity; MatIdentityBackchannelHandler.cs (MATIDENTITY_INTERNAL_URL)
+  MatIdentitySignIn.cs       AddMatIdentitySignIn<TUsers> (OIDC code + PKCE, JWT bearer), IMatIdentityUsers, CompleteSignInAsync, SignOutAtIdentity; MatIdentityBackchannelHandler.cs (MATIDENTITY_INTERNAL_URL)
+  MatIdentityPendingLink.cs  an account that matches by address is linked only after its password: the pending link (protected cookie, 10 minutes), LinkRequired sends to ?local=1&link=1
   MatPlatformInfo.cs         the version (= MatPlatformVersion in MatPlatform.csproj, a test holds them equal)
 src/MatDesign.Core         no web types
   Colors.cs                  OKLab, mixing like CSS color-mix, WCAG contrast, distance

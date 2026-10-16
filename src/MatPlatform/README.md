@@ -5,7 +5,7 @@ builder for it, the endpoints (`/api`, `/api/health`, `/api/state[/{key}]`, `GET
 MatIdentity's tokens, the checks of the settings, a validator of a definition for the app's tests and the sign-in through MatIdentity (OpenID Connect).
 An app only **describes** itself and **supplies its values**.
 
-Version **1.0.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
+Version **1.1.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
 The first app on it is MatSplit (`src/MatSplit.Web/Platform/SplitPlatform.cs` there is the example to read).
 
 ## How an app gets it: a copy (CODE-03)
@@ -16,7 +16,7 @@ Like MatUi, an app **copies** the package; nothing is loaded from elsewhere and 
 node tools/matplatform-copy.js <folder of the app's web project>      # or: ./tools/matplatform-copy.ps1 -Target <folder>
 ```
 
-It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.0.0 – a copy from MatDesign, do not edit here`, and
+It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.1.0 – a copy from MatDesign, do not edit here`, and
 `matplatform.version` (the version, then the SHA-256 of each file as copied, with LF line ends). Copying again updates the files and removes the ones the package no longer has.
 **Never change the copy in the app**: change `src/MatPlatform` here (with a test in `tests/MatPlatform.Tests`), raise the version and copy it to the apps.
 
@@ -47,7 +47,10 @@ interface IMatIdentityUsers         { Task<MatIdentitySignInResult> SignInAsync(
 
 record MatPlatformCall(HttpContext Http, string Language, string Caller) { string T(string de, string en); }
 record MatIdentityPerson(string Subject, string? Email, string? Name, string? PreferredUserName, string? Role, string? IdToken, ClaimsPrincipal Principal);
-record MatIdentitySignInResult(bool Succeeded, string? Error) { static Success(); static Refused(string error); }
+record MatIdentitySignInResult(bool Succeeded, string? Error) { string? LinkAccount; static Success(); static Refused(string error); static LinkRequired(string account); }
+record MatIdentityPendingLink(string Subject, string? Email, string? Name, string? PreferredUserName, string? Role, string? IdToken, string Account)
+    { static Store(HttpContext, MatIdentityPerson, string account); static Peek(HttpContext); static Take(HttpContext); static TakeFor(HttpContext, string account); static Clear(HttpContext);
+      CookieName, Purpose, Lifetime (10 minutes) }
 
 // The description (called at startup and for each GET /api with the caller's language)
 MatPlatformBuilder: Language, T(de, en), App(id, name, description, version, icon?, accent?, home = "/"),
@@ -57,8 +60,9 @@ MatPlatformBuilder: Language, T(de, en), App(id, name, description, version, ico
     static Build(describe, language = "de", auth?) -> MatApiDefinition
 MatSection.Tiles(keys...), MatSection.Form(label?, keys...), MatSection.Actions(ids...), MatSection.Link(label, url); MatField.When((key, value)...) for showIf
 MatPlatformOptions: DefaultLanguage = "de", CheckValues = true, AnonymousPermitPerMinute = 120, LanguageOf(http)
-MatIdentitySignInOptions: CookieScheme, LoginPath = "/Account/Login", SignedOutRedirect (?signedOut=1), FailedRedirect (?local=1&ssoError=1), AccessDeniedPath = "/AccessDenied", RoleClaim = "role", Scopes
+MatIdentitySignInOptions: CookieScheme, LoginPath = "/Account/Login", SignedOutRedirect (?signedOut=1), FailedRedirect (?local=1&ssoError=1), LinkRedirect (?local=1&link=1), AccessDeniedPath = "/AccessDenied", RoleClaim = "role", Scopes
 MatIdentitySignIn.Scheme ("MatIdentity"), MatIdentitySignIn.SignOutAtIdentity(HttpContext http, string idToken) -> SignOutResult
+MatIdentitySignIn.CompleteSignInAsync(HttpContext http, MatIdentityPerson person, string? returnUrl) -> where the browser goes (what /signin-oidc does; for the apps' tests)
 MatApiAccess (X-Api-Key in constant time, or a bearer token of MatIdentity for the audience = client id), MatApiAccess.BearerScheme, MatApiAccess.CallerOf(http)
 MatPlatformSettings.From(configuration, appId): MAT_API_KEY, MATIDENTITY_AUTHORITY, MATIDENTITY_CLIENT_ID (default: the app id), MATIDENTITY_CLIENT_SECRET, MATIDENTITY_INTERNAL_URL
 MatPlatformValidator.Validate(MatApiDefinition | string json, IEnumerable<string>? icons) -> problems; MatPlatformValidator.ReadSprite(path)
@@ -88,15 +92,25 @@ wrong, and answers the values; an action that is not a `post` action of the defi
    app.UseRateLimiter(); app.UseAuthentication(); app.UseAuthorization();
    app.MapMatPlatform();
    ```
-5. **Sign-in**: implement `IMatIdentityUsers` (find the local user by `Subject`, else link the one with the same `Email`, else create it; follow `Role` when it is set; sign in with
-   the app's own cookie and keep `IdToken` with the session; refuse a disabled or deleted user). The sign-in page challenges `MatIdentitySignIn.Scheme` when `platform.IdentityEnabled`
+5. **Sign-in**: implement `IMatIdentityUsers` (find the local user by `Subject`; else, when exactly one active account that is not linked yet has the same `Email` (or user name),
+   answer `MatIdentitySignInResult.LinkRequired(<its id>)` and **do not link it**; else create the user; follow `Role` when it is set; sign in with the app's own cookie and
+   keep `IdToken` with the session; refuse a disabled or deleted user, several matches or a match linked to another subject). **Linking needs proof of both identities**: the
+   address in the app proves nothing (anyone may have typed it into their own profile, or registered with it as a user name), so a person who could link by it would be put into
+   an account whose password someone else knows. On `LinkRequired` the package keeps a `MatIdentityPendingLink` (the claims and the ID token, Data Protection, HttpOnly,
+   Secure on https, SameSite=Lax, 10 minutes, the path of the app) and sends the browser to `LoginPath?local=1&link=1`. The sign-in page says so when `MatIdentityPendingLink.Peek`
+   finds one (German and English: an account with this address exists here; sign in once with its password to connect it with MatIdentity) and offers to cancel
+   (`MatIdentityPendingLink.Clear`). When the local sign-in has succeeded (after the app's second factor, if it has one), `MatIdentityPendingLink.TakeFor(http, <the id of the
+   user>)` gives the link only for the account that matched (and deletes it either way): set the external subject, apply the role claim like a MatIdentity sign-in, keep its
+   `IdToken` with the session, write "linked with MatIdentity" to the activity log. Another account signs in normally and links nothing. The sign-in page challenges `MatIdentitySignIn.Scheme` when `platform.IdentityEnabled`
    and none of `?local=1`, `?signedOut=1`, `?ssoError=1` is set (and shows the local form when the challenge throws because MatIdentity cannot be reached); the sign-out page
    returns `MatIdentitySignIn.SignOutAtIdentity(HttpContext, idToken)` after the local sign-out when the session has an ID token. A column for the subject (`ExternalSubject`)
    needs a migration or a step of the app's schema upgrade.
 6. **Tests** (`dotnet test`, the app in memory with `WebApplicationFactory`): `Assert.Empty(MatPlatformValidator.Validate(MatPlatformBuilder.Build(AppPlatform.Describe, "de"),
    MatPlatformValidator.ReadSprite(<the app's matui-icons.svg>)))` for `de` and `en`; the endpoints (shapes, `401` without key, a secret never sent back, `404` for an unknown
    key or action); the sign-in with and without `MATIDENTITY_AUTHORITY` (a fixed `OpenIdConnectConfiguration` through `PostConfigure<OpenIdConnectOptions>(MatIdentitySignIn.Scheme, ...)`
-   and `PostConfigure<JwtBearerOptions>(MatApiAccess.BearerScheme, ...)`, so no MatIdentity has to run). MatSplit's `tests/MatSplit.Tests` has all of these.
+   and `PostConfigure<JwtBearerOptions>(MatApiAccess.BearerScheme, ...)`, so no MatIdentity has to run); the pending link: `MatIdentitySignIn.CompleteSignInAsync` with a person whose
+   address an account pre-claimed lands on `?local=1&link=1` without entering it, the local sign-in of that account links it, another account does not, cancel, an expired or
+   forged cookie is ignored (`MatIdentityPendingLink.Purpose` makes an expired one). MatSplit's `tests/MatSplit.Tests` has all of these.
 7. **Docker**: `HEALTHCHECK ... CMD curl -fsS http://127.0.0.1:<port>/api/health || exit 1` (200 for `ok` and `degraded`, 503 for `down`; a degraded app is not restarted).
 8. **README**: the settings table gets `MAT_API_KEY`, `MATIDENTITY_AUTHORITY`, `MATIDENTITY_CLIENT_ID` (default: the app id), `MATIDENTITY_CLIENT_SECRET`, `MATIDENTITY_INTERNAL_URL`;
    a section on the platform API (the endpoints and what the tiles, fields and actions are) and on the sign-in through MatIdentity (`?local=1`, redirect address `/signin-oidc`,

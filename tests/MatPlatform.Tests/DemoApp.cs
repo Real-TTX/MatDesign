@@ -115,13 +115,16 @@ public sealed class DemoStore
     public string? LastCaller { get; set; }
 
     public bool Down { get; set; }
+
+    /// <summary>What <see cref="DemoUsers"/> answers to a person, null: success.</summary>
+    public Func<MatIdentityPerson, MatIdentitySignInResult>? SignInAnswer { get; set; }
 }
 
-/// <summary>The demo app's side of the sign-in through MatIdentity.</summary>
-public sealed class DemoUsers : IMatIdentityUsers
+/// <summary>The demo app's side of the sign-in through MatIdentity: answers what <see cref="DemoStore.SignInAnswer"/> says (default: success).</summary>
+public sealed class DemoUsers(DemoStore store) : IMatIdentityUsers
 {
     public Task<MatIdentitySignInResult> SignInAsync(MatIdentityPerson person, HttpContext http, CancellationToken ct)
-        => Task.FromResult(MatIdentitySignInResult.Success());
+        => Task.FromResult(store.SignInAnswer?.Invoke(person) ?? MatIdentitySignInResult.Success());
 }
 
 /// <summary>Starts the demo app in memory (TestServer).</summary>
