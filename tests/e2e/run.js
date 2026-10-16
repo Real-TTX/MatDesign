@@ -7335,18 +7335,35 @@ function seenAt(page, selector) {
     }, id);
     const heard = () => page.evaluate(() => window.__up);
     const pdf = (name, size) => ({ name, mimeType: 'application/pdf', buffer: Buffer.alloc(size || 100, 1) });
+    // how often the page asked a file input to open its dialog (a covered zone never asks; a browser that drops the request asked)
+    const fileClicks = () => page.evaluate(() => {
+      if (!window.__fileClicks) {
+        window.__fileClicks = { n: 0 };
+        const click = HTMLInputElement.prototype.click;
+        HTMLInputElement.prototype.click = function () { if (this.type === 'file') { window.__fileClicks.n++; } return click.call(this); };
+      }
+      return window.__fileClicks.n;
+    });
     const choose = async (selector, files, how) => {
-      // a dialog that does not open is reported with what the page looked like (a flaky browser and a covered zone look the same from outside)
-      const waiting = page.waitForEvent('filechooser', { timeout: 10000 });
-      const waited = waiting.catch(() => null);
-      await how();
-      const chooser = await waited;
+      // a dialog that does not open is reported with what the page looked like. Chromium drops the request now and then when the dialog before it has
+      // only just closed (headless on a busy runner); when the page did ask, the same press is tried once more after a pause, when it did not, that is the failure
+      const attempt = async () => {
+        const before = await fileClicks();
+        const waited = page.waitForEvent('filechooser', { timeout: 10000 }).catch(() => null);
+        await how();
+        return { chooser: await waited, asked: (await fileClicks()) > before };
+      };
+      let { chooser, asked } = await attempt();
+      if (!chooser && asked) {
+        await page.waitForTimeout(500);
+        ({ chooser, asked } = await attempt());
+      }
       if (!chooser) {
         const state = await page.evaluate(() => ({
           focus: document.hasFocus(), visibility: document.visibilityState, active: document.activeElement ? document.activeElement.className || document.activeElement.tagName : null,
           open: [...document.querySelectorAll('dialog[open]')].map(d => d.id), toasts: document.querySelectorAll('.mat-toast').length, scroll: Math.round(window.scrollY),
         }));
-        throw new Error('the file dialog did not open: ' + JSON.stringify(state));
+        throw new Error(`the file dialog did not open (the page ${asked ? 'asked for it' : 'never asked for it'}): ${JSON.stringify(state)}`);
       }
       await chooser.setFiles(files);
       return chooser;
