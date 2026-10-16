@@ -395,6 +395,10 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
       compared += d.total;
       exactTotal += Math.max(d.exact, 0);
       loudTotal += Math.max(d.loud, 0);
+      // a few pixels on ONE edge (all in one column or one row) are the anti-aliasing of a border that sits on a fraction of a pixel: Chrome on the Linux runner
+      // draws it a little louder now and then (4 pixels of the left line of an example, x 295, y 558-631). A change of the toolkit (a colour, a space, a radius) changes hundreds.
+      const edgeNoise = d.box && d.loud <= 8 && (d.box[0] === d.box[2] || d.box[1] === d.box[3]);
+      if (edgeNoise) { return; }
       expect(d.loud, 0, `${what}: pixels that differ by more than 4 levels, of ${d.total} (${JSON.stringify(d.size)}${d.box ? ', at x ' + d.box[0] + '-' + d.box[2] + ', y ' + d.box[1] + '-' + d.box[3] : ''})`);
     }
     for (const [label, options] of looks) {
