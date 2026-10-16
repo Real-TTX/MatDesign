@@ -562,6 +562,20 @@ public static class ComponentCatalog
                       <a class="mat-btn mat-btn--primary" href="#">{I("refresh")}<span>Reset the tools</span></a>
                     </div>
                     """),
+                new("A list with nothing yet", $"""
+                    <div class="mat-list">
+                      <div class="mat-empty mat-empty--first">
+                        <span class="mat-empty__icon">{I("users")}</span>
+                        <div class="mat-empty__title">No groups yet</div>
+                        <p>A group gets apps and roles for all its people at once.</p>
+                        <a class="mat-btn mat-btn--primary" href="#">{I("plus")}<span>New group</span></a>
+                      </div>
+                      <div class="mat-actions">
+                        <a class="mat-btn mat-btn--primary" href="#">{I("plus")}<span>New group</span></a>
+                        <a class="mat-btn mat-btn--secondary" href="#">{I("upload")}<span>Import</span></a>
+                      </div>
+                    </div>
+                    """, "mat-empty--first: the list has nothing yet and the empty state offers the first item. The toolkit hides the same primary button in the actions row below; Import stays. The markup of the page does not change between an empty and a full list."),
                 new("Framed, outside a list", $"""
                     <div class="mat-empty mat-empty--framed">
                       <span class="mat-empty__icon">{I("plus")}</span>
