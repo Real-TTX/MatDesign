@@ -248,6 +248,9 @@ Optional for every app, on as soon as the environment names MatIdentity:
   app follows it at every sign-in) or *Managed by the app* (no claim `role`; the app gives rights itself, as before). An app reads `role` when it is there and keeps its
   own role management when it is not.
 - **Sign-out** ends the session in the app and at MatIdentity (end-session endpoint).
+- **Behind a TLS proxy** (Matcad) the scheme comes from `X-Forwarded-Proto`: the first value `https` makes the request https, so the `redirect_uri` is `https://.../signin-oidc` and the
+  correlation cookies are `Secure` (only the scheme; the client address and the host stay the app's own policy; `X-Forwarded-Prefix` is not needed, every app is served at the root of its address).
+  In .NET apps MatPlatform does this when MatIdentity is on (`MatIdentitySignInOptions.TrustForwardedProto`, default on).
 - **Machines:** Mattiverse and the other apps get tokens with client credentials (see above); `X-Api-Key` stays as the way without MatIdentity.
 - Mattiverse sets these variables when it installs or updates an app and MatIdentity is installed (the catalog entry says `identity: {}`, and `platform: true` for `MAT_API_KEY`); the client is created in MatIdentity through its API at the same time (`managedBy: mattiverse`, client id = the slug of the app) and removed with the app. When MatIdentity comes or goes, Mattiverse connects or disconnects every such app and redeploys it. Mattiverse signs in through MatIdentity itself too (client `mattiverse`).
 - The local sign-in stays at `?local=1` (`1` or `true`) in every app.

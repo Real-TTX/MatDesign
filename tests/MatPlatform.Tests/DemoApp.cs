@@ -134,7 +134,15 @@ public static class DemoHost
 
     public const string Authority = "http://identity.test";
 
-    public static async Task<WebApplication> StartAsync(bool withKey = true, string? authority = null, Action<MatPlatformOptions>? configure = null, DemoStore? store = null)
+    /// <param name="signIn">More options of the sign-in, after the demo's own.</param>
+    /// <param name="pipeline">Middleware of the app itself, before rate limiter and authentication (for example its own ForwardedHeaders).</param>
+    public static async Task<WebApplication> StartAsync(
+        bool withKey = true,
+        string? authority = null,
+        Action<MatPlatformOptions>? configure = null,
+        DemoStore? store = null,
+        Action<MatIdentitySignInOptions>? signIn = null,
+        Action<WebApplication>? pipeline = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
         builder.WebHost.UseTestServer();
@@ -154,6 +162,7 @@ public static class DemoHost
             {
                 o.CookieScheme = "cookie";
                 o.LoginPath = "/login";
+                signIn?.Invoke(o);
             });
         builder.Services.AddAuthorization();
 
@@ -180,12 +189,15 @@ public static class DemoHost
         }
 
         var app = builder.Build();
+        pipeline?.Invoke(app);
         app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapMatPlatform();
         app.MapGet("/login", (HttpContext http) => Results.Challenge(new AuthenticationProperties { RedirectUri = "/" }, [MatIdentitySignIn.Scheme]));
         app.MapPost("/logout", (HttpContext http) => MatIdentitySignIn.SignOutAtIdentity(http, "the.id.token"));
+        // What the app sees of the request (scheme, client address, host).
+        app.MapGet("/whoami", (HttpContext http) => $"{http.Request.Scheme}|{http.Request.IsHttps}|{http.Connection.RemoteIpAddress}|{http.Request.Host}");
         await app.StartAsync();
         return app;
     }

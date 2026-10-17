@@ -7,7 +7,7 @@
     <AssemblyName>MatPlatform</AssemblyName>
     <IsPackable>false</IsPackable>
     <!-- The version of the package (semantic versioning). Change it together with MatPlatformInfo.Version (a test holds them equal). -->
-    <MatPlatformVersion>1.1.0</MatPlatformVersion>
+    <MatPlatformVersion>1.2.0</MatPlatformVersion>
   </PropertyGroup>
 
   <ItemGroup>

@@ -5,7 +5,7 @@ builder for it, the endpoints (`/api`, `/api/health`, `/api/state[/{key}]`, `GET
 MatIdentity's tokens, the checks of the settings, a validator of a definition for the app's tests and the sign-in through MatIdentity (OpenID Connect).
 An app only **describes** itself and **supplies its values**.
 
-Version **1.1.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
+Version **1.2.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
 The first app on it is MatSplit (`src/MatSplit.Web/Platform/SplitPlatform.cs` there is the example to read).
 
 ## How an app gets it: a copy (CODE-03)
@@ -16,7 +16,7 @@ Like MatUi, an app **copies** the package; nothing is loaded from elsewhere and 
 node tools/matplatform-copy.js <folder of the app's web project>      # or: ./tools/matplatform-copy.ps1 -Target <folder>
 ```
 
-It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.1.0 – a copy from MatDesign, do not edit here`, and
+It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.2.0 – a copy from MatDesign, do not edit here`, and
 `matplatform.version` (the version, then the SHA-256 of each file as copied, with LF line ends). Copying again updates the files and removes the ones the package no longer has.
 **Never change the copy in the app**: change `src/MatPlatform` here (with a test in `tests/MatPlatform.Tests`), raise the version and copy it to the apps.
 
@@ -60,7 +60,8 @@ MatPlatformBuilder: Language, T(de, en), App(id, name, description, version, ico
     static Build(describe, language = "de", auth?) -> MatApiDefinition
 MatSection.Tiles(keys...), MatSection.Form(label?, keys...), MatSection.Actions(ids...), MatSection.Link(label, url); MatField.When((key, value)...) for showIf
 MatPlatformOptions: DefaultLanguage = "de", CheckValues = true, AnonymousPermitPerMinute = 120, LanguageOf(http)
-MatIdentitySignInOptions: CookieScheme, LoginPath = "/Account/Login", SignedOutRedirect (?signedOut=1), FailedRedirect (?local=1&ssoError=1), LinkRedirect (?local=1&link=1), AccessDeniedPath = "/AccessDenied", RoleClaim = "role", Scopes
+MatIdentitySignInOptions: CookieScheme, LoginPath = "/Account/Login", SignedOutRedirect (?signedOut=1), FailedRedirect (?local=1&ssoError=1), LinkRedirect (?local=1&link=1), AccessDeniedPath = "/AccessDenied", RoleClaim = "role", Scopes, TrustForwardedProto = true
+MatForwardedProto.Apply(HttpContext), MatForwardedProto.IsHttps(header): the scheme from X-Forwarded-Proto (registered by AddMatIdentitySignIn, see below)
 MatIdentitySignIn.Scheme ("MatIdentity"), MatIdentitySignIn.SignOutAtIdentity(HttpContext http, string idToken) -> SignOutResult
 MatIdentitySignIn.CompleteSignInAsync(HttpContext http, MatIdentityPerson person, string? returnUrl) -> where the browser goes (what /signin-oidc does; for the apps' tests)
 MatApiAccess (X-Api-Key in constant time, or a bearer token of MatIdentity for the audience = client id), MatApiAccess.BearerScheme, MatApiAccess.CallerOf(http)
@@ -74,6 +75,13 @@ What the endpoints do for the app: `/api` and `/api/health` are anonymous and ra
 and answers `304`; the health status is the worst check (`503` for `down`, a check that throws is `down`); the rest answers `401` without the key or a token; a field of the type
 `secret` is always sent as `{"isSet": bool}`, whatever the app returns; `PUT /api/configure` checks the values against the definition (`CheckValues`), saves nothing when one is
 wrong, and answers the values; an action that is not a `post` action of the definition is `404` without asking the app; texts follow `Accept-Language` (`de`, `en`).
+
+**Behind a TLS proxy** (Matcad, whose address in Docker is not fixed): when MatIdentity is on, `AddMatIdentitySignIn` registers an `IStartupFilter` that puts a tiny middleware
+at the very start of the pipeline: when the first value of `X-Forwarded-Proto` is `https` (any case), `Request.Scheme` becomes `https` (and `IsHttps` follows); any other value
+changes nothing. Without it the app sees `http`, the `redirect_uri` is `http://.../signin-oidc` and the correlation and nonce cookies (`SameSite=None`) are not `Secure`, so the
+browser drops them and the sign-in fails. **Only the scheme**: `RemoteIpAddress` (`X-Forwarded-For`, which guards the rate limits) and `Host` stay the app's own
+ForwardedHeaders policy, and that policy, before or after it, comes to the same scheme. `X-Forwarded-Prefix` is not read: Matcad serves every app at the root of its own
+address. `MatIdentitySignInOptions.TrustForwardedProto = false` turns it off.
 
 ## Adopting it in an app, step by step
 

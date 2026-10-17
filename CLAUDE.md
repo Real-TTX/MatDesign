@@ -57,6 +57,7 @@ src/MatPlatform            the platform contract for .NET apps (docs/PLATFORM.md
   MatApiAccess.cs            X-Api-Key in constant time or a bearer token of MatIdentity (audience = client id); MatPlatformSettings.cs the MAT_API_KEY / MATIDENTITY_* variables
   MatValueChecker.cs         the checks of PUT /api/configure from the definition; MatPlatformValidator.cs the checks of a definition (for the apps' tests)
   MatIdentitySignIn.cs       AddMatIdentitySignIn<TUsers> (OIDC code + PKCE, JWT bearer), IMatIdentityUsers, CompleteSignInAsync, SignOutAtIdentity; MatIdentityBackchannelHandler.cs (MATIDENTITY_INTERNAL_URL)
+  MatForwardedProto.cs       behind a TLS proxy the scheme from X-Forwarded-Proto (only the scheme, never the address or host); an IStartupFilter AddMatIdentitySignIn registers (TrustForwardedProto)
   MatIdentityPendingLink.cs  an account that matches by address is linked only after its password: the pending link (protected cookie, 10 minutes), LinkRequired sends to ?local=1&link=1
   MatPlatformInfo.cs         the version (= MatPlatformVersion in MatPlatform.csproj, a test holds them equal)
 src/MatDesign.Core         no web types
