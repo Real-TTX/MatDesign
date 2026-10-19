@@ -584,6 +584,68 @@
    }
   },
   {
+   "id": "matsmtp",
+   "layout": "",
+   "results": {
+    "shell.menu-left": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "shell.breadcrumb": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "shell.theme": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "shell.user": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "shell.version": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "dialog.native": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "dialog.used": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "color.tokens": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "code.inline": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "code.external": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "type.system": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "icon.inline": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "mobile.query": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    },
+    "a11y.motion": {
+     "state": "unknown",
+     "note": "New app (2026-10-19), the mail relay: not scanned yet."
+    }
+   }
+  },
+  {
    "id": "matbu",
    "layout": "(none found)",
    "results": {
