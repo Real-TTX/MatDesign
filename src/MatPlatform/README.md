@@ -5,7 +5,7 @@ builder for it, the endpoints (`/api`, `/api/health`, `/api/state[/{key}]`, `GET
 MatIdentity's tokens, the checks of the settings, a validator of a definition for the app's tests and the sign-in through MatIdentity (OpenID Connect).
 An app only **describes** itself and **supplies its values**.
 
-Version **1.2.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
+Version **1.3.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
 The first app on it is MatSplit (`src/MatSplit.Web/Platform/SplitPlatform.cs` there is the example to read).
 
 ## How an app gets it: a copy (CODE-03)
@@ -16,7 +16,7 @@ Like MatUi, an app **copies** the package; nothing is loaded from elsewhere and 
 node tools/matplatform-copy.js <folder of the app's web project>      # or: ./tools/matplatform-copy.ps1 -Target <folder>
 ```
 
-It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.2.0 – a copy from MatDesign, do not edit here`, and
+It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.3.0 – a copy from MatDesign, do not edit here`, and
 `matplatform.version` (the version, then the SHA-256 of each file as copied, with LF line ends). Copying again updates the files and removes the ones the package no longer has.
 **Never change the copy in the app**: change `src/MatPlatform` here (with a test in `tests/MatPlatform.Tests`), raise the version and copy it to the apps.
 
@@ -66,6 +66,10 @@ MatIdentitySignIn.Scheme ("MatIdentity"), MatIdentitySignIn.SignOutAtIdentity(Ht
 MatIdentitySignIn.CompleteSignInAsync(HttpContext http, MatIdentityPerson person, string? returnUrl) -> where the browser goes (what /signin-oidc does; for the apps' tests)
 MatApiAccess (X-Api-Key in constant time, or a bearer token of MatIdentity for the audience = client id), MatApiAccess.BearerScheme, MatApiAccess.CallerOf(http)
 MatPlatformSettings.From(configuration, appId): MAT_API_KEY, MATIDENTITY_AUTHORITY, MATIDENTITY_CLIENT_ID (default: the app id), MATIDENTITY_CLIENT_SECRET, MATIDENTITY_INTERNAL_URL
+MatSmtpSettings.From(configuration): MATSMTP_HOST, MATSMTP_PORT (default 2025), MATSMTP_USERNAME, MATSMTP_PASSWORD, MATSMTP_FROM, MATSMTP_TLS (none|starttls|tls)
+    IsConfigured (the host is set), HasCredentials, Host, Port, Username, Password, FromAddress, Tls (MatSmtpTls.None|StartTls|Tls), UseStartTls, UseTls, TlsName,
+    Describe(language) -> the sentence for the fixed state (null when off), Fix(MatField, language) -> the field with fixed: true and that sentence as its hint (unchanged when off)
+MatField.Fixed: set from outside the app; a consumer shows it without editing, PUT /api/configure refuses a change (MatValueChecker)
 MatPlatformValidator.Validate(MatApiDefinition | string json, IEnumerable<string>? icons) -> problems; MatPlatformValidator.ReadSprite(path)
 MatValueChecker.Check(definition, changes, current, language) -> errors per key
 MatApiDefinition.Json: the serializer options of the contract (camelCase, nulls left out but a state value, letters such as ü not escaped)
@@ -82,6 +86,34 @@ changes nothing. Without it the app sees `http`, the `redirect_uri` is `http://.
 browser drops them and the sign-in fails. **Only the scheme**: `RemoteIpAddress` (`X-Forwarded-For`, which guards the rate limits) and `Host` stay the app's own
 ForwardedHeaders policy, and that policy, before or after it, comes to the same scheme. `X-Forwarded-Prefix` is not read: Matcad serves every app at the root of its own
 address. `MatIdentitySignInOptions.TrustForwardedProto = false` turns it off.
+
+## Mail through MatSMTP (1.3.0)
+
+An app that sends mail reads the `MATSMTP_*` variables (docs/PLATFORM.md "Mail through MatSMTP") once at startup and, when they are set, sends **all** its mail through MatSMTP
+and shows its own SMTP settings as fixed:
+
+```csharp
+var smtp = MatSmtpSettings.From(builder.Configuration);           // a singleton for the app's mail service
+builder.Services.AddSingleton(smtp);
+
+// the mail service (MailKit)
+if (smtp.IsConfigured)
+{
+    await client.ConnectAsync(smtp.Host, smtp.Port, smtp.UseTls ? SecureSocketOptions.SslOnConnect : smtp.UseStartTls ? SecureSocketOptions.StartTls : SecureSocketOptions.None, ct);
+    if (smtp.HasCredentials) { await client.AuthenticateAsync(smtp.Username, smtp.Password, ct); }
+    message.From.Clear(); message.From.Add(MailboxAddress.Parse(smtp.FromAddress ?? ownSender));
+}
+else { /* the app's own SMTP settings, as before */ }
+
+// the description of /api: the SMTP fields become fixed (hint = where the mail goes); PUT /api/configure refuses them
+builder.AddMatPlatform<AppPlatform>(o => AppPlatform.Describe(o, smtp));
+o.Field(smtp.Fix(new MatField("smtpHost", o.T("SMTP-Server", "SMTP server"), "text"), o.Language));
+
+// the settings page: smtp.Describe(language) as the sentence, the fields disabled when smtp.IsConfigured
+```
+
+What the app stored for its own server stays stored and is used again when the variables are gone. `GET /api/configure` answers the values in force (MatSMTP's, the password as
+`{"isSet": true}`).
 
 ## Adopting it in an app, step by step
 
@@ -131,7 +163,9 @@ address. `MatIdentitySignInOptions.TrustForwardedProto = false` turns it off.
    # MATIDENTITY_CLIENT_SECRET: ""
    # MATIDENTITY_INTERNAL_URL: ""       # http://matidentity:2300 inside Docker
    ```
-10. The Mattiverse catalog entry (`platform: true`, `identity: {}`), see docs/PLATFORM.md "What an app has to do".
+10. The Mattiverse catalog entry (`platform: true`, `identity: {}`, and `mail: {}` for an app that sends mail), see docs/PLATFORM.md "What an app has to do".
+11. **Mail** (an app that sends any): `MatSmtpSettings` as in "Mail through MatSMTP" above, the six `MATSMTP_*` variables in the README's settings table and as comments in the
+    release `docker-compose.yml`, and tests that the SMTP fields are fixed with the variables and editable without them.
 
 ## Changing the package
 
