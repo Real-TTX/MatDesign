@@ -59,7 +59,7 @@ async function load(browser, options, url, scheme, css) {
   const desktop = { viewport: { width: 1360, height: 900 } };
   const phone = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true };
   const scenarios = [
-    ['/Components', desktop, 'light'], ['/Components', desktop, 'dark'], ['/Components', phone, 'light'],
+    ['/Components/All', desktop, 'light'], ['/Components/All', desktop, 'dark'], ['/Components/All', phone, 'light'], ['/Components', desktop, 'light'], ['/Components/buttons', desktop, 'light'],
     ['/Preview', desktop, 'light'], ['/Preview', phone, 'light'], ['/Foundations/Tokens', desktop, 'light'], ['/Identity', phone, 'light'],
   ];
   let bad = 0;
@@ -68,7 +68,7 @@ async function load(browser, options, url, scheme, css) {
     const results = [];
     for (const css of [before, null]) {
       const { ctx, page } = await load(browser, options, url, scheme, css);
-      if (url === '/Components') {
+      if (url === '/Components/All') {
         // a dialog and a toast are built by the script: open both, let them settle, and take them too
         await page.evaluate(() => { window.MatUi.alert('A notice'); window.MatUi.toast('Saved', { tone: 'success' }); });
         await page.waitForTimeout(700);

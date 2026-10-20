@@ -287,7 +287,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- the toolkit's own dialogs
   console.log('\nScript dialogs and toasts');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#dialogs');
+    const { ctx, page } = await open(desktopOptions, '/Components/dialogs');
     await check('MatUi.confirm, alert and prompt are dialogs and return their results; a toast follows', async () => {
       await page.click('#dialogs [data-doc-demo="dialogs"]');
       await page.waitForSelector('dialog[open] .mat-dialog__title');
@@ -412,7 +412,7 @@ function seenAt(page, selector) {
       expect(await label(), 'Design: Night $&. Klicken für System.', 'only the names replaced');
     });
     await check('the texts of the pickers follow the same rule: data-pk-<name> replaces AM, the placeholder of a typed time is a text too', async () => {
-      await page.goto(BASE + '/Components#time-picker', { waitUntil: 'networkidle' });
+      await page.goto(BASE + '/Components/time-picker', { waitUntil: 'networkidle' });
       await page.evaluate(() => document.documentElement.setAttribute('data-pk-am', 'vorm.'));
       await page.click('#pk-time12-trigger');
       const column = '#pk-time12-trigger ~ .mat-picker__panel [data-time-col="ap"] .mat-timecol__item';
@@ -679,7 +679,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#switcher');
+    const { ctx, page } = await open(desktopOptions, '/Components/switcher');
     const dot = () => page.locator('#switch-demo .mat-switcher__dot').isVisible();
     await check('the dot on the switcher is there while the other menu needs attention and goes when it is shown', async () => {
       expectTrue(await dot(), 'no dot while Work is shown');
@@ -753,7 +753,7 @@ function seenAt(page, selector) {
   }
   {
     // the variant that opens a menu: documented in the components
-    const { ctx, page } = await open(desktopOptions, '/Components#navmenu');
+    const { ctx, page } = await open(desktopOptions, '/Components/navmenu');
     const button = '#navmenu button.mat-nav__group-action';
     await check('a group action can open a menu: the popup is shown, the button says so, Escape closes it', async () => {
       expect(await page.getAttribute(button, 'aria-haspopup'), 'menu', 'haspopup');
@@ -801,7 +801,7 @@ function seenAt(page, selector) {
   }
   {
     // SHELL-15: an entry that is a link is the start page of its menu: the browser loads it, the script does not swap the items
-    const { ctx, page } = await open(desktopOptions, '/Components#switcher');
+    const { ctx, page } = await open(desktopOptions, '/Components/switcher');
     const entry = '#switch-pages-menu [data-nav-set="admin"]';
     await check('an entry of the switcher that is a link loads its page and does not swap the items', async () => {
       await page.click('#switch-pages-demo .mat-switcher');
@@ -1052,7 +1052,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#switcher');
+    const { ctx, page } = await open(desktopOptions, '/Components/switcher');
     await check('the example with a group: a parent opens its menus, choosing one names the parent', async () => {
       await page.click('#switch-tree-demo .mat-switcher');
       expect(await page.getAttribute('#switch-tree-menu [data-nav-group]', 'aria-expanded'), 'false', 'closed at first');
@@ -1106,7 +1106,7 @@ function seenAt(page, selector) {
     return { title, go, view, pressed, lastRange, active, create };
   };
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#schedule');
+    const { ctx, page } = await open(desktopOptions, '/Components/schedule');
     const { title, go, view, pressed, lastRange, active, create } = await schedulePage(page);
     const practice = '#sched-practice', school = '#sched-school', project = '#sched-project';
     const next = sel => `${sel} .mat-schedule__next`, prev = sel => `${sel} .mat-schedule__prev`, today = sel => `${sel} .mat-schedule__today`;
@@ -1422,7 +1422,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#schedule');
+    const { ctx, page } = await open(phoneOptions, '/Components/schedule');
     const { title, go, view, pressed, create, active } = await schedulePage(page);
     // the schedule of a phone has the whole width of the content (358 px), unlike the examples, which sit in a box of the documentation
     await create('sched-ph', { 'data-view': 'agenda', 'data-date': '2026-10-14', 'data-now': '2026-10-14T10:20', 'data-week-numbers': '' }, true);
@@ -1492,7 +1492,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open({ ...desktopOptions, reducedMotion: 'reduce' }, '/Components#schedule');
+    const { ctx, page } = await open({ ...desktopOptions, reducedMotion: 'reduce' }, '/Components/schedule');
     await check('for a user who asked for less motion a page does not slide', async () => {
       await page.click('#sched-practice .mat-schedule__next');
       expect(await page.$eval('#sched-practice .mat-schedule__body', b => b.classList.contains('is-from-next') || b.classList.contains('is-from-prev')), false, 'the class of the slide');
@@ -1500,7 +1500,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#schedule');
+    const { ctx, page } = await open(desktopOptions, '/Components/schedule');
     await check('a page slides in from the side it was turned to, for a user who did not ask for less motion', async () => {
       await page.click('#sched-practice .mat-schedule__next');
       await page.waitForFunction(() => document.querySelector('#sched-practice .mat-schedule__body').classList.contains('is-from-next'), null, { timeout: 500 });
@@ -1509,7 +1509,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#topbar');
+    const { ctx, page } = await open(desktopOptions, '/Components/topbar');
     await check('the main action of the header bar is the one icon in the accent colour, a second one is secondary, with room between them and in line with the content edge', async () => {
       const state = await page.evaluate(() => {
         const bar = Array.from(document.querySelectorAll('.mat-topbar')).find(b => b.querySelector('.mat-topbar__actions .mat-btn--primary'));
@@ -1543,7 +1543,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- long pages: the index
   console.log('\nOn this page: the index of a long page');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components');
+    const { ctx, page } = await open(desktopOptions, '/Components/All');
     await check('the index sits beside the content and stays in view while the page scrolls', async () => {
       const before = await page.locator('.mat-toc-aside').boundingBox();
       await page.evaluate(() => { document.querySelector('.mat-main').scrollTop = 3000; });
@@ -1591,7 +1591,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components');
+    const { ctx, page } = await open(phoneOptions, '/Components/All');
     await check('on a phone there is no index beside the content: the icon in the header bar opens it in a full-screen dialog and a link closes it', async () => {
       expectTrue(!(await page.locator('.mat-toc-aside').isVisible()), 'the index is shown beside the content on a phone');
       await page.click('.mat-topbar__index');
@@ -1610,7 +1610,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- lists of rows (LIST-15)
   console.log('\nLists of rows');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#itemlist');
+    const { ctx, page } = await open(desktopOptions, '/Components/All');
     // the toasts of the documentation (it reports the events of the lists) would cover what the checks press
     await page.addStyleTag({ content: '.mat-toasts { display: none; }' });
     // what the lists report is collected in the page, so that each check can look at it
@@ -1954,7 +1954,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#itemlist-actions');
+    const { ctx, page } = await open(phoneOptions, '/Components/itemlist-actions');
     await check('on a phone the rows, the handle and the options are touch targets, nothing scrolls sideways, and a swipe with a finger slides a row open', async () => {
       const slide = '#il-slide', first = slide + ' > .mat-item:nth-child(1)';
       await page.locator(slide).scrollIntoViewIfNeeded();
@@ -1985,7 +1985,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- the form controls
   console.log('\nForm controls');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#range');
+    const { ctx, page } = await open(desktopOptions, '/Components/All');
     await check('a range writes its value next to it and fills the track up to it', async () => {
       await page.$eval('#rng-vol', el => { el.value = 70; el.dispatchEvent(new Event('input', { bubbles: true })); });
       expect((await page.textContent('#rng-vol-out')).trim(), '70', 'output');
@@ -2067,7 +2067,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#form-grid');
+    const { ctx, page } = await open(phoneOptions, '/Components/form-grid');
     await check('on a phone the label of a horizontal form is above the field and the columns are one', async () => {
       const state = await page.evaluate(() => {
         const f = document.querySelector('#grid-h-name').closest('.mat-field');
@@ -2084,7 +2084,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- the code input
   console.log('\nCode input');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#code-input');
+    const { ctx, page } = await open(desktopOptions, '/Components/code-input');
     await page.evaluate(() => {
       window.__otp = [];
       document.addEventListener('mat:otp-complete', e => window.__otp.push(e.target.querySelector('.mat-otp__input').id + ':' + e.detail.value));
@@ -2313,7 +2313,7 @@ function seenAt(page, selector) {
   }
   {
     // the form validation and the application programming interface, on a page of their own (a complete code is sent by this field)
-    const { ctx, page } = await open(desktopOptions, '/Components#code-input');
+    const { ctx, page } = await open(desktopOptions, '/Components/code-input');
     const boxSel = id => `#${id} ~ .mat-otp__boxes .mat-otp__box`;
     const vals = id => page.$$eval(boxSel(id), els => els.map(e => e.value).join('|'));
     const active = () => page.evaluate(() => document.activeElement.id);
@@ -2390,13 +2390,13 @@ function seenAt(page, selector) {
   }
   {
     // markup that is added later, a form that is reset, another language and a code input outside a field
-    const { ctx, page } = await open(desktopOptions, '/Components#code-input');
+    const { ctx, page } = await open(desktopOptions, '/Components/code-input');
     await check('MatUi.refresh draws the boxes of markup added later: 12 boxes in three groups, in German, that a form reset puts back', async () => {
       await page.evaluate(() => {
         document.documentElement.lang = 'de';
         const host = document.createElement('div');
         host.id = 'otp-host';
-        host.innerHTML = '<form class="mat-form" id="otp-dyn-form" method="get" action="/Components#code-input" novalidate>' +
+        host.innerHTML = '<form class="mat-form" id="otp-dyn-form" method="get" action="/Components/code-input" novalidate>' +
           '<div class="mat-field"><label class="mat-label" for="otp-dyn">Schlüssel</label>' +
           '<div class="mat-otp" data-otp data-length="12" data-chars="hex" data-group="4-4-4"><input class="mat-otp__input" id="otp-dyn" name="dyn" value="abc" required /></div>' +
           '<span class="mat-error" aria-live="polite"></span></div>' +
@@ -2434,7 +2434,7 @@ function seenAt(page, selector) {
     // without the script the real input is a text field
     const ctx = await browser.newContext({ ...desktopOptions, javaScriptEnabled: false });
     const page = await ctx.newPage();
-    await page.goto(BASE + '/Components#code-input', { waitUntil: 'networkidle' });
+    await page.goto(BASE + '/Components/code-input', { waitUntil: 'networkidle' });
     await check('without the script the real input is a visible text field with the look of a code', async () => {
       const s = await page.evaluate(() => {
         const i = document.getElementById('otp-totp');
@@ -2448,7 +2448,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#code-input');
+    const { ctx, page } = await open(phoneOptions, '/Components/code-input');
     await check('on a phone eight boxes fit the screen, are 44 px high and keep 16 px type, and a code of twelve fits too', async () => {
       await page.evaluate(() => {
         const host = document.createElement('div');
@@ -2497,7 +2497,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- content components
   console.log('\nContent components');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#accordion');
+    const { ctx, page } = await open(desktopOptions, '/Components/All');
     await check('in an accordion with one name only one item is open; a single collapse opens on its own', async () => {
       const open = () => page.$$eval('details[name="acc-faq"]', items => items.map(d => d.open));
       expect(await open(), [true, false, false], 'items at the start');
@@ -2607,7 +2607,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#dialogs');
+    const { ctx, page } = await open(phoneOptions, '/Components/dialogs');
     await check('on a phone the side dialog is full screen, like every dialog', async () => {
       await page.click('[data-dialog-open="dlg-side"]');
       const state = await page.$eval('#dlg-side', el => { const r = el.getBoundingClientRect(); return { width: Math.round(r.width) === innerWidth, height: Math.round(r.height) === innerHeight }; });
@@ -2619,7 +2619,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- number stepper (FORM-20)
   console.log('\nNumber stepper');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#number-stepper');
+    const { ctx, page } = await open(desktopOptions, '/Components/number-stepper');
     const val = id => page.$eval(`#${id}`, el => el.value);
     const dec = id => page.locator(`.mat-stepper:has(#${id}) > .mat-stepper__btn--dec`);
     const inc = id => page.locator(`.mat-stepper:has(#${id}) > .mat-stepper__btn--inc`);
@@ -2810,7 +2810,7 @@ function seenAt(page, selector) {
     });
     await check('in a form: an empty required field gets its message and the border of the buttons follows, a press starts at the lowest value and takes the message away', async () => {
       await page.evaluate(() => document.getElementById('stp-seats').scrollIntoView({ block: 'center' }));
-      await page.click('form[action="/Components#number-stepper"] button[type=submit]');
+      await page.click('form[action="/Components/number-stepper"] button[type=submit]');
       await page.waitForTimeout(200);
       expect(await page.locator('#stp-seats').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked');
       expect((await page.locator('#stp-seats').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please enter the number of seats.', 'the message');
@@ -2896,7 +2896,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#number-stepper');
+    const { ctx, page } = await open(phoneOptions, '/Components/number-stepper');
     await check('on a phone every stepper has buttons of the size of a control (also the stacked one), a tap steps once and nothing is wider than the screen', async () => {
       await page.evaluate(() => document.getElementById('number-stepper').scrollIntoView());
       const state = await page.evaluate(() => {
@@ -2921,7 +2921,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- dropdown with checkboxes (FORM-15)
   console.log('\nDropdown with checkboxes');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#checkbox-select');
+    const { ctx, page } = await open(desktopOptions, '/Components/checkbox-select');
     const panel = id => `#${id}-trigger ~ .mat-picker__panel`;
     const val = id => page.$eval(`#${id}`, el => el.value);
     const shown = async id => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
@@ -3054,7 +3054,7 @@ function seenAt(page, selector) {
     });
     await check('in a form a dropdown with nothing ticked gets its message at the field and Select all clears it', async () => {
       await page.evaluate(() => document.getElementById('cbs-req').scrollIntoView({ block: 'center' }));
-      await page.click('form[action="/Components#checkbox-select"] button[type=submit]');
+      await page.click('form[action="/Components/checkbox-select"] button[type=submit]');
       await page.waitForTimeout(200);
       expect(await page.locator('#cbs-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked');
       expect((await page.locator('#cbs-req').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose at least one day.', 'the message');
@@ -3077,7 +3077,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#checkbox-select');
+    const { ctx, page } = await open(phoneOptions, '/Components/checkbox-select');
     await check('on a phone the dropdown with checkboxes fills the screen, Select all is as tall as a control and a tap ticks everything', async () => {
       await page.evaluate(() => document.getElementById('cbs-countries').scrollIntoView({ block: 'center' }));
       await page.tap('#cbs-countries-trigger');
@@ -3099,7 +3099,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- pickers
   console.log('\nPickers');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#rich-select');
+    const { ctx, page } = await open(desktopOptions, '/Components/All');
     const panelOf = id => page.locator(`#${id}-trigger ~ .mat-picker__panel`);
     const valueOf = id => page.$eval(`#${id}`, el => el.value);
     const shown = async id => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
@@ -3177,7 +3177,7 @@ function seenAt(page, selector) {
     });
     await check('a required select writes its message at the field and the focus goes to its button', async () => {
       await page.evaluate(() => document.getElementById('pk-req-trigger').scrollIntoView({ block: 'center' }));
-      await page.click('form[action="/Components#rich-select"] button[type=submit]');
+      await page.click('form[action="/Components/rich-select"] button[type=submit]');
       await page.waitForTimeout(200);
       expect(await page.locator('#pk-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked invalid');
       expect((await page.locator('#pk-req').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose a server.', 'the message');
@@ -3283,7 +3283,7 @@ function seenAt(page, selector) {
 
     await page.evaluate(() => document.getElementById('pk-topics').scrollIntoView({ block: 'center' }));
     await check('only from the list: other text is refused, a required field writes its message and takes the focus into the field', async () => {
-      await page.click('form[action="/Components#tag-input"] button[type=submit]');
+      await page.click('form[action="/Components/tag-input"] button[type=submit]');
       await page.waitForTimeout(200);
       expect(await page.locator('#pk-topics').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked invalid');
       expect((await page.locator('#pk-topics').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please add at least one topic.', 'the message');
@@ -3481,7 +3481,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#date-picker');
+    const { ctx, page } = await open(phoneOptions, '/Components/All');
     await check('on a phone a picker is a full-screen sheet with an X; one month for a period; the X closes it', async () => {
       await page.click('#pk-period-trigger');
       const panel = '#pk-period-trigger ~ .mat-picker__panel';
@@ -3551,7 +3551,7 @@ function seenAt(page, selector) {
   const calTitle = (page, root) => page.$eval(`${root} .mat-cal__title`, el => el.textContent.trim());
   const calActive = page => page.evaluate(() => document.activeElement.getAttribute('data-date') || document.activeElement.getAttribute('data-cal-month') || document.activeElement.getAttribute('data-cal-year') || document.activeElement.className);
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#calendar');
+    const { ctx, page } = await open(desktopOptions, '/Components/calendar');
     const calRoot = '#e2e-box .mat-calendar';
 
     await check('a calendar names itself after its label, shows one month from Monday with today marked, and posts nothing before a choice', async () => {
@@ -3788,7 +3788,7 @@ function seenAt(page, selector) {
     });
 
     await check('a required calendar writes its message at the field, takes the focus to a day and forgets the choice on reset', async () => {
-      await calPut(page, `<form class="mat-form" id="e2e-form" method="get" action="/Components#calendar" novalidate>${calField('e2e-c14', 'data-min="today"', 'Day', 'required data-msg-required="Please choose a day."').replace('</div></div>', '</div><span class="mat-error" aria-live="polite"></span></div>')}<button type="submit" class="mat-btn mat-btn--primary" id="e2e-send">Continue</button><button type="reset" class="mat-btn mat-btn--secondary" id="e2e-reset">Reset</button></form>`);
+      await calPut(page, `<form class="mat-form" id="e2e-form" method="get" action="/Components/calendar" novalidate>${calField('e2e-c14', 'data-min="today"', 'Day', 'required data-msg-required="Please choose a day."').replace('</div></div>', '</div><span class="mat-error" aria-live="polite"></span></div>')}<button type="submit" class="mat-btn mat-btn--primary" id="e2e-send">Continue</button><button type="reset" class="mat-btn mat-btn--secondary" id="e2e-reset">Reset</button></form>`);
       const calmBorder = await page.$eval(calRoot, el => getComputedStyle(el).borderTopColor);
       await page.click('#e2e-send');
       await page.waitForTimeout(150);
@@ -3847,7 +3847,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#calendar');
+    const { ctx, page } = await open(phoneOptions, '/Components/calendar');
     const calRoot = '#e2e-box .mat-calendar';
     await check('on a phone a calendar fits the screen, its days are 44 px high, two months are one above the other and a click works with a touch', async () => {
       await calPut(page, calField('e2e-p1', 'data-mode="range" data-months="2"') + calField('e2e-p2', 'data-agenda data-week-numbers'));
@@ -3877,7 +3877,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- appointment picker (FORM-18)
   console.log('\nAppointment picker');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#slot-picker');
+    const { ctx, page } = await open(desktopOptions, '/Components/slot-picker');
     // the availability of the checks: from tomorrow on, a free time in the morning and the afternoon, two taken ones, a day now and then fully booked or closed
     const slotData = (from, to) => {
       const data = {};
@@ -4224,7 +4224,7 @@ function seenAt(page, selector) {
 
     await check('a required appointment writes its message at the field and the focus goes to its button', async () => {
       await page.evaluate(() => document.getElementById('pk-slot-req-trigger').scrollIntoView({ block: 'center' }));
-      await page.click('form[action="/Components#slot-picker"] button[type=submit]');
+      await page.click('form[action="/Components/slot-picker"] button[type=submit]');
       await page.waitForTimeout(200);
       expect(await page.locator('#pk-slot-req').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is marked invalid');
       expect((await page.locator('#pk-slot-req').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose an appointment.', 'the message');
@@ -4245,7 +4245,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#slot-picker');
+    const { ctx, page } = await open(phoneOptions, '/Components/slot-picker');
     const days = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + n); return d; };
     const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     await check('on a phone the appointment picker is a full-screen sheet with an X, the month above the times, 44 px targets, and the page behind does not scroll', async () => {
@@ -4289,12 +4289,12 @@ function seenAt(page, selector) {
     // the language of the page: the texts and the names of the months come in German when the page says lang="de"
     const ctx = await browser.newContext({ ...desktopOptions, locale: 'de-DE' });
     const page = await ctx.newPage();
-    page.on('pageerror', e => consoleErrors.push('/Components (de): ' + e.message));
-    await page.route('**/Components', async route => {
+    page.on('pageerror', e => consoleErrors.push('/Components/calendar (de): ' + e.message));
+    await page.route('**/Components/calendar', async route => {
       const response = await route.fetch();
       await route.fulfill({ response, body: (await response.text()).replace('<html lang="en"', '<html lang="de"') });
     });
-    await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+    await page.goto(BASE + '/Components/calendar', { waitUntil: 'networkidle' });
     await check('in German the calendar and the appointment picker speak German: days, months, buttons, placeholder, Taken', async () => {
       await calPut(page, calField('e2e-de1', 'data-min="today" data-clearable data-week-numbers') + `<div class="mat-field"><label class="mat-label" for="e2e-de2">Termin</label><div class="mat-picker" data-picker="slot" data-min="today" data-group data-slots='${JSON.stringify({ [calIso(calPlus(1))]: { free: ['09:00', '14:00'], taken: ['09:15'] } })}'><input class="mat-picker__input" id="e2e-de2" name="de2" /></div></div>`);
       const root = '#e2e-box .mat-calendar';
@@ -4326,7 +4326,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- carousel (LIST-13)
   console.log('\nCarousel');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#carousel');
+    const { ctx, page } = await open(desktopOptions, '/Components/carousel');
     const tour = 'section[aria-label="A tour of the toolkit"]';
     const state = sel => page.$eval(sel, c => {
       const slides = [...c.querySelectorAll('.mat-carousel__slide')];
@@ -4448,7 +4448,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open({ ...desktopOptions, reducedMotion: 'reduce' }, '/Components#carousel');
+    const { ctx, page } = await open({ ...desktopOptions, reducedMotion: 'reduce' }, '/Components/carousel');
     await check('for a user who asked for less motion a show does not start by itself, and the button can start it', async () => {
       const news = 'section[aria-label="News"]';
       await page.evaluate(() => document.querySelector('section[aria-label="News"]').scrollIntoView({ block: 'center' }));
@@ -4458,7 +4458,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#carousel');
+    const { ctx, page } = await open(phoneOptions, '/Components/carousel');
     await check('on a phone one slide fills the strip, every card has a dot and the page does not scroll sideways', async () => {
       const apps = 'section[aria-label="Apps of the family"]';
       await page.evaluate(() => document.querySelector('section[aria-label="Apps of the family"]').scrollIntoView({ block: 'center' }));
@@ -4484,7 +4484,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- slider and range slider (FORM-17)
   console.log('\nSlider and range slider');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#slider');
+    const { ctx, page } = await open(desktopOptions, '/Components/slider');
     await page.evaluate(() => document.getElementById('slider').scrollIntoView());
     await page.evaluate(() => {
       window.__events = [];
@@ -4783,7 +4783,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#slider');
+    const { ctx, page } = await open(phoneOptions, '/Components/slider');
     await page.evaluate(() => document.getElementById('slider').scrollIntoView());
     await check('on a phone the thumb is a target of 44 px (a small slider 36 px), and nothing scrolls sideways, also with every thumb at an end (MOBILE-04)', async () => {
       const sizes = await page.evaluate(() => {
@@ -4919,7 +4919,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- the select: create what is missing, suggestions (FORM-16)
   console.log('\nSelect: create and suggestions');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#rich-select');
+    const { ctx, page } = await open(desktopOptions, '/Components/rich-select');
     const panelOf = id => `#${id}-trigger ~ .mat-picker__panel`;
     const search = id => `${panelOf(id)} input[type=search]`;
     const createRow = id => `${panelOf(id)} .mat-picker__create`;
@@ -5123,7 +5123,7 @@ function seenAt(page, selector) {
     });
     await check('in a form: required with the message at the field; the row has the wording of the field; a created option is a real one and takes the message away', async () => {
       await page.evaluate(() => document.getElementById('pk-corr-trigger').scrollIntoView({ block: 'center' }));
-      await page.click('form[action="/Components#pk-corr"] button[type=submit]');
+      await page.click('form:has(#pk-corr) button[type=submit]');
       await page.waitForTimeout(200);
       expect(await page.locator('#pk-corr').evaluate(el => el.closest('.mat-field').classList.contains('is-invalid')), true, 'the field is invalid');
       expect((await page.locator('#pk-corr').evaluate(el => el.closest('.mat-field').querySelector('.mat-error').textContent)).trim(), 'Please choose or create a correspondent.', 'the message');
@@ -5154,7 +5154,7 @@ function seenAt(page, selector) {
     });
     // the two refusals above are on purpose; the browser writes a request that failed into the console as an error
     for (let i = consoleErrors.length - 1; i >= 0; i--) {
-      if (consoleErrors[i].startsWith('/Components#rich-select: ') && /status of 422|ERR_FAILED/.test(consoleErrors[i])) { consoleErrors.splice(i, 1); }
+      if (consoleErrors[i].startsWith('/Components/rich-select: ') && /status of 422|ERR_FAILED/.test(consoleErrors[i])) { consoleErrors.splice(i, 1); }
     }
     await check('the texts are English or German by lang and each can be replaced: data-create-label, data-pk-<name> on the field or on html', async () => {
       await page.evaluate(() => { document.documentElement.lang = 'de'; MatUi.picker.suggest('#pk-corr', [{ value: 'contracts' }, { value: 'family' }]); });
@@ -5179,7 +5179,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#rich-select');
+    const { ctx, page } = await open(phoneOptions, '/Components/rich-select');
     await check('on a phone the panel with the Create row is a full-screen sheet; the keyboard does not pop up until the field is touched; the row can be pressed', async () => {
       await page.evaluate(() => document.getElementById('pk-create-trigger').scrollIntoView({ block: 'center' }));
       await page.click('#pk-create-trigger');
@@ -5200,7 +5200,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- coloured marks (COLOR-10)
   console.log('\nColoured marks');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#pills');
+    const { ctx, page } = await open(desktopOptions, '/Components/pills');
     const swatchOf = sel => page.$eval(sel, el => el.style.getPropertyValue('--mat-swatch').trim());
     const dotOf = sel => page.$eval(sel, el => { const s = getComputedStyle(el, '::before'); return { content: s.content, width: s.width, height: s.height, radius: s.borderTopLeftRadius, background: s.backgroundColor }; });
     await check('a tag with data-colour gets a dot of that colour before its text; the colour is written into --mat-swatch (any case, #rgb too) and the text stays muted', async () => {
@@ -5292,7 +5292,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#rich-select');
+    const { ctx, page } = await open(desktopOptions, '/Components/rich-select');
     await check('an option of a picker with data-colour has the dot in the list and in the closed field; addOption and the answer of the create endpoint take a colour', async () => {
       const dotIn = sel => page.$eval(sel, el => getComputedStyle(el, '::before').backgroundColor);
       await page.evaluate(() => document.getElementById('pk-create-trigger').scrollIntoView({ block: 'center' }));
@@ -5388,7 +5388,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- the header bar with icons, the footer
   console.log('\nHeader bar and footer');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components');
+    const { ctx, page } = await open(desktopOptions, '/Components/All');
     await check('the icons of the header bar are at its right end, after the breadcrumb, and each has a name and a tooltip (SHELL-17, ICON-03)', async () => {
       const bar = page.locator('#topbar .mat-topbar').first();
       await bar.scrollIntoViewIfNeeded();
@@ -5448,7 +5448,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components');
+    const { ctx, page } = await open(phoneOptions, '/Components/All');
     await check('on a phone the icons stay inside the bar, the breadcrumb gives way, nothing scrolls sideways (MOBILE-01)', async () => {
       const bar = page.locator('#topbar .mat-topbar').first();
       await bar.scrollIntoViewIfNeeded();
@@ -5511,7 +5511,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#toolbar');
+    const { ctx, page } = await open(desktopOptions, '/Components/toolbar');
     await check('the toolbar example with the field is live: Filter and Sort sit at the right end and open their dialogs', async () => {
       const field = page.locator('#tb2-q');
       await field.scrollIntoViewIfNeeded();
@@ -5540,7 +5540,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(desktopOptions, '/Components');
+    const { ctx, page } = await open(desktopOptions, '/Components/All');
     await check('from 1100 px the index is beside the content and there is no icon for it in the header bar', async () => {
       expectTrue(await page.locator('.mat-toc-aside').isVisible(), 'the index is not beside the content');
       expectTrue(!(await page.locator('.mat-topbar__index').isVisible()), 'the index icon is drawn next to the index');
@@ -5548,7 +5548,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open({ viewport: { width: 1000, height: 800 } }, '/Components');
+    const { ctx, page } = await open({ viewport: { width: 1000, height: 800 } }, '/Components/All');
     await check('below 1100 px the icon sits at the right end of the header bar, stays in reach when the page is scrolled and opens the index in a dialog', async () => {
       expectTrue(!(await page.locator('.mat-toc-aside').isVisible()), 'the index is beside the content');
       const icon = page.locator('.mat-topbar__index');
@@ -5573,7 +5573,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(desktopOptions, '/Components');
+    const { ctx, page } = await open(desktopOptions, '/Components/All');
     const clear = 'rgba(0, 0, 0, 0)';
     await check('the current item of the menu is a tint behind the whole item: no bar at one edge (COLOR-08)', async () => {
       const nav = await page.evaluate(() => {
@@ -5610,7 +5610,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- the code of the examples, the group in a page
   console.log('\nCode beside the examples, the group in a page');
   {
-    const { ctx, page } = await open({ viewport: { width: 1920, height: 1000 } }, '/Components#buttons');
+    const { ctx, page } = await open({ viewport: { width: 1920, height: 1000 } }, '/Components/All');
     await check('on a wide window the code is beside the example, coloured, and an example that needs the width has it below', async () => {
       const live = await page.locator('#ex-buttons-1').locator('xpath=ancestor::div[@role="group"][1]').locator('.doc-example__live').boundingBox();
       const code = await page.locator('#src-buttons-1').locator('xpath=..').boundingBox();
@@ -5649,7 +5649,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#buttons');
+    const { ctx, page } = await open(desktopOptions, '/Components/buttons');
     await check('on a laptop window the code is below the example and the choice is not offered', async () => {
       const live = await page.locator('#ex-buttons-1').locator('xpath=ancestor::div[@role="group"][1]').locator('.doc-example__live').boundingBox();
       const code = await page.locator('#src-buttons-1').boundingBox();
@@ -5659,7 +5659,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open({ viewport: { width: 1920, height: 1000 } }, '/Components#group-forms');
+    const { ctx, page } = await open({ viewport: { width: 1920, height: 1000 } }, '/Components/All#group-forms');
     const frameOf = async (group = 'group-forms') => (await page.locator('#context-' + group + ' iframe').elementHandle()).contentFrame();
     await check('the page of a group is not loaded until its panel is opened, then it is a real page with the shell', async () => {
       expect(await page.locator('#context-group-forms iframe').getAttribute('src'), null, 'the frame before it is opened');
@@ -5684,7 +5684,7 @@ function seenAt(page, selector) {
       await page.click('#context-group-forms [data-context-size="desktop"]');
     });
     await check('"Show in a page" at a component opens the panel of its group and outlines the component there', async () => {
-      await page.goto(BASE + '/Components#group-lists-and-data', { waitUntil: 'networkidle' });
+      await page.goto(BASE + '/Components/All#group-lists-and-data', { waitUntil: 'networkidle' });
       await page.waitForFunction(() => document.readyState === 'complete');
       await page.click('#toolbar [data-context-show]');
       await page.waitForFunction(() => { const f = document.querySelector('#context-group-lists-and-data iframe'); return f && f.getAttribute('data-loaded') === 'true'; });
@@ -5699,7 +5699,7 @@ function seenAt(page, selector) {
       await page.waitForTimeout(300);
       expect(await (await frameOf('group-lists-and-data')).evaluate(() => getComputedStyle(document.querySelector('.mat-gallery')).outlineStyle), 'solid', 'the outline of the gallery');
       expectTrue((await page.getAttribute('#context-group-lists-and-data [data-context-open-page]', 'href')).includes('view=gallery'), 'the link to the page is still the table');
-      await page.goto(BASE + '/Components#group-feedback', { waitUntil: 'networkidle' });
+      await page.goto(BASE + '/Components/All#group-feedback', { waitUntil: 'networkidle' });
       await page.waitForFunction(() => document.readyState === 'complete');
       await page.click('#dialogs [data-context-show]');
       await page.waitForFunction(() => { const f = document.querySelector('#context-group-feedback iframe'); return f && f.getAttribute('data-loaded') === 'true'; });
@@ -5709,7 +5709,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components');
+    const { ctx, page } = await open(phoneOptions, '/Components/All');
     await check('on a phone the code is below the example, the classes are left out, and the page of a group fits the screen', async () => {
       const live = await page.locator('#ex-buttons-1').locator('xpath=ancestor::div[@role="group"][1]').locator('.doc-example__live').boundingBox();
       const code = await page.locator('#src-buttons-1').boundingBox();
@@ -6094,7 +6094,7 @@ function seenAt(page, selector) {
         expectTrue((await page.textContent('.mat-toast')).includes(compName + ' was added.'), 'no toast');
       });
       await check('the component is on its page, live, in its group and in the index of the page', async () => {
-        await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+        await page.goto(BASE + '/Components/All', { waitUntil: 'networkidle' });
         await page.waitForFunction(() => document.readyState === 'complete');
         expect(await page.locator('#' + compId + ' .mat-pill--ok').count(), 1, 'the example drawn live on the page');
         expect(await page.locator('.mat-toc-aside a[href="#' + compId + '"]').count(), 1, 'the link in the index');
@@ -6102,13 +6102,25 @@ function seenAt(page, selector) {
         await page.click('.mat-toc-aside a[href="#' + compId + '"]');
         await page.waitForFunction((id) => document.querySelector('.mat-toc-aside a[href="#' + id + '"]').classList.contains('is-active'), compId);
       });
+      await check('the component is a tile of the overview and has a page of its own, live, with the rules it names and a Previous that leads to the component before it', async () => {
+        await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+        expect(await page.locator('[data-component="' + compId + '"] a').getAttribute('href'), '/Components/' + compId, 'the tile');
+        expectTrue((await page.locator('#group-content').evaluate((el, id) => !!el.querySelector('[data-component="' + id + '"]'), compId)), 'the tile is not in the group Content');
+        await page.goto(BASE + '/Components/' + compId, { waitUntil: 'networkidle' });
+        expect(await page.locator('h1').count(), 1, 'one h1');
+        expect(await page.locator('#' + compId + ' .mat-pill--ok').count(), 1, 'the example drawn live on its own page');
+        expectTrue(await page.locator('#toc-rules a.doc-rule-id').count() > 0, 'the rules it names');
+        expectTrue(await page.locator('[data-components-pager] a[rel="prev"]').count() > 0, 'a Previous');
+      });
       await check('deleting the component asks in a dialog and takes it off its page', async () => {
         await page.goto(BASE + '/Studio/Components/Edit?id=' + compId, { waitUntil: 'networkidle' });
         await page.click('.mat-btn--danger[data-confirm]');
         await page.click('dialog[open] button[value="ok"]');
         await page.waitForURL('**/Studio/Components');
-        const html = await (await page.request.get(BASE + '/Components')).text();
+        const html = await (await page.request.get(BASE + '/Components/All')).text();
         expectTrue(!html.includes('id="' + compId + '"'), 'the component is still on its page');
+        expect((await page.request.get(BASE + '/Components/' + compId)).status(), 404, 'its own page after the deletion');
+        expectTrue(!(await (await page.request.get(BASE + '/Components')).text()).includes('data-component="' + compId + '"'), 'its tile after the deletion');
       });
       // the history of an app: two revisions, what changed between them, and a restore that asks first
       const histLetters = Array.from({ length: 6 }, () => String.fromCharCode(97 + Math.floor(Math.random() * 26))).join('');
@@ -6264,7 +6276,7 @@ function seenAt(page, selector) {
 
   // ---------------------------------------------------------------------------------------------------- no page is wider than a phone
   console.log('\nPhone width');
-  for (const url of ['/Components', '/Layout', '/Utilities', '/Download', '/Shell']) {
+  for (const url of ['/Components', '/Components/All', '/Components/buttons', '/Components/switcher', '/Components/table', '/Components/toolbar', '/Components/schedule', '/Components/slot-picker', '/Components/tree', '/Components/itemlist-contents', '/Layout', '/Utilities', '/Download', '/Shell']) {
     const { ctx, page } = await open(phoneOptions, url);
     await check(`${url} does not scroll sideways on a phone (MOBILE-01)`, async () => {
       const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
@@ -6276,7 +6288,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- groups in a table (LIST-16)
   console.log('\nGroups in a table');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#table-groups');
+    const { ctx, page } = await open(desktopOptions, '/Components/table-groups');
     const table = '#grp-hosts';
     const group = n => `${table} tbody.mat-group >> nth=${n}`;
     const within = (n, sel) => `${group(n)} >> ${sel}`;
@@ -6327,7 +6339,7 @@ function seenAt(page, selector) {
     });
     await ctx.close();
 
-    const phone = await open(phoneOptions, '/Components#table-groups');
+    const phone = await open(phoneOptions, '/Components/table-groups');
     await phone.page.evaluate(() => document.getElementById('table-groups').scrollIntoView());
     await check('on a phone the rows of a group are cards, without the line, with their labels, and the add row is a card with its button', async () => {
       const s = await phone.page.$eval('#grp-hosts tbody.mat-group >> nth=0', g => {
@@ -6376,7 +6388,7 @@ function seenAt(page, selector) {
     const firstDifference = (a, b) => Object.keys(a).filter(k => a[k] !== b[k]).slice(0, 3).map(k => k + ': ' + a[k] + ' <> ' + b[k]);
 
     for (const [name, options] of [['desktop', desktopOptions], ['phone', phoneOptions]]) {
-      const { ctx, page } = await open(options, '/Components');
+      const { ctx, page } = await open(options, '/Components/All');
       await check(`component properties, ${name}: every property set to its documented default gives the computed styles of none set`, async () => {
         const props = await page.evaluate(async () => (await (await fetch('/api/properties')).json()));
         expectTrue(props.length >= 40 && props.length <= 75, 'the number of properties: ' + props.length);
@@ -6394,7 +6406,7 @@ function seenAt(page, selector) {
     }
 
     {
-      const { ctx, page } = await open(desktopOptions, '/Components');
+      const { ctx, page } = await open(desktopOptions, '/Components/All');
       const radii = (sel) => page.$$eval(sel, els => [...new Set(els.map(e => getComputedStyle(e).borderTopLeftRadius + '/' + getComputedStyle(e).borderBottomRightRadius))]);
       await check('--mat-btn-radius: 0 on :root squares every button, of every size and in a group, and no other control changes', async () => {
         const outsideGroups = '.mat-btn:not(.mat-input-group > .mat-btn)'; // a button in an input group takes the radius of the field next to it
@@ -6447,6 +6459,8 @@ function seenAt(page, selector) {
         expect([k.w, k.h, k.size, k.top, k.left], [64, 32, 24, 4, 4], 'the track, the knob and its distance from the edge');
         // switched on, it has moved by the width less the height, so the gap at the right is the gap at the left
         await page.$eval('#choices .mat-switch input:not(:disabled)', i => { i.checked = true; });
+        // the knob moves by a transition (the page has spinners that never stop, so the animations of the page are no sign): read it when it stays
+        for (let before = null, i = 0; i < 20; i++) { const now = (await knob()).travel; if (now === before) { break; } before = now; await page.waitForTimeout(150); }
         const on = await knob();
         expect(on.travel, 32, 'the way of the knob');
         expect(on.w - (on.left + on.travel + on.size), on.left, 'the gap at the right end equals the gap at the left');
@@ -6480,7 +6494,7 @@ function seenAt(page, selector) {
 
     // on a phone the default heights are the floor of 44 px, and a card keeps its smaller side space
     {
-      const { ctx, page } = await open(phoneOptions, '/Components');
+      const { ctx, page } = await open(phoneOptions, '/Components/All');
       await check('on a touch screen the default control heights are 44 px and a card has its side space of 20 px (nothing set)', async () => {
         const h = (sel) => page.$eval(sel, e => Math.round(e.getBoundingClientRect().height));
         expect(await h('#buttons .mat-btn:not(.mat-btn--sm):not(.mat-btn--lg):not(.mat-btn--icon)'), 44, 'button');
@@ -6690,7 +6704,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- rating (FORM-22)
   console.log('\nRating');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#rating');
+    const { ctx, page } = await open(desktopOptions, '/Components/rating');
     await page.evaluate(() => document.getElementById('rating').scrollIntoView());
     const group = id => `fieldset.mat-rating:has(#${id})`;
     // where the pointer goes to be on a place of the row: a fraction (0 to 1) of the width of the shapes, in the middle of their height
@@ -6905,7 +6919,7 @@ function seenAt(page, selector) {
     });
     await ctx.close();
 
-    const phone = await open(phoneOptions, '/Components#rating');
+    const phone = await open(phoneOptions, '/Components/rating');
     const pg = phone.page;
     await pg.evaluate(() => document.getElementById('rating').scrollIntoView());
     await check('on a phone: the targets are 44 px (36 px small), ten dots fit the screen, nothing scrolls sideways', async () => {
@@ -6989,7 +7003,7 @@ function seenAt(page, selector) {
       return r;
     };
 
-    const { ctx, page } = await fresh(desktopOptions, '/Components#tree');
+    const { ctx, page } = await fresh(desktopOptions, '/Components/tree');
 
     await check('the tree has the roles and the numbers of the ARIA tree pattern, with a name for every item', async () => {
       expect(await page.getAttribute(`#${FILES}`, 'role'), 'tree', 'the role of the tree');
@@ -7106,7 +7120,7 @@ function seenAt(page, selector) {
     });
 
     await ctx.close();
-    const second = await fresh(desktopOptions, '/Components#tree');
+    const second = await fresh(desktopOptions, '/Components/tree');
     const p2 = second.page;
 
     await check('a filter hides what does not match, keeps and opens the folders above a match, counts the items that are shown and says the matches', async () => {
@@ -7257,7 +7271,7 @@ function seenAt(page, selector) {
 
     await second.ctx.close();
 
-    const dark = await fresh({ ...desktopOptions, colorScheme: 'dark' }, '/Components#tree');
+    const dark = await fresh({ ...desktopOptions, colorScheme: 'dark' }, '/Components/tree');
     // the colours of the chosen row, of a row that is not, and of what is behind the tree, as the browser computes them
     const surfaces = page => page.$eval('#' + FILES, tree => {
       const backdrop = el => { for (let e = el; e; e = e.parentElement) { const c = getComputedStyle(e).backgroundColor; if (c !== 'rgba(0, 0, 0, 0)' && c !== 'transparent') { return c; } } return 'rgb(255, 255, 255)'; };
@@ -7280,7 +7294,7 @@ function seenAt(page, selector) {
     });
     await dark.ctx.close();
 
-    const phone = await fresh(phoneOptions, '/Components#tree');
+    const phone = await fresh(phoneOptions, '/Components/tree');
     const pp = phone.page;
     await check('on a phone a row is 44 px high, the chevron can be hit, a long label wraps and nothing scrolls sideways', async () => {
       await pp.evaluate(() => { window.__tr.item('tr-files', 'Notes.txt').querySelector('.mat-tree__label').textContent = 'A very long name for a note that goes on and on and on, notes-from-the-meeting-with-everybody-about-the-budget-of-next-year.txt'; });
@@ -7308,7 +7322,7 @@ function seenAt(page, selector) {
   // ---------------------------------------------------------------------------------------------------- file upload (FORM-21)
   console.log('\nFile upload');
   {
-    const { ctx, page } = await open(desktopOptions, '/Components#file-upload');
+    const { ctx, page } = await open(desktopOptions, '/Components/file-upload');
     const up = id => `.mat-upload:has(#${id})`;
     const names = id => page.$$eval(`${up(id)} .mat-upload__name`, els => els.map(e => e.textContent));
     const inputNames = id => page.$eval('#' + id, el => [...el.files].map(f => f.name));
@@ -7497,7 +7511,7 @@ function seenAt(page, selector) {
     await check('a required field says so at the field when the form is sent without a file, the focus lands on the zone, and the message goes when a file is chosen; a reset empties the list', async () => {
       await page.click(`${up('up-letter')} .mat-upload__remove`);
       expect(await inputNames('up-letter'), [], 'no file');
-      await page.click('form[action="/Components#file-upload"] button[type=submit]');
+      await page.click('form[action="/Components/file-upload"] button[type=submit]');
       await page.waitForTimeout(300);
       const s = await page.evaluate(() => ({
         error: document.querySelector('.mat-field:has(#up-letter) .mat-error').textContent, invalid: document.getElementById('up-letter').getAttribute('aria-invalid'),
@@ -7511,7 +7525,7 @@ function seenAt(page, selector) {
       expectTrue(s.line !== s.plain, 'the zone has the colour of an error: ' + s.line);
       await dropFiles('up-letter', [['letter.pdf', 'application/pdf', 100]]);
       expect(await page.$eval('.mat-field:has(#up-letter) .mat-error', el => el.textContent), '', 'the message is gone with a file');
-      await page.evaluate(() => document.querySelector('form[action="/Components#file-upload"]').reset());
+      await page.evaluate(() => document.querySelector('form[action="/Components/file-upload"]').reset());
       await page.waitForTimeout(50);
       expect(await names('up-letter'), [], 'a reset empties the list');
       expect(await inputNames('up-letter'), [], 'and the real input');
@@ -7705,7 +7719,7 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
-    const { ctx, page } = await open(phoneOptions, '/Components#file-upload');
+    const { ctx, page } = await open(phoneOptions, '/Components/file-upload');
     await check('on a phone the zone says Tap to choose, the targets are as large as a control, a long name wraps and nothing is wider than the screen', async () => {
       await page.evaluate(() => document.getElementById('up-docs').scrollIntoView({ block: 'center' }));
       expect(await page.textContent('#up-docs-title'), 'Tap to choose files', 'the text on a touch screen');
@@ -8757,7 +8771,7 @@ function seenAt(page, selector) {
   // with elementFromPoint, so padding on a label and an ::after count and the drawn mark does not). 44 px for everything, 36 px for the compact variants (--sm) that the rule allows.
   console.log('\nTouch targets (MOBILE-04)');
   {
-    const { ctx, page } = await open(phoneOptions, '/Components');
+    const { ctx, page } = await open(phoneOptions, '/Components/All');
     await page.evaluate(installTouchHit);
     // the first `limit` elements of the selector that are on show (a closed panel, a hidden tab, the crumbs a phone leaves out are not)
     const hits = (selector, limit) => page.evaluate(({ selector, limit }) => [...document.querySelectorAll(selector)].filter(e => {
@@ -8895,7 +8909,7 @@ function seenAt(page, selector) {
     await ctx.close();
 
     // a tablet (768 px, touch): the table keeps its header, so its sort links are there, and the picker panels are popups
-    const tablet = await open({ viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true }, '/Components');
+    const tablet = await open({ viewport: { width: 768, height: 1024 }, isMobile: true, hasTouch: true }, '/Components/All');
     await tablet.page.evaluate(installTouchHit);
     await check('on a tablet the sort links of a table, the options of a picker and the days of its calendar are 44 px', async () => {
       const list = await tablet.page.evaluate(() => [...document.querySelectorAll('.mat-table__sort')].filter(e => e.getBoundingClientRect().width > 0).slice(0, 3).map(el => { const h = window.__touchHit(el, 44); return h ? { w: Math.round(h.w), h: Math.round(h.h), covered: h.covered || '' } : null; }));
@@ -8932,7 +8946,7 @@ function seenAt(page, selector) {
     });
     await menu.ctx.close();
 
-    const desktop = await open(desktopOptions, '/Components');
+    const desktop = await open(desktopOptions, '/Components/All');
     await check('with a mouse nothing changes: the checks, the switches and the pager are the sizes of the compact tokens, the crumbs links are a line of text', async () => {
       const sizes = await desktop.page.evaluate(() => ({
         check: getComputedStyle(document.querySelector('.mat-check')).minHeight,
@@ -8945,6 +8959,493 @@ function seenAt(page, selector) {
       expect(sizes, { check: '32px', sw: '32px', pager: 32, chipX: 'none', swatch: 'none', rating: 0 }, 'the sizes with a mouse');
     });
     await desktop.ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- the pages of the components (LIST-18)
+  console.log('\nComponents: the overview, a page for each component, everything on one page');
+  const overviewIds = [];
+  const overviewNames = {};
+  const overviewExamples = {};
+  const overviewGroups = [];
+  const overviewGroupOf = {};
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components');
+    const tiles = await page.$$eval('[data-component]', list => list.map(t => ({
+      id: t.getAttribute('data-component'),
+      name: t.querySelector('.doc-tile__name').textContent.trim(),
+      group: t.closest('[data-components-group]').getAttribute('data-components-group'),
+      examples: +((t.querySelector('.doc-tile__facts').textContent.match(/(\d+) example/) || [])[1]),
+    })));
+    tiles.forEach(t => { overviewIds.push(t.id); overviewNames[t.id] = t.name; overviewExamples[t.id] = t.examples; overviewGroupOf[t.id] = t.group; if (!overviewGroups.includes(t.group)) { overviewGroups.push(t.group); } });
+    const visible = () => page.$$eval('[data-component]:not([hidden])', list => list.map(t => t.getAttribute('data-component')));
+    const info = () => page.textContent('.mat-toolbar__info').then(t => t.trim());
+    const serverVisible = async (query) => {
+      const html = await (await page.request.get(BASE + '/Components' + query)).text();
+      return [...html.matchAll(/<li class="doc-tile"[^>]*data-component="([^"]+)"[^>]*>/g)].filter(m => !/\shidden(\s|=|>)/.test(m[0])).map(m => m[1]);
+    };
+
+    await check('the overview shows a tile for each component under the heading of its group, nothing is drawn live and no control is started', async () => {
+      const badge = parseInt((await page.textContent('a.mat-nav__item[href="/Components"] .mat-nav__badge')).replace(/\D/g, ''), 10);
+      expect(overviewIds.length, badge, 'tiles and the count in the menu');
+      expect(await page.$$eval('.doc-group--tiles h2', hs => hs.map(h => h.textContent.trim())), ['Actions', 'Forms', 'Lists and data', 'Content', 'Navigation', 'Feedback'], 'the headings');
+      expect(overviewIds.length, new Set(overviewIds).size, 'every component once');
+      const heavy = await page.evaluate(() => ({ examples: document.querySelectorAll('.doc-example').length, pickers: document.querySelectorAll('.mat-picker, .mat-calendar, .mat-schedule, .mat-tree, .mat-carousel, .mat-slider').length, elements: document.querySelectorAll('*').length }));
+      expect(heavy.examples + heavy.pickers, 0, 'examples and controls on the overview');
+      expectTrue(heavy.elements < 3000, 'the overview has ' + heavy.elements + ' elements');
+    });
+    await check('a tile has an icon, the name, a summary of two lines at most and its facts; the whole tile is the link, also in a corner where no text is', async () => {
+      const first = await page.$eval('[data-component="buttons"]', t => {
+        const summary = t.querySelector('.doc-tile__summary');
+        const cs = getComputedStyle(summary);
+        return { icon: !!t.querySelector('svg.mat-icon use'), clamp: cs.webkitLineClamp, lines: Math.round(summary.getBoundingClientRect().height / parseFloat(cs.lineHeight)), facts: t.querySelector('.doc-tile__facts').textContent.replace(/\s+/g, ' ').trim() };
+      });
+      expect(first.icon, true, 'the icon');
+      expect(first.clamp, '2', 'the summary is cut after two lines');
+      expectTrue(first.lines <= 2, 'the summary takes ' + first.lines + ' lines');
+      expectTrue(/^3 examples 6 rules 5 properties$/.test(first.facts), 'the facts: ' + first.facts);
+      const box = await page.locator('[data-component="buttons"] a').boundingBox();
+      await Promise.all([page.waitForURL('**/Components/buttons'), page.mouse.click(box.x + box.width - 5, box.y + box.height - 5)]);
+      await page.goBack({ waitUntil: 'networkidle' });
+    });
+    await check('a tile is reached with the Tab key, shows its focus ring and Enter opens the page', async () => {
+      await page.focus('#cmp-q');
+      let ring = null;
+      for (let i = 0; i < 6 && !ring; i++) {
+        await page.keyboard.press('Tab');
+        ring = await page.evaluate(() => {
+          const a = document.activeElement;
+          if (!a.classList.contains('doc-tile__link')) { return null; }
+          const cs = getComputedStyle(a);
+          return { href: a.getAttribute('href'), visible: (cs.outlineStyle !== 'none' && parseFloat(cs.outlineWidth) > 0) || cs.boxShadow !== 'none' };
+        });
+      }
+      expectTrue(ring !== null, 'the Tab key did not reach a tile');
+      expect(ring.href, '/Components/' + overviewIds[0], 'the first tile');
+      expectTrue(ring.visible, 'the focus is not visible');
+      await Promise.all([page.waitForURL('**/Components/' + overviewIds[0]), page.keyboard.press('Enter')]);
+      await page.goBack({ waitUntil: 'networkidle' });
+    });
+    await check('the search filters the tiles while it is typed, ignores case and accents, and the count is in the live region of the toolbar', async () => {
+      expect(await page.getAttribute('.mat-toolbar__info', 'aria-live'), 'polite', 'the live region');
+      expect(await info(), overviewIds.length + ' components', 'the count before');
+      await page.fill('#cmp-q', 'SLIDER');
+      const shown = await visible();
+      expectTrue(shown.includes('slider') && !shown.includes('buttons'), 'the tiles for slider: ' + shown.join());
+      expect(await info(), shown.length + ' of ' + overviewIds.length + ' components', 'the count');
+      await page.fill('#cmp-q', 'PÏcker  forms');
+      const accents = await visible();
+      expectTrue(accents.includes('date-picker') && !accents.includes('buttons'), 'accents and case: ' + accents.join());
+      await page.fill('#cmp-q', 'form-15');
+      expectTrue((await visible()).includes('date-picker'), 'a rule id finds the components that follow it');
+      await page.fill('#cmp-q', '');
+      expect((await visible()).length, overviewIds.length, 'all tiles after the search is cleared');
+      expect(await info(), overviewIds.length + ' components', 'the count after');
+    });
+    await check('the script and the server filter by the same text: the same tiles for a dozen queries', async () => {
+      const queries = ['slider', 'SLIDER', 'form-15', 'picker forms', 'button group', 'dépôt', 'a', 'tab', 'Navigation', 'FEEDBACK toast', 'mat-', 'zzzz'];
+      for (const q of queries) {
+        await page.fill('#cmp-q', q);
+        const mine = await visible();
+        const theirs = await serverVisible('?q=' + encodeURIComponent(q));
+        expect(mine, theirs, 'the tiles for "' + q + '"');
+      }
+      await page.fill('#cmp-q', '');
+    });
+    await check('the search stays in the address while it is typed, so that a reload and a step back show it', async () => {
+      await page.fill('#cmp-q', 'tree');
+      await page.waitForFunction(() => location.search === '?q=tree');
+      await page.reload({ waitUntil: 'networkidle' });
+      expect(await page.inputValue('#cmp-q'), 'tree', 'the field after a reload');
+      expect((await visible()).includes('tree'), true, 'the tile of tree after a reload');
+      await page.fill('#cmp-q', '');
+      await page.waitForFunction(() => location.search === '');
+    });
+    await check('a search that finds nothing shows the empty state with the way out; a group without a match is hidden with its link in the index', async () => {
+      await page.fill('#cmp-q', 'slider');
+      expectTrue(!(await page.locator('#group-actions').isVisible()), 'the group Actions has no slider');
+      expectTrue(await page.locator('#group-forms').isVisible(), 'the group Forms has');
+      expect(await page.locator('.mat-toc-aside a[href="#group-actions"]').count(), 0, 'the link of a group that is gone');
+      expectTrue(await page.locator('.mat-toc-aside a[href="#group-forms"]').isVisible(), 'the link of Forms');
+      await page.fill('#cmp-q', 'zzzzzz');
+      await page.waitForFunction(() => location.search.includes('zzzzzz'));
+      expectTrue(await page.locator('[data-components-empty]').isVisible(), 'the empty state');
+      expect(await info(), '0 of ' + overviewIds.length + ' components', 'the count');
+      expect((await visible()).length, 0, 'tiles');
+      await Promise.all([page.waitForURL(u => !u.search), page.click('[data-components-empty] a')]);
+      expect((await visible()).length, overviewIds.length, 'tiles after the reset');
+    });
+    await check('the Filter dialog shows one group (the server draws it), says so on its button and as a chip, and a search keeps it', async () => {
+      await page.click('[data-dialog-open="cmp-filter"]');
+      await page.selectOption('#cmp-f-group', 'Forms');
+      await Promise.all([page.waitForURL(u => u.searchParams.get('group') === 'Forms'), page.click('#cmp-filter button[type="submit"]')]);
+      const forms = overviewIds.filter(id => overviewGroupOf[id] === 'Forms');
+      expect(await visible(), forms, 'the tiles of Forms');
+      expectTrue(await page.locator('.mat-toolbar__btn.is-active').count() === 1, 'the Filter button is marked');
+      expectTrue((await page.textContent('.mat-chips')).includes('Group: Forms'), 'the chip');
+      await page.fill('#cmp-q', 'slider');
+      const narrowed = await visible();
+      expectTrue(narrowed.includes('slider') && narrowed.every(id => forms.includes(id)), 'a search in the group: ' + narrowed.join());
+      expect(await info(), narrowed.length + ' of ' + overviewIds.length + ' components', 'the count');
+      await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+    });
+    await check('an old address with the id of a component, of its heading, of an example or of its code is the page of the component; a group stays where it is', async () => {
+      for (const [hash, id] of [['slot-picker', 'slot-picker'], ['ex-buttons-1', 'buttons'], ['props-buttons', 'buttons'], ['src-tree-1', 'tree'], ['h-toolbar', 'toolbar']]) {
+        await page.goto(BASE + '/Components#' + hash, { waitUntil: 'load' });
+        await page.waitForURL('**/Components/' + id);
+      }
+      await page.goto(BASE + '/Components#group-feedback', { waitUntil: 'networkidle' });
+      expectTrue(page.url().endsWith('/Components#group-feedback'), 'a group is left alone: ' + page.url());
+      const top = await page.$eval('#group-feedback', el => Math.round(el.getBoundingClientRect().top));
+      expectTrue(top >= 0 && top < 320, 'the group is at the top of the content: ' + top);
+      await page.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+      await page.evaluate(() => { location.hash = '#toolbar'; });
+      await page.waitForURL('**/Components/toolbar');
+    });
+    await ctx.close();
+  }
+  {
+    const tablet = await open({ viewport: { width: 700, height: 900 }, isMobile: true, hasTouch: true }, '/Components');
+    const phone = await open(phoneOptions, '/Components');
+    const wide = await open(desktopOptions, '/Components');
+    const columns = (page) => page.$$eval('[data-component]:not([hidden])', list => new Set(list.slice(0, 8).map(t => Math.round(t.getBoundingClientRect().left))).size);
+    await check('the tiles are three columns on a desktop, two on a wide phone and one on a phone; a tile is 44 px high or more and nothing scrolls sideways', async () => {
+      expect([await columns(wide.page), await columns(tablet.page), await columns(phone.page)], [3, 2, 1], 'the columns');
+      const heights = await phone.page.$$eval('[data-component]:not([hidden]) a', list => list.slice(0, 10).map(a => Math.round(a.getBoundingClientRect().height)));
+      expectTrue(heights.every(h => h >= 44), 'a tile is lower than 44 px: ' + heights.join());
+      const widths = await phone.page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth, main: document.querySelector('.mat-main').scrollWidth, mainClient: document.querySelector('.mat-main').clientWidth }));
+      expectTrue(widths.page <= widths.window && widths.main <= widths.mainClient, 'the overview scrolls sideways on a phone: ' + JSON.stringify(widths));
+    });
+    await check('on a phone the search is a field in the toolbar, the groups are in the icon of the header bar and a link of the dialog jumps to the group', async () => {
+      expectTrue(await phone.page.locator('#cmp-q').isVisible(), 'the field');
+      expect(await phone.page.getAttribute('.mat-topbar__index', 'aria-label'), 'Groups, choose one', 'the name of the icon');
+      expectTrue(!(await phone.page.locator('.mat-toc-aside').isVisible()), 'the index is not beside the content on a phone');
+      await phone.page.click('.mat-topbar__index');
+      await phone.page.waitForTimeout(350);
+      expectTrue(await phone.page.locator('#toc-dialog').evaluate(d => d.open), 'the dialog did not open');
+      await phone.page.click('#toc-dialog a[href="#group-feedback"]');
+      await phone.page.waitForTimeout(500);
+      expect(await phone.page.evaluate(() => document.getElementById('toc-dialog').open), false, 'the dialog after the jump');
+      const top = await phone.page.$eval('#group-feedback', el => Math.round(el.getBoundingClientRect().top));
+      expectTrue(top >= 0 && top < 260, 'the group is not at the top: ' + top);
+    });
+    await tablet.ctx.close();
+    await phone.ctx.close();
+    await wide.ctx.close();
+  }
+  for (const scheme of ['light', 'dark']) {
+    const { ctx, page } = await open({ ...desktopOptions, colorScheme: scheme }, '/Components');
+    await check(`${scheme}: the tiles are a surface with a line, the name and the summary are readable (4.5:1), and the tiles are flat (no shadow, no bar at one side)`, async () => {
+      const look = await page.$eval('[data-component="buttons"] a', a => {
+        const cs = getComputedStyle(a);
+        const name = getComputedStyle(a.querySelector('.doc-tile__name'));
+        const summary = getComputedStyle(a.querySelector('.doc-tile__summary'));
+        const page = getComputedStyle(document.querySelector('.mat-main'));
+        return { bg: cs.backgroundColor, page: page.backgroundColor, name: name.color, summary: summary.color, shadow: cs.boxShadow, border: cs.borderTopWidth, left: cs.borderLeftWidth, right: cs.borderRightWidth, radius: cs.borderTopLeftRadius };
+      });
+      expectTrue(look.bg !== look.page, 'the tile is not a surface of its own');
+      expectTrue(contrastOf(look.name, look.bg) >= 4.5, 'the name: ' + contrastOf(look.name, look.bg));
+      expectTrue(contrastOf(look.summary, look.bg) >= 4.5, 'the summary: ' + contrastOf(look.summary, look.bg));
+      expect(look.shadow, 'none', 'a shadow');
+      expect([look.border, look.left, look.right], ['1px', '1px', '1px'], 'a line all around, none thicker at a side');
+      expectTrue(parseFloat(look.radius) > 0 && parseFloat(look.radius) <= 16, 'the corner: ' + look.radius);
+    });
+    await ctx.close();
+  }
+  {
+    const nojs = await browser.newContext({ ...desktopOptions, javaScriptEnabled: false });
+    const page = await nojs.newPage();
+    await page.goto(BASE + '/Components?q=slider', { waitUntil: 'load' });
+    await check('without the script the overview is a page of links: the search works as a GET form and a tile opens its page', async () => {
+      const shown = await page.$$eval('[data-component]', list => list.filter(t => t.getBoundingClientRect().height > 0).map(t => t.getAttribute('data-component')));
+      expectTrue(shown.includes('slider') && !shown.includes('buttons'), 'the server hides what does not match: ' + shown.join());
+      await page.goto(BASE + '/Components', { waitUntil: 'load' });
+      await page.fill('#cmp-q', 'tooltip');
+      await Promise.all([page.waitForURL(u => u.searchParams.get('q') === 'tooltip'), page.press('#cmp-q', 'Enter')]);
+      const found = await page.$$eval('[data-component]', list => list.filter(t => t.getBoundingClientRect().height > 0).map(t => t.getAttribute('data-component')));
+      expectTrue(found.includes('tooltip') && found.length < 6 && !found.includes('buttons'), 'the tiles of the search: ' + found.join());
+      await Promise.all([page.waitForURL('**/Components/tooltip'), page.click('[data-component="tooltip"] a')]);
+    });
+    await nojs.close();
+  }
+
+  // the page of every component, found by walking from one to the next (the same walk the buttons make)
+  {
+    const first = overviewIds[0];
+    const { ctx, page } = await open(desktopOptions, '/Components/' + first);
+    const visited = [];
+    await check('every component has a page: one h1 with its name, a title of its own, its examples live, and Previous and Next walk through all of them once, in the order of the overview', async () => {
+      let id = first;
+      for (let i = 0; i < overviewIds.length + 2 && id; i++) {
+        if (visited.length) { await page.goto(BASE + '/Components/' + id, { waitUntil: 'load' }); }
+        visited.push(id);
+        const seen = await page.evaluate(() => ({
+          h1: [...document.querySelectorAll('h1')].map(h => h.textContent.trim()),
+          title: document.title,
+          examples: document.querySelectorAll('.doc-examples .doc-example').length,
+          prev: (document.querySelector('[data-components-pager] a[rel="prev"]') || {}).href || null,
+          next: (document.querySelector('[data-components-pager] a[rel="next"]') || {}).href || null,
+          position: (document.querySelector('.doc-pager__pos') || {}).textContent || '',
+          current: !!document.querySelector('a.mat-nav__item.is-active[href="/Components"][aria-current="page"]'),
+          crumbs: [...document.querySelectorAll('.mat-main > .mat-topbar .mat-crumbs li')].map(li => li.textContent.trim()),
+        }));
+        const at = overviewIds.indexOf(id);
+        expect(seen.h1, [overviewNames[id]], id + ': the h1');
+        expectTrue(seen.title.startsWith(overviewNames[id]), id + ': the title is "' + seen.title + '"');
+        expect(seen.examples, overviewExamples[id], id + ': the examples');
+        expect(seen.prev && new URL(seen.prev).pathname, at > 0 ? '/Components/' + overviewIds[at - 1] : null, id + ': Previous');
+        expect(seen.next && new URL(seen.next).pathname, at < overviewIds.length - 1 ? '/Components/' + overviewIds[at + 1] : null, id + ': Next');
+        expectTrue(seen.position.replace(/\s+/g, ' ').includes(`${at + 1} of ${overviewIds.length}`), id + ': the position "' + seen.position + '"');
+        expect(seen.current, true, id + ': the menu item Components is the current one');
+        expect(seen.crumbs.slice(-3), ['Components', overviewGroupOf[id], overviewNames[id]], id + ': the crumbs');
+        id = seen.next ? new URL(seen.next).pathname.split('/').pop() : null;
+      }
+      expect(visited, overviewIds, 'the walk from the first to the last');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components/fields');
+    const idOfNext = () => page.$eval('[data-components-pager] a[rel="next"]', a => new URL(a.href).pathname);
+    const idOfPrev = () => page.$eval('[data-components-pager] a[rel="prev"]', a => new URL(a.href).pathname);
+    await check('the arrow keys walk to the next and the previous component without adding to the history, and do nothing with a modifier', async () => {
+      const length = await page.evaluate(() => history.length);
+      const next = await idOfNext();
+      const previous = await idOfPrev();
+      await page.keyboard.press('Shift+ArrowRight');
+      await page.keyboard.press('Control+ArrowRight');
+      await page.waitForTimeout(400);
+      expect(new URL(page.url()).pathname, '/Components/fields', 'a modifier moves the page');
+      await Promise.all([page.waitForURL('**' + next), page.keyboard.press('ArrowRight')]);
+      expect(await page.evaluate(() => history.length), length, 'the history after the right arrow');
+      await Promise.all([page.waitForURL('**/Components/fields'), page.keyboard.press('ArrowLeft')]);
+      await Promise.all([page.waitForURL('**' + previous), page.keyboard.press('ArrowLeft')]);
+      expect(await page.evaluate(() => history.length), length, 'the history after the left arrows');
+      await page.goto(BASE + '/Components/' + overviewIds[0], { waitUntil: 'load' });
+      await page.keyboard.press('ArrowLeft');
+      await page.waitForTimeout(400);
+      expect(new URL(page.url()).pathname, '/Components/' + overviewIds[0], 'the first component has no previous');
+      await page.goto(BASE + '/Components/' + overviewIds.at(-1), { waitUntil: 'load' });
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(400);
+      expect(new URL(page.url()).pathname, '/Components/' + overviewIds.at(-1), 'the last component has no next');
+    });
+    await check('the arrow keys are left to a field, a picker, a control of an example, a code block and a dialog', async () => {
+      await page.goto(BASE + '/Components/fields', { waitUntil: 'load' });
+      await page.focus('#c-name');
+      await page.keyboard.press('ArrowRight');
+      await page.keyboard.press('ArrowLeft');
+      await page.waitForTimeout(400);
+      expect(new URL(page.url()).pathname, '/Components/fields', 'a text field');
+      expect(await page.evaluate(() => document.activeElement.id), 'c-name', 'the focus stays in the field');
+      await page.focus('#src-fields-1');
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(300);
+      expect(new URL(page.url()).pathname, '/Components/fields', 'a code block (it scrolls)');
+      await page.goto(BASE + '/Components/date-picker', { waitUntil: 'load' });
+      await page.click('.mat-picker .mat-picker__trigger >> nth=0');
+      await page.waitForSelector('.mat-picker__panel:not([hidden])');
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(300);
+      expect(new URL(page.url()).pathname, '/Components/date-picker', 'an open picker');
+      await page.goto(BASE + '/Components/tabs', { waitUntil: 'load' });
+      await page.focus('.doc-examples .mat-tab');
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(300);
+      expect(new URL(page.url()).pathname, '/Components/tabs', 'tabs of an example');
+    });
+    await check('with a dialog open the arrow keys do not walk (the index of the page below 1100 px)', async () => {
+      await page.setViewportSize({ width: 1000, height: 800 });
+      await page.goto(BASE + '/Components/fields', { waitUntil: 'load' });
+      await page.click('.mat-topbar__index');
+      await page.waitForTimeout(350);
+      expectTrue(await page.locator('#toc-dialog').evaluate(d => d.open), 'the dialog did not open');
+      await page.keyboard.press('ArrowRight');
+      await page.waitForTimeout(400);
+      expect(new URL(page.url()).pathname, '/Components/fields', 'the page behind the dialog');
+      await page.keyboard.press('Escape');
+      await page.setViewportSize({ width: 1360, height: 900 });
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components');
+    await check('"All components" is one step back to the overview: the place on the page is as it was left, also after walking with the keys', async () => {
+      await page.evaluate(() => { document.querySelector('[data-component="fields"]').scrollIntoView({ block: 'center' }); });
+      await page.waitForTimeout(400);
+      const left = await page.evaluate(() => Math.round(document.querySelector('.mat-main').scrollTop));
+      expectTrue(left > 300, 'the overview did not scroll: ' + left);
+      await page.click('[data-component="fields"] a');
+      await page.waitForURL('**/Components/fields');
+      const length = await page.evaluate(() => history.length);
+      for (let i = 0; i < 2; i++) {
+        const here = new URL(page.url()).pathname;
+        await page.keyboard.press('ArrowRight');
+        await page.waitForURL(u => u.pathname !== here);
+      }
+      expect(await page.evaluate(() => history.length), length, 'walking adds no entry');
+      await Promise.all([page.waitForURL(u => u.pathname === '/Components'), page.click('.doc-pager--end [data-components-back]')]);
+      await page.waitForFunction(() => document.readyState === 'complete');
+      await page.waitForTimeout(500);
+      const back = await page.evaluate(() => Math.round(document.querySelector('.mat-main').scrollTop));
+      expectTrue(Math.abs(back - left) <= 4, 'the place on the overview: left at ' + left + ', shown at ' + back);
+      expect(await page.evaluate(() => history.length), length, 'a step back is no new entry');
+    });
+    await check('"All components" brings the search back with the tiles it showed', async () => {
+      await page.fill('#cmp-q', 'picker');
+      await page.waitForFunction(() => location.search === '?q=picker');
+      const shown = await page.$$eval('[data-component]:not([hidden])', list => list.map(t => t.getAttribute('data-component')));
+      await page.click('[data-component]:not([hidden]) a >> nth=0');
+      await page.waitForURL('**/Components/**');
+      await Promise.all([page.waitForURL('**/Components?q=picker'), page.click('.mat-toc-aside [data-components-back]')]);
+      expect(await page.inputValue('#cmp-q'), 'picker', 'the search');
+      expect(await page.$$eval('[data-component]:not([hidden])', list => list.map(t => t.getAttribute('data-component'))), shown, 'the tiles');
+    });
+    await check('a page that was opened directly has no overview behind it: "All components" is an ordinary link', async () => {
+      const direct = await open(desktopOptions, '/Components/fields');
+      await direct.page.click('.doc-pager--end [data-components-back]');
+      await direct.page.waitForURL(u => u.pathname === '/Components');
+      expect(await direct.page.inputValue('#cmp-q'), '', 'the overview is the whole list');
+      expect(await direct.page.evaluate(() => history.length), 3, 'a new entry: the link was followed');
+      await direct.ctx.close();
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components/slot-picker');
+    await check('the page of a component starts only its own controls: the pickers of the appointment examples, no tree, schedule, carousel or slider of another component', async () => {
+      const counts = await page.evaluate(() => ({ picker: document.querySelectorAll('.mat-picker').length, others: document.querySelectorAll('.mat-tree, .mat-schedule, .mat-carousel, .mat-slider, .mat-rating, .mat-upload').length, examples: document.querySelectorAll('.doc-example').length }));
+      expectTrue(counts.picker > 0 && counts.others === 0, JSON.stringify(counts));
+    });
+    await check('the examples work on their page: the slot picker opens, offers a month and a time', async () => {
+      await page.click('.mat-picker[data-picker="slot"] .mat-picker__trigger >> nth=0');
+      await page.waitForSelector('.mat-picker__panel:not([hidden])');
+      expectTrue(await page.locator('.mat-picker__panel:not([hidden]) .mat-cal__day').count() > 20, 'no days in the panel');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components/buttons');
+    await check('the page of a component has its index (the sections, and the components of its group with the current one marked) and "Show in a page" opens the group in a page of the sample app', async () => {
+      const sections = await page.$$eval('.mat-toc-aside nav[data-scrollspy] a', as => as.map(a => a.getAttribute('href')));
+      expect(sections, ['#toc-examples', '#toc-how', '#toc-properties', '#toc-rules', '#toc-page'], 'the sections');
+      const group = await page.$$eval('.mat-toc-aside .doc-toc-group a.mat-toc__link:not(.doc-toc-all)', as => as.map(a => [a.getAttribute('href'), a.getAttribute('aria-current')]));
+      expect(group.map(g => g[0]), overviewIds.filter(id => id === 'buttons' || ['button-group', 'dropdown', 'button-row'].includes(id)).map(id => '/Components/' + id), 'the components of Actions');
+      expect(group.filter(g => g[1] === 'page').map(g => g[0]), ['/Components/buttons'], 'the current one');
+      await page.click('.doc-head [data-context-show]');
+      await page.waitForFunction(() => { const f = document.querySelector('#context-group-actions iframe'); return f && f.getAttribute('data-loaded') === 'true'; });
+      expectTrue(await page.evaluate(() => document.getElementById('context-group-actions').open), 'the panel is not open');
+      expect(await page.getAttribute('#context-group-actions [data-context-component="buttons"]', 'aria-pressed'), 'true', 'the mark of the buttons');
+    });
+    await check('a rule it follows is a link with its title and level, and its Do and Do not stand beside the statement; the properties are in a table', async () => {
+      const rule = await page.$eval('#toc-rules .doc-rulecard', c => ({ id: c.querySelector('.doc-rule-id').textContent.trim(), link: c.querySelector('.doc-rule-id').getAttribute('href'), title: c.querySelector('.doc-rulecard__title').textContent.trim(), level: c.querySelector('.mat-pill').textContent.trim() }));
+      expect(rule.id, 'BUTTON-01', 'the first rule');
+      expect(rule.link, '/Rules/Detail?id=BUTTON-01', 'its address');
+      expect(['Must', 'Should', 'May'].includes(rule.level), true, 'the level ' + rule.level);
+      expectTrue(rule.title.length > 3, 'the title');
+      expectTrue((await page.locator('#toc-how table.doc-props tbody tr').count()) >= 4, 'the properties of the buttons');
+      await page.goto(BASE + '/Components/tree', { waitUntil: 'load' });
+      expectTrue(await page.locator('#toc-rules .doc-dodont .doc-do').count() > 0 && await page.locator('#toc-rules .doc-dodont .doc-dont').count() > 0, 'Do and Do not of LIST-17');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components/buttons');
+    await check('on a phone the page of a component fits the screen: the head wraps, the pager has two buttons of half the width, the code scrolls inside its block', async () => {
+      const m = await page.evaluate(() => {
+        const rect = el => { const r = el.getBoundingClientRect(); return { x: Math.round(r.x), w: Math.round(r.width), h: Math.round(r.height), y: Math.round(r.y) }; };
+        const next = document.querySelector('[data-components-pager] a[rel="next"]');
+        return { scroll: [document.documentElement.scrollWidth, innerWidth, document.querySelector('.mat-main').scrollWidth, document.querySelector('.mat-main').clientWidth], next: rect(next), pos: rect(document.querySelector('.doc-pager__pos')), title: rect(document.querySelector('.mat-page__title')), show: rect(document.querySelector('.doc-show')) };
+      });
+      expectTrue(m.scroll[0] <= m.scroll[1] && m.scroll[2] <= m.scroll[3], 'sideways scrolling: ' + JSON.stringify(m.scroll));
+      expectTrue(m.next.h >= 44 && m.next.x + m.next.w <= 390, 'the Next button: ' + JSON.stringify(m.next));
+      expectTrue(m.pos.y < m.next.y, 'the position is above the buttons');
+      expectTrue(m.show.y >= m.title.y + m.title.h - 2, 'the button "Show in a page" wraps under the title: ' + JSON.stringify([m.show, m.title]));
+    });
+    await check('on a phone the index of the page is in the icon of the header bar: the sections and the components of the group', async () => {
+      expect(await page.getAttribute('.mat-topbar__index', 'aria-label'), 'On this page, jump to a section', 'the name of the icon');
+      await page.click('.mat-topbar__index');
+      await page.waitForTimeout(350);
+      expect(await page.$$eval('#toc-dialog nav[data-scrollspy] a', as => as.map(a => a.getAttribute('href'))), ['#toc-examples', '#toc-how', '#toc-properties', '#toc-rules', '#toc-page'], 'the sections');
+      expectTrue(await page.locator('#toc-dialog .doc-toc-heading').isVisible(), 'the heading of the group list is hidden in the dialog');
+      await Promise.all([page.waitForURL('**/Components/button-group'), page.click('#toc-dialog a[href="/Components/button-group"]')]);
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open({ ...desktopOptions, colorScheme: 'dark' }, '/Components/buttons');
+    await check('dark: the rules, the classes and the pager of a page are readable and flat', async () => {
+      const look = await page.evaluate(() => {
+        const rgb = el => getComputedStyle(el).color;
+        const card = document.querySelector('.doc-rulecard');
+        const bg = getComputedStyle(card).backgroundColor;
+        return { bg, text: rgb(card.querySelector('.doc-rulecard__text')), title: rgb(card.querySelector('.doc-rulecard__title')), shadow: getComputedStyle(card).boxShadow, api: rgb(document.querySelector('.doc-api--full code')), pager: getComputedStyle(document.querySelector('.doc-pager__btn')).backgroundColor, pagerText: rgb(document.querySelector('.doc-pager__btn')) };
+      });
+      expectTrue(contrastOf(look.text, look.bg) >= 4.5, 'the statement: ' + contrastOf(look.text, look.bg));
+      expectTrue(contrastOf(look.title, look.bg) >= 4.5, 'the title: ' + contrastOf(look.title, look.bg));
+      expect(look.shadow, 'none', 'a shadow at a card of a rule');
+      expectTrue(contrastOf(look.pagerText, look.pager) >= 4.5, 'the pager: ' + contrastOf(look.pagerText, look.pager));
+    });
+    await ctx.close();
+  }
+  {
+    const missing = await browser.newContext(desktopOptions);
+    const p = await missing.newPage();
+    const answer = await p.goto(BASE + '/Components/nothing-like-it', { waitUntil: 'load' });
+    await check('an id that is no component is a 404 of the site with a way back to the overview; other cases and the layout pages are sent on', async () => {
+      expect(answer.status(), 404, 'the status');
+      expect(await p.locator('h1').count(), 1, 'one h1');
+      expectTrue((await p.textContent('main')).includes('This component does not exist'), 'the words');
+      expectTrue(await p.locator('main a.mat-btn[href="/Components"]').isVisible(), 'the way back');
+      const upper = await p.goto(BASE + '/Components/Buttons', { waitUntil: 'load' });
+      expect(new URL(p.url()).pathname, '/Components/buttons', 'one address for a component');
+      expect(upper.status(), 200, 'after the redirect');
+      await p.goto(BASE + '/Components/breakpoints', { waitUntil: 'load' });
+      expect(new URL(p.url()).pathname + new URL(p.url()).hash, '/Layout#breakpoints', 'a component of the layout page');
+      await p.goto(BASE + '/Components/All', { waitUntil: 'load' });
+      expect(new URL(p.url()).pathname, '/Components/All', 'All is the page of everything');
+    });
+    await missing.close();
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components/All');
+    await check('the page of everything has every component and the index beside the content, and draws everything: no content-visibility (it was tried, docs/ARCHITECTURE.md)', async () => {
+      const m = await page.evaluate(() => ({ sections: document.querySelectorAll('section.doc-component').length, h1: document.querySelectorAll('h1').length, code: getComputedStyle(document.querySelector('.doc-code .mat-code')).contentVisibility, section: getComputedStyle(document.querySelector('section.doc-component')).contentVisibility, aside: !!document.querySelector('.mat-toc-aside nav[data-scrollspy]'), link: !!document.querySelector('a[href="/Components"]') }));
+      expect(m.sections, overviewIds.length, 'sections');
+      expect([m.h1, m.code, m.section, m.aside], [1, 'visible', 'visible', true], 'one h1, content-visibility of a code block and of a section, the index');
+    });
+    await check('the fixed panel of a picker opens in place even far down the page', async () => {
+      await page.evaluate(() => document.getElementById('time-picker').scrollIntoView());
+      await page.waitForTimeout(300);
+      await page.click('#time-picker .mat-picker__trigger >> nth=0');
+      await page.waitForSelector('#time-picker .mat-picker__panel:not([hidden])');
+      const where = await page.evaluate(() => {
+        const open = document.querySelector('#time-picker .mat-picker__panel:not([hidden])');
+        const trigger = open.parentElement.querySelector('.mat-picker__trigger');
+        const p = open.getBoundingClientRect(), t = trigger.getBoundingClientRect();
+        return { cv: getComputedStyle(document.getElementById('time-picker')).contentVisibility, gap: Math.round(Math.min(Math.abs(p.top - t.bottom), Math.abs(t.top - p.bottom))), inside: p.top >= 0 && p.bottom <= innerHeight + 1 };
+      });
+      expect(where.cv, 'visible', 'the section of the picker');
+      expectTrue(where.gap < 40 && where.inside, 'the panel is not at its picker: ' + JSON.stringify(where));
+    });
+    await ctx.close();
+  }
+  {
+    // not a check of speed (the machines differ), a report of what the pages cost in this browser
+    await check('report: what the pages of the components cost here (DOMContentLoaded, long tasks of the main thread, elements)', async () => {
+      for (const url of ['/Components', '/Components/buttons', '/Components/itemlist-contents', '/Components/All']) {
+        const c = await browser.newContext(desktopOptions);
+        const p = await c.newPage();
+        await p.addInitScript(() => { window.__long = []; try { new PerformanceObserver(l => l.getEntries().forEach(e => window.__long.push(e.duration))).observe({ type: 'longtask', buffered: true }); } catch (e) { /* no long task API */ } });
+        let bytes = 0;
+        p.on('response', async r => { if (r.request().resourceType() === 'document') { try { bytes = (await r.body()).length; } catch (e) { /* a redirect */ } } });
+        await p.goto(BASE + url, { waitUntil: 'networkidle' });
+        await p.waitForTimeout(800);
+        const m = await p.evaluate(() => ({ dcl: Math.round(performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd), elements: document.querySelectorAll('*').length, tasks: window.__long.length, total: Math.round(window.__long.reduce((s, d) => s + d, 0)) }));
+        console.log(`        ${url.padEnd(34)} ${String(Math.round(bytes / 1024)).padStart(5)} KB  ${String(m.elements).padStart(6)} elements  DOMContentLoaded ${String(m.dcl).padStart(4)} ms  long tasks: ${m.tasks} (${m.total} ms)`);
+        expectTrue(bytes > 0 && m.elements > 0, url + ' was not measured');
+        await c.close();
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------------------------------- the end

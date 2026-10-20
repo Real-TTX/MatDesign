@@ -21,7 +21,7 @@ const ALLOW = {
 };
 
 // The pages of the site without an administrator, and the views of the sample app.
-const PAGES = ['/', '/Rules', '/Identity', '/Foundations', '/Shell', '/Components', '/Layout', '/Utilities', '/Patterns', '/Builder', '/Download',
+const PAGES = ['/', '/Rules', '/Identity', '/Foundations', '/Shell', '/Components', '/Components/All', '/Components/buttons', '/Components/tree', '/Layout', '/Utilities', '/Patterns', '/Builder', '/Download',
   '/Preview?app=matmail&view=list', '/Preview?app=matmail&view=gallery', '/Preview?app=matmail&view=form', '/Preview?app=matmail&view=dashboard',
   '/Preview?app=matmail&view=settings', '/Preview?app=matmail&view=auth'];
 

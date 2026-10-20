@@ -80,7 +80,7 @@ internal static class PickerComponents
                     </div>
                     """, "The list stays open while you choose; more than two choices show their count (see Dropdown with checkboxes for plain entries and a row that ticks them all). The search finds words in the title, the description and the tags. Done closes the panel (the check boxes are drawn, so the option stays one button)."),
                 new("In a form: required, with the message at the field", $"""
-                    <form class="mat-form" method="get" action="/Components#rich-select" novalidate>
+                    <form class="mat-form" method="get" action="/Components/rich-select" novalidate>
                       <div class="mat-field">
                         <label class="mat-label" for="pk-req">Server <span class="mat-req" aria-hidden="true">*</span></label>
                         <div class="mat-picker" data-picker="select" data-placeholder="Choose a server">
@@ -141,7 +141,7 @@ internal static class PickerComponents
                     </div>
                     """),
                 new("Both, in a form: required, with the message at the field", $"""
-                    <form class="mat-form" method="get" action="/Components#pk-corr" novalidate>
+                    <form class="mat-form" method="get" action="/Components/rich-select" novalidate>
                       <div class="mat-field">
                         <label class="mat-label" for="pk-corr">Correspondent <span class="mat-req" aria-hidden="true">*</span></label>
                         <div class="mat-picker" data-picker="select" data-create-url="/api/demo/create" data-create-label="Create correspondent &quot;{"{0}"}&quot;" data-suggest-url="/api/demo/suggest?set=tags" data-placeholder="Choose a correspondent">
@@ -210,7 +210,7 @@ internal static class PickerComponents
                     </div>
                     """, "A `disabled` entry is skipped by the arrow keys and by Select all; if it is ticked in the value it stays ticked. Space ticks and unticks the entry that has the focus, the arrow keys move, Home and End go to the first and the last row."),
                 new("In a form: required, with the message at the field", $"""
-                    <form class="mat-form" method="get" action="/Components#checkbox-select" novalidate>
+                    <form class="mat-form" method="get" action="/Components/checkbox-select" novalidate>
                       <div class="mat-field">
                         <label class="mat-label" for="cbs-req">Days <span class="mat-req" aria-hidden="true">*</span></label>
                         <div class="mat-picker" data-picker="select" data-multiple data-select-all data-placeholder="Choose days">
@@ -264,7 +264,7 @@ internal static class PickerComponents
                     </div>
                     """, "The options of the list are the suggestions (the same markup as the options of a select). A suggestion that is already a tag is not offered again, and a typed text that matches a suggestion takes its spelling."),
                 new("Only from the list, required", $"""
-                    <form class="mat-form" method="get" action="/Components#tag-input" novalidate>
+                    <form class="mat-form" method="get" action="/Components/tag-input" novalidate>
                       <div class="mat-field">
                         <label class="mat-label" for="pk-topics">Topics <span class="mat-req" aria-hidden="true">*</span></label>
                         <div class="mat-picker" data-picker="tags" data-strict data-placeholder="Choose topics">
@@ -446,7 +446,7 @@ internal static class PickerComponents
                     </div>
                     """, "A click adds a day or takes it away again; the line under the month counts them and says when the limit is reached."),
                 new("In a form: required", $"""
-                    <form class="mat-form" method="get" action="/Components#calendar" novalidate>
+                    <form class="mat-form" method="get" action="/Components/calendar" novalidate>
                       <div class="mat-field">
                         <label class="mat-label" for="cal-req">Day <span class="mat-req" aria-hidden="true">*</span></label>
                         <div class="mat-calendar" data-calendar data-min="today">
@@ -495,7 +495,7 @@ internal static class PickerComponents
                     </div>
                     """, "With `data-unavailable=\"hide\"` a day that has no free time is not drawn at all, and a taken time is not listed; with `mark` (the default) they are dimmed, struck through and say \"Taken\"."),
                 new("In a form: required", $"""
-                    <form class="mat-form" method="get" action="/Components#slot-picker" novalidate>
+                    <form class="mat-form" method="get" action="/Components/slot-picker" novalidate>
                       <div class="mat-field">
                         <label class="mat-label" for="pk-slot-req">Appointment <span class="mat-req" aria-hidden="true">*</span></label>
                         <div class="mat-picker" data-picker="slot" data-min="tomorrow" data-placeholder="Choose an appointment">

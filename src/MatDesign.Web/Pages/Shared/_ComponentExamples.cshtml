@@ -1,0 +1,59 @@
+@model (MatDesign.Web.Services.ComponentDoc Component, int Heading)
+@*
+    The examples of one component, each live with its code beside it (below on a narrow window, and for examples that need the width). The code is always shown,
+    highlighted, with a Copy button. One partial for the page of everything (_Component, the titles of the examples are h4 under the h3 of the component) and for
+    the page of a component (the titles are h3 under the h2 "Examples"): the same markup, so a test and a browser check read both the same way.
+    The ids of the elements are prefixed with the id of the component: the page of everything has all of them on one page.
+*@
+@{
+    var c = Model.Component;
+    var n = 0;
+}
+@foreach (var ex in c.Examples)
+{
+    n++;
+    var sourceId = $"src-{c.Id}-{n}";
+    var live = ex.Live && ex.Html.Length > 0;
+    var script = ex.Js is not null;
+    var alone = !live && ex.Demo is null;
+    <div class="doc-example" role="group" aria-labelledby="ex-@c.Id-@n">
+        <div class="doc-example__head">
+            @if (Model.Heading == 3)
+            {
+                <h3 id="ex-@c.Id-@n">@ex.Title</h3>
+            }
+            else
+            {
+                <h4 id="ex-@c.Id-@n">@ex.Title</h4>
+            }
+            @if (ex.Note is not null) { <p>@Ui.Rich(ex.Note)</p> }
+        </div>
+
+        <div class="doc-example__body@(ex.Wide ? " doc-example__body--stack" : string.Empty)@(alone ? " doc-example__body--alone" : string.Empty)">
+            @if (live)
+            {
+                <div class="doc-example__live@(ex.Frame is null ? string.Empty : " doc-example__live--" + ex.Frame)">@Html.Raw(ex.Html)</div>
+            }
+            else if (ex.Demo is not null)
+            {
+                <div class="doc-example__live">
+                    <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-doc-demo="@ex.Demo">@Ui.Icon("play")<span>Try it</span></button></div>
+                </div>
+            }
+
+            <div class="doc-code">
+                <div class="doc-code__bar">
+                    <span class="doc-code__lang">@(script ? "Script" : "HTML")</span>
+                    <span class="mat-row">
+                        @if (script && ex.Demo is not null && live)
+                        {
+                            <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-doc-demo="@ex.Demo">@Ui.Icon("play")<span>Try it</span></button>
+                        }
+                        <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-copy="#@sourceId">@Ui.Icon("copy")<span>Copy</span></button>
+                    </span>
+                </div>
+                <pre class="mat-code" id="@sourceId" tabindex="0"><code>@Html.Raw(MatDesign.Web.Studio.CodeHighlighter.Of(ex.Js ?? ex.Html, script))</code></pre>
+            </div>
+        </div>
+    </div>
+}

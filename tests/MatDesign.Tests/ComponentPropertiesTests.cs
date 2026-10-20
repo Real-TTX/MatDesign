@@ -236,7 +236,7 @@ public sealed partial class ComponentPropertiesTests(WebApplicationFactory<Progr
     [Fact]
     public async Task The_component_page_lists_the_properties_of_a_component_that_has_some_and_only_then()
     {
-        var page = await _client.GetStringAsync("/Components");
+        var page = await _client.GetStringAsync("/Components/All");
 
         // the table is inside the section of the buttons and names the properties
         var buttons = Regex.Match(page, "<section class=\"doc-component mat-anchor\" id=\"buttons\".*?</section>", RegexOptions.Singleline).Value;

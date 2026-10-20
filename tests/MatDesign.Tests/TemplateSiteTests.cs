@@ -296,6 +296,8 @@ public sealed partial class TemplateSiteTests : IClassFixture<WebApplicationFact
         yield return "/Foundations/Tokens?group=Schemes";
         yield return "/Shell";
         yield return "/Components";
+        yield return "/Components/All";
+        yield return "/Components/buttons";
         yield return "/Layout";
         yield return "/Utilities";
         yield return "/Patterns";

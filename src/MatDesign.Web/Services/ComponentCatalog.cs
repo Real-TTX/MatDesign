@@ -81,6 +81,21 @@ public static class ComponentCatalog
     /// <summary>The section a component belongs to.</summary>
     public static CatalogSection SectionOf(ComponentDoc doc) => Sections.First(s => s.Groups.Contains(doc.Group));
 
+    /// <summary>The overview of the components (a tile each, LIST-18), and the page of everything at once (printing, the browser checks): neither is a page of a component.</summary>
+    public const string OverviewPath = "/Components";
+
+    public const string AllPath = "/Components/All";
+
+    /// <summary>
+    /// The address a component is found at: the page of its own for the components (<c>/Components/buttons</c>), the anchor on the page of its section for the layout and the
+    /// utilities, which stay one page each. Every link to a component, in the pages and in the Studio, is made with this.
+    /// </summary>
+    public static string PageOf(ComponentDoc doc) => PageOf(doc.Group, doc.Id);
+
+    /// <summary>The same for a group and an id that may not be saved yet (the edit page of the Studio): a group that is not one of the layout or the utilities leads to a page of its own.</summary>
+    public static string PageOf(string? group, string id)
+        => Sections.FirstOrDefault(s => group is not null && s.Groups.Contains(group)) is { Id: not "components" } section ? $"{section.Path}#{id}" : $"{OverviewPath}/{id}";
+
     /// <summary>The anchor of a group on the components page.</summary>
     public static string GroupAnchor(string group) => "group-" + System.Text.RegularExpressions.Regex.Replace(group.ToLowerInvariant(), "[^a-z0-9]+", "-").Trim('-');
 
@@ -243,7 +258,7 @@ public static class ComponentCatalog
             ["FORM-01", "FORM-04", "FORM-07", "FORM-10", "LIST-01"],
             [
                 new("An edit form", $"""
-                    <form class="mat-form" method="get" action="/Components#form-layout" novalidate>
+                    <form class="mat-form" method="get" action="/Components/form-layout" novalidate>
                       <div class="mat-card">
                         <div class="mat-card__head">{I("edit")}<span class="mat-card__title">Item</span></div>
                         <div class="mat-card__body">
@@ -304,7 +319,7 @@ public static class ComponentCatalog
                         <span class="mat-chip">Category: Finance<a class="mat-chip__x" href="#" aria-label="Remove the filter Category">{I("x")}</a></span>
                       </div>
 
-                      <form id="tb-form" method="get" action="/Components#toolbar" hidden></form>
+                      <form id="tb-form" method="get" action="/Components/toolbar" hidden></form>
 
                       <dialog class="mat-dialog mat-dialog--sm" id="tb-search" aria-labelledby="tb-search-title">
                         <div class="mat-dialog__form">
@@ -349,7 +364,7 @@ public static class ComponentCatalog
                         </div>
                       </div>
 
-                      <form id="tb2-form" method="get" action="/Components#toolbar" hidden></form>
+                      <form id="tb2-form" method="get" action="/Components/toolbar" hidden></form>
 
                       <dialog class="mat-dialog mat-dialog--sm" id="tb2-filter" aria-labelledby="tb2-filter-title">
                         <div class="mat-dialog__form">
@@ -1065,14 +1080,13 @@ public static class ComponentCatalog
                     <nav class="mat-toc" aria-label="On this page">
                       <p class="mat-toc__title">On this page</p>
                       <ul class="mat-toc__list">
-                        <li><a class="mat-toc__link mat-toc__link--group" href="#group-forms">Forms</a>
+                        <li><a class="mat-toc__link mat-toc__link--group" href="#toc">Examples</a>
                           <ul class="mat-toc__list">
-                            <li><a class="mat-toc__link" href="#fields">Fields</a></li>
-                            <li><a class="mat-toc__link is-active" href="#choices" aria-current="location">Switches, checks and segments</a></li>
-                            <li><a class="mat-toc__link" href="#form-layout">Form layout</a></li>
+                            <li><a class="mat-toc__link" href="#ex-toc-1">The index</a></li>
+                            <li><a class="mat-toc__link is-active" href="#ex-toc-2" aria-current="location">The layout with the index beside the content</a></li>
                           </ul>
                         </li>
-                        <li><a class="mat-toc__link mat-toc__link--group" href="#group-lists-and-data">Lists and data</a></li>
+                        <li><a class="mat-toc__link mat-toc__link--group" href="#src-toc-1">The code of the index</a></li>
                       </ul>
                     </nav>
                     """, "Groups and sections, the one in view marked (is-active, aria-current=\"location\"). The links lead to the sections of this very page: try them."),

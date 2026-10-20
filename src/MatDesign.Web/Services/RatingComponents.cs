@@ -105,7 +105,7 @@ internal static class RatingComponents
                     </fieldset>
                     """, "A disabled fieldset disables the radios: the pointer does nothing, the value is not sent and the shapes are dimmed."),
                 new("In a form: required, with the message at the field", $"""
-                    <form class="mat-form" method="get" action="/Components#rating" novalidate>
+                    <form class="mat-form" method="get" action="/Components/rating" novalidate>
                       <fieldset class="mat-field mat-fieldset mat-rating" data-rating data-show-value>
                         <legend class="mat-legend">Your rating <span class="mat-req" aria-hidden="true">*</span></legend>
                         {Radios("rt-req", "rating", 5, 1, null, required: true, requiredMessage: "Please choose a rating.")}

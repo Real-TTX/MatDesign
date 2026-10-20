@@ -44,7 +44,7 @@ the rules it follows, a rule that a component of the Studio names cannot be dele
 
 ### Components
 
-A component of the Studio is a `ComponentDoc`: an id (the anchor on its page), a name, a group (which decides the page and the place in its index), a summary, the rules it follows, "good to know"
+A component of the Studio is a `ComponentDoc`: an id (the address of its page, `/Components/{id}`, and the id of the element that holds its examples; `all` and the prefixes the pages use themselves are not allowed), a name, a group (the heading its tile stands under in the overview and its place in the walk with Previous and Next), a summary, the rules it follows, "good to know"
 lines and examples. An example has a title, markup, a note and a switch for "live" (drawn above its markup); the examples that a built-in component has with a script or a frame carry their
 fields along when the component is edited. The form is one page with the preview beside it, outside the form element so that a button inside an example cannot submit the editor; examples are
 added and removed by buttons that answer with the form as it is, nothing saved.
@@ -55,7 +55,7 @@ labelled table cells, typed buttons, controls with an id, dialogs that are named
 the kinds `inline`, `elements` and `outside` are the ones that keep a page safe: markup that breaks one is never drawn, not even in the preview, and a component read from the disk that breaks one
 is left out. `ComponentValidator` adds the rest: an id the page does not use itself, a name nobody has, a group, rules that exist, and ids inside live examples that no other component and no part of
 the page has (all examples share one page; an example shown as markup only puts no id on it). `DesignData` merges the built-in catalogue with the items, placing an added component after the last
-component of its group, and `NavFacts` carries the counts of the menu. A rule that a component of the Studio names cannot be deleted before the component lets go of it.
+component of its group, and `NavFacts` carries the counts of the menu. A component of the Studio is a tile of the overview and has a page of its own like a built-in one (docs/ARCHITECTURE.md, "Components pages"); the "On the site" links of the Studio lead to that page (`ComponentCatalog.PageOf`). A rule that a component of the Studio names cannot be deleted before the component lets go of it.
 
 ### History
 

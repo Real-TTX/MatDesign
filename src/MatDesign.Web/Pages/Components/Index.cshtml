@@ -1,15 +1,72 @@
 @page "/Components"
+@model MatDesign.Web.Pages.ComponentPages.IndexModel
+@using MatDesign.Web.Studio
 @{
-    var section = ComponentCatalog.Sections.Single(s => s.Id == "components");
-    ViewData["Title"] = section.Title;
-    ViewData["PageSub"] = section.Sub;
-    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), (section.Title, null));
+    // The overview of the components (LIST-18): a tile per component under the heading of its group, nothing drawn live. A tile leads to the page of the component
+    // (/Components/{id}); everything on one page is /Components/All. An old address (the overview with the id of a component as its hash) is sent on by components.js.
+    ViewData["Title"] = "Components";
+    ViewData["PageSub"] = "Every control of the toolkit, by group. Choose one to see it live, with its markup to copy, how to use it and the rules it follows.";
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), ("Components", null));
     ViewData["Width"] = "wide";
     ViewData["IndexDialog"] = "toc-dialog";
+    ViewData["IndexLabel"] = "Groups";
 }
 
-<partial name="_DocSection" model="section" />
+<div class="mat-with-toc">
+    <div class="mat-with-toc__main">
+        <div class="mat-list" data-components data-group="@Model.Group">
+            <partial name="_Toolbar" model="Model.Toolbar" />
+
+            <div class="doc-tilearea">
+                @foreach (var group in Model.Groups)
+                {
+                    <section class="doc-group doc-group--tiles mat-anchor" id="@group.Anchor" data-components-group="@group.Group" aria-labelledby="h-@group.Anchor" hidden="@(group.VisibleCount == 0)">
+                        <div class="mat-section__head">
+                            <h2 id="h-@group.Anchor">@group.Group</h2>
+                            <p class="mat-section__lead">@group.Summary</p>
+                        </div>
+                        <ul class="doc-tiles">
+                            @foreach (var tile in group.Tiles)
+                            {
+                                var doc = tile.Doc;
+                                @* one line each: the page is only as heavy as its markup, and the indentation of 68 tiles was a third of it *@
+                                <li class="doc-tile" data-component="@doc.Id" data-keys="@ComponentOverview.KeysOf(doc)" hidden="@(!tile.Visible)"><a class="doc-tile__link" href="@tile.Url"><span class="doc-tile__head">@Ui.Icon(doc.Icon)<span class="doc-tile__name">@doc.Name</span></span> <span class="doc-tile__summary">@doc.Summary</span> <span class="doc-tile__facts"><span>@StudioFormat.Count(tile.Examples, "example")</span> @if (tile.Rules > 0) { <span>@StudioFormat.Count(tile.Rules, "rule")</span> } @if (tile.Properties > 0) { <span>@(tile.Properties == 1 ? "1 property" : $"{tile.Properties} properties")</span> }</span></a></li>
+                            }
+                        </ul>
+                    </section>
+                }
+            </div>
+
+            <div class="mat-empty" data-components-empty hidden="@(Model.Matching > 0)">
+                <span class="mat-empty__icon">@Ui.Icon("search")</span>
+                <div class="mat-empty__title">No component matches</div>
+                <p>Change the search or the group, or reset them.</p>
+                <a class="mat-btn mat-btn--primary" href="@ComponentCatalog.OverviewPath">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+            </div>
+        </div>
+
+        <p class="mat-muted doc-note">
+            The <a href="/Patterns">patterns</a> put the controls together in whole pages.
+            <a href="@ComponentCatalog.AllPath">Show everything on one page</a>, for printing and for searching with the browser.
+        </p>
+    </div>
+
+    <aside class="mat-toc-aside" aria-label="Groups of components">
+        <partial name="_ComponentGroups" model="Model.Groups" />
+    </aside>
+</div>
+
+<dialog class="mat-dialog mat-dialog--sm" id="toc-dialog" aria-labelledby="toc-dialog-title">
+    <div class="mat-dialog__form">
+        <div class="mat-dialog__head">
+            @Ui.Icon("list")
+            <h2 class="mat-dialog__title" id="toc-dialog-title">Groups</h2>
+            <button type="button" class="mat-btn mat-btn--ghost mat-btn--icon mat-dialog__close" data-dialog-close aria-label="Close">@Ui.Icon("x")</button>
+        </div>
+        <div class="mat-dialog__body"><partial name="_ComponentGroups" model="Model.Groups" /></div>
+    </div>
+</dialog>
 
 @section Scripts {
-    <script src="/js/doc.js"></script>
+    <script src="/js/components.js"></script>
 }
