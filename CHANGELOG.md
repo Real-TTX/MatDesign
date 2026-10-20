@@ -23,6 +23,10 @@ A change that an app can see is written down under **Unreleased** in the pull re
 - The empty state of a list has the frame of the table whose place it takes (`LIST-11`): `.mat-list > .mat-empty` gets the surface, the line, the radius (`--mat-table-radius`) and the shadow of `.mat-table-wrap`, so a list without rows keeps its shape. Outside a list the new modifier `mat-empty--framed` gives an empty state the same frame; in a card it stays without one. Nothing to do for an app but copy the files; an app that drew its own frame around an empty state in a list can drop it.
 - A list with nothing yet: `mat-empty--first` on its empty state (the one with the primary action, not the one of an empty search) makes the toolkit hide the same primary button in the actions row below it (`LIST-11`); the other actions stay, a row with nothing else goes. Opt-in: without the modifier nothing changes. An app that left out its actions row by hand for an empty list can render it always and add the modifier.
 
+### Fixed
+
+- A short link alone in the value of a key/value list (`mat-kv`) has a hit area of 44 px on a touch screen in width as well: the area grows 4 px to each side; the look and the layout do not change.
+
 ## [0.2.0] - 2026-10-15
 ### Added
 

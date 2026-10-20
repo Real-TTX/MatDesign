@@ -31,7 +31,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **142 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **145 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule with its history, and as JSON at `/api/rules`; the **search of the site** in the header bar finds a rule by its id (`form 15`)
 - A **changelog of the rulebook** – what was added, changed, removed or moved, and when, at `/Rules/Changes` and `/api/rules/changes`; a rule cannot change without a line that says so (a test fails)
@@ -58,7 +58,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   so an app that sets none sees no change; the list, with types and defaults, is read from the CSS
 
 **The documentation**
-- **68 components with 236 live examples**, an **overview of tiles by group** and a **page for each** (one click from the tile, Previous and Next with the arrow keys), each example with its **code beside it** – coloured, with *Copy* –
+- **69 components with 245 live examples**, an **overview of tiles by group** and a **page for each** (one click from the tile, Previous and Next with the arrow keys), each example with its **code beside it** – coloured, with *Copy* –
   and for each component how to use it: the classes it uses, its properties and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined

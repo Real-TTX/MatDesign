@@ -99,10 +99,10 @@ public sealed partial class RuleReviewTests(WebApplicationFactory<Program> facto
         Assert.Equal("CODE-15", RuleBook.In("CODE").Last().Id);
         Assert.Equal("TABLE-05", RuleBook.In("TABLE").Last().Id);
         Assert.Equal("FORM-24", RuleBook.In("FORM").Last().Id);
-        // FORM-23, SHELL-20 and LIST-18 were given to other changes that are made at the same time
-        Assert.Null(RuleBook.Get("FORM-23"));
-        Assert.Null(RuleBook.Get("SHELL-20"));
-        Assert.Null(RuleBook.Get("LIST-18"));
+        // FORM-23, SHELL-20 and LIST-18 were given to other changes that were made at the same time (the search, the components pages): they exist now, and the review did not write them
+        Assert.NotNull(RuleBook.Get("FORM-23"));
+        Assert.NotNull(RuleBook.Get("SHELL-20"));
+        Assert.NotNull(RuleBook.Get("LIST-18"));
     }
 
     // ------------------------------------------------------------------------------------------------------ the rules that were changed

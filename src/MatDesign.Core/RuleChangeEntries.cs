@@ -183,5 +183,8 @@ public static partial class RuleChanges
         Add("2026-10-20", "CODE-13", "16fce424", "Found missing in the review: the shape of the attributes, events and API of the script."),
         Add("2026-10-20", "CODE-14", "ce55b0ef", "Found missing in the review: the lock-out of the sign-in and the proxies whose headers are believed."),
         Add("2026-10-20", "CODE-15", "f82463de", "Found missing in the review: a change is finished when it is written down and checked."),
+        Add("2026-10-20", "FORM-23", "5ed52552", "A search with suggestions (mat-search): a field that is an ARIA combobox, grouped suggestions, keys, recent searches, a full-screen panel on a phone."),
+        Add("2026-10-20", "SHELL-20", "d307dd1a", "A search in the header bar: it finds everything by keywords, as a field on a wide screen and an icon on a phone."),
+        Add("2026-10-20", "LIST-18", "f7906524", "A catalogue is an overview of tiles by category and one page per item with its own address, never everything on one page."),
     ];
 }

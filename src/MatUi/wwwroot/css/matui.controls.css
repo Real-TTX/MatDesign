@@ -446,7 +446,7 @@ a.mat-listgroup__item:hover, button.mat-listgroup__item:hover { background: var(
 @media (pointer: coarse) {
   /* a link in a list of keys and values: the row is 44 px (half of what the line lacks above and below it), the link has the padding of that room */
   .mat-kv > dd:has(a:not(.mat-btn)), .mat-kv > dt:has(+ dd a:not(.mat-btn)) { padding-block: max(0px, calc((44px - 1lh) / 2)); }
-  .mat-kv dd a:not(.mat-btn) { padding-block: 12px; margin-block: -12px; }
+  .mat-kv dd a:not(.mat-btn) { padding: 12px 4px; margin: -12px -4px; }
   .mat-chip__x, .mat-alert__close { position: relative; }
   .mat-chip__x::before, .mat-alert__close::before { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
 }

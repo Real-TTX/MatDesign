@@ -12,6 +12,9 @@ namespace MatDesign.Tests;
 /// </summary>
 public sealed partial class ComponentsPagesTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
+    /// <summary>How many components the overview shows: the ones of the first section of the catalogue (the Layout and Utilities groups have pages of their own).</summary>
+    private static int Total => ComponentCatalog.All.Count(c => ComponentCatalog.Sections[0].Groups.Contains(c.Group));
+
     private readonly HttpClient _client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
 
     private static readonly CatalogSection Section = ComponentCatalog.Sections.Single(s => s.Id == "components");
@@ -62,7 +65,7 @@ public sealed partial class ComponentsPagesTests(WebApplicationFactory<Program> 
         Assert.Single(Heading().Matches(html));
         var tiles = Tile().Matches(html).Select(m => m.Groups[1].Value).ToList();
         Assert.Equal(Components.Select(c => c.Id), tiles);
-        Assert.Equal(68, tiles.Count);
+        Assert.Equal(Total, tiles.Count);
 
         // a heading per group, in the order of the catalogue, and the tiles of a group stand under their own heading
         var position = -1;
@@ -124,7 +127,7 @@ public sealed partial class ComponentsPagesTests(WebApplicationFactory<Program> 
         Assert.True(html.IndexOf("class=\"mat-toolbar\"", StringComparison.Ordinal) < html.IndexOf("class=\"doc-tilearea\"", StringComparison.Ordinal), "the toolbar is above the tiles (LIST-02)");
         Assert.Contains("class=\"mat-input-icon mat-toolbar__search\"", html);
         Assert.Contains("<input class=\"mat-input\" type=\"search\" id=\"cmp-q\" name=\"q\" form=\"cmp-form\"", html);
-        Assert.Contains("<span class=\"mat-toolbar__info\" aria-live=\"polite\">68 components</span>", html);
+        Assert.Contains($"<span class=\"mat-toolbar__info\" aria-live=\"polite\">{Total} components</span>", html);
         Assert.Contains("id=\"cmp-filter\"", html);
         Assert.Contains("<select class=\"mat-select\" id=\"cmp-f-group\" name=\"group\" form=\"cmp-form\">", html);
         foreach (var group in Section.Groups)
@@ -160,15 +163,15 @@ public sealed partial class ComponentsPagesTests(WebApplicationFactory<Program> 
         // and nothing else: exactly the components whose text has every word
         Assert.Equal(Components.Where(c => ComponentOverview.Matches(ComponentOverview.SearchText(c), query)).Select(c => c.Id), shown);
         // the count says how many are left, and the tiles that are not are still in the page (hidden), so that the script can show them again
-        Assert.Equal(68, Tile().Matches(html).Count);
+        Assert.Equal(Total, Tile().Matches(html).Count);
         if (shown.Count == 0)
         {
-            Assert.Contains("<span class=\"mat-toolbar__info\" aria-live=\"polite\">0 of 68 components</span>", html);
+            Assert.Contains($"<span class=\"mat-toolbar__info\" aria-live=\"polite\">0 of {Total} components</span>", html);
             Assert.DoesNotContain("data-components-empty hidden", html);
         }
         else
         {
-            Assert.Contains($"<span class=\"mat-toolbar__info\" aria-live=\"polite\">{shown.Count} of 68 components</span>", html);
+            Assert.Contains($"<span class=\"mat-toolbar__info\" aria-live=\"polite\">{shown.Count} of {Total} components</span>", html);
             Assert.Contains("data-components-empty hidden", html);
         }
     }
@@ -182,14 +185,14 @@ public sealed partial class ComponentsPagesTests(WebApplicationFactory<Program> 
         Assert.Equal(forms, ShownTiles(html));
         Assert.Matches(@"<section class=""doc-group doc-group--tiles mat-anchor"" id=""group-actions""[^>]*\shidden", html);
         Assert.DoesNotMatch(@"<section class=""doc-group doc-group--tiles mat-anchor"" id=""group-forms""[^>]*\shidden", html);
-        Assert.Contains($"{forms.Count} of 68 components", html);
+        Assert.Contains($"{forms.Count} of {Total} components", html);
         // the filter is on its button and as a chip that removes it
         Assert.Contains("mat-toolbar__btn is-active", html);
         Assert.Contains("Group: Forms", html);
         Assert.Contains("<option value=\"Forms\" selected", html);
 
-        Assert.Equal(68, ShownTiles(await Page("/Components?group=Toys")).Count);
-        Assert.Equal(68, ShownTiles(await Page("/Components?group=Layout")).Count);
+        Assert.Equal(Total, ShownTiles(await Page("/Components?group=Toys")).Count);
+        Assert.Equal(Total, ShownTiles(await Page("/Components?group=Layout")).Count);
     }
 
     [Fact]
