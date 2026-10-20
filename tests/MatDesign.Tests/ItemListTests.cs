@@ -339,6 +339,14 @@ public sealed partial class ItemListTests(WebApplicationFactory<Program> factory
     }
 
     [Fact]
+    public void A_list_of_rows_in_the_list_block_stands_where_a_table_stands_after_the_chips()
+    {
+        // LIST-05: toolbar, chips, the rows; without an order of its own the list of rows came before the chips
+        Assert.Contains(".mat-list > .mat-chips { order: 1; }", Css);
+        Assert.Contains(".mat-list > .mat-table-wrap, .mat-list > .mat-gallery, .mat-list > .mat-itemlist { order: 2; }", Css);
+    }
+
+    [Fact]
     public void The_sticky_dividers_stay_because_the_card_clips_instead_of_scrolling()
     {
         Assert.Contains(".mat-itemlist--sticky .mat-itemlist__divider { position: sticky;", Section);

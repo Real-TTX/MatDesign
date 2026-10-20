@@ -95,6 +95,13 @@ public partial class TableGroupsTests
     }
 
     [Fact]
+    public void On_a_phone_the_label_of_a_cell_is_in_the_type_of_the_page_even_in_a_monospace_cell()
+    {
+        // TABLE-02: the label is text of the page, not a value; a mat-mono cell (a date, a number) must not lend it its monospace
+        Assert.Matches(@"\.mat-table td::before \{ content: attr\(data-label\);[^}]*font-family: var\(--mat-font\);", Css);
+    }
+
+    [Fact]
     public void On_a_phone_the_line_is_gone_and_the_heading_is_a_bar_over_the_cards()
     {
         var phone = Css[Css.IndexOf("@media (max-width: 720px) {\n  /* A row is a card here: no line", StringComparison.Ordinal)..];

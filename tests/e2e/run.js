@@ -5527,13 +5527,15 @@ function seenAt(page, selector) {
   }
   {
     const { ctx, page } = await open(phoneOptions, '/Rules');
-    await check('on a phone the search field takes the first row and Filter and Sort stand right-aligned in the next, nothing scrolls sideways', async () => {
+    await check('on a phone the search field and Filter and Sort share one row, the buttons as icons at the right end with their names kept, nothing scrolls sideways', async () => {
       const field = await page.locator('.mat-toolbar__search input').boundingBox();
       const end = await page.locator('.mat-toolbar__end').boundingBox();
       const bar = await page.locator('.mat-toolbar').boundingBox();
-      expectTrue(field.width > 390 - 60, 'the field is narrow: ' + field.width);
-      expectTrue(end.y >= field.y + field.height - 1, 'the buttons are not below the field');
+      expectTrue(field.width > 150, 'the field is narrow: ' + field.width);
+      expectTrue(Math.abs((end.y + end.height / 2) - (field.y + field.height / 2)) < 4, 'the buttons are not in the row of the field');
       expectTrue(bar.x + bar.width - (end.x + end.width) < 20, 'the buttons are not at the right end of the toolbar: ' + (bar.x + bar.width - (end.x + end.width)));
+      const buttons = await page.locator('.mat-toolbar__end .mat-toolbar__btn').evaluateAll(a => a.map(b => { const r = b.getBoundingClientRect(); return { w: Math.round(r.width), h: Math.round(r.height), name: b.innerText.trim() || b.textContent.trim() }; }));
+      buttons.forEach(b => { expectTrue(b.w === b.h && b.w >= 44, 'a button is not a square icon of 44 px: ' + JSON.stringify(b)); expectTrue(!!b.name, 'a button lost its name'); });
       const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
       expectTrue(widths.page <= widths.window, 'the page scrolls sideways');
     });

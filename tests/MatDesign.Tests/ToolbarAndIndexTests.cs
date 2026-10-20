@@ -32,8 +32,10 @@ public sealed class ToolbarAndIndexTests(WebApplicationFactory<Program> factory)
 
         Assert.Contains(".mat-toolbar__search { flex: 1 1 16rem; min-width: 0;", css);
         Assert.Contains("margin-left: auto", css[css.IndexOf(".mat-toolbar__end {", StringComparison.Ordinal)..]);
-        // on a phone the field takes the whole first row
-        Assert.Matches(@"@media \(max-width: 480px\) \{[^@]*\.mat-toolbar__search \{ flex-basis: 100%", css);
+        // on a phone the field and the buttons share one row: the field grows, the buttons are icons whose name stays for screen readers
+        Assert.Matches(@"@media \(max-width: 480px\) \{[^@]*\.mat-toolbar__search \{ flex: 1 1 0;", css);
+        Assert.Matches(@"@media \(max-width: 480px\) \{[^@]*\.mat-toolbar__btn:has\(> \.mat-icon\) > span:not\(\.mat-badge\) \{\s*position: absolute; width: 1px;", css);
+        Assert.DoesNotMatch(@"@media \(max-width: 480px\) \{[^@]*\.mat-toolbar__search \{ flex-basis: 100%", css);
         Assert.Contains("mat-input-icon", Css("matui.forms.css"));
     }
 
