@@ -168,6 +168,71 @@ function seenAt(page, selector) {
       await page.fill('#sample-q', 'a/b');
       expect(await page.inputValue('#sample-q'), 'a/b', 'the slash was typed into the field');
     });
+    await check('a tooltip that is not shown takes no room: the button at the end of a row does not make the table scroll sideways, and its tip opens towards the row', async () => {
+      await page.goto(BASE + '/Preview?app=matmail&view=list', { waitUntil: 'networkidle' });
+      expect(await page.locator('.mat-table-wrap').evaluate(w => w.scrollWidth - w.clientWidth), 0, 'the table scrolls sideways by');
+      const button = page.locator('.mat-table__actions [data-tip]').first();
+      expect(await button.evaluate(b => getComputedStyle(b, '::after').display), 'none', 'the hidden tip is drawn');
+      await button.hover();
+      const tip = await button.evaluate(b => { const s = getComputedStyle(b, '::after'); return { display: s.display, right: s.right, bottom: s.bottom }; });
+      expect(tip.display, 'block', 'the tip on hover');
+      expect(tip.right, '0px', 'the tip of the last button is not aligned with its end');
+    });
+    await check('the tips of the header bar open below it, towards the start', async () => {
+      // the header bar of the catalogue (the sample list has no icons in its bar)
+      const bar = await open(desktopOptions, '/Components/All');
+      try {
+        const button = bar.page.locator('#topbar .mat-topbar__actions [data-tip]').first();
+        await button.scrollIntoViewIfNeeded();
+        await button.hover();
+        const tip = await button.evaluate(b => { const s = getComputedStyle(b, '::after'); return { display: s.display, top: s.top, right: s.right }; });
+        expect(tip.display, 'block', 'the tip on hover');
+        expectTrue(tip.top !== 'auto' && parseFloat(tip.top) > 0, 'the tip does not open below the button: top ' + tip.top);
+        expect(tip.right, '0px', 'the tip is not aligned with the end of the button');
+      } finally {
+        await bar.ctx.close();
+      }
+    });
+    await check('a table wider than its frame leaves out its mat-hide-sm columns, the last first, and takes them back when there is room (TABLE-02); data-table-scroll keeps them', async () => {
+      // two tables of eight columns: the script fits the first, the second scrolls
+      await page.evaluate(() => {
+        // the headings do not wrap (white-space: nowrap), so eight long ones make the table wider than a narrow frame; the cells wrap
+        const cols = ['Name of the item', 'Owner of the item', 'Folder of the item', 'Created on the day', 'Changed on the day', 'Size in kilobytes', 'Kind of the item', 'State of the item'];
+        const optional = [1, 2, 4, 6];
+        const table = (id, scroll) => '<div class="mat-table-wrap"' + (scroll ? ' data-table-scroll' : '') + ' id="' + id + '"><table class="mat-table"><caption class="mat-sr-only">Fit</caption><thead><tr>' +
+          cols.map((c, i) => '<th scope="col"' + (optional.includes(i) ? ' class="mat-hide-sm"' : '') + '>' + c + '</th>').join('') + '</tr></thead><tbody>' +
+          [1, 2, 3].map(r => '<tr>' + cols.map((c, i) => '<td data-label="' + c + '"' + (optional.includes(i) ? ' class="mat-hide-sm"' : '') + '>' + c + ' ' + r + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>';
+        const host = document.createElement('div');
+        host.id = 'fit-host';
+        host.innerHTML = table('fit-a', false) + table('fit-b', true);
+        document.querySelector('.mat-page').appendChild(host);
+        window.MatUi.refresh(host);
+      });
+      await page.setViewportSize({ width: 1000, height: 900 });
+      await page.waitForTimeout(200);
+      const narrow = await page.evaluate(() => {
+        const a = document.getElementById('fit-a'), b = document.getElementById('fit-b');
+        return { sideways: a.scrollWidth - a.clientWidth, hidden: [...a.querySelectorAll('thead th.is-col-hidden')].map(t => t.textContent), scrolls: b.scrollWidth > b.clientWidth, bHidden: b.querySelectorAll('.is-col-hidden').length };
+      });
+      expect(narrow.sideways, 0, 'the fitted table scrolls sideways by');
+      expectTrue(narrow.hidden.length > 0, 'no column was left out of the narrow table');
+      expectTrue(narrow.scrolls && narrow.bHidden === 0, 'the table with data-table-scroll lost a column or does not scroll');
+      // a width at which only some go: those are the last of the optional columns
+      const lastFirst = ['Kind of the item', 'Changed on the day', 'Folder of the item', 'Owner of the item'];
+      let partial = null;
+      for (let w = 1100; w <= 2400 && !partial; w += 100) {
+        await page.setViewportSize({ width: w, height: 900 });
+        await page.waitForTimeout(150);
+        const hidden = await page.evaluate(() => [...document.querySelectorAll('#fit-a thead th.is-col-hidden')].map(t => t.textContent));
+        if (hidden.length > 0 && hidden.length < lastFirst.length) { partial = hidden; }
+      }
+      expectTrue(partial !== null, 'no width at which only some columns were left out');
+      expectTrue(lastFirst.slice(0, partial.length).every(h => partial.includes(h)), 'not the last columns went first: ' + partial.join());
+      await page.setViewportSize({ width: 2400, height: 900 });
+      await page.waitForTimeout(200);
+      expect(await page.evaluate(() => document.querySelectorAll('#fit-a .is-col-hidden').length), 0, 'columns that fit again are still hidden');
+      await page.setViewportSize(desktopOptions.viewport);
+    });
     await ctx.close();
   }
 

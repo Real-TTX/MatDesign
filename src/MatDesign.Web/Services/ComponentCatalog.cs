@@ -1197,7 +1197,9 @@ public static class ComponentCatalog
                     </div>
                     """, "Hover or focus a button. The aria-label is the real name; data-tip only shows it."),
             ],
-            ["On a device without hover the tooltip is not drawn at all (hover: none)."]),
+            ["On a device without hover the tooltip is not drawn at all (hover: none).",
+             "A tip that is not shown takes no room, so a button at the edge of a table or of the header bar never makes its box scroll sideways.",
+             "At the end of a table row and in the header bar the tip opens towards the start, in the header bar below; data-tip-align=\"start|end\" and data-tip-place=\"below\" do the same elsewhere."]),
 
         new("skeleton", "Skeleton", "Feedback", "clock",
             "A placeholder while content loads, so the page does not jump.",

@@ -101,6 +101,9 @@
 .mat-table__name .mat-muted { font-weight: 400; } /* a part of the name that the group already says: .example.org after app */
 .mat-table__actions { display: flex; justify-content: flex-end; gap: var(--mat-space-1); }
 .mat-table td.mat-table__cell-actions { width: 1%; white-space: nowrap; }
+/* A table that is wider than its frame above 720 px leaves out the columns the phone leaves out (mat-hide-sm), the last one first, until it fits (TABLE-02,
+   the script marks their cells is-col-hidden); it scrolls sideways only with data-table-scroll on the frame (TABLE-04: a table that cannot become cards). */
+.mat-table .is-col-hidden { display: none; }
 
 /* Under 720 px a row becomes a card; every <td> needs data-label for that (RULE TABLE-02). */
 @media (max-width: 720px) {

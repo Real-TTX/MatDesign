@@ -93,6 +93,8 @@
      data-show-if="#id | name" data-show-value="a,b | * | true"   show a dependent field only when it is needed
      data-copy="text | #id"                 copy to the clipboard
      data-tabs                              a tab group (role=tablist buttons + role=tabpanel panels)
+     data-table-scroll                      on a .mat-table-wrap: the table keeps every column and scrolls sideways (TABLE-04). Without it a table that is wider than
+                                            its frame above 720 px leaves out its mat-hide-sm columns, the last one first, until it fits (is-col-hidden on their cells)
      data-groups="key"                      a table whose groups (<tbody class="mat-group" data-group="name">) open and close (LIST-16): the toggle in the heading row
                                             (data-group-toggle, aria-expanded) opens or closes its group, and the choice is remembered per table key and group; a group with
                                             data-group-fixed stays as the server drew it (the one with a search hit). data-groups-set="open|closed|toggle" on a button does it
@@ -1588,6 +1590,32 @@
       setAllGroups(scope, mode === 'open' ? true : mode === 'closed' ? false : groups.length > 0 && groups.every(function (g) { return g.classList.contains('is-collapsed'); }));
     }
   });
+
+  // ------------------------------------------------------------------------------------------------- tables that fit
+  // Under 720 px the rows of a table are cards (TABLE-02). Above, a table that is wider than its frame does not scroll sideways either: the columns that the phone
+  // leaves out (mat-hide-sm on the heading) go, the last one first, until it fits, and come back when there is room (a ResizeObserver on the frame). Only the rows
+  // with as many cells as the heading are touched (a group heading spans the row). data-table-scroll on the frame keeps every column and lets it scroll (TABLE-04).
+  function fitTable(wrap) {
+    var table = $('table.mat-table', wrap);
+    if (!table || !table.tHead || !table.tHead.rows.length) { return; }
+    var heads = Array.prototype.slice.call(table.tHead.rows[0].cells);
+    var optional = heads.map(function (th, i) { return th.classList.contains('mat-hide-sm') ? i : -1; }).filter(function (i) { return i >= 0; }).reverse();
+    if (!optional.length) { return; }
+    $$('.is-col-hidden', table).forEach(function (cell) { cell.classList.remove('is-col-hidden'); });
+    for (var k = 0; k < optional.length && wrap.scrollWidth > wrap.clientWidth; k += 1) {
+      Array.prototype.forEach.call(table.rows, function (row) {
+        if (row.cells.length === heads.length) { row.cells[optional[k]].classList.add('is-col-hidden'); }
+      });
+    }
+  }
+  function initTables(scope) {
+    $$('.mat-table-wrap', scope).forEach(function (wrap) {
+      if (wrap._matFit || wrap.hasAttribute('data-table-scroll')) { return; }
+      wrap._matFit = true;
+      fitTable(wrap);
+      if (typeof ResizeObserver === 'function') { new ResizeObserver(function () { fitTable(wrap); }).observe(wrap); }
+    });
+  }
 
   // ------------------------------------------------------------------------------------------------------- tabs
   function selectTab(tab, focus) {
@@ -7912,6 +7940,7 @@
     initSchedules();
     initItemLists();
     initRatings();
+    initTables();
     initTrees();
     initUploads();
     initSearches();
@@ -7964,6 +7993,6 @@
     tree: tree,
     upload: { init: initUploads, files: upFiles, add: upAddFiles, remove: upRemoveFile, clear: upClearFiles, setProgress: upSetProgress, setError: upSetError },
     search: search,
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); initRatings(scope); initTrees(scope); initUploads(scope); initSearches(scope); restoreGroups(scope); }
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); initRatings(scope); initTables(scope); initTrees(scope); initUploads(scope); initSearches(scope); restoreGroups(scope); }
   };
 })();
