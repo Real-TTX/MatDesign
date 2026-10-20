@@ -12,6 +12,15 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+### Added
+
+- The events the script sends are written down (`CODE-13`, docs/VERSIONING.md: events and their `detail` are part of the contract): the header of `matui.js` has an Events block and `docs/ADOPTING.md` a table (section 3b, Events the script sends) with all 23 events: where each is sent, when, its `detail`, whether it bubbles and whether it can be cancelled. Four of them had been sent and named nowhere (`mat:theme`, `mat:accent`, `mat:navset` and `mat:dialog-open`) and are part of the contract now. `mat:theme`, `mat:accent`, `mat:scheme` and `mat:navset` are sent on `<html>` and do not bubble (listen on `document.documentElement`); `mat:dialog-open` is sent on the dialog and bubbles; `mat:theme` and, for a `data-custom-accent`, `mat:accent` are also sent once when the script starts. A unit test holds the table and the header to the code, so an event that is added without a row fails the build. Nothing to do for an app but copy the files.
+- `MatUi.toast(message, { tone, timeout })`: `timeout` (milliseconds, 6000 by default) was always read and is documented now.
+
+### Fixed
+
+- A text field has 16 px type or more on a touch screen (`MOBILE-06`), so that iOS Safari no longer zooms into it when it takes the focus and leaves the page zoomed: `mat-input`, `mat-select`, `mat-textarea` in every size (the small size too: its 36 px height stays; the large size keeps its 17 px), a number stepper and its buttons, the search field, the text field of the tags, the typed time, the hex of a colour and the field of a row (`mat-item__input`). They inherited 15 px before; the rules are inside `@media (pointer: coarse)` and read `max(1rem, 1em)`, so a field is never made smaller than the text it stands in, and with a mouse nothing changes. Nothing to do for an app but copy the files; an app's own field with `font-size` below 16 px on a phone fixes it the same way.
+- A toast waits while the pointer is over it or the focus is inside it (its X, a link), as the catalogue always said (`SHELL-12`, WCAG 2.2.1): the time that was left runs again when both have gone, 1.5 seconds at least, instead of the toast going after 6 seconds whatever the user did. A toast lets taps through (since 0.3.1), so the pointer is found by its position; a touch is never over a toast. Escape closes the toast that has the focus (not the dialog it is shown in) and the focus goes back to where it was. Nothing to do for an app but copy the files.
 
 ## [0.3.2] - 2026-10-20
 ### Changed

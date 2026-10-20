@@ -1,9 +1,11 @@
-// Touch audit: is every interactive element of the site a target of at least 44 px on a touch screen (MOBILE-04)?
+// Touch audit: is every interactive element of the site a target of at least 44 px on a touch screen (MOBILE-04), and has every text field 16 px type or more (MOBILE-06)?
 //   cd tests/e2e && node touch-audit.js [http://localhost:8060]        TOUCH_PAGES=/Layout,/Utilities node touch-audit.js   (only these pages)
 // It opens the pages in a touch context (isMobile, hasTouch: 390 and 768 px wide, so `pointer: coarse` is on), collects every visible interactive element and measures
 // the EFFECTIVE hit rectangle, not the drawn mark (touch-hit.js: the element is scrolled into view and the script walks outwards from a point that reaches it, a pixel at a
 // time, as long as `document.elementFromPoint` still names the element, its label or something inside them; a padding on a label, a ::before that reaches beyond the mark and
 // a stretched link all count). Every element whose rectangle is under 44 px in width or height is a finding, except the exceptions of ALLOW below, each with its reason.
+// The second measure is the type of the fields (MOBILE-06): every visible text field (an input of a kind that is typed into, a select, a textarea) has a computed font size of 16 px
+// or more, because iOS Safari zooms into a field with less when it takes the focus. A field under 16 px is a finding except the exceptions of ALLOW_TYPE, each with its reason.
 // It also opens what is not on the page at first (the drawer of the menu, dialogs, context menus, the panels of the pickers) and measures that. Exit code 1 on a finding.
 const { chromium } = require('playwright-core');
 const { installTouchHit } = require('./touch-hit');
@@ -19,6 +21,13 @@ const ALLOW = {
   'preview': 'The sample in the brand editor of the Studio is a picture of the brand being edited: it shows the values as typed (a control height of 40 px, which a touch screen never applies) and nothing in it is a control for its own sake.',
   'grid-fit': 'The day of a calendar or a schedule in a box that is narrower than seven times 44 px (a calendar with week numbers on a phone, two months side by side, a calendar in a framed example): seven columns share the box, the days are 44 px high and never wider than their column. In an app a month fits a phone (47 px).',
 };
+
+// The type of a field (MOBILE-06): what is measured, the least size and the exceptions (the test runs in the page, in `measureType` below, where `exception` names the id; only the reasons are here).
+// There is no exception today, not even the sample of the brand editor (its fields follow the same rule). An exception is an id here with its reason, and a test of the audit holds that it has one.
+// A text field is an input of a kind that is typed into (not a check, a radio, a range, a file, a colour or a button), a select or a textarea.
+const FIELDS = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), select, textarea';
+const MIN_TYPE = 16;
+const ALLOW_TYPE = {};
 
 // The pages of the site without an administrator, and the views of the sample app.
 const PAGES = ['/', '/Rules', '/Identity', '/Foundations', '/Shell', '/Components', '/Components/All', '/Components/buttons', '/Components/tree', '/Layout', '/Utilities', '/Patterns', '/Builder', '/Download',
@@ -81,11 +90,48 @@ function measure(args) {
   return results;
 }
 
+// Runs in the page: the type of every text field that is on show now and has not been looked at before on this page (MOBILE-06).
+function measureType(args) {
+  const { fields, minType } = args;
+  const results = [];
+  let looked = 0;
+  const seen = (window.__typeSeen = window.__typeSeen || new WeakSet());
+  const path = (el) => {
+    const cls = String(el.getAttribute('class') || '').split(/\s+/).filter(Boolean).slice(0, 2).map(c => '.' + c).join('');
+    const type = el.tagName === 'INPUT' ? '[' + (el.getAttribute('type') || 'text') + ']' : '';
+    return el.tagName.toLowerCase() + cls + type;
+  };
+  // while a drawer or a dialog is open only what is in it is measured (the page behind it was measured before)
+  let scopes = args.scope ? [...document.querySelectorAll(args.scope)].filter(e => e.checkVisibility()) : [];
+  if (!scopes.length) { scopes = [document]; }
+  for (const el of scopes.flatMap(s => [...s.querySelectorAll(fields)])) {
+    if (seen.has(el)) { continue; }
+    if (!el.checkVisibility({ checkVisibilityCSS: true }) || el.closest('[inert], [hidden]')) { continue; }
+    const cs = getComputedStyle(el);
+    // the real input of a control that the script draws instead (a picker, a calendar, a code) lies over it, invisible: a finger never gets the focus into it
+    if (cs.opacity === '0' && cs.pointerEvents === 'none') { continue; }
+    const box = el.getBoundingClientRect();
+    if (box.width < 1 || box.height < 1) { continue; }
+    seen.add(el);
+    looked++;
+    const size = parseFloat(cs.fontSize);
+    if (size + .001 >= minType) { continue; }
+    results.push({
+      path: path(el), size: Math.round(size * 100) / 100,
+      text: (el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.getAttribute('name') || el.id || '').trim().replace(/\s+/g, ' ').slice(0, 30),
+      exception: '',
+    });
+  }
+  return { results, looked };
+}
+
 (async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true }).catch(() => chromium.launch({ channel: 'chrome', headless: true }));
   const findings = new Map();   // signature -> { count, pages, text }
   const allowed = new Map();
-  let measured = 0;
+  const typeFindings = new Map();   // the type of the fields, the same shape
+  const typeAllowed = new Map();
+  let measured = 0, fieldsLooked = 0;
 
   function record(pageName, width, results) {
     for (const r of results) {
@@ -97,13 +143,26 @@ function measure(args) {
       bucket.set(key, e);
     }
   }
-  const measureNow = async (page, scope) => {
+  // the type of the fields (MOBILE-06): a signature is the kind of field and its size, so that 40 fields of one kind are one line
+  function recordType(pageName, width, found) {
+    fieldsLooked += found.looked;
+    for (const r of found.results) {
+      const sig = `${r.path} ${r.size}px`;
+      const bucket = r.exception ? typeAllowed : typeFindings;
+      const key = r.exception ? r.exception + ': ' + sig : sig;
+      const e = bucket.get(key) || { count: 0, pages: new Set(), text: r.text };
+      e.count++; e.pages.add(`${pageName}@${width}`);
+      bucket.set(key, e);
+    }
+  }
+  const measureNow = async (page, scope, pageName, width) => {
     await page.evaluate(installTouchHit);
+    recordType(pageName, width, await page.evaluate(measureType, { fields: FIELDS, minType: MIN_TYPE, scope }));
     return page.evaluate(measure, { candidates: CANDIDATES, min: MIN, compact: COMPACT, compactMin: COMPACT_MIN, scope });
   };
 
   async function auditPage(page, name, width) {
-    record(name, width, await measureNow(page));
+    record(name, width, await measureNow(page, undefined, name, width));
     // what is not there at first: the drawer of the menu, dialogs, context menus, the panels of the pickers
     const openers = await page.evaluate(() => {
       const out = [];
@@ -132,7 +191,8 @@ function measure(args) {
           await page.keyboard.type('button', { delay: 20 });
           await page.waitForFunction(() => document.querySelectorAll('.mat-search.is-full .mat-search__option').length > 2, null, { timeout: 4000 }).catch(() => { /* a search that answers nothing has no rows to measure */ });
         }
-        record(name + ' (' + o.kind + ' ' + String(key).slice(0, 20) + ')', width, await measureNow(page, o.kind === 'drawer' ? '.mat-nav' : o.kind === 'dialog' ? 'dialog[open]' : o.kind === 'picker' ? '.mat-picker__panel, dialog[open]' : o.kind === 'search' ? '.mat-search.is-full' : ''));
+        const openName = name + ' (' + o.kind + ' ' + String(key).slice(0, 20) + ')';
+        record(openName, width, await measureNow(page, o.kind === 'drawer' ? '.mat-nav' : o.kind === 'dialog' ? 'dialog[open]' : o.kind === 'picker' ? '.mat-picker__panel, dialog[open]' : o.kind === 'search' ? '.mat-search.is-full' : '', openName, width));
         measured++;
         await page.keyboard.press('Escape');
         await page.waitForTimeout(150);
@@ -216,6 +276,18 @@ function measure(args) {
   }
   console.log('\n' + (findings.size ? 'Findings (hit area under ' + MIN + ' px):' : 'No element has a hit area under ' + MIN + ' px.'));
   show(findings);
-  console.log(`\n${measured} page views and openings measured, ${findings.size} kinds of finding.`);
-  process.exit(findings.size ? 1 : 0);
+
+  if (typeAllowed.size) {
+    console.log('\nFields with an exception for their type (' + [...typeAllowed.values()].reduce((s, e) => s + e.count, 0) + ' fields):');
+    show(typeAllowed);
+    for (const id of new Set([...typeAllowed.keys()].map(k => k.split(':')[0]))) { console.log(`  ${id}: ${ALLOW_TYPE[id]}`); }
+  }
+  console.log('\n' + (typeFindings.size ? 'Findings (a text field with type under ' + MIN_TYPE + ' px):' : `No text field has type under ${MIN_TYPE} px (${fieldsLooked} fields looked at).`));
+  show(typeFindings);
+  // a whole run that saw hardly any field did not look at the pages it should have
+  const tooFew = !only && fieldsLooked < 50;
+  if (tooFew) { console.log('The audit looked at only ' + fieldsLooked + ' fields: the pages were not what they should be.'); }
+
+  console.log(`\n${measured} page views and openings measured, ${findings.size} kinds of finding for the hit area, ${typeFindings.size} for the type of fields.`);
+  process.exit(findings.size || typeFindings.size || tooFew ? 1 : 0);
 })().catch(e => { console.error('FAILED to run:', e.message); process.exit(2); });

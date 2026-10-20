@@ -90,9 +90,9 @@ Action: **fixed** (changed in this review, with a line in the changelog), **adde
 
 | Where | Finding | Action |
 |---|---|---|
-| Component `toasts` | "hovering keeps them". `matui.js` ends every toast with `setTimeout(remove, 6000)`; nothing pauses it. A message that goes while the pointer or the focus is on it fails WCAG 2.2.1. | task (pause on hover and focus) |
-| Component `fields` | "On a touch screen inputs are 44 px high and 16 px type, so iOS does not zoom." The fields inherit 15 px (`--mat-fs-md`); only the code input keeps 16 px or more. iOS Safari zooms into a field under 16 px. | task (16 px with `pointer: coarse`, then a MOBILE rule) |
-| `matui.js` | Sends `mat:theme`, `mat:accent`, `mat:navset` and `mat:dialog-open`; the header, ADOPTING.md and the changelog name none of them, so by docs/VERSIONING.md they are not part of the contract. | task (document them or say they are internal); a test pins the four so a fifth fails |
+| Component `toasts` | "hovering keeps them". `matui.js` ends every toast with `setTimeout(remove, 6000)`; nothing pauses it. A message that goes while the pointer or the focus is on it fails WCAG 2.2.1. | fixed afterwards (CHANGELOG Unreleased: the timer waits while the pointer or the focus is on the toast; Escape closes it) |
+| Component `fields` | "On a touch screen inputs are 44 px high and 16 px type, so iOS does not zoom." The fields inherit 15 px (`--mat-fs-md`); only the code input keeps 16 px or more. iOS Safari zooms into a field under 16 px. | fixed afterwards (16 px inside `@media (pointer: coarse)`, rule MOBILE-06, a second measure in `touch-audit.js`) |
+| `matui.js` | Sends `mat:theme`, `mat:accent`, `mat:navset` and `mat:dialog-open`; the header, ADOPTING.md and the changelog name none of them, so by docs/VERSIONING.md they are not part of the contract. | fixed afterwards: all 23 events are in the header of the script and in the table of ADOPTING.md (section 3b), and `ScriptEventsTests` holds the table to the code (a new event without a row fails) |
 | Catalogue citations | `tabs` cites SHELL-09 (the page head), `spinner` cites BUTTON-03 (labels start with a verb), `u-spacing` cites MOBILE-04. They are about something else. | owner (the components pages are changed by other work) |
 | The site | Pages send no `Content-Security-Policy`, no `X-Content-Type-Options`, no `Referrer-Policy`; only the brand files and the releases do. CODE-03 says an app works under a strict policy. | owner |
 
@@ -131,7 +131,7 @@ Every added rule is of the source MatDesign, level Should, has a reason, an exam
 | Performance budget | The components page is about two megabytes (a comment in `run.js`) | The site would break its own rule. Owner. |
 | Caching and file names | IDENT-08 (brand files by hash, `immutable`); `/ui/matui.css?v=<hash>`; releases never change | Only this site and its brand do it; no promise for apps. |
 | `rel` on links | `target="_blank"` has `rel="noopener"` in both places it is used | Two places. |
-| A mobile rule for 16 px inputs | See above | The toolkit does not do it yet. Written into the follow-up. |
+| A mobile rule for 16 px inputs | See above | The toolkit did not do it yet. Added afterwards, with the fix, as MOBILE-06. |
 | Keyboard shortcuts, drag and drop alternatives | A11Y-02 (`/`), LIST-15, FORM-21 | Exist. |
 
 ## Decisions for the owner
@@ -144,7 +144,7 @@ Every added rule is of the source MatDesign, level Should, has a reason, an exam
 6. **Performance budget**: the components page is about two megabytes; set a budget for it first, then a rule.
 7. **The 52 remaining Review rules**: a pass that names the tests that exist, and drops the claim where none does.
 8. **The catalogue's mis-citations** (tabs, spinner, u-spacing): fix with the components pages.
-9. **Follow-ups suggested**: pause a toast while pointer or focus is on it; 16 px inputs on touch screens, then a MOBILE rule; document or hide the four events. Each changes `src/MatUi` and so needs its line in `CHANGELOG.md`.
+9. **Follow-ups suggested**: pause a toast while pointer or focus is on it; 16 px inputs on touch screens, then a MOBILE rule; document or hide the four events. Each changes `src/MatUi` and so needs its line in `CHANGELOG.md`. **Done afterwards** (branch `fix/toolkit-gaps`, CHANGELOG Unreleased): the three follow-ups are in the toolkit; the rule for the 16 px is MOBILE-06.
 10. **The changelog starts at 2026-10-20.** Between the first day and now 23 rules were changed after they were added (SHELL-03 seven times, FORM-15 thirteen times: `node tools/rule-history.js --changes`); those changes are not in it. They can be added as lines with their dates if wanted; the notes would have to be written by hand.
 11. **The hash covers statement, level and source.** A new title, reason, example or check needs no line; the review wrote lines for check changes anyway. Add the title to the hash?
 

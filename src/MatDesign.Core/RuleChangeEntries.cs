@@ -188,5 +188,6 @@ public static partial class RuleChanges
         Add("2026-10-20", "LIST-18", "f7906524", "A catalogue is an overview of tiles by category and one page per item with its own address, never everything on one page."),
         Chg("2026-10-20", "TABLE-02", "24d1f1f3", "A row with actions reads like a phone list on a phone: the name is the title of the card, without its label, and the actions stand beside it."),
         Chg("2026-10-20", "SHELL-12", "78c4fcb1", "A toast stands at the top on a phone, under the header bar, and a tap on it goes to what lies under it; only its X takes the tap."),
+        Add("2026-10-20", "MOBILE-06", "df3190b8", "Found missing in the review: the type of a text field is 16 px or more on a touch screen, so that iOS does not zoom into it; a mouse sees no change."),
     ];
 }

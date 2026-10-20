@@ -1,10 +1,11 @@
 using System.Text.RegularExpressions;
 using MatDesign.Core;
+using MatDesign.Web.Services;
 
 namespace MatDesign.Tests;
 
 /// <summary>
-/// MOBILE-04 on the CSS and the script: what a touch screen gets is a hit area of 44 px, not a bigger mark. The browser check (tests/e2e/run.js, "Touch targets", and
+/// MOBILE-04 and MOBILE-06 on the CSS and the script: what a touch screen gets is a hit area of 44 px, not a bigger mark. The browser check (tests/e2e/run.js, "Touch targets", and
 /// tests/e2e/touch-audit.js) measures the real thing; these hold the pieces it relies on.
 /// </summary>
 public partial class TouchTargetTests
@@ -184,5 +185,127 @@ public partial class TouchTargetTests
         {
             Assert.True(Regex.IsMatch(audit, $@"'{m.Groups["id"].Value}':\s*'"), $"the exception '{m.Groups["id"].Value}' of touch-audit.js has no reason");
         }
+    }
+
+    // ------------------------------------------------------------------------------------------------------ MOBILE-06: the type of a field
+
+    [GeneratedRegex(@"font-size:\s*(?:1rem|max\(1rem,[^;]+\))\s*;")]
+    private static partial Regex FieldSize();
+
+    [Fact]
+    public void Every_text_field_the_toolkit_draws_gets_16_px_type_for_a_touch_screen_and_a_mouse_sees_no_change()
+    {
+        // The fields take their size from what they stand in (15 px in the body) and `font: inherit` is set on some of them after the rule of the forms part, so the pieces are in three parts:
+        // matui.forms.css (the field, the select, the text area, the small and the large size, the stepper), matui.pickers.css (the search field, the tags) and matui.lists.css (the field of a row).
+        var coarse = new List<(string Part, string Selector, string Body)>();
+        foreach (var part in CssParts)
+        {
+            foreach (var block in CoarseBlocks(Css(part)))
+            {
+                foreach (Match rule in RuleRegex().Matches(block))
+                {
+                    if (rule.Groups["body"].Value.Contains("font-size", StringComparison.Ordinal))
+                    {
+                        coarse.Add((part, rule.Groups["selector"].Value.Trim(), rule.Groups["body"].Value.Trim()));
+                    }
+                }
+            }
+        }
+
+        foreach (var (part, field) in new[]
+        {
+            ("forms", ".mat-input"), ("forms", ".mat-select"), ("forms", ".mat-textarea"), ("forms", ".mat-input--sm"), ("forms", ".mat-select--sm"), ("forms", ".mat-input--lg"), ("forms", ".mat-select--lg"),
+            ("forms", ".mat-input-group--sm .mat-input"), ("forms", ".mat-input-group--lg .mat-select"), ("pickers", ".mat-search__input"), ("pickers", ".mat-tagfield__input"), ("lists", ".mat-item__input"),
+        })
+        {
+            Assert.True(coarse.Any(r => r.Part == part && r.Selector.Split(',').Select(s => s.Trim()).Contains(field)), $"matui.{part}.css has no `font-size` for {field} under @media (pointer: coarse)");
+        }
+
+        // none of them gives less than 16 px: the value is 1rem or max(1rem, ...), and the large size keeps its own token
+        var fields = new Regex(@"\.mat-(?:input|select|textarea|search__input|tagfield__input|item__input|stepper)");
+        foreach (var rule in coarse.Where(r => fields.IsMatch(r.Selector)))
+        {
+            Assert.True(FieldSize().IsMatch(rule.Body), $"{rule.Selector} sets a type of less than 16 px for a touch screen: {rule.Body}");
+        }
+
+        Assert.Contains(coarse, r => r.Selector.Contains(".mat-input--lg", StringComparison.Ordinal) && r.Body.Contains("var(--mat-fs-lg)", StringComparison.Ordinal));
+
+        // the rules that give a field its type outside of a touch screen have the same weight as these, so the later one wins: each of these stands after them in its part
+        // (the input group set the type of its fields after the sizes of the field: a first version stood before it and left `grp-sm` at 13 px)
+        var forms = Css("forms");
+        var formsBlock = forms.IndexOf(".mat-input, .mat-select, .mat-textarea { font-size: max(1rem, 1em); }", StringComparison.Ordinal);
+        Assert.True(formsBlock > 0, "the touch rule of the fields is not in matui.forms.css");
+        foreach (var before in new[] { ".mat-input--sm, .mat-select--sm {", ".mat-input--lg, .mat-select--lg {", ".mat-input-group--sm .mat-input,", ".mat-input-group--lg .mat-input,", ".mat-stepper:has(> .mat-input--sm) {", ".mat-stepper:has(> .mat-input--lg) {" })
+        {
+            var at = forms.IndexOf(before, StringComparison.Ordinal);
+            Assert.True(at >= 0, $"matui.forms.css has no `{before}`");
+            Assert.True(formsBlock > at, $"the touch rule of the fields stands before `{before}` in matui.forms.css, which then has the last word");
+        }
+
+        var pickers = Css("pickers");
+        var pickersBlock = pickers.IndexOf(".mat-search__input, .mat-tagfield__input { font-size: max(1rem, 1em); }", StringComparison.Ordinal);
+        Assert.True(pickersBlock > pickers.IndexOf(".mat-tagfield__input {", StringComparison.Ordinal) && pickersBlock > pickers.LastIndexOf(".mat-search__input { font-size: 1rem; }", StringComparison.Ordinal) && pickersBlock > pickers.LastIndexOf("  font: inherit;\n  appearance: none;", StringComparison.Ordinal), "the touch rule of the search field and the tags does not stand after their own rules in matui.pickers.css");
+        var lists = Css("lists");
+        Assert.True(lists.IndexOf(".mat-item__input { font-size: max(1rem, 1em); }", StringComparison.Ordinal) > lists.IndexOf(".mat-item__input {", StringComparison.Ordinal), "the touch rule of the field of a row does not stand after its own rule in matui.lists.css");
+
+        // and never outside of a touch screen: with a mouse the type is what it was (the 1rem of the search field on a phone below 640 px was there before)
+        foreach (var part in CssParts)
+        {
+            var outside = Css(part);
+            foreach (var block in CoarseBlocks(outside))
+            {
+                outside = outside.Replace(block, string.Empty, StringComparison.Ordinal);
+            }
+
+            Assert.DoesNotContain("max(1rem, 1em)", outside);
+        }
+    }
+
+    [Fact]
+    public void The_rule_says_16_px_for_a_touch_screen_no_page_stops_the_zoom_and_the_catalogue_says_what_is_true()
+    {
+        var rule = RuleBook.Get("MOBILE-06")!;
+        Assert.True(rule.Statement.Length <= 1200, $"MOBILE-06 is {rule.Statement.Length} characters");
+        Assert.Equal(RuleLevel.Should, rule.Level);
+        Assert.Equal(RuleBook.Design, rule.Source);
+        Assert.Contains("16 px", rule.Statement);
+        Assert.Contains("iOS", rule.Statement);
+        Assert.Contains("@media (pointer: coarse)", rule.Statement);
+        Assert.Contains("max(1rem, 1em)", rule.Statement);
+        Assert.Contains("touch-audit.js", rule.Check);
+
+        // the way not to do it, which would take the zoom away from the user (WCAG 1.4.4), is not on any page of the site or of a sample
+        foreach (var file in new[] { Path.Combine("Pages", "Shared", "_Head.cshtml"), Path.Combine("Services", "ShellSkeleton.cs") })
+        {
+            var text = File.ReadAllText(TestPaths.Web(file));
+            Assert.Contains("name=\"viewport\"", text);
+            Assert.DoesNotContain("maximum-scale", text);
+            Assert.DoesNotContain("user-scalable", text);
+        }
+
+        Assert.Contains(ComponentCatalog.Get("fields")!.Behaviour, b => b.Contains("16 px type at least", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void The_audit_measures_the_type_of_every_text_field_and_the_browser_checks_look_at_the_components_page()
+    {
+        var e2e = Path.Combine(TestPaths.RepoRoot, "tests", "e2e");
+        var audit = File.ReadAllText(Path.Combine(e2e, "touch-audit.js"));
+        var run = File.ReadAllText(Path.Combine(e2e, "run.js"));
+        Assert.Contains("const MIN_TYPE = 16;", audit);
+        Assert.Contains("function measureType(", audit);
+        Assert.Contains("parseFloat(cs.fontSize)", audit);
+        Assert.Contains("const ALLOW_TYPE = {", audit);
+        Assert.Contains("input:not([type=\"hidden\"])", audit);
+        // every exception has its reason, and the audit fails when it saw hardly a field
+        foreach (Match m in Regex.Matches(audit, @"\? '(?<id>[a-z-]+)' : ''"))
+        {
+            Assert.True(Regex.IsMatch(audit, $@"'{m.Groups["id"].Value}':\s*'"), $"the exception '{m.Groups["id"].Value}' of the type measure in touch-audit.js has no reason");
+        }
+
+        Assert.Contains("fieldsLooked < 50", audit);
+        Assert.Contains("The type of fields on a touch screen, and toasts that wait", run);
+        Assert.Contains("every text field of the components page has 16 px type or more", run);
+        Assert.Contains("with a mouse a field keeps the type it had", run);
     }
 }
