@@ -13,6 +13,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-20
 ### Changed
 
 - A tooltip that is not shown takes no room (`[data-tip]::after` is `display: none` until hover or focus, and fades in from `@starting-style`). Before, the transparent tip of a button at the end of a table row or of the header bar stood out of its box and let the table, or the whole main area, scroll sideways by the width of a tip nobody saw. Tips at the end of a row (`mat-table__actions`) and in the header bar (`mat-topbar__actions`) open towards the start, the tips of the header bar open below it (above there is no room); `data-tip-align="start|end"` and `data-tip-place="below"` do the same anywhere else. Nothing to do for an app but copy the files; an app that moved its tips with a rule of its own (`left`, `right`, `transform` on `[data-tip]::after`) can drop it.
