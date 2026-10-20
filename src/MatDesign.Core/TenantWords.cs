@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using MatDesign.Core.Studio;
@@ -171,7 +172,7 @@ public sealed partial class TenantWords
         var last = 0;
         foreach (Match tag in Tag().Matches(html))
         {
-            result.Append(Apply(MarkupPattern, html[last..tag.Index]));
+            result.Append(Apply(MarkupPattern, html[last..tag.Index], html: true));
             last = tag.Index + tag.Length;
             if (!tag.Groups["name"].Success)
             {
@@ -185,7 +186,7 @@ public sealed partial class TenantWords
                 .Append('>');
         }
 
-        result.Append(Apply(MarkupPattern, html[last..]));
+        result.Append(Apply(MarkupPattern, html[last..], html: true));
         return result.ToString();
     }
 
@@ -199,7 +200,7 @@ public sealed partial class TenantWords
 
         var quote = attribute.Groups["double"].Success ? '"' : '\'';
         var value = attribute.Groups["double"].Success ? attribute.Groups["double"].Value : attribute.Groups["single"].Value;
-        return $"{name}={quote}{Apply(MarkupPattern, value)}{quote}";
+        return $"{name}={quote}{Apply(MarkupPattern, value, html: true)}{quote}";
     }
 
     /// <summary>A quick test before the markup is taken apart: the words that can change are all in this list.</summary>
@@ -250,21 +251,23 @@ public sealed partial class TenantWords
 
     // ---- the work
 
-    private string Apply(Regex pattern, string text)
-        => text.Length == 0 || _tenant is null ? text : pattern.Replace(text, match => Expand(match.Value));
+    /// <summary>Maps <paramref name="text"/>; the names of the company that are put into markup (<paramref name="html"/>) are encoded, so that a name can never open a tag or close an attribute.</summary>
+    private string Apply(Regex pattern, string text, bool html = false)
+        => text.Length == 0 || _tenant is null ? text : pattern.Replace(text, match => Expand(match.Value, html));
 
-    private string Expand(string matched)
+    private string Expand(string matched, bool html)
     {
+        var tenant = _tenant!;
+        string Name(string value) => html ? WebUtility.HtmlEncode(value) : value;
         var entry = Lookup[matched];
-        var replacement = entry.To
-            .Replace("{a_app}", Article(_tenant!.App) + " " + _tenant.App, StringComparison.Ordinal)
-            .Replace("{apps}", _tenant.Apps, StringComparison.Ordinal)
-            .Replace("{app}", _tenant.App, StringComparison.Ordinal)
-            .Replace("{family}", _tenant.Family, StringComparison.Ordinal)
-            .Replace("{site}", _tenant.SiteName, StringComparison.Ordinal)
-            .Replace("{company}", _tenant.Company, StringComparison.Ordinal)
-            .Replace("{sample}", _sample, StringComparison.Ordinal);
-        return replacement;
+        return entry.To
+            .Replace("{a_app}", Article(tenant.App) + " " + Name(tenant.App), StringComparison.Ordinal)
+            .Replace("{apps}", Name(tenant.Apps), StringComparison.Ordinal)
+            .Replace("{app}", Name(tenant.App), StringComparison.Ordinal)
+            .Replace("{family}", Name(tenant.Family), StringComparison.Ordinal)
+            .Replace("{site}", Name(tenant.SiteName), StringComparison.Ordinal)
+            .Replace("{company}", Name(tenant.Company), StringComparison.Ordinal)
+            .Replace("{sample}", Name(_sample), StringComparison.Ordinal);
     }
 
     /// <summary>"a" or "an" for the word that follows.</summary>

@@ -240,18 +240,7 @@ public sealed partial class BlankSiteFixture : IAsyncLifetime
         }
 
         // the archive of the toolkit: its README and manifest are words
-        var bytes = await client.GetByteArrayAsync("/ui/matui.zip");
-        using (var zip = new System.IO.Compression.ZipArchive(new MemoryStream(bytes)))
-        {
-            foreach (var entry in zip.Entries.Where(e => e.FullName.EndsWith(".txt", StringComparison.Ordinal) || e.FullName.EndsWith(".md", StringComparison.Ordinal) || e.FullName.EndsWith(".json", StringComparison.Ordinal)))
-            {
-                using var reader = new StreamReader(entry.Open());
-                var content = await reader.ReadToEndAsync();
-                var name = "/ui/matui.zip!" + entry.FullName;
-                Crawl.Files.Add(name);
-                Crawl.Findings.AddRange(MatWords.In(name, entry.FullName.EndsWith(".json", StringComparison.Ordinal) ? SiteText.JsonStrings(content) : SiteText.Lines(content)));
-            }
-        }
+        ScanZip("/ui/matui.zip", await client.GetByteArrayAsync("/ui/matui.zip"));
 
         // the files of the release the Studio made: the text of them (the styleguide, README, changelog, design.json)
         var latest = await Text("/api/releases/latest");
@@ -263,12 +252,19 @@ public sealed partial class BlankSiteFixture : IAsyncLifetime
             foreach (var file in manifest.RootElement.GetProperty("files").EnumerateArray().Select(f => f.GetProperty("path").GetString()!))
             {
                 var extension = Path.GetExtension(file);
+                var url = $"/releases/{version}/{file}";
+                if (extension == ".zip")
+                {
+                    // the archive of the release: its README, manifests and changelog are words
+                    ScanZip(url, await client.GetByteArrayAsync(url));
+                    continue;
+                }
+
                 if (extension is not (".html" or ".json" or ".md" or ".txt"))
                 {
                     continue;
                 }
 
-                var url = $"/releases/{version}/{file}";
                 var content = await Text(url);
                 var pieces = extension switch
                 {
@@ -282,6 +278,20 @@ public sealed partial class BlankSiteFixture : IAsyncLifetime
                     Crawl.Findings.AddRange(MatWords.InAddresses(url, content));
                 }
             }
+        }
+    }
+
+    /// <summary>The words in an archive: the README, the manifests and the changelog in it (the files of the toolkit are code, read by the other tests).</summary>
+    private void ScanZip(string name, byte[] bytes)
+    {
+        using var zip = new System.IO.Compression.ZipArchive(new MemoryStream(bytes));
+        foreach (var entry in zip.Entries.Where(e => e.FullName.EndsWith(".txt", StringComparison.Ordinal) || e.FullName.EndsWith(".md", StringComparison.Ordinal) || e.FullName.EndsWith(".json", StringComparison.Ordinal)))
+        {
+            using var reader = new StreamReader(entry.Open());
+            var content = reader.ReadToEnd();
+            var inside = name + "!" + entry.FullName;
+            Crawl.Files.Add(inside);
+            Crawl.Findings.AddRange(MatWords.In(inside, entry.FullName.EndsWith(".json", StringComparison.Ordinal) ? SiteText.JsonStrings(content) : SiteText.Lines(content)));
         }
     }
 
@@ -445,6 +455,7 @@ public sealed class BlankNeutralityTests : IClassFixture<BlankSiteFixture>
         Assert.Contains(_site.Crawl.Files, f => f.StartsWith("/ui/matui.zip!matui/README", StringComparison.Ordinal));
         Assert.Contains(_site.Crawl.Files, f => f.Contains("/styleguide", StringComparison.Ordinal) && f.EndsWith(".html", StringComparison.Ordinal));
         Assert.Contains(_site.Crawl.Files, f => f.EndsWith("/design.json", StringComparison.Ordinal));
+        Assert.Contains(_site.Crawl.Files, f => f.StartsWith("/releases/", StringComparison.Ordinal) && f.Contains(".zip!", StringComparison.Ordinal) && f.EndsWith("README.txt", StringComparison.Ordinal));
     }
 
     [Fact]

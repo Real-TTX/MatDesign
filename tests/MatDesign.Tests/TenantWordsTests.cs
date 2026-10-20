@@ -279,6 +279,18 @@ public sealed partial class TenantWordsTests : IClassFixture<WebApplicationFacto
     }
 
     [Fact]
+    public void A_name_of_the_company_never_opens_a_tag_or_closes_an_attribute_in_a_markup()
+    {
+        var words = TenantWords.For(Tenant.For("Fish & Chips", DesignTemplates.BlankId), "Fish & \"Chips\" <b>");
+
+        var mapped = words.Markup("<a href=\"#\" title=\"MatMail\">MatMail</a> <p>The Mat apps of MatDesign</p>");
+
+        Assert.Equal("<a href=\"#\" title=\"Fish &amp; &quot;Chips&quot; &lt;b&gt;\">Fish &amp; &quot;Chips&quot; &lt;b&gt;</a> <p>The Fish apps of Fish Design</p>", mapped);
+        // in a text (a page encodes it) the name is what it is
+        Assert.Equal("The Fish apps of Fish Design", words.Text("The Mat apps of MatDesign"));
+    }
+
+    [Fact]
     public void The_changelog_keeps_its_structure_and_says_an_app_where_it_named_one()
     {
         var markdown = "# Changelog\n\n## [0.3.1] - 2026-10-20\n\n### Changed\n\n- The accent of Matddns is blue. Matddns takes it with its next copy of the toolkit.\n- A brand is set in the MatDesign Studio for the Mat apps.\n";
@@ -545,6 +557,36 @@ public sealed partial class TenantWordsTests : IClassFixture<WebApplicationFacto
         }
 
         Assert.True(problems.Count == 0, "A page never writes a word of the family (IDENT-09): read it from DesignData.Tenant, or pass the sentence through DesignData.Words.Text.\n" + string.Join("\n", problems));
+    }
+
+    [GeneratedRegex(@"RuleBook\.(?:All|In\()|ComponentCatalog\.All\b|PatternCatalog\.(?:All|Get\()|Changelog\.(?:Current|LoadText)|(?<![.\w])RuleChanges\.(?:All|For)\b")]
+    private static partial Regex BuiltInTextSource();
+
+    [Fact]
+    public void The_texts_of_the_toolkit_are_read_from_DesignData_where_they_are_mapped_and_nowhere_else()
+    {
+        // DesignData maps them; the checks of the design data validate the built-in entries as they are; the menu counts the rules. Everything else (a page, the API, the search, a release) reads DesignData.
+        var allowed = new[] { "Studio/DesignData.cs", "Studio/DesignChecks.cs", "Services/Navigation.cs", "Services/ComponentCatalog.cs", "Services/PatternCatalog.cs" };
+        var problems = new List<string>();
+        foreach (var file in Directory.EnumerateFiles(TestPaths.Web(string.Empty), "*.*", SearchOption.AllDirectories).Where(f => f.EndsWith(".cs", StringComparison.Ordinal) || f.EndsWith(".cshtml", StringComparison.Ordinal)))
+        {
+            var relative = Path.GetRelativePath(TestPaths.Web(string.Empty), file).Replace('\\', '/');
+            if (relative.StartsWith("obj/", StringComparison.Ordinal) || relative.StartsWith("bin/", StringComparison.Ordinal) || allowed.Contains(relative))
+            {
+                continue;
+            }
+
+            var lines = File.ReadAllLines(file);
+            for (var i = 0; i < lines.Length; i++)
+            {
+                if (!lines[i].TrimStart().StartsWith("//", StringComparison.Ordinal) && BuiltInTextSource().Match(lines[i]) is { Success: true } match)
+                {
+                    problems.Add($"{relative}:{i + 1}: {match.Value}");
+                }
+            }
+        }
+
+        Assert.True(problems.Count == 0, "These read the toolkit's own texts as they were written (in the words of the Mat family). Read DesignData.Rules / Areas / Components / Patterns / RuleChanges / Changelog instead (IDENT-09).\n" + string.Join("\n", problems));
     }
 
     // ---- the icon of the site
