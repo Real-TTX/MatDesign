@@ -186,5 +186,6 @@ public static partial class RuleChanges
         Add("2026-10-20", "FORM-23", "5ed52552", "A search with suggestions (mat-search): a field that is an ARIA combobox, grouped suggestions, keys, recent searches, a full-screen panel on a phone."),
         Add("2026-10-20", "SHELL-20", "d307dd1a", "A search in the header bar: it finds everything by keywords, as a field on a wide screen and an icon on a phone."),
         Add("2026-10-20", "LIST-18", "f7906524", "A catalogue is an overview of tiles by category and one page per item with its own address, never everything on one page."),
+        Chg("2026-10-20", "TABLE-02", "24d1f1f3", "A row with actions reads like a phone list on a phone: the name is the title of the card, without its label, and the actions stand beside it."),
     ];
 }
