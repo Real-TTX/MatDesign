@@ -59,7 +59,7 @@
                     @if (isNew)
                     {
                         <select class="mat-select" id="Input_Area" name="Input.Area">
-                            @foreach (var area in MatDesign.Core.RuleBook.Areas)
+                            @foreach (var area in Design.Areas)
                             {
                                 <option value="@area.Id" selected="@(area.Id == input.Area)">@area.Name (@area.Id)</option>
                             }

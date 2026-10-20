@@ -44,7 +44,7 @@ public static class RuleChangesApi
         var ruleId = string.IsNullOrWhiteSpace(rule) ? null : rule.Trim();
         var places = design.Rules.Select((r, i) => (r.Id, i)).ToDictionary(p => p.Id, p => p.i, StringComparer.Ordinal);
         // newest first; on one day the rules stand in the order of the book, and the lines of one rule the newest first (as the page of the rule shows them)
-        var lines = RuleChanges.All
+        var lines = design.RuleChanges
             .Select((change, index) => (Change: change, Index: index))
             .Where(x => ruleId is null || x.Change.RuleId.Equals(ruleId, StringComparison.OrdinalIgnoreCase))
             .Where(x => wanted is null || x.Change.Kind == wanted)

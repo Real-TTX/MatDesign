@@ -99,7 +99,7 @@ public class IndexModel(DesignData design) : PageModel
             ],
             Filters =
             [
-                new("area", "Area", RuleBook.Areas.Select(a => new FilterOption(a.Id, a.Name)).ToList(), area),
+                new("area", "Area", design.Areas.Select(a => new FilterOption(a.Id, a.Name)).ToList(), area),
                 new("level", "Level", Enum.GetValues<RuleLevel>().Select(l => new FilterOption(l.ToString(), l.ToString())).ToList(), level),
                 new("source", "Source", design.Rules.Select(r => r.Source).Distinct().Order().Select(s => new FilterOption(s, s)).ToList(), source),
                 new("check", "Checked by", [new("Test", "A test"), new("Report", "The palette report"), new("Review", "A reviewer")], checkedBy),

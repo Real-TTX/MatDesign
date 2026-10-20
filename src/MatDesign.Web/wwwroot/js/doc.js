@@ -177,7 +177,8 @@
     });
 
     dialog.querySelector('[data-iconlib-tags]').textContent = cell.getAttribute('data-iconlib-tags') || 'none';
-    dialog.querySelector('[data-iconlib-origin]').textContent = cell.getAttribute('data-iconlib-origin') === 'lucide' ? 'Lucide (ISC licence)' : 'Drawn for MatDesign';
+    var originLine = dialog.querySelector('[data-iconlib-origin]');
+    originLine.textContent = cell.getAttribute('data-iconlib-origin') === 'lucide' ? 'Lucide (ISC licence)' : (originLine.getAttribute('data-drawn-for') || 'Drawn for the toolkit');
 
     var usage = '<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="' + ref + '"></use></svg>';
     var use = dialog.querySelector('[data-iconlib-use]');

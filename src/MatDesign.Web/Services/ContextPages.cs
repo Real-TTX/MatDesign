@@ -15,8 +15,8 @@ public sealed record ContextPage(string Group, string View, string Title, string
 /// </summary>
 public static class ContextPages
 {
-    /// <summary>The address of a view of the sample app, as the frames of the site open it.</summary>
-    public static string Url(string view) => $"/Preview?app=matdesign&view={view}";
+    /// <summary>The address of a view of the sample app, as the frames of the site open it: in the app that is the site itself (<paramref name="app"/>, the demo's <c>matdesign</c> unless a company has its own).</summary>
+    public static string Url(string view, string app = "matdesign") => $"/Preview?app={app}&view={view}";
 
     public static ContextPage? For(string group) => All.FirstOrDefault(p => p.Group == group);
 

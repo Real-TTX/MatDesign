@@ -426,7 +426,7 @@ public sealed partial class ReleaseService(StudioService studio, DesignData desi
         Add("matui.css", Text(toolkit.ReleaseBundle(version)));
         Add("matui.js", Text(toolkit.ReleaseScript(version)));
         Add("matui.boot.js", Text(toolkit.ReleaseBootScript(version)));
-        Add("CHANGELOG.md", Text(Changelog.LoadText()));
+        Add("CHANGELOG.md", Text(design.ChangelogText));
         Add("matui-icons.svg", Text(toolkit.Sprite));
         foreach (var part in ToolkitFiles.CssParts)
         {

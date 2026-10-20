@@ -43,6 +43,9 @@ public class CompanyModel(StudioService studio, DesignData design) : StudioPageM
 
     public ITemplate Other => DesignTemplates.All.First(t => t.Id != design.Template.Id);
 
+    /// <summary>What a template is, in the words of this company: the demo is "the Mat apps as a sample" only for the demo; a company reads it as a set of sample apps.</summary>
+    public string DescriptionOf(ITemplate template) => design.Words.Text(template.Description);
+
     /// <summary>The sentence of the question when the template is switched: what is hidden, and what is not lost.</summary>
     public string SwitchQuestion
     {
@@ -52,10 +55,8 @@ public class CompanyModel(StudioService studio, DesignData design) : StudioPageM
             var hidden = leaving.Offers.Count == 0
                 ? "Nothing of the site is hidden."
                 : $"The site stops offering {Join(leaving.Offers)}.";
-            var kept = Other.Id == DesignTemplates.DemoId
-                ? "It brings the Mat apps, the audit, the Mat brand and the sample apps back."
-                : "It starts you with your own brand and the apps you add yourself.";
-            return $"Switch to the {Other.Name.ToLowerInvariant()} template? {hidden} Nothing is deleted: what you saved in the Studio stays, and switching back undoes this. {kept}";
+            var kept = Other.Brings;
+            return design.Words.Text($"Switch to the {Other.Name.ToLowerInvariant()} template? {hidden} Nothing is deleted: what you saved in the Studio stays, and switching back undoes this. {kept}");
         }
     }
 

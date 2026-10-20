@@ -32,7 +32,7 @@
                     @foreach (var rule in Model.Items)
                     {
                         var source = Model.SourceOf(rule);
-                        var area = RuleBook.Areas.First(a => a.Id == rule.Area);
+                        var area = Design.Areas.First(a => a.Id == rule.Area);
                         <tr>
                             <td data-label="Rule">
                                 <div class="mat-table__name">

@@ -1,4 +1,5 @@
 using MatDesign.Core;
+using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
@@ -6,9 +7,9 @@ namespace MatDesign.Web.Pages;
 
 /// <summary>
 /// The changelog of the toolkit as a page: what changed in each version, and, for the version an app carries, what an update takes with it and whether it has to
-/// change something of its own. The data is <see cref="Changelog"/> (CHANGELOG.md, embedded in the build).
+/// change something of its own. The data is <see cref="Changelog"/> (CHANGELOG.md, embedded in the build), in the words of the company (<see cref="DesignData.Changelog"/>).
 /// </summary>
-public class ChangelogModel : PageModel
+public class ChangelogModel(DesignData design) : PageModel
 {
     /// <summary>The version of an app's copy of the toolkit (the form asks for it); empty shows every version.</summary>
     [BindProperty(SupportsGet = true)]
@@ -17,7 +18,7 @@ public class ChangelogModel : PageModel
     public string Version => AppVersion.MatUi;
 
     /// <summary>The changes that are not released yet, or null.</summary>
-    public ChangelogEntry? Unreleased => Changelog.Current.Unreleased;
+    public ChangelogEntry? Unreleased => design.Changelog.Unreleased;
 
     /// <summary>The released versions that are shown: all of them, or those after <see cref="Since"/>.</summary>
     public IReadOnlyList<ChangelogEntry> Shown { get; private set; } = [];
@@ -36,11 +37,11 @@ public class ChangelogModel : PageModel
         if (Since is not null && !Changelog.IsVersion(Since))
         {
             Problem = "A version is three numbers with dots, like 0.1.0. You find it in the first line of matui.css.";
-            Shown = Changelog.Current.Releases;
+            Shown = design.Changelog.Releases;
             return;
         }
 
-        Shown = Since is null ? Changelog.Current.Releases : Changelog.Current.Since(Since);
+        Shown = Since is null ? design.Changelog.Releases : design.Changelog.Since(Since);
     }
 
     /// <summary>The id of the heading of a version, for a link to it.</summary>

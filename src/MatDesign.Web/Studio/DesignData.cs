@@ -41,6 +41,7 @@ public sealed class DesignData
     private Snapshot _snapshot;
     private long _version;
     private BrandAssets? _assets;
+    private BuiltIn? _builtIn;
 
     public DesignData(StudioService studio)
     {
@@ -51,7 +52,10 @@ public sealed class DesignData
 
     private sealed record Kind<T>(IReadOnlyList<T> All, IReadOnlyList<T> Items, IReadOnlyDictionary<string, ItemSource> Sources);
 
-    private sealed record Snapshot(Kind<MatApp> Apps, Kind<Rule> Rules, Kind<ComponentDoc> Components, Brand? Brand, Tenant Tenant, TenantOrigin Origin);
+    private sealed record Snapshot(Kind<MatApp> Apps, Kind<Rule> Rules, Kind<ComponentDoc> Components, Brand? Brand, Tenant Tenant, TenantOrigin Origin, BuiltIn BuiltIn);
+
+    /// <summary>The built-in texts in the words of the tenant (the identity for the demo): the toolkit's own data, mapped once for as long as the words that decide the result do not change.</summary>
+    private sealed record BuiltIn(string Key, TenantWords Words, IReadOnlyList<Rule> Rules, IReadOnlyList<ComponentDoc> Components, IReadOnlyList<RuleArea> Areas, IReadOnlyList<PatternDoc> Patterns, IReadOnlyList<RuleChange> RuleChanges, Changelog Changelog, string ChangelogText);
 
     /// <summary>A number that grows with every change made in the Studio.</summary>
     public long Version => Interlocked.Read(ref _version);
@@ -86,6 +90,34 @@ public sealed class DesignData
     /// such app, so that a blank site never shows or links an app of the Mat family.
     /// </summary>
     public MatApp Pick(string? preferred) => App(preferred) ?? SiteApp;
+
+    /// <summary>
+    /// The words of this instance's company for the toolkit's built-in texts (docs/STUDIO.md, "Company and templates"): the identity for the demo, the map of <see cref="TenantWords"/> for any other tenant. A page that shows a text
+    /// that is data and was written in the words of the Mat family (a card of a template, an example of the documentation) reads it through here; the rules, the components and the patterns already do.
+    /// </summary>
+    public TenantWords Words => _snapshot.BuiltIn.Words;
+
+    /// <summary>The areas of the rulebook (name and summary) in the words of the company.</summary>
+    public IReadOnlyList<RuleArea> Areas => _snapshot.BuiltIn.Areas;
+
+    public RuleArea? Area(string? id) => id is null ? null : Areas.FirstOrDefault(a => a.Id == id);
+
+    /// <summary>The patterns in the words of the company.</summary>
+    public IReadOnlyList<PatternDoc> Patterns => _snapshot.BuiltIn.Patterns;
+
+    public PatternDoc? Pattern(string? id) => id is null ? null : Patterns.FirstOrDefault(p => p.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>The changelog of the rulebook (what changed in the rules, when) in the words of the company: the notes are mapped, the hashes are the rules'.</summary>
+    public IReadOnlyList<RuleChange> RuleChanges => _snapshot.BuiltIn.RuleChanges;
+
+    /// <summary>The lines about one rule, oldest first, in the words of the company.</summary>
+    public IReadOnlyList<RuleChange> RuleChangesFor(string ruleId) => RuleChanges.Where(c => c.RuleId.Equals(ruleId, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    /// <summary>The changelog of the toolkit in the words of the company (as it is for the demo): the page, the API, the file and the one in the archive and in a release.</summary>
+    public Changelog Changelog => _snapshot.BuiltIn.Changelog;
+
+    /// <summary>The same as the markdown of the file.</summary>
+    public string ChangelogText => _snapshot.BuiltIn.ChangelogText;
 
     // ---- apps
 
@@ -254,11 +286,44 @@ public sealed class DesignData
         var (tenant, origin) = LoadTenant();
         var template = DesignTemplates.Get(tenant.Template);
         var apps = Merge(template.Apps, Items<MatApp>("apps", a => a, AppValidator.IsSafe, a => a.Id), a => a.Id, StringComparison.Ordinal, (all, _) => all.Count);
-        var rules = Merge(RuleBook.All, Items<Rule>("rules", r => r, RuleValidator.IsSafe, r => r.Id), r => r.Id, StringComparison.Ordinal,
+        var builtIn = BuiltInFor(TenantWords.For(tenant, apps.All.FirstOrDefault()?.Name));
+        var rules = Merge(builtIn.Rules, Items<Rule>("rules", r => r, RuleValidator.IsSafe, r => r.Id), r => r.Id, StringComparison.Ordinal,
             (all, added) => all.FindLastIndex(r => r.Area == added.Area) is var last and >= 0 ? last + 1 : all.Count);
-        var components = Merge(ComponentCatalog.All, Items<ComponentDoc>("components", ComponentValidator.Normalize, ComponentValidator.IsSafe, c => c.Id), c => c.Id, StringComparison.Ordinal,
+        var components = Merge(builtIn.Components, Items<ComponentDoc>("components", ComponentValidator.Normalize, ComponentValidator.IsSafe, c => c.Id), c => c.Id, StringComparison.Ordinal,
             (all, added) => all.FindLastIndex(c => c.Group == added.Group) is var last and >= 0 ? last + 1 : all.Count);
         var brand = Items<Brand>(Brand.Kind, b => b with { Light = b.Light ?? new Dictionary<string, string>(), Dark = b.Dark ?? new Dictionary<string, string>() }, BrandValidator.IsSafe, _ => Brand.ItemId).FirstOrDefault();
-        return new Snapshot(apps, rules, components, brand, tenant, origin);
+        return new Snapshot(apps, rules, components, brand, tenant, origin, builtIn);
+    }
+
+    /// <summary>
+    /// The built-in rules, areas, components, patterns and the changelog in the words of the company. The demo gets them as they are (the same objects); another company gets the map of <see cref="TenantWords"/> applied once, and the
+    /// result is kept while the words that decide it stay the same (a save in the Studio reloads the data, and the toolkit's own texts have not changed).
+    /// </summary>
+    private BuiltIn BuiltInFor(TenantWords words)
+    {
+        if (_builtIn is { } kept && kept.Key == words.Key)
+        {
+            return kept;
+        }
+
+        _builtIn = words.IsIdentity
+            ? new BuiltIn(words.Key, words, RuleBook.All, ComponentCatalog.All, RuleBook.Areas, PatternCatalog.All, Core.RuleChanges.All, Changelog.Current, Changelog.LoadText())
+            : MapBuiltIn(words);
+        return _builtIn;
+    }
+
+    private static BuiltIn MapBuiltIn(TenantWords words)
+    {
+        var text = words.Changelog(Changelog.LoadText());
+        return new BuiltIn(
+            words.Key,
+            words,
+            RuleBook.All.Select(words.OfRule).ToList(),
+            ComponentCatalog.All.Select(words.OfComponent).ToList(),
+            RuleBook.Areas.Select(words.OfArea).ToList(),
+            PatternCatalog.All.Select(words.OfPattern).ToList(),
+            Core.RuleChanges.All.Select(words.OfChange).ToList(),
+            Changelog.Parse(text, out _),
+            text);
     }
 }

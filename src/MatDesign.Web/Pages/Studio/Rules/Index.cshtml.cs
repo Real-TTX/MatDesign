@@ -96,7 +96,7 @@ public class IndexModel(StudioService studio, DesignData design) : StudioPageMod
             ],
             Filters =
             [
-                new("area", "Area", RuleBook.Areas.Select(a => new FilterOption(a.Id, a.Name)).ToList(), area),
+                new("area", "Area", design.Areas.Select(a => new FilterOption(a.Id, a.Name)).ToList(), area),
                 new("level", "Level", Enum.GetValues<RuleLevel>().Select(l => new FilterOption(l.ToString(), l.ToString())).ToList(), level),
                 new("source", "Source", [new("BuiltIn", "Built in"), new("Added", "Added in the Studio"), new("Changed", "Built in, changed in the Studio")], source),
             ],

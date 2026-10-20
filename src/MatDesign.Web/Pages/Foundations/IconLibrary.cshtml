@@ -1,6 +1,7 @@
 @page "/Foundations/IconLibrary"
 @model MatDesign.Web.Pages.Foundations.IconLibraryModel
 @inject MatDesign.Web.Services.IconLibrary Library
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     ViewData["Title"] = "Icon library";
     ViewData["PageSub"] = $"{Model.Total:N0} icons in {Model.CategoryCount} categories, in files of their own. Optional: MatUi works without them.";
@@ -82,7 +83,7 @@
                 <pre class="mat-code" data-copy='<svg class="mat-icon" aria-hidden="true" focusable="false"><use href="/matui-iconlib.svg#mat-il-lamp"></use></svg>'><code>&lt;svg class="mat-icon" aria-hidden="true" focusable="false"&gt;&lt;use href="/matui-iconlib.svg#mat-il-lamp"&gt;&lt;/use&gt;&lt;/svg&gt;</code></pre>
                 <p class="mat-muted">
                     The icons are drawn on the same grid as the toolkit's (24 px, 2 px stroke, round caps, <code>currentColor</code>), so they sit next to each other without a seam, and the rules for icons apply to them as well.
-                    @Library.Icons.Count(i => i.Origin == "lucide") are from Lucide (lucide.dev, ISC licence), @Library.Icons.Count(i => i.Origin == "matdesign") were drawn for MatDesign where Lucide has none
+                    @Library.Icons.Count(i => i.Origin == "lucide") are from Lucide (lucide.dev, ISC licence), @Library.Icons.Count(i => i.Origin == "matdesign") @Design.Words.Text("were drawn for MatDesign where Lucide has none")
                     (radiator, curtains, motion sensor …); <a href="/ui/iconlib/LICENSE.txt">LICENSE.txt</a> goes with the files.
                 </p>
             </div></div>
@@ -91,7 +92,7 @@
         <section class="mat-section" aria-labelledby="rules-title">
             <div class="mat-section__head"><h2 id="rules-title">Rules for icons</h2></div>
             <div class="mat-grid">
-                @foreach (var rule in RuleBook.In("ICON"))
+                @foreach (var rule in Design.RulesIn("ICON"))
                 {
                     <a class="mat-card" href="/Rules/Detail?id=@rule.Id"><div class="mat-card__body mat-stack mat-stack--sm"><span class="doc-rule-id">@rule.Id</span><strong>@rule.Title</strong></div></a>
                 }
@@ -140,7 +141,7 @@
                 <dt>Also found as</dt>
                 <dd data-iconlib-tags></dd>
                 <dt>Origin</dt>
-                <dd data-iconlib-origin></dd>
+                <dd data-iconlib-origin data-drawn-for="@Design.Words.Text("Drawn for MatDesign")"></dd>
             </dl>
             <div class="mat-field">
                 <span class="mat-label">In a page that has the sprite inline <span class="mat-hint">(click to copy)</span></span>

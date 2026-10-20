@@ -36,14 +36,14 @@ public class DetailModel(DesignData design, StudioService studio, StudioHistory 
         }
 
         Rule = rule;
-        Area = RuleBook.Areas.First(a => a.Id == rule.Area);
+        Area = design.Areas.First(a => a.Id == rule.Area);
         InArea = design.RulesIn(rule.Area).ToList();
         var index = design.Rules.ToList().IndexOf(rule);
         Previous = index > 0 ? design.Rules[index - 1] : null;
         Next = index < design.Rules.Count - 1 ? design.Rules[index + 1] : null;
 
         Origin = design.RuleSourceOf(rule.Id);
-        Changes = RuleChanges.For(rule.Id).Reverse().ToList();
+        Changes = design.RuleChangesFor(rule.Id).Reverse().ToList();
         if (Origin != ItemSource.BuiltIn && history.HasHistory("rules", rule.Id) && studio.CurrentUser(User) is { } person && person.Can(Capability.ViewStudio))
         {
             StudioHistoryUrl = StudioHistory.HistoryUrl("rules", rule.Id);

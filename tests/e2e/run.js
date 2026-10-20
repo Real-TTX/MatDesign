@@ -10348,6 +10348,50 @@ function seenAt(page, selector) {
     }
   }
 
+  // ---------------------------------------------------------------------------------------------------- the words of the demo (IDENT-09)
+  // A blank site reads the toolkit's own texts in the company's words (TenantWords, one map in DesignData: blank.js holds that). For the demo the map is the identity:
+  // the rules, the examples, the changelog and the icon say what they always said.
+  console.log('\nThe words of the demo');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Rules/Detail?id=IDENT-09');
+    await check('the rules of the demo keep the words of the Mat family: the rule about names, an example name, and the sources', async () => {
+      expectTrue((await page.textContent('main')).includes('The Mat apps, their accents, the audit of their repositories and the Mat brand are a template'), 'the rule about names');
+      await page.goto(BASE + '/Rules/Detail?id=SHELL-06', { waitUntil: 'networkidle' });
+      expectTrue((await page.textContent('main')).includes('MatMail 1.4.212-20261010'), 'the example name of an app');
+      await page.goto(BASE + '/Rules?q=Mat', { waitUntil: 'networkidle' });
+      const sources = await page.$$eval('table.mat-table tbody td[data-label="Source"]', tds => [...new Set(tds.map(td => td.textContent.trim()))]);
+      expectTrue(sources.some(s => s === 'MatMail' || s === 'MatPaper' || s === 'MatSplit ui-controls') || sources.includes('MatDesign'), 'the sources of the rules: ' + sources.join(', '));
+      expectTrue(!sources.includes('Toolkit') && !sources.includes('Reference app'), 'a source of the map on the demo: ' + sources.join(', '));
+      const api = await (await page.request.get(BASE + '/api/rules')).text();
+      expectTrue(api.includes('"source":"MatDesign"') && api.includes('The Mat apps, their accents'), 'the API');
+    });
+    await check('the examples of the demo name the apps of the family, and the picture and the icon of the site are the design glyph in its own colour', async () => {
+      await page.goto(BASE + '/Components/breadcrumb', { waitUntil: 'networkidle' });
+      expect(await page.locator('.doc-example__live .mat-crumbs li:first-child').first().innerText(), 'MatMail', 'the first crumb of the example');
+      await page.goto(BASE + '/Components/typography', { waitUntil: 'networkidle' });
+      const alts = await page.evaluate(() => [...document.querySelectorAll('.doc-example__live img')].map(i => i.alt));
+      expectTrue(alts.length >= 3 && alts.every(a => a.startsWith('The MatDesign logo')), 'the alt texts: ' + alts.join(' | '));
+      await page.goto(BASE + '/Components/colour-picker', { waitUntil: 'networkidle' });
+      expectTrue((await page.locator('.doc-example__live [data-swatches]').first().getAttribute('data-swatches')).includes(':MatDock'), 'the swatches of the picker');
+      expect(await page.getAttribute('link[rel="icon"]', 'href'), '/favicon.svg', 'the link of the icon');
+      const svg = await (await page.request.get(BASE + '/favicon.svg')).text();
+      expectTrue(svg.includes('fill="#d6336c"') && svg.includes('aria-label="MatDesign"'), 'the file of the icon: ' + svg.slice(0, 160));
+    });
+    await check('the changelog, its file and the icon library of the demo keep their words', async () => {
+      await page.goto(BASE + '/Changelog', { waitUntil: 'networkidle' });
+      expectTrue((await page.textContent('main')).includes('MatMail takes it with its next copy of the toolkit'), 'the changelog page');
+      const file = await (await page.request.get(BASE + '/ui/CHANGELOG.md')).text();
+      expectTrue(file.includes('The toolkit that the Mat apps copy'), 'the file of the changelog');
+      await page.goto(BASE + '/Foundations/IconLibrary?q=radiator', { waitUntil: 'networkidle' });
+      expectTrue((await page.textContent('main')).includes('were drawn for MatDesign where Lucide has none'), 'the sentence of the page');
+      await page.locator('.doc-icon[data-iconlib="radiator"]').first().click();
+      await page.waitForSelector('dialog#iconlib-dialog[open]');
+      expect(await page.textContent('#iconlib-dialog [data-iconlib-origin]'), 'Drawn for MatDesign', 'the origin line of the dialog');
+      await page.keyboard.press('Escape');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {

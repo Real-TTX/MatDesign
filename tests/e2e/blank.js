@@ -38,7 +38,7 @@ function expectTrue(value, what) {
 }
 
 // What the site must not say for a company that is not Mat: the name of the demo and the apps of its family, in the text of a page (not in the code of an example).
-const MAT_WORDS = ['MatDesign', 'Mat apps', 'Mat family', 'MatMail', 'Mattiverse', 'MatPaper', 'Matdo', 'Matcad', 'MatDock', 'MatOS'];
+const MAT_WORDS = ['MatDesign', 'Mat apps', 'Mat family', 'Mat app', 'MatMail', 'Mattiverse', 'MatPaper', 'Matdo', 'Matcad', 'MatDock', 'MatOS', 'MatSplit', 'Matmon', 'Matthix', 'MatCMS', 'MatFile', 'MatSMTP', 'MatIdentity'];
 
 (async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true }).catch(() => chromium.launch({ channel: 'chrome', headless: true }));
@@ -50,6 +50,7 @@ const MAT_WORDS = ['MatDesign', 'Mat apps', 'Mat family', 'MatMail', 'Mattiverse
     const ctx = await browser.newContext(options);
     const page = await ctx.newPage();
     page.on('pageerror', e => consoleErrors.push(url + ': ' + e.message));
+    if (process.env.DEBUG404) { page.on('response', r => { if (r.status() >= 400) { console.log('        ' + r.status() + ' ' + r.url() + ' (page ' + page.url() + ')'); } }); }
     page.on('console', m => { if (m.type() === 'error') { consoleErrors.push(url + ': ' + m.text()); } });
     await page.goto(BASE + url, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.readyState === 'complete');
@@ -78,7 +79,7 @@ const MAT_WORDS = ['MatDesign', 'Mat apps', 'Mat family', 'MatMail', 'Mattiverse
     expect(await page.locator('[data-setup-step]:not([hidden])').count(), 1, 'steps on show');
     await page.click('[data-setup-next]');
     expect(await page.locator('.mat-choice').count(), 2, 'template cards');
-    expect(await page.locator('.mat-choice__text small').allTextContents(), ['The Mat apps as a sample, to look around and change.', 'Start with your own brand and no apps.'], 'the descriptions');
+    expect(await page.locator('.mat-choice__text small').allTextContents(), ['A set of sample apps, to look around and change.', 'Start with your own brand and no apps.'], 'the descriptions');
     await shot(page, 'setup-2-template');
     await page.click('[data-setup-back]');
     expect(await page.inputValue('#Company'), COMPANY, 'the company after Back');
@@ -191,6 +192,87 @@ const MAT_WORDS = ['MatDesign', 'Mat apps', 'Mat family', 'MatMail', 'Mattiverse
     expectTrue(css.includes('[data-app="this-site"] { --mat-app-accent: #2563eb; }'), 'the colour of the site is not in the CSS');
     await shot(sp, 'palette-one-app');
   });
+
+  // ---------------------------------------------------------------------------------------------------- the words of a blank site (IDENT-09)
+  // The toolkit's own texts (the rules, the documentation of the components, the changelog) are written in the words of the Mat family and are read in the company's words
+  // through one map (TenantWords); the icon of the site is the company's colour. A visitor of a blank site must not read Mat anywhere.
+  console.log('\nThe words of a blank site');
+  {
+    const { ctx: c, page: p } = await open(desktop, '/Rules');
+    const read = async (url) => {
+      await p.goto(BASE + url, { waitUntil: 'networkidle' });
+      const title = await p.title();
+      return { title, said: (await sayMat(p)).concat(MAT_WORDS.filter(w => title.includes(w))) };
+    };
+    await check('the rules page and a rule say the company and no word of the Mat family; the title is the company\'s', async () => {
+      const list = await read('/Rules');
+      expect(list.title, 'Rulebook · ' + COMPANY + ' Design', 'the title of the rules page');
+      expect(list.said, [], 'words of the Mat family on the rules page');
+      const sources = await p.evaluate(() => [...document.querySelectorAll('table.mat-table tbody td[data-label="Source"]')].map(td => td.textContent.trim()));
+      expectTrue(sources.length > 0 && sources.every(s => ['Owner', 'Toolkit', 'Reference app', 'Studio'].includes(s)), 'the sources of the rules: ' + [...new Set(sources)].join(', '));
+      await shot(p, 'rules-blank');
+      const identity = await read('/Rules/Detail?id=IDENT-09');
+      expect(identity.said, [], 'words of the Mat family on the rule about names');
+      expectTrue((await p.textContent('main')).includes('A company that starts blank sees its own name and none of the sample apps.'), 'the sentence of IDENT-09');
+      const version = await read('/Rules/Detail?id=SHELL-06');
+      expect(version.said, [], 'words of the Mat family on SHELL-06');
+      expectTrue((await p.textContent('main')).includes('Acmemail 1.4.212-20261010'), 'the example name is an app of the company');
+      await shot(p, 'rule-blank');
+    });
+    await check('a component page, the overview, the changelog and the icon library say no word of the Mat family; the examples are the company\'s', async () => {
+      const problems = [];
+      for (const url of ['/Components', '/Components/breadcrumb', '/Components/topbar', '/Components/footer', '/Components/colour-picker', '/Components/typography', '/Changelog', '/Foundations/IconLibrary', '/Patterns', '/Layout', '/Utilities', '/Download', '/Rules/Changes']) {
+        const said = (await read(url)).said;
+        if (said.length) { problems.push(url + ': ' + said.join(', ')); }
+      }
+      expect(problems, [], 'pages that speak of the Mat family');
+      await p.goto(BASE + '/Components/breadcrumb', { waitUntil: 'networkidle' });
+      expect(await p.locator('.doc-example__live .mat-crumbs li:first-child').first().innerText(), 'Acmemail', 'the first crumb of the example');
+      await shot(p, 'component-blank');
+      await p.goto(BASE + '/Components/typography', { waitUntil: 'networkidle' });
+      const alts = await p.evaluate(() => [...document.querySelectorAll('.doc-example__live img')].map(i => i.alt));
+      expectTrue(alts.length >= 3 && alts.every(a => a.startsWith('The ' + COMPANY + ' Design logo')), 'the alt texts of the sample picture: ' + alts.join(' | '));
+      await p.goto(BASE + '/Components/colour-picker', { waitUntil: 'networkidle' });
+      expectTrue((await p.locator('.doc-example__live [data-swatches]').first().getAttribute('data-swatches')).includes(':Indigo'), 'the swatches of the picker are named by colour');
+    });
+    await check('the icon of the site is the glyph in the accent of the company, in the link and as a file; an icon of the library says it was drawn for the toolkit', async () => {
+      await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+      expect(await p.getAttribute('link[rel="icon"]', 'href'), '/favicon.svg', 'the link of the icon');
+      const svg = await (await p.request.get(BASE + '/favicon.svg')).text();
+      expectTrue(svg.includes('fill=\"#2563eb\"') && !svg.toLowerCase().includes('#d6336c') && svg.includes('aria-label=\"' + COMPANY + ' Design\"'), 'the file: ' + svg.slice(0, 160));
+      // the file is looked at as the picture of the examples (a page that is only an svg makes the browser ask for /favicon.ico, which the site does not have)
+      await p.goto(BASE + '/Components/typography', { waitUntil: 'networkidle' });
+      if (SHOTS) { await p.locator('.doc-example__live img').first().screenshot({ path: SHOTS + '/favicon-blank.png' }); }
+      await p.goto(BASE + '/Foundations/IconLibrary?q=radiator', { waitUntil: 'networkidle' });
+      await p.locator('.doc-icon[data-iconlib=\"radiator\"]').first().click();
+      await p.waitForSelector('dialog#iconlib-dialog[open]');
+      expect(await p.textContent('#iconlib-dialog [data-iconlib-origin]'), 'Drawn for the toolkit', 'the origin line of the dialog');
+      await p.keyboard.press('Escape');
+    });
+    await check('the shell skeleton is shown for the site\'s own app: its name, its tagline, its glyph, nothing of an example app', async () => {
+      await p.goto(BASE + '/Shell', { waitUntil: 'networkidle' });
+      const code = await p.textContent('#skeleton');
+      expectTrue(code.includes('<span class=\"mat-nav__name\">' + COMPANY + ' Design</span><span class=\"mat-nav__tagline\">Identity of the ' + COMPANY + ' apps</span>'), 'the brand of the skeleton');
+      expect(['MatMail', 'matmail', 'Mail gateway', 'mat-i-mail\"'].filter(w => code.includes(w)), [], 'what the skeleton keeps of the example app');
+    });
+    await check('the search finds nothing of the Mat family by its names, in the popup and in the answer of the API', async () => {
+      const found = [];
+      for (const q of ['MatMail', 'Mattiverse', 'MatPaper', 'Mat apps', 'Mat family', 'MatDesign', 'Matthix']) {
+        const answer = await (await p.request.get(BASE + '/api/search?limit=50&q=' + encodeURIComponent(q))).json();
+        for (const g of answer.groups) { for (const i of g.items) { const said = MAT_WORDS.filter(w => (i.title + ' ' + i.text + ' ' + i.href).includes(w)); if (said.length) { found.push(q + ' -> ' + i.title + ': ' + said.join(', ')); } } }
+      }
+      expect(found, [], 'results that name the family');
+      await p.goto(BASE + '/', { waitUntil: 'networkidle' });
+      await p.focus('#site-search');
+      await p.keyboard.type('MatMail', { delay: 20 });
+      await p.waitForFunction(() => { const s = document.querySelector('#site-search').closest('.mat-search')._matSearch; return s.q === 'MatMail' && (s.mode === 'results' || s.mode === 'empty'); });
+      const options = await p.evaluate(() => [...document.querySelectorAll('.mat-search__panel [role=option]')].map(o => o.innerText));
+      // the last row (All results for what was typed) says the words of the visitor, not the site's
+      expect(options.filter(o => !o.startsWith('All results for') && MAT_WORDS.some(w => o.includes(w))), [], 'options of the popup that name the family');
+      await shot(p, 'search-matmail-blank');
+    });
+    await c.close();
+  }
 
   // ---------------------------------------------------------------------------------------------------- the search of the site (SHELL-20, FORM-23)
   console.log('\nSearch');

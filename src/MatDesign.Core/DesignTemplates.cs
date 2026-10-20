@@ -33,6 +33,9 @@ public interface ITemplate
     /// <summary>What this template offers that the other does not, in words for a sentence: switching away from it hides these (nothing is deleted, switching back brings them back).</summary>
     IReadOnlyList<string> Offers { get; }
 
+    /// <summary>The sentence that says what switching to this template brings (the question of the Company page ends with it).</summary>
+    string Brings { get; }
+
     /// <summary>The app that is the site itself: the logo, the colour and the name of the shell. <paramref name="apps"/> are the apps of the site as <c>DesignData</c> merged them.</summary>
     MatApp SiteApp(Tenant tenant, IReadOnlyList<MatApp> apps);
 
@@ -75,6 +78,8 @@ public static class DesignTemplates
 
         public string DefaultAccent => string.Empty;
 
+        public string Brings => "It brings the Mat apps, the audit, the Mat brand and the sample apps back.";
+
         public IReadOnlyList<string> Offers =>
         [
             "the Mat apps with their accents",
@@ -111,6 +116,8 @@ public static class DesignTemplates
         public bool OffersSampleApps => false;
 
         public string DefaultAccent => "#2563eb";
+
+        public string Brings => "It starts you with your own brand and the apps you add yourself.";
 
         public IReadOnlyList<string> Offers => [];
 
