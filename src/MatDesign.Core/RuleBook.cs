@@ -146,7 +146,7 @@ public static class RuleBook
             "Sign-in, setup and error pages have no menu: a centred card on the plain page background with the logo above the title.",
             RuleLevel.Should, Design),
         new("SHELL-12", "SHELL", "Messages after a save",
-            "After a successful POST the page redirects (PRG) and says what happened: a toast (at the bottom right, gone after a few seconds, with an X) for \"done\", an alert at the top of the content for something the user has to read. A toast is never the only place for an error or for something the user has to act on, because it goes by itself. Errors stay on the page, at the field and in a summary.",
+            "After a successful POST the page redirects (PRG) and says what happened: a toast (at the bottom right, on a phone at the top under the header bar, gone after a few seconds, with an X; a tap on it goes to what lies under it, only the X takes it) for \"done\", an alert at the top of the content for something the user has to read. A toast is never the only place for an error or for something the user has to act on, because it goes by itself. Errors stay on the page, at the field and in a summary.",
             RuleLevel.Should, MatSplit, Check: "Test (the toasts live in the topmost dialog) and review"),
         new("SHELL-13", "SHELL", "Submenus",
             "A menu can be hierarchical, one level deep. The parent is a button, not a page: it opens its children (`aria-expanded`, `aria-controls`). If the section has a page of its own, that page is its first child. The branch that has the current page is open when the page loads; what the user opens or closes is remembered. Children show no icon. A closed parent shows the sum of its children's badges.",

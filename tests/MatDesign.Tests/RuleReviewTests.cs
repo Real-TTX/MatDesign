@@ -116,7 +116,8 @@ public sealed partial class RuleReviewTests(WebApplicationFactory<Program> facto
         Assert.DoesNotContain("smaller than 36 px", size);
 
         var messages = RuleBook.Get("SHELL-12")!.Statement;
-        Assert.Contains("a toast (at the bottom right, gone after a few seconds", messages);
+        Assert.Contains("a toast (at the bottom right, on a phone at the top under the header bar, gone after a few seconds", messages);
+        Assert.Contains("a tap on it goes to what lies under it, only the X takes it", messages);
         Assert.Contains("never the only place for an error", messages);
 
         Assert.Contains("split into cards or sections", RuleBook.Get("FORM-10")!.Statement);
@@ -158,6 +159,12 @@ public sealed partial class RuleReviewTests(WebApplicationFactory<Program> facto
         Assert.Contains("right:", host);
         Assert.Contains("bottom:", host);
         Assert.DoesNotContain("top:", host);
+        // on a phone at the top under the header bar, where it covers no action of the thumb
+        Assert.Matches(@"@media \(max-width: 600px\) \{\s*\.mat-toasts \{[^}]*top: calc\(var\(--mat-topbar-h\)[^}]*bottom: auto;", Css("controls"));
+        // it only tells: a tap goes through it, except on its X
+        Assert.Matches(@"\.mat-toast \{\s*pointer-events: none;", Css("controls"));
+        Assert.Contains(".mat-toast .mat-alert__close { pointer-events: auto; }", Css("controls"));
+        Assert.Contains(".mat-toasts > .mat-toast:not(:last-child) { display: none; }", Css("controls"));
         Assert.Matches(@"setTimeout\(remove, o\.timeout \|\| 6000\)", Script);
         Assert.Contains("class=\"mat-alert__close\"", Script.Replace("'", "\""));
     }

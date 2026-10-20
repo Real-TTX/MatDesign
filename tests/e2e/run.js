@@ -206,7 +206,11 @@ function seenAt(page, selector) {
       await page.waitForTimeout(350);
       await page.evaluate(() => { MatUi.toast('Saved', { tone: 'success', timeout: 30000 }); });
       await page.waitForTimeout(450);
-      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the sheet');
+      expect(await seenAt(page, '.mat-toast .mat-alert__close'), 'seen', 'the toast above the sheet (its X: the rest of a toast lets taps through)');
+      const place = await page.evaluate(() => { const r = document.querySelector('.mat-toast').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: innerHeight }; });
+      expectTrue(place.top < place.h / 3, 'on a phone the toast is not at the top: ' + JSON.stringify(place));
+      const through = await page.evaluate(() => { const r = document.querySelector('.mat-toast .mat-alert__body').getBoundingClientRect(); const hit = document.elementFromPoint(r.x + 4, r.y + r.height / 2); return !hit || !hit.closest('.mat-toast'); });
+      expectTrue(through, 'a tap on the text of a toast does not go to what lies under it');
       await page.click('.mat-toast .mat-alert__close', { timeout: 3000 });
       expect(await page.locator('.mat-toast').count(), 0, 'toasts after its X');
       await page.click('dialog[open] [data-dialog-close]');
@@ -316,7 +320,7 @@ function seenAt(page, selector) {
       await page.evaluate(() => { MatUi.toast('Saved in the dialog', { tone: 'success', timeout: 30000 }); });
       await page.waitForTimeout(450);
       expect(await page.evaluate(() => !!document.querySelector('#dlg-side .mat-toasts .mat-toast')), true, 'the toast is inside the open dialog');
-      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the dialog');
+      expect(await seenAt(page, '.mat-toast .mat-alert__close'), 'seen', 'the toast above the dialog (its X: the rest of a toast lets taps through)');
       await page.click('.mat-toast .mat-alert__close', { timeout: 3000 });
       expect(await page.locator('.mat-toast').count(), 0, 'toasts after its X');
       await page.click('#dlg-side .mat-dialog__close');
@@ -331,17 +335,17 @@ function seenAt(page, selector) {
       await page.evaluate(() => { MatUi.toast('Over both dialogs', { timeout: 30000 }); });
       await page.waitForTimeout(450);
       expectTrue((await host()).startsWith('mat-dlg-'), 'the toasts are not in the topmost dialog: ' + await host());
-      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the confirmation');
+      expect(await seenAt(page, '.mat-toast .mat-alert__close'), 'seen', 'the toast above the confirmation');
       await page.click('dialog.mat-dialog--sm[open] [data-dialog-close]');
       await page.waitForTimeout(300);
       expect(await host(), 'dlg-side', 'where the toasts are after the confirmation closed (it removes itself)');
       expect(await page.locator('.mat-toast').count(), 1, 'toasts after the confirmation closed');
-      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast above the panel');
+      expect(await seenAt(page, '.mat-toast .mat-alert__close'), 'seen', 'the toast above the panel');
       await page.click('#dlg-side .mat-dialog__close');
       await page.waitForTimeout(250);
       expect(await host(), 'body', 'where the toasts are after the last dialog closed');
       expect(await page.locator('.mat-toast').count(), 1, 'toasts after the last dialog closed');
-      expect(await seenAt(page, '.mat-toast'), 'seen', 'the toast on the page');
+      expect(await seenAt(page, '.mat-toast .mat-alert__close'), 'seen', 'the toast on the page');
     });
     await ctx.close();
   }

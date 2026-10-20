@@ -12,6 +12,9 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+### Changed
+
+- A toast never stands in the way (`SHELL-12`): a tap on it goes to what lies under it, only its X takes the tap (before, a toast blocked the buttons under it for six seconds, such as the next Delete of a list); and on a phone (up to 600 px) the toasts stand at the top under the header bar (`--mat-topbar-h`) instead of at the bottom, where the thumb works, one at a time (the newest takes the place of the one before). On a wide screen they stay at the bottom right. Nothing to do for an app but copy the files.
 
 ## [0.3.0] - 2026-10-20
 ### Added
