@@ -1,0 +1,17 @@
+@page "/Components/All"
+@{
+    // Everything on one page, as the components page was before it became an overview (LIST-18): for printing, for searching the whole documentation with the browser,
+    // and for the browser checks that need several components at once. It is not in the menu; the overview links to it in a small line.
+    var section = ComponentCatalog.Sections.Single(s => s.Id == "components");
+    ViewData["Title"] = "All components";
+    ViewData["PageSub"] = section.Sub;
+    ViewData["Crumbs"] = Crumbs.Of(("Toolkit", "/Shell"), ("Components", ComponentCatalog.OverviewPath), ("All on one page", null));
+    ViewData["Width"] = "wide";
+    ViewData["IndexDialog"] = "toc-dialog";
+}
+
+<partial name="_DocSection" model="section" />
+
+@section Scripts {
+    <script src="/js/doc.js"></script>
+}

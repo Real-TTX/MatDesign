@@ -253,10 +253,55 @@ beyond that is a component of its own with the app's prefix (`CODE-04`).
 
 ### Long pages and one page per section
 
-The components are not a list of pages to click through but one page, grouped, with an index beside it (`mat-with-toc`, `mat-toc`): a sticky column from 1100 px, an icon in the header bar that opens it in a dialog below that
-(full screen on a phone); the layout and the utilities are two more pages of the same kind. `data-scrollspy` marks the link of the section at the top; it computes per index from the position of the sections, so the index beside the content and the one in the dialog
-agree and two indexes on one page do not disturb each other. Because every example of every component is on the same page, **all ids share one page**: a test checks that no id appears twice and
-that every `#link` leads to a section that exists.
+A page with many sections has an index beside it (`mat-with-toc`, `mat-toc`): a sticky column from 1100 px, an icon in the header bar that opens it in a dialog below that
+(full screen on a phone); the layout and the utilities are two pages of this kind, and so is the page of everything (`/Components/All`, below). `data-scrollspy` marks the link of the section at the top; it computes per index from the position of the sections, so the index beside the content and the one in the dialog
+agree and two indexes on one page do not disturb each other. Because every example of every component of such a page is on the same page, **all ids share one page** there: a test checks that no id appears twice and
+that every `#link` leads to a section that exists. The components themselves are no longer one page, but an overview and a page each (next section).
+
+### Components pages (LIST-18)
+
+The components were one page: all 68 with their 217 examples, built at once and every picker, calendar, schedule, tree and carousel started by the script on load. That is 3.2 MB of HTML and about 69,000 elements, and the page lagged.
+The rule `LIST-18` (a catalogue with many items is an overview of tiles and one page per item) turned it into three pages that read the same data (`ComponentCatalog` and the Studio's items, through `DesignData`):
+
+- **`/Components`, the overview.** A tile for each component under the heading of its group (`ComponentOverview`, `Pages/Components/Index`): the icon, the name, the summary cut after two lines, and the number of examples, rules and properties. A tile is a link
+  (the whole tile, 44 px or more), flat like the rest (a line, a tint on hover, nothing lifts). The toolbar above has a search field and a Filter dialog for the group, one GET form (`q`, `group`), so the page works without the script: the server draws every tile and writes
+  `hidden` on those that do not match, which is also what lets the script show them again. `wwwroot/js/components.js` filters while the person types, with the same text as the server (the name, the summary and `data-keys` of the tile: group, id, ids of the rules; every word of the query has to be in it,
+  case and accents ignored: `ComponentOverview.Fold` and `fold()` do the same), writes the count into the live region of the toolbar ("12 of 68 components"), shows the empty state with the way out, hides a group that has no tile left together with its link in the index (the scroll spy would take a hidden heading
+  for one that was passed), and keeps the search in the address with `replaceState`. The index of the page lists the groups. An old address `/Components` + the id of a component (or of its heading, an example or its code) as a hash is sent on by the script to `/Components/{id}`
+  (the hash never reaches the server); a hash that starts with `group-` is a heading of the overview and stays.
+- **`/Components/{id}`, one component** (`Pages/Components/Detail`). The h1 and the summary, the examples each live with its code beside it (`_ComponentExamples`, the same partial as the page of everything, with `h3` titles under the `h2` "Examples"),
+  **How to use** (the markup contract read from the examples by `ComponentApi`: classes and attributes, all of them; the behaviour lines; the properties table of stage 11), **Rules it follows** (a card per rule with its title and level, the statement and the Do and Do not of the rule), and, where `ContextPages` has a page for the group,
+  the panel "In a page". The element that holds the examples has the id of the component (as the section has on the page of everything), so a selector such as `#slot-picker .mat-picker` reads the same on both pages; the sections have ids with the prefix `toc-` (reserved for the pages, `ComponentValidator`),
+  and `all` is a reserved id (it is a page). Only this component's controls are on the page, so only they are started. `<title>` is "Name · Components · Site". The crumbs are Components > group > name, the menu item Components is current (the longest prefix of the path), an unknown id is a 404 drawn by the page
+  with a way back (the status code pages of the site only run outside Development, and the page should say the same everywhere), `/Components/Buttons` is redirected to `/Components/buttons`, and a component of the layout or the utilities has no page of its own (it is sent to its place on `/Layout` or `/Utilities`).
+  **Paging:** `ComponentPaging` orders the components by group (the order of `ComponentCatalog.Groups`) and, inside, as the catalogue does; the last of a group is followed by the first of the next one, and there is no wrap-around. Previous and Next name the neighbour (and its group, where it is another one); they are drawn under the title and under the content.
+  The arrow keys do the same, unless the toolkit took the key (`defaultPrevented`) or the focus is in a field, a picker, a menu, a tree, a schedule, a control of an example, a code block or a dialog. Walking replaces the entry of the history instead of adding one, so **"All components" is one step back** to the overview,
+  which shows the search it had (it is in its address) and the place on the page: the shell scrolls its content area and not the window, so the browser does not bring that place back by itself, and the overview keeps it in the `state` of its own entry (`componentsScroll`). Whether the entry before is the overview is read from the Navigation API
+  (the referrer where there is none); a page that was opened directly gets an ordinary link. The index lists the sections of the page and the components of the group (the current one marked), in a dialog below 1100 px.
+- **`/Components/All`, everything on one page**, as the components page was: for printing, for the search of the browser and for the browser checks that need several components at once. It is not in the menu; the overview has a small line that links to it.
+  **It has no `content-visibility`**, although that cheap win was asked for: it was tried three ways and measured, and each way costs more than it gives. On the sections of the components, `auto` implies layout containment, which makes a section the frame of the `position: fixed`
+  panel of a picker (three picker checks of `run.js` fail); the override that undoes it for a section that holds the focus (`:focus-within { content-visibility: visible }`) makes Edge crash the renderer ("Target crashed" in the checks of the lists of rows); and a section that is skipped has a height
+  that can only be guessed (56,000 px by the estimate, 217,000 px in fact), so the scroll bar and the index jump and the check of the index fails. On the 217 code blocks only (half of the elements, no controls, 26 rem high like their `max-height`) the page loads faster (DOMContentLoaded 584 ms instead of 863 ms)
+  but a block that has the height of the estimate and not its own moves what is below it when it is drawn, so a tap that is computed after a scroll lands beside its target: the touch checks failed in three runs of six, and in none of six without it. `ComponentsPagesTests` holds the page to that (no
+  `content-visibility` in `site.css`). A better way to make the page lighter is to start the controls when they come into view (`matui.js`), not to skip their drawing.
+  Layout and Utilities are well under a megabyte and keep their pages as they are.
+
+Every link to a component is made with `ComponentCatalog.PageOf` (the Studio's "On the site" too), the forms of the examples go to `/Components/{id}` (they used to go to the overview with the id as a hash), and a test reads the pages, the catalogue, the sources and the documentation for the old form.
+The budgets are in `ComponentsPagesTests` (the overview 110,000 bytes and 1,800 elements, a page of a component 340,000 bytes and 7,000 elements, set a fifth above the measurement) and the browser checks print what the pages cost in the browser they run in (they only report).
+
+What the pages cost, measured with Playwright and the installed Edge on the development PC (1360 x 900, a cold context, the median of three runs; "until idle" includes the 500 ms that the network has to be quiet, so 600 ms is the floor):
+
+| Page | HTML | Elements | DOMContentLoaded | Until idle | Long tasks (total) |
+|---|---:|---:|---:|---:|---:|
+| `/Components` before (one page) | 3109 KB | 68,881 | 863 ms | 1643 ms | 3 (425 ms) |
+| `/Components` now (the overview) | 91 KB | 1,464 | 91 ms | 630 ms | 0 (0 ms) |
+| `/Components/buttons` (a small page) | 74 KB | 1,335 | 102 ms | 642 ms | 0 (0 ms) |
+| `/Components/itemlist-contents` (the largest) | 271 KB | 5,729 | 155 ms | 700 ms | 0 (0 ms) |
+| `/Components/All` (everything, as before) | 3095 KB | 68,864 | 823 ms | 1599 ms | 2 (358 ms) |
+| `/Layout` (unchanged) | 111 KB | 2,057 | 107 ms | 645 ms | 0 (0 ms) |
+| `/Utilities` (unchanged) | 185 KB | 3,615 | 133 ms | 652 ms | 0 (0 ms) |
+
+The page of everything still starts every control on load, which is what the long tasks are; it is the page for printing and for the checks, not the way in.
 
 ## 5. The documentation cannot drift from the toolkit
 

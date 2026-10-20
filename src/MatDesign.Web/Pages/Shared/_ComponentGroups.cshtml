@@ -1,0 +1,17 @@
+@model IReadOnlyList<TileGroup>
+@*
+    The index of the overview of the components (SHELL-16): the groups, each a link to its heading. It is drawn twice, beside the content and in the dialog that small
+    screens open, so both are marked by the scroll spy. A group that the filter leaves empty is hidden by components.js together with its link, and the link loses its
+    address (the scroll spy would take the hidden heading, which has no place on the page, for one that has been passed).
+*@
+<nav class="mat-toc" aria-label="Groups of components" data-scrollspy>
+    <p class="mat-toc__title">Groups</p>
+    <ul class="mat-toc__list">
+        @foreach (var group in Model)
+        {
+            <li data-components-index="@group.Anchor" hidden="@(group.VisibleCount == 0)">
+                <a class="mat-toc__link" href="#@group.Anchor">@group.Group</a>
+            </li>
+        }
+    </ul>
+</nav>

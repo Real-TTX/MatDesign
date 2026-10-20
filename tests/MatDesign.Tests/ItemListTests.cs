@@ -461,7 +461,7 @@ public sealed partial class ItemListTests(WebApplicationFactory<Program> factory
     [Fact]
     public async Task The_components_page_shows_the_lists_with_their_code_and_a_name_in_the_index()
     {
-        var html = await factory.CreateClient().GetStringAsync("/Components");
+        var html = await factory.CreateClient().GetStringAsync("/Components/All");
         foreach (var d in Docs)
         {
             Assert.Contains($"<section class=\"doc-component mat-anchor\" id=\"{d.Id}\"", html);

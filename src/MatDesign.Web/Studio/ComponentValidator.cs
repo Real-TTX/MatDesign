@@ -16,7 +16,8 @@ public static partial class ComponentValidator
     /// <summary>Ids the page makes itself: the sections, headings and sources of the components, the menu, the index.</summary>
     private static readonly string[] ReservedPrefixes = ["group-", "h-", "src-", "ex-", "toc-", "nav-", "mat-", "user-"];
 
-    private static readonly string[] ReservedIds = ["main"];
+    /// <summary>"main" is the element of the content; "all" is the page /Components/All, which an address of a component (/Components/{id}) must not shadow.</summary>
+    private static readonly string[] ReservedIds = ["main", "all"];
 
     [GeneratedRegex(@"^[a-z][a-z0-9-]{1,39}$")]
     private static partial Regex IdPattern();

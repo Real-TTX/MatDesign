@@ -12,7 +12,9 @@ One container, no cloud, nothing loaded from another site.
 
 </div>
 
-![The components page: every example with its code beside it](docs/images/components-code.png)
+![The overview of the components: a tile for each, by group, with a search](docs/images/components-overview.png)
+
+![The page of a component: every example with its code beside it](docs/images/components-code.png)
 
 ---
 
@@ -29,7 +31,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **130 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **131 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
 - Searchable, a page per rule, and as JSON at `/api/rules`
 
@@ -53,8 +55,8 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   so an app that sets none sees no change; the list, with types and defaults, is read from the CSS
 
 **The documentation**
-- **68 components with 236 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
-  it uses and the rules it follows
+- **68 components with 236 live examples**, an **overview of tiles by group** and a **page for each** (one click from the tile, Previous and Next with the arrow keys), each example with its **code beside it** – coloured, with *Copy* –
+  and for each component how to use it: the classes it uses, its properties and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined
 - **Layout** (twelve columns, breakpoints) and **utility classes**, the **page patterns**, the **foundations**
@@ -181,7 +183,7 @@ The sample app is built from nothing but MatUi, in the accent of one of the apps
 | **Rules** | The rulebook, searchable, with a page per rule. |
 | **Foundations** | Colour (light and dark side by side), type, spacing, motion, the icon sprite, the optional **icon library**, and every design token. |
 | **Shell** | The frame around every page: switcher, items with badges and submenus, foot, header bar, footer – with a live sample and the HTML skeleton. |
-| **Components** | Buttons, forms, pickers, toolbar, table, pagination, cards, tabs, dialogs, alerts and more – live, with code beside, classes, rules and a real page per group. |
+| **Components** | An overview of tiles by group (with a search), and a page for each: buttons, forms, pickers, toolbar, table, pagination, cards, tabs, dialogs, alerts and more – live, with code beside, how to use it, the rules it follows and a real page per group; Previous and Next walk through them (the arrow keys too). Everything on one page: `/Components/All`. |
 | **Layout** | Breakpoints and containers, the grid of twelve columns, stack, row and auto grid. |
 | **Utilities** | One class, one property: spacing, display by width, flex, text, colour, borders, sizing, position. |
 | **Patterns** | The page types (list, gallery, edit, settings, dashboard, sign-in) in real frames, on a desktop and a phone. |

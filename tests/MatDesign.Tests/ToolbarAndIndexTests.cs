@@ -86,7 +86,8 @@ public sealed class ToolbarAndIndexTests(WebApplicationFactory<Program> factory)
     }
 
     [Theory]
-    [InlineData("/Components")]
+    [InlineData("/Components/All")]
+    [InlineData("/Components/buttons")]
     [InlineData("/Layout")]
     [InlineData("/Utilities")]
     public async Task A_page_with_an_index_offers_it_as_an_icon_in_the_header_bar_and_not_as_a_button_in_the_content(string url)

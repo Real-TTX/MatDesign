@@ -1,0 +1,43 @@
+@model (MatDesign.Web.Services.ComponentNeighbours Around, bool Bottom)
+@*
+    The buttons that walk through the components (LIST-18): Previous and Next name their neighbour, and, where the neighbour is in another group, the group; the first component has no Previous and
+    the last no Next (no wrap-around). The page draws it twice, under the title and under the content, so that the next one is at hand when the examples are long. components.js adds the
+    arrow keys and walks without a new entry in the history (so "All components" can go back to the overview, with its filter and its place). Without the script these are plain links.
+*@
+@{
+    var around = Model.Around;
+    var previous = around.Previous;
+    var next = around.Next;
+}
+<nav class="doc-pager@(Model.Bottom ? " doc-pager--end" : string.Empty)" aria-label="@(Model.Bottom ? "Previous and next component" : "Other components")" data-components-pager>
+    @if (previous is not null)
+    {
+        <a class="mat-btn mat-btn--secondary doc-pager__btn doc-pager__btn--prev" rel="prev" href="@ComponentCatalog.PageOf(previous)" aria-keyshortcuts="ArrowLeft" aria-label="Previous component: @previous.Name@(around.PreviousIsOtherGroup ? ", in " + previous.Group : string.Empty)">
+            @Ui.Icon("chevron-left")<span>@previous.Name</span>@if (around.PreviousIsOtherGroup) { <small>@previous.Group</small> }
+        </a>
+    }
+    else
+    {
+        <span class="doc-pager__none" aria-hidden="true"></span>
+    }
+
+    @if (Model.Bottom)
+    {
+        <a class="mat-btn mat-btn--ghost doc-pager__all" href="@ComponentCatalog.OverviewPath" data-components-back>@Ui.Icon("grid")<span>All components</span></a>
+    }
+    else
+    {
+        <span class="doc-pager__pos"><span class="mat-sr-only">Component </span>@around.Position of @around.Count<span class="mat-sr-only"> components</span></span>
+    }
+
+    @if (next is not null)
+    {
+        <a class="mat-btn mat-btn--secondary doc-pager__btn doc-pager__btn--next" rel="next" href="@ComponentCatalog.PageOf(next)" aria-keyshortcuts="ArrowRight" aria-label="Next component: @next.Name@(around.NextIsOtherGroup ? ", in " + next.Group : string.Empty)">
+            <span>@next.Name</span>@if (around.NextIsOtherGroup) { <small>@next.Group</small> }@Ui.Icon("chevron-right")
+        </a>
+    }
+    else
+    {
+        <span class="doc-pager__none" aria-hidden="true"></span>
+    }
+</nav>

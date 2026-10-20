@@ -22,8 +22,8 @@ public class IndexModel(StudioService studio, DesignData design) : StudioPageMod
 
     public static string PillClass(ItemSource source) => source switch { ItemSource.Added => "mat-pill--ok", ItemSource.Changed => "mat-pill--info", _ => string.Empty };
 
-    /// <summary>Where the component is on the site: its page and its anchor.</summary>
-    public static string PageOf(ComponentDoc doc) => $"{ComponentCatalog.SectionOf(doc).Path}#{doc.Id}";
+    /// <summary>Where the component is on the site: the page of its own, or its anchor on the page of the layout or the utilities.</summary>
+    public static string PageOf(ComponentDoc doc) => ComponentCatalog.PageOf(doc);
 
     public void OnGet()
     {

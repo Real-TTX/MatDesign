@@ -1,0 +1,35 @@
+@model (MatDesign.Web.Services.ComponentDoc Doc, MatDesign.Web.Services.ComponentNeighbours Around, bool HasProperties, bool HasContext)
+@*
+    The index of the page of a component (SHELL-16): the sections of the page (marked by the scroll spy) and the components of its group, to jump to another one. It is drawn twice, beside the
+    content and in the dialog that small screens open, so both are marked by the scroll spy; the group list uses its own heading, which the dialog does not hide.
+*@
+@{
+    var doc = Model.Doc;
+}
+<nav class="mat-toc" aria-label="On this page" data-scrollspy>
+    <p class="mat-toc__title">On this page</p>
+    <ul class="mat-toc__list">
+        <li><a class="mat-toc__link" href="#toc-examples">Examples</a></li>
+        <li><a class="mat-toc__link" href="#toc-how">How to use</a></li>
+        @if (Model.HasProperties) { <li><a class="mat-toc__link" href="#toc-properties">Properties</a></li> }
+        <li><a class="mat-toc__link" href="#toc-rules">Rules it follows</a></li>
+        @if (Model.HasContext) { <li><a class="mat-toc__link" href="#toc-page">In a page</a></li> }
+    </ul>
+</nav>
+<nav class="mat-toc doc-toc-group" aria-label="In @doc.Group">
+    <p class="doc-toc-heading">In @doc.Group <span class="doc-toc-heading__count">@Model.Around.InGroup.Count</span></p>
+    <ul class="mat-toc__list">
+        @foreach (var other in Model.Around.InGroup)
+        {
+            if (other.Id == doc.Id)
+            {
+                <li><a class="mat-toc__link is-active" href="@ComponentCatalog.PageOf(other)" aria-current="page">@other.Name</a></li>
+            }
+            else
+            {
+                <li><a class="mat-toc__link" href="@ComponentCatalog.PageOf(other)">@other.Name</a></li>
+            }
+        }
+    </ul>
+    <a class="mat-toc__link doc-toc-all" href="@ComponentCatalog.OverviewPath" data-components-back>@Ui.Icon("grid")<span>All components</span></a>
+</nav>
