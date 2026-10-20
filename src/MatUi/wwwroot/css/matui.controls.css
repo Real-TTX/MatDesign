@@ -285,20 +285,29 @@ a.mat-card:hover, .mat-card--link:hover { border-color: var(--mat-text-faint); b
 .mat-steps li.is-done { background: color-mix(in srgb, var(--mat-accent) 55%, transparent); }
 .mat-steps li.is-active { background: var(--mat-accent); }
 
-/* Tooltip for icon buttons: [data-tip="Edit"]. Real information never lives only in a tooltip. */
+/* Tooltip for icon buttons: [data-tip="Edit"]. Real information never lives only in a tooltip.
+   A tip that is not shown takes no room (display: none, not only transparent): a button at the end of a table row or of the header bar would otherwise let
+   its scrolling box scroll sideways by the width of a tip nobody sees. It fades in from @starting-style.
+   Where it opens: centred above the element; at the end of a row of a table (mat-table__actions) and in the actions of the header bar it opens towards the
+   start, in the header bar below (above it there is no room). data-tip-align="start|end" and data-tip-place="below" do the same anywhere else. */
 [data-tip] { position: relative; }
 [data-tip]::after {
   content: attr(data-tip);
-  position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%) translateY(2px);
+  display: none;
+  position: absolute; left: 50%; bottom: calc(100% + 6px); translate: -50% 0;
   padding: 4px 8px; border-radius: var(--mat-radius-xs);
   background: var(--mat-text); color: var(--mat-bg);
   font-size: var(--mat-fs-xs); font-weight: 600; white-space: nowrap;
-  opacity: 0; pointer-events: none;
-  transition: opacity var(--mat-dur-fast) var(--mat-ease), transform var(--mat-dur-fast) var(--mat-ease);
+  opacity: 1; pointer-events: none;
+  transition: opacity var(--mat-dur-fast) var(--mat-ease);
   z-index: var(--mat-z-menu);
 }
-[data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; transform: translateX(-50%); }
-@media (hover: none) { [data-tip]::after { display: none; } }
+[data-tip]:hover::after, [data-tip]:focus-visible::after { display: block; }
+@starting-style { [data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 0; } }
+.mat-table__actions [data-tip]::after, .mat-topbar__actions [data-tip]::after, [data-tip-align="end"]::after { left: auto; right: 0; translate: none; }
+[data-tip-align="start"]::after { left: 0; translate: none; }
+.mat-topbar [data-tip]::after, [data-tip-place="below"]::after { bottom: auto; top: calc(100% + 6px); }
+@media (hover: none) { [data-tip]::after { display: none; } [data-tip]:hover::after, [data-tip]:focus-visible::after { display: none; } }
 
 /* ==========================================================================
    More building blocks: button groups, spinners, progress, accordions, list groups, avatars, indicators, stats, timelines, text, pictures.

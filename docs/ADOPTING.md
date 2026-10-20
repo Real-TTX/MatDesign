@@ -145,7 +145,7 @@ A text that goes into the markup of a page (a label, a hint, the words of a `dat
   asks the server for something) sends the form without the check, as in the browser. A dependent field appears only when it is needed (`data-show-if`, `FORM-04`).
 - The right control for the value (`FORM-12`): the type of the value (`email`, `tel`, `number`, `date`) with `autocomplete` and `inputmode`; radios up to five choices, a select above; a switch applies at once, a check is saved.
   A form with errors shows a **summary** at the top with a link to every field (`data-validation-summary`, `FORM-03`). Layouts: columns, label beside the field on a wide screen, one line, sections (`FORM-14`).
-- Every table cell has `data-label`: on a phone the rows become cards (`TABLE-02`).
+- Every table cell has `data-label`: on a phone the rows become cards (`TABLE-02`). Above 720 px a table that is wider than its frame leaves out its `mat-hide-sm` columns, the last one first, until it fits; give the secondary columns that class in the order of their importance (the last goes first). `data-table-scroll` on the frame keeps every column and scrolls (`TABLE-04`).
 - A value on a scale whose exact number does not matter is a **slider**, a from and to a **range slider** (`FORM-17`): native `input type="range"` (one, or two named `from` and `to`) in a wrapper
   `mat-slider[data-slider]` (`mat-slider--range` for two), so a form posts them and they work without the script. The script draws the track, the thumbs (a target of 44 px) and the bubble with the
   value; `data-format="{0} €"` is the template of every value shown, `data-min-gap` keeps two thumbs apart, `data-bubble="always"`, `data-ticks` and `data-output="id"` are optional:

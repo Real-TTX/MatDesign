@@ -13,6 +13,11 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 ## [Unreleased]
 
+### Changed
+
+- A tooltip that is not shown takes no room (`[data-tip]::after` is `display: none` until hover or focus, and fades in from `@starting-style`). Before, the transparent tip of a button at the end of a table row or of the header bar stood out of its box and let the table, or the whole main area, scroll sideways by the width of a tip nobody saw. Tips at the end of a row (`mat-table__actions`) and in the header bar (`mat-topbar__actions`) open towards the start, the tips of the header bar open below it (above there is no room); `data-tip-align="start|end"` and `data-tip-place="below"` do the same anywhere else. Nothing to do for an app but copy the files; an app that moved its tips with a rule of its own (`left`, `right`, `transform` on `[data-tip]::after`) can drop it.
+- A table does not scroll sideways above 720 px any more (`TABLE-02`, `TABLE-04`): while it is wider than its frame (`.mat-table-wrap`), the columns that the phone leaves out (`mat-hide-sm` on the heading) go, the last one first, and come back when there is room (the script marks their cells `is-col-hidden` and follows the width of the frame with a `ResizeObserver`; rows with fewer cells than the heading, such as a group heading, are left alone). A table that cannot become cards and should scroll keeps every column with `data-table-scroll` on its frame. Nothing to do for an app but copy the files; an app that hid columns with a script of its own can drop it.
+
 ## [0.3.1] - 2026-10-20
 ### Changed
 
