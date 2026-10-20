@@ -13,7 +13,7 @@ internal static class CodeInputComponents
             ["FORM-19", "FORM-03", "FORM-05", "A11Y-02", "A11Y-04", "MOBILE-04"],
             [
                 new("An authenticator code that is sent with the last digit", """
-                    <form class="mat-form" method="get" action="/Components#code-input" novalidate>
+                    <form class="mat-form" method="get" action="/Components/code-input" novalidate>
                       <div class="mat-field">
                         <label class="mat-label" for="otp-totp">Authentication code <span class="mat-req" aria-hidden="true">*</span></label>
                         <div class="mat-otp" data-otp data-length="6" data-chars="digits" data-submit>
@@ -26,7 +26,7 @@ internal static class CodeInputComponents
                     </form>
                     """, "Type the digits, or paste a code (also \"123 456\"): it is spread over the boxes. With `data-submit` the form is sent with `requestSubmit()` when the sixth digit is in, so the validation still runs; without it nothing is sent until the author asks for it. Press Verify with fewer digits to see the message of an incomplete code."),
                 new("A PIN, shown as dots", """
-                    <form class="mat-form" method="get" action="/Components#code-input" novalidate>
+                    <form class="mat-form" method="get" action="/Components/code-input" novalidate>
                       <div class="mat-field">
                         <label class="mat-label" for="otp-pin">PIN <span class="mat-req" aria-hidden="true">*</span></label>
                         <div class="mat-otp" data-otp data-length="4" data-mask>
@@ -103,7 +103,7 @@ internal static class CodeInputComponents
                         <h3>Two-step verification</h3>
                         <p class="mat-muted">Open your authenticator app and type the code it shows.</p>
                       </div>
-                      <form class="mat-form" method="get" action="/Components#code-input" novalidate>
+                      <form class="mat-form" method="get" action="/Components/code-input" novalidate>
                         <div class="mat-field">
                           <label class="mat-label" for="otp-signin">Code <span class="mat-req" aria-hidden="true">*</span></label>
                           <div class="mat-otp mat-otp--lg mat-otp--center" data-otp data-length="6" data-submit="#otp-signin-go">

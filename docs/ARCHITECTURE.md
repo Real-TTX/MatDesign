@@ -46,6 +46,8 @@ the repository. `matui.apps.css` has to equal it (a test), so the family's colou
 already had it) and, where a test enforces it, a `Check`. In code they can be searched and linked, counted, cited by other rules and verified (a rule that cites an unknown
 ID fails a test). `/api/rules` gives the same list as JSON for tools and agents.
 
+What happens to the rules is code as well: `RuleChanges` (data in `RuleChangeEntries.cs`) is the changelog of the rulebook, a line for each rule that was added, changed, removed or moved, with a short hash of the rule after the change (its statement, level and source). A test compares the newest line of every rule with the hash of its text, so **a rule cannot change without a line that says so**, and the failure message is the line to add. The hash is computed twice, in C# and in `tools/rule-hash.js` (which reads `RuleBook.cs` as text, so a person can get the line without a build), and a test holds the two together. The page `/Rules/Changes`, the History block of every rule page and `/api/rules/changes` read it. Rules written in the Studio keep their own history there.
+
 ## 4. The site eats its own dog food
 
 The site's layout is the shell of the toolkit (`Pages/Shared/_Layout.cshtml`), driven by a `ShellModel`. The **Preview** page draws a *sample app* of the family with the same
@@ -189,6 +191,34 @@ under a tint that is transparent; they are `inert` and `visibility: hidden` whil
 Escape) moves the node at once and puts the focus back on its handle, and a live region says every step. Both paths end in `mat:reorder` with the keys of the rows in their new order. The checks of rows are the ones of tables
 (`data-selectable`), and a filter hides rows by their text, ignoring case and accents. All texts are English and German (`IL_TEXT`).
 
+### Search
+
+**The control** (`FORM-23`, `mat-search[data-autocomplete]`, in `matui.pickers.css` and one section of `matui.js`) is a wrapper around a **real `input type="search"`**, like the pickers: in a `<form role="search">` Enter sends it and without the
+script it is a plain search field, which is also what makes it usable in a page that has no `/api/search`. The script moves the input into a bar next to a magnifier and a clear button and adds the popup, a WAI-ARIA 1.2 combobox with a
+listbox: the input keeps the focus for good and names the active option with `aria-activedescendant`, the options are links (so a click, Ctrl and click, a touch and a browser without the script all do the one thing a link does) that are not in
+the Tab order, and **choosing is one path**: Enter dispatches a click, with the modifier keys, on the active option and the one click handler asks the app (`mat:search-select`, cancelable), remembers the choice and lets the browser follow the link.
+The typed text is never replaced while the arrow keys walk. Three decisions are worth knowing. **What a server or a page says is data, not markup**: titles, lines, headings and kinds are `textContent`, the highlight is made of text nodes and a
+`mark`, an icon name has to be `[a-z0-9-]+`, and an address is followed only when it is http or https, so a result called `<img onerror>` is shown as text (a test and a browser check hold that). **Answers can be late**: every question counts up a number and an
+`AbortController`, an answer is shown only if it is the latest, and whatever closes the popup invalidates the one on its way; a failure is a row ("Search is not available", the way to the page of the results stays) and a slow answer a loading row after
+200 ms, so typing is never blocked. **A key that the page already has is not taken**: `data-key="/,mod+k"` names the keys that focus the field, a plain key that another element has as `data-shortcut` (the list pages' own search) stays
+that element's and the hint in the field then names the other, and the first visible search of a page that claims a key gets it. On a phone the focused field becomes a **full-screen panel** (`is-full`, `position: fixed; inset: 0`, the field and an X on top, the
+suggestions below, the page locked like under a picker): the same input, so the soft keyboard does not flicker, and in the header bar (`mat-topbar__search`, `SHELL-20`) a phone shows an icon button instead of the field. The bar's order is
+enforced by CSS (`order` 1 for the search, 2 for the icons; the burger and the breadcrumb keep 0); the width is the documented `--mat-search-width`, the shape `--mat-search-radius` and `--mat-search-height` (a floor: 44 px on a touch screen).
+Recent choices are five entries in `localStorage` per app and key, read again like data from a server. The texts are `SRCH_TEXT` (English and German).
+
+**The site's search** (`/api/search`, `/Search`, the field in the header bar of every page of the site and of the Studio, not of a sample app) is `SearchIndex` (`MatDesign.Web/Services`): documents of rules, components, tokens (the custom
+properties and the documented component properties), icons (the sprite, and the library, whose tags and categories also make the sprite's icons findable), the pages of the menu, the apps and the patterns, built in memory from what `DesignData`
+merges (so a rule saved in the Studio is found) and rebuilt when `DesignData.Version` moves; a query reads a snapshot, so it never waits for a rebuild. **Not searched**: the Studio's own pages and content, the changelog and the docs.
+A document has fields with weights (title 10, id 9, keywords 7, code 6, group 3, references 2, text 1.5): the *code* field holds what people copy (the classes and attributes of a component, a token's values), a rule is shown as `FORM-21 File upload` and
+searched by `File upload` with its id as a field of its own, and a token is searched without its `--mat-` prefix (`accent` finds `--mat-accent`). A word of the query is looked up in the vocabulary of all documents: the same word, its singular or plural (0.95),
+a word it starts (the closer in length the better), a word that holds it (0.35), a word one letter off for a word of five letters or more and two for nine (only where nothing is the word or starts with it: a typo; a swap of two letters is one), and the
+words of the **synonyms** (`SearchSynonyms`, English and German, by hand: a group of words that mean the same, found exactly, as a start, as a compound that begins with one, or with a typo). **Every word must be found** (AND), each with the score of its best
+place; little words (the, a, how, der, die, mode …) need not be found and count when they are. Bonuses: the exact id of a rule (`form-15`, `FORM 15`, `form15`, `FORM-5`) wins before everything; a title that is the query (or its plural) +200, that starts with it +80,
+that holds it at a word +35; a thing that is *named by a synonym* of the word (the page called Switches for "toggle") +25; the whole phrase in the text +8 (only for a query without little words); the bonus of an icon or a token is worth a tenth or a third. Kinds
+weigh (pages 1.25, components 1.2, apps 1.05, rules and patterns 1, tokens 0.85, icons 0.7). Text is **folded** by a table, not by `string.Normalize`: the image runs with the invariant globalization, where a normalisation form does nothing for an umlaut (found by running
+the site: `haekchen` found nothing in the container while the unit tests, which run with ICU, passed). A query is under 5 ms for the whole index (a test holds it), the answer for a text is cached until the data changes, `/api/search` has an ETag of the version of
+the data, and `/Search` is a list page like the others: the search as a field in the toolbar, the kinds as the filter, groups with counts and a link to all of a kind, a pager under a long list.
+
 ### Layout and utilities
 
 `matui.layout.css` is the last part before the apps: containers, a grid of twelve columns (`mat-cols`, `mat-col-N`, with `sm`, `md` and `lg` variants from 600, 900 and 1200 px, mobile first) and
@@ -221,14 +251,14 @@ All of this is values in `matui.tokens.css` and a few rules per file, so a diffe
 ### Component properties: handles for the shape of a control
 
 The tokens set the look of everything at once (the radius of a button *and* of an input and a menu item is `--mat-radius`). A brand, and later the Studio's editor, also needs to change one control: square
-buttons with round inputs, a card with more room. The toolkit offers that through a small, deliberate set of **`--mat-<component>-<aspect>` properties** (`SPACE-06`; 68, three to six per component: radius,
-padding, a height, a border width, a gap, a type size or weight; button, field, card, dialog, context menu, tag, pill, badge, tabs, table, alert, toast, switch, check, menu item, header bar). The decisions:
+buttons with round inputs, a card with more room. The toolkit offers that through a small, deliberate set of **`--mat-<component>-<aspect>` properties** (`SPACE-06`; 71, three to six per component: radius,
+padding, a height, a border width, a gap, a type size or weight; button, field, card, dialog, context menu, tag, pill, badge, tabs, table, alert, toast, switch, check, menu item, header bar, search field). The decisions:
 
 - **The fallback is the default, the property has no value.** Every use is `border-radius: var(--mat-btn-radius, var(--mat-radius))`: no default in `:root`, so an app that sets nothing computes exactly what it did
   before (a browser check compares the computed styles of every example with and without). The fallback is a global token; only where the toolkit has none (a border of 1 px, the 42 px of a switch) it is a literal
   of the type. A property that is used with two defaults (`--mat-btn-radius` is `--mat-radius-sm` for a small button) says the first in its declaration; the small button follows the same property, so one value squares every size.
 - **Set where it should apply.** Custom properties inherit, so `:root` sets one for the app, `[data-app]` for one app and an element for what is inside it: the same three places as the tokens, no class to override.
-- **A height is a floor.** `--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-nav-item-height` and `--mat-menu-item-height` fall back to `--mat-control-h`, which the tokens make 44 px under
+- **A height is a floor.** `--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-nav-item-height`, `--mat-menu-item-height` and `--mat-search-height` fall back to `--mat-control-h`, which the tokens make 44 px under
   `(pointer: coarse)` (`MOBILE-04`); a brand that wants less sets it for `(pointer: fine)` only. The editor of stage 12 does exactly that: a value under 44 px is written inside `@media (pointer: fine)` (so a touch screen never sees it and keeps the 44 px of the control height), a value under 32 px is refused, and a browser
   check with a touch-emulating context holds that the button, field, menu item, tab and menu item of the shell stay 44 px high. The limits of every property are in `ComponentTokens` (docs/STUDIO.md, "Components, apps and schemes").
 - **The target is the hit area, not the mark.** What is 44 px on a touch screen is what takes the tap (`MOBILE-04`), and it never depends on a property that draws the mark: `--mat-check-size` and `--mat-switch-*` change the
@@ -253,10 +283,55 @@ beyond that is a component of its own with the app's prefix (`CODE-04`).
 
 ### Long pages and one page per section
 
-The components are not a list of pages to click through but one page, grouped, with an index beside it (`mat-with-toc`, `mat-toc`): a sticky column from 1100 px, an icon in the header bar that opens it in a dialog below that
-(full screen on a phone); the layout and the utilities are two more pages of the same kind. `data-scrollspy` marks the link of the section at the top; it computes per index from the position of the sections, so the index beside the content and the one in the dialog
-agree and two indexes on one page do not disturb each other. Because every example of every component is on the same page, **all ids share one page**: a test checks that no id appears twice and
-that every `#link` leads to a section that exists.
+A page with many sections has an index beside it (`mat-with-toc`, `mat-toc`): a sticky column from 1100 px, an icon in the header bar that opens it in a dialog below that
+(full screen on a phone); the layout and the utilities are two pages of this kind, and so is the page of everything (`/Components/All`, below). `data-scrollspy` marks the link of the section at the top; it computes per index from the position of the sections, so the index beside the content and the one in the dialog
+agree and two indexes on one page do not disturb each other. Because every example of every component of such a page is on the same page, **all ids share one page** there: a test checks that no id appears twice and
+that every `#link` leads to a section that exists. The components themselves are no longer one page, but an overview and a page each (next section).
+
+### Components pages (LIST-18)
+
+The components were one page: all 68 with their 217 examples, built at once and every picker, calendar, schedule, tree and carousel started by the script on load. That is 3.2 MB of HTML and about 69,000 elements, and the page lagged.
+The rule `LIST-18` (a catalogue with many items is an overview of tiles and one page per item) turned it into three pages that read the same data (`ComponentCatalog` and the Studio's items, through `DesignData`):
+
+- **`/Components`, the overview.** A tile for each component under the heading of its group (`ComponentOverview`, `Pages/Components/Index`): the icon, the name, the summary cut after two lines, and the number of examples, rules and properties. A tile is a link
+  (the whole tile, 44 px or more), flat like the rest (a line, a tint on hover, nothing lifts). The toolbar above has a search field and a Filter dialog for the group, one GET form (`q`, `group`), so the page works without the script: the server draws every tile and writes
+  `hidden` on those that do not match, which is also what lets the script show them again. `wwwroot/js/components.js` filters while the person types, with the same text as the server (the name, the summary and `data-keys` of the tile: group, id, ids of the rules; every word of the query has to be in it,
+  case and accents ignored: `ComponentOverview.Fold` and `fold()` do the same), writes the count into the live region of the toolbar ("12 of 68 components"), shows the empty state with the way out, hides a group that has no tile left together with its link in the index (the scroll spy would take a hidden heading
+  for one that was passed), and keeps the search in the address with `replaceState`. The index of the page lists the groups. An old address `/Components` + the id of a component (or of its heading, an example or its code) as a hash is sent on by the script to `/Components/{id}`
+  (the hash never reaches the server); a hash that starts with `group-` is a heading of the overview and stays.
+- **`/Components/{id}`, one component** (`Pages/Components/Detail`). The h1 and the summary, the examples each live with its code beside it (`_ComponentExamples`, the same partial as the page of everything, with `h3` titles under the `h2` "Examples"),
+  **How to use** (the markup contract read from the examples by `ComponentApi`: classes and attributes, all of them; the behaviour lines; the properties table of stage 11), **Rules it follows** (a card per rule with its title and level, the statement and the Do and Do not of the rule), and, where `ContextPages` has a page for the group,
+  the panel "In a page". The element that holds the examples has the id of the component (as the section has on the page of everything), so a selector such as `#slot-picker .mat-picker` reads the same on both pages; the sections have ids with the prefix `toc-` (reserved for the pages, `ComponentValidator`),
+  and `all` is a reserved id (it is a page). Only this component's controls are on the page, so only they are started. `<title>` is "Name · Components · Site". The crumbs are Components > group > name, the menu item Components is current (the longest prefix of the path), an unknown id is a 404 drawn by the page
+  with a way back (the status code pages of the site only run outside Development, and the page should say the same everywhere), `/Components/Buttons` is redirected to `/Components/buttons`, and a component of the layout or the utilities has no page of its own (it is sent to its place on `/Layout` or `/Utilities`).
+  **Paging:** `ComponentPaging` orders the components by group (the order of `ComponentCatalog.Groups`) and, inside, as the catalogue does; the last of a group is followed by the first of the next one, and there is no wrap-around. Previous and Next name the neighbour (and its group, where it is another one); they are drawn under the title and under the content.
+  The arrow keys do the same, unless the toolkit took the key (`defaultPrevented`) or the focus is in a field, a picker, a menu, a tree, a schedule, a control of an example, a code block or a dialog. Walking replaces the entry of the history instead of adding one, so **"All components" is one step back** to the overview,
+  which shows the search it had (it is in its address) and the place on the page: the shell scrolls its content area and not the window, so the browser does not bring that place back by itself, and the overview keeps it in the `state` of its own entry (`componentsScroll`). Whether the entry before is the overview is read from the Navigation API
+  (the referrer where there is none); a page that was opened directly gets an ordinary link. The index lists the sections of the page and the components of the group (the current one marked), in a dialog below 1100 px.
+- **`/Components/All`, everything on one page**, as the components page was: for printing, for the search of the browser and for the browser checks that need several components at once. It is not in the menu; the overview has a small line that links to it.
+  **It has no `content-visibility`**, although that cheap win was asked for: it was tried three ways and measured, and each way costs more than it gives. On the sections of the components, `auto` implies layout containment, which makes a section the frame of the `position: fixed`
+  panel of a picker (three picker checks of `run.js` fail); the override that undoes it for a section that holds the focus (`:focus-within { content-visibility: visible }`) makes Edge crash the renderer ("Target crashed" in the checks of the lists of rows); and a section that is skipped has a height
+  that can only be guessed (56,000 px by the estimate, 217,000 px in fact), so the scroll bar and the index jump and the check of the index fails. On the 217 code blocks only (half of the elements, no controls, 26 rem high like their `max-height`) the page loads faster (DOMContentLoaded 584 ms instead of 863 ms)
+  but a block that has the height of the estimate and not its own moves what is below it when it is drawn, so a tap that is computed after a scroll lands beside its target: the touch checks failed in three runs of six, and in none of six without it. `ComponentsPagesTests` holds the page to that (no
+  `content-visibility` in `site.css`). A better way to make the page lighter is to start the controls when they come into view (`matui.js`), not to skip their drawing.
+  Layout and Utilities are well under a megabyte and keep their pages as they are.
+
+Every link to a component is made with `ComponentCatalog.PageOf` (the Studio's "On the site" too), the forms of the examples go to `/Components/{id}` (they used to go to the overview with the id as a hash), and a test reads the pages, the catalogue, the sources and the documentation for the old form.
+The budgets are in `ComponentsPagesTests` (the overview 110,000 bytes and 1,800 elements, a page of a component 340,000 bytes and 7,000 elements, set a fifth above the measurement) and the browser checks print what the pages cost in the browser they run in (they only report).
+
+What the pages cost, measured with Playwright and the installed Edge on the development PC (1360 x 900, a cold context, the median of three runs; "until idle" includes the 500 ms that the network has to be quiet, so 600 ms is the floor):
+
+| Page | HTML | Elements | DOMContentLoaded | Until idle | Long tasks (total) |
+|---|---:|---:|---:|---:|---:|
+| `/Components` before (one page) | 3109 KB | 68,881 | 863 ms | 1643 ms | 3 (425 ms) |
+| `/Components` now (the overview) | 91 KB | 1,464 | 91 ms | 630 ms | 0 (0 ms) |
+| `/Components/buttons` (a small page) | 74 KB | 1,335 | 102 ms | 642 ms | 0 (0 ms) |
+| `/Components/itemlist-contents` (the largest) | 271 KB | 5,729 | 155 ms | 700 ms | 0 (0 ms) |
+| `/Components/All` (everything, as before) | 3095 KB | 68,864 | 823 ms | 1599 ms | 2 (358 ms) |
+| `/Layout` (unchanged) | 111 KB | 2,057 | 107 ms | 645 ms | 0 (0 ms) |
+| `/Utilities` (unchanged) | 185 KB | 3,615 | 133 ms | 652 ms | 0 (0 ms) |
+
+The page of everything still starts every control on load, which is what the long tasks are; it is the page for printing and for the checks, not the way in.
 
 ## 5. The documentation cannot drift from the toolkit
 

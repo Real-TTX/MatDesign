@@ -22,7 +22,7 @@ internal static class UploadComponents
                     </div>
                     """, "Drag files onto the zone, or click it (Enter and Space work on its button). The limits are written in the zone, from `accept`, `data-max-files` and `data-max-size`. A file of another type, one that is too large and a sixth file are refused, each with its reason under the zone; the others are still added."),
                 new("A file that the form needs", """
-                    <form class="mat-form" method="get" action="/Components#file-upload" novalidate>
+                    <form class="mat-form" method="get" action="/Components/file-upload" novalidate>
                       <div class="mat-field">
                         <label class="mat-label" for="up-letter">Application letter <span class="mat-req" aria-hidden="true">*</span></label>
                         <div class="mat-upload" data-upload data-max-size="2MB">

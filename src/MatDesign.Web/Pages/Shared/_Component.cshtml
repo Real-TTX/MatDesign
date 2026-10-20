@@ -4,11 +4,11 @@
 @*
     One component on the components page: what it is, the rules it follows, the classes and attributes it uses, each example live with its code beside it
     (below on a narrow window, and for examples that need the width), and what is good to know. The code is always shown, highlighted, with a Copy button.
-    The ids of the elements are prefixed with the id of the component: all components share one page.
+    This is a component on the page of everything (/Components/All, Layout and Utilities); the page of one component is Pages/Components/Detail.cshtml, which draws the examples
+    with the same partial. The ids of the elements are prefixed with the id of the component: all components share one page.
 *@
 @{
     var c = Model;
-    var n = 0;
     const int ApiShown = 14; // the classes that are listed at once; the rest opens with "+n more"
     var classes = ComponentApi.Classes(c);
     var attributes = ComponentApi.Attributes(c);
@@ -56,47 +56,7 @@
         }
     </header>
 
-    @foreach (var ex in c.Examples)
-    {
-        n++;
-        var sourceId = $"src-{c.Id}-{n}";
-        var live = ex.Live && ex.Html.Length > 0;
-        var script = ex.Js is not null;
-        var alone = !live && ex.Demo is null;
-        <div class="doc-example" role="group" aria-labelledby="ex-@c.Id-@n">
-            <div class="doc-example__head">
-                <h4 id="ex-@c.Id-@n">@ex.Title</h4>
-                @if (ex.Note is not null) { <p>@Ui.Rich(ex.Note)</p> }
-            </div>
-
-            <div class="doc-example__body@(ex.Wide ? " doc-example__body--stack" : string.Empty)@(alone ? " doc-example__body--alone" : string.Empty)">
-                @if (live)
-                {
-                    <div class="doc-example__live@(ex.Frame is null ? string.Empty : " doc-example__live--" + ex.Frame)">@Html.Raw(ex.Html)</div>
-                }
-                else if (ex.Demo is not null)
-                {
-                    <div class="doc-example__live">
-                        <div class="mat-row"><button type="button" class="mat-btn mat-btn--secondary" data-doc-demo="@ex.Demo">@Ui.Icon("play")<span>Try it</span></button></div>
-                    </div>
-                }
-
-                <div class="doc-code">
-                    <div class="doc-code__bar">
-                        <span class="doc-code__lang">@(script ? "Script" : "HTML")</span>
-                        <span class="mat-row">
-                            @if (script && ex.Demo is not null && live)
-                            {
-                                <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-doc-demo="@ex.Demo">@Ui.Icon("play")<span>Try it</span></button>
-                            }
-                            <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-copy="#@sourceId">@Ui.Icon("copy")<span>Copy</span></button>
-                        </span>
-                    </div>
-                    <pre class="mat-code" id="@sourceId" tabindex="0"><code>@Html.Raw(MatDesign.Web.Studio.CodeHighlighter.Of(ex.Js ?? ex.Html, script))</code></pre>
-                </div>
-            </div>
-        </div>
-    }
+    <partial name="_ComponentExamples" model="(c, 4)" />
 
     @if (properties.Count > 0)
     {

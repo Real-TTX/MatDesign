@@ -1,0 +1,74 @@
+@page "/Rules/Changes"
+@model MatDesign.Web.Pages.Rules.ChangesModel
+@inject MatDesign.Web.Studio.DesignData Design
+@{
+    ViewData["Title"] = "What changed in the rulebook";
+    ViewData["PageSub"] = $"What was added to the rules of the {Design.Tenant.Family}, changed in them or taken out, and when. The rules are the product, so a change of a rule is written down here, like a change of the toolkit is in its changelog. Rules that were written in the Studio keep the history of their revisions there.";
+    ViewData["Crumbs"] = Crumbs.Of(("Rules", "/Rules"), ("Rulebook", "/Rules"), ("What changed", null));
+}
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (Model.Shown == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">No change matches</div>
+            <p>Change the search or the filters, or reset them.</p>
+            <a class="mat-btn mat-btn--primary" href="/Rules/Changes">@Ui.Icon("refresh")<span>Reset the tools</span></a>
+        </div>
+    }
+    else
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table" data-groups="rule-changes">
+                <caption class="mat-sr-only">Changes of the rulebook, the newest first, by month</caption>
+                <thead>
+                    <tr><th scope="col">Rule</th><th scope="col">Change</th><th scope="col">What changed</th><th scope="col">Date</th></tr>
+                </thead>
+                @foreach (var group in Model.Groups)
+                {
+                    <tbody class="mat-group" data-group="@group.Key">
+                        <tr class="mat-group__head">
+                            <td class="mat-group__cell" colspan="4">
+                                <div class="mat-group__bar">
+                                    <button type="button" class="mat-group__toggle" data-group-toggle aria-expanded="true">@Ui.Icon("chevron-down", "mat-group__chev")<span class="mat-group__title">@group.Title</span><span class="mat-badge mat-badge--soft">@group.Rows.Count</span></button>
+                                </div>
+                            </td>
+                        </tr>
+                        @foreach (var row in group.Rows)
+                        {
+                            var change = row.Change;
+                            <tr class="mat-group__item">
+                                <td data-label="Rule">
+                                    <div class="mat-table__name">
+                                        <span class="doc-rule-id">@change.RuleId</span>
+                                        @if (row.Exists)
+                                        {
+                                            <span><a href="/Rules/Detail?id=@change.RuleId">@row.Title</a></span>
+                                        }
+                                        else
+                                        {
+                                            <span class="mat-muted">no longer in the rulebook</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td data-label="Change"><span class="mat-pill @ChangesModel.KindClass(change.Kind)">@ChangesModel.KindLabel(change.Kind)</span></td>
+                                <td data-label="What changed"><span>@Ui.Inline(ChangesModel.NoteOf(change))</span></td>
+                                <td data-label="Date" class="mat-mono mat-text-nowrap">@change.DateText</td>
+                            </tr>
+                        }
+                    </tbody>
+                }
+            </table>
+        </div>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="/Rules">@Ui.Icon("book")<span>Back to the rulebook</span></a>
+        <a class="mat-btn mat-btn--secondary" href="/api/rules/changes">@Ui.Icon("code")<span>Changes as JSON</span></a>
+    </div>
+</div>

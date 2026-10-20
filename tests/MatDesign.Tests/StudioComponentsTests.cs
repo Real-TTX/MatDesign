@@ -88,7 +88,7 @@ public sealed partial class StudioComponentsTests : IClassFixture<WebApplication
         }
 
         Assert.Contains("href=\"/Studio/Components/Edit\"", html);
-        Assert.Contains("href=\"/Components#buttons\"", html);
+        Assert.Contains("href=\"/Components/buttons\"", html);
         Assert.Contains("No component matches", await _studio.Get("/Studio/Components?q=zzzzz"));
         var layout = await _studio.Get("/Studio/Components?group=Layout");
         Assert.Contains("Breakpoints", layout);
@@ -112,7 +112,7 @@ public sealed partial class StudioComponentsTests : IClassFixture<WebApplication
     public async Task A_new_component_is_saved_and_is_on_its_page_in_its_group_in_the_index_and_live()
     {
         await _studio.SignIn();
-        var before = (await _studio.Get("/Components")).Split("class=\"doc-component mat-anchor\"").Length - 1;
+        var before = (await _studio.Get("/Components/All")).Split("class=\"doc-component mat-anchor\"").Length - 1;
 
         var saved = await Save(Form());
         Assert.Equal(HttpStatusCode.Redirect, saved.StatusCode);
@@ -122,7 +122,7 @@ public sealed partial class StudioComponentsTests : IClassFixture<WebApplication
         Assert.Contains("QA sample", list);
         Assert.Contains("data-toast=\"QA sample was added.\"", list);
 
-        var page = await _studio.Get("/Components");
+        var page = await _studio.Get("/Components/All");
         Assert.Equal(before + 1, page.Split("class=\"doc-component mat-anchor\"").Length - 1);
         Assert.Contains("<section class=\"doc-component mat-anchor\" id=\"qa-sample\"", page);
         Assert.Contains(Pill, page);
@@ -134,6 +134,18 @@ public sealed partial class StudioComponentsTests : IClassFixture<WebApplication
         Assert.Equal("qa-sample", components[^1]);
         Assert.Equal(ItemSource.Added, _studio.Design.ComponentSourceOf("qa-sample"));
         Assert.Contains($">{ComponentCatalog.In(ComponentCatalog.Sections[0]).Count() + 1}<", page);
+
+        // and as a tile of the overview and a page of its own (LIST-18), live, with the rules it names and between its neighbours
+        var overview = await _studio.Get("/Components");
+        Assert.Contains("data-component=\"qa-sample\"", overview);
+        Assert.Contains("href=\"/Components/qa-sample\"", overview);
+        var own = await _studio.Get("/Components/qa-sample");
+        Assert.Contains("<h1>QA sample</h1>", own);
+        Assert.Contains(Pill, own);
+        Assert.Contains("href=\"/Rules/Detail?id=BUTTON-01\"", own);
+        Assert.Contains("rel=\"prev\"", own);
+        // the last component of the last group has no Next
+        Assert.DoesNotContain("rel=\"next\"", await _studio.Get("/Components/" + _studio.Design.ComponentsOf("Feedback").Last().Id));
 
         // the page stays whole: ids unique, every fragment link leads somewhere
         var ids = IdAttribute().Matches(page).Select(m => WebUtility.HtmlDecode(m.Groups[1].Value)).ToList();
@@ -232,7 +244,7 @@ public sealed partial class StudioComponentsTests : IClassFixture<WebApplication
 
         var stored = _studio.Design.Component("qa-sample")!;
         Assert.False(stored.Examples[0].Live);
-        var page = await _studio.Get("/Components");
+        var page = await _studio.Get("/Components/qa-sample");
         Assert.DoesNotContain($"doc-example__live\">{Pill}", page);
         Assert.Contains("doc-example__body doc-example__body--alone", page);
         Assert.Contains("<span class=\"doc-code__lang\">HTML</span>", page);
@@ -264,6 +276,8 @@ public sealed partial class StudioComponentsTests : IClassFixture<WebApplication
 
         Assert.Equal(ComponentCatalog.All.Count, _studio.Design.Components.Count);
         Assert.Equal(ItemSource.Changed, _studio.Design.ComponentSourceOf("pills"));
+        Assert.Contains("A new summary for the pills", await _studio.Get("/Components/All"));
+        Assert.Contains("A new summary for the pills", await _studio.Get("/Components/pills"));
         Assert.Contains("A new summary for the pills", await _studio.Get("/Components"));
         Assert.Equal("Changed summary", _studio.Store.Current("components", "pills")!.Note);
         Assert.Equal(original.Examples.Count, _studio.Design.Component("pills")!.Examples.Count);
@@ -285,12 +299,14 @@ public sealed partial class StudioComponentsTests : IClassFixture<WebApplication
         var edit = await _studio.Get("/Studio/Components/Edit?id=qa-sample");
         Assert.Contains("data-confirm=\"Delete QA sample?", edit);
         Assert.Contains("readonly", edit);
-        Assert.Contains("href=\"/Components#qa-sample\"", edit);
+        Assert.Contains("href=\"/Components/qa-sample\"", edit);
 
         var deleted = await _studio.Post("/Studio/Components/Edit?id=qa-sample", "/Studio/Components/Edit?handler=Delete", Form(original: "qa-sample"));
 
         Assert.Equal(HttpStatusCode.Redirect, deleted.StatusCode);
-        Assert.DoesNotContain("id=\"qa-sample\"", await _studio.Get("/Components"));
+        Assert.DoesNotContain("id=\"qa-sample\"", await _studio.Get("/Components/All"));
+        Assert.DoesNotContain("qa-sample", await _studio.Get("/Components"));
+        Assert.Equal(HttpStatusCode.NotFound, (await _studio.Client.GetAsync("/Components/qa-sample")).StatusCode);
         Assert.Equal(ComponentCatalog.All.Count, _studio.Design.Components.Count);
         Assert.Equal(["Deleted", "Created"], _studio.Store.History("components", "qa-sample").Select(r => r.Note));
     }
@@ -358,7 +374,7 @@ public sealed partial class StudioComponentsTests : IClassFixture<WebApplication
 
         Assert.Equal(ComponentCatalog.All.Count + 1, _studio.Design.Components.Count);
         Assert.NotNull(_studio.Design.Component("fine-one"));
-        var page = await _studio.Get("/Components");
+        var page = await _studio.Get("/Components/All");
         Assert.DoesNotContain("alert(1)", page);
         Assert.DoesNotContain("evil-", page);
         await _studio.Get("/Studio/Components");

@@ -160,7 +160,7 @@
         <a class="mat-btn mat-btn--secondary" href="/Studio/Components">@Ui.Icon("back")<span>Back</span></a>
         @if (!isNew && !string.IsNullOrEmpty(input.Id))
         {
-            <a class="mat-btn mat-btn--ghost" href="@(MatDesign.Web.Services.ComponentCatalog.Sections.FirstOrDefault(s => s.Groups.Contains(input.Group ?? string.Empty))?.Path ?? "/Components")#@input.Id">@Ui.Icon("eye")<span>On the site</span></a>
+            <a class="mat-btn mat-btn--ghost" href="@MatDesign.Web.Services.ComponentCatalog.PageOf(input.Group, input.Id)">@Ui.Icon("eye")<span>On the site</span></a>
         }
         @if (!isNew && History.HasHistory("components", input.Id ?? string.Empty))
         {

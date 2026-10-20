@@ -42,9 +42,11 @@ do not change, because rules are cited by id in reviews, commits and the catalog
 the statement, the level and the source; `IsSafe` runs again for what is read from the disk. The level is stored by name, so a file can be read by a person. When stage 4 lets a component name
 the rules it follows, a rule that a component of the Studio names cannot be deleted before the component lets go of it.
 
+**The rulebook changelog and the Studio.** The built-in rules have a changelog in code (`RuleChanges`, docs/VERSIONING.md: `/Rules/Changes`, `/api/rules/changes`, the History block on the page of a rule). What the Studio saves has its own history, the revisions of the item (`/Studio/History?kind=rules&id=...`): a rule that was added in the Studio is not in the changelog of the rulebook, and a built-in rule that was changed in the Studio keeps the lines it has and says that its text is the Studio's. The page of a rule links to the revisions for a signed-in person who may open the Studio (every role may); a visitor sees no link. A change of a built-in rule in the code needs a line in the changelog of the rulebook in the same commit (a test fails without it).
+
 ### Components
 
-A component of the Studio is a `ComponentDoc`: an id (the anchor on its page), a name, a group (which decides the page and the place in its index), a summary, the rules it follows, "good to know"
+A component of the Studio is a `ComponentDoc`: an id (the address of its page, `/Components/{id}`, and the id of the element that holds its examples; `all` and the prefixes the pages use themselves are not allowed), a name, a group (the heading its tile stands under in the overview and its place in the walk with Previous and Next), a summary, the rules it follows, "good to know"
 lines and examples. An example has a title, markup, a note and a switch for "live" (drawn above its markup); the examples that a built-in component has with a script or a frame carry their
 fields along when the component is edited. The form is one page with the preview beside it, outside the form element so that a button inside an example cannot submit the editor; examples are
 added and removed by buttons that answer with the form as it is, nothing saved.
@@ -55,7 +57,7 @@ labelled table cells, typed buttons, controls with an id, dialogs that are named
 the kinds `inline`, `elements` and `outside` are the ones that keep a page safe: markup that breaks one is never drawn, not even in the preview, and a component read from the disk that breaks one
 is left out. `ComponentValidator` adds the rest: an id the page does not use itself, a name nobody has, a group, rules that exist, and ids inside live examples that no other component and no part of
 the page has (all examples share one page; an example shown as markup only puts no id on it). `DesignData` merges the built-in catalogue with the items, placing an added component after the last
-component of its group, and `NavFacts` carries the counts of the menu. A rule that a component of the Studio names cannot be deleted before the component lets go of it.
+component of its group, and `NavFacts` carries the counts of the menu. A component of the Studio is a tile of the overview and has a page of its own like a built-in one (docs/ARCHITECTURE.md, "Components pages"); the "On the site" links of the Studio lead to that page (`ComponentCatalog.PageOf`). A rule that a component of the Studio names cannot be deleted before the component lets go of it.
 
 ### History
 
@@ -97,7 +99,7 @@ Each stage ends with the build clean, the tests and the browser checks green, th
 | 8 | **Apps and versions:** which MatUi version each app uses, which are behind; polish, documentation, browser checks of the whole Studio | **done** |
 | 9 | **Setup assistant:** the first visit creates the administrator (name and password, kept as a hash in the volume), so the release compose file has no password and no variables | **done** |
 | 10 | **Brand and tokens** (docs/PRODUCT.md, stage 10): the item `brand`, a token editor with a live preview, the brand overlay in `matui.css`, releases and the archive, history, restore and checks | **done** |
-| 12 | **Token editor per component, per app and per colour scheme** (docs/PRODUCT.md, stage 12): the 68 component properties next to the real control with a live preview, overrides on `[data-app]`, tokens inside each colour scheme, the 44 px rule for touch targets | **done** |
+| 12 | **Token editor per component, per app and per colour scheme** (docs/PRODUCT.md, stage 12): the 71 component properties next to the real control with a live preview, overrides on `[data-app]`, tokens inside each colour scheme, the 44 px rule for touch targets | **done** |
 | 14 | **Demo data and templates** (docs/PRODUCT.md, stage 14): the item `tenant`, the setup assistant's company and template steps, the Company page, the template layer under `DesignData`, a site that names itself after its company, `IDENT-09` | **done** |
 | 15 | **White label build** (docs/PRODUCT.md, stage 15): the item `whitelabel` (prefix and product name), the renamer, the Build stage with checks on the renamed copy, a trial build, history, restore and a check | **done** |
 | 16 | **People and roles** (docs/PRODUCT.md, stage 16): `users.json` (more than one user, a role each), the three roles and their capabilities, a capability declared by every page and every handler that changes something and checked on the server, the people page, the account page, a lock-out per name and address, sessions that follow the person, history and activity that name them, a check, `CODE-10` | **done** |
@@ -134,11 +136,11 @@ shows the preview in light or in dark whatever the page is in, and works out the
 
 The brand item and its history grow by three maps; nothing else is new in the store.
 
-- **`Components`** on the brand: the name of a documented property (`--mat-btn-radius`, read from the `@prop` lines of the CSS by `ComponentProperties`) to one value, the same in light and dark. `ComponentTokens` turns each of the 68 into a
+- **`Components`** on the brand: the name of a documented property (`--mat-btn-radius`, read from the `@prop` lines of the CSS by `ComponentProperties`) to one value, the same in light and dark. `ComponentTokens` turns each of the 71 into a
   `PropertyToken` (a `BrandToken` for the kind and the limits, whether it is a touch target, what the control uses today). The limits are in code: a radius of 0 to 24 px, padding and gaps of 0 to 48 px, a border or the indicator of a tab of 0 to 4 px,
   the width of a dialog or a toast of 200 to 960 px, a weight of 100 to 900, the text of a table or the breadcrumb of 12 to 22 px and of a small label (tag, pill, badge) of 11 to 18 px, the parts of a switch and a check within a range (and the knob smaller than its track).
   A new property needs no code: it gets the limits of its name (`-radius`, `-pad-x`, `-font-size` ...), and a test fails while a length or a number has none.
-- **The 44 px rule.** The heights of the controls that are pressed (`--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-menu-item-height`, `--mat-nav-item-height`) fall back to `--mat-control-h`, which the tokens make 44 px under `(pointer: coarse)`. They take
+- **The 44 px rule.** The heights of the controls that are pressed (`--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-menu-item-height`, `--mat-nav-item-height`, `--mat-search-height`) fall back to `--mat-control-h`, which the tokens make 44 px under `(pointer: coarse)`. They take
   32 to 72 px. A value of **44 px or more** is written on `:root` and applies everywhere; a value **under 44 px** is written inside `@media (pointer: fine) { :root { ... } }`, so on a touch screen the property is unset and the control keeps its 44 px (`MOBILE-04`). Under 32 px is refused.
   The editor says so at the field, and its preview does what the CSS does: a phone ignores a height under 44 px. `(pointer: fine)` is the primary pointer of the device (a laptop with a touch screen counts as fine); a hybrid that also takes touches keeps the small control for the touches.
 - **`Schemes`** on the brand: a colour scheme id to a light and a dark map (`SchemeValues`). Only a token that the scheme itself sets in that mode can be changed (paper and contrast in both, black in dark only), with the kind and limits of the token. It is written after the scheme blocks of

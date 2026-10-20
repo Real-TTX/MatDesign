@@ -63,12 +63,12 @@ public sealed partial class ComponentPageTests(WebApplicationFactory<Program> fa
     // ---------------------------------------------------------------------------------------------------- the code of an example
 
     [Theory]
-    [InlineData("/Components")]
+    [InlineData("/Components/All")]
     [InlineData("/Layout")]
     [InlineData("/Utilities")]
     public async Task Every_example_shows_its_code_with_it_coloured_with_a_copy_button_and_nothing_behind_a_click(string url)
     {
-        var section = ComponentCatalog.Sections.Single(s => s.Path == url);
+        var section = ComponentCatalog.Sections.Single(s => s.Path == (url == ComponentCatalog.AllPath ? ComponentCatalog.OverviewPath : url));
         var html = await Page(url);
         var examples = ComponentCatalog.In(section).SelectMany(c => c.Examples.Select((e, i) => (Id: $"src-{c.Id}-{i + 1}", Example: e))).ToList();
 
@@ -90,7 +90,7 @@ public sealed partial class ComponentPageTests(WebApplicationFactory<Program> fa
     [Fact]
     public async Task A_script_example_is_labelled_script_and_an_example_with_a_demo_can_be_tried_beside_its_code()
     {
-        var html = await Page("/Components");
+        var html = await Page("/Components/All");
 
         Assert.Contains("<span class=\"doc-code__lang\">Script</span>", html);
         Assert.Contains("<span class=\"doc-code__lang\">HTML</span>", html);
@@ -100,7 +100,7 @@ public sealed partial class ComponentPageTests(WebApplicationFactory<Program> fa
     [Fact]
     public async Task An_example_that_needs_the_whole_width_has_its_code_below_and_the_others_have_it_beside()
     {
-        var html = await Page("/Components");
+        var html = await Page("/Components/All");
 
         Assert.True(ComponentCatalog.Get("toolbar")!.Examples[0].Wide);
         Assert.True(ComponentCatalog.Get("table")!.Examples[0].Wide);
@@ -116,7 +116,7 @@ public sealed partial class ComponentPageTests(WebApplicationFactory<Program> fa
     [Fact]
     public async Task The_page_offers_to_put_the_code_below_the_examples_and_the_css_puts_it_beside_them_on_a_wide_window()
     {
-        var html = await Page("/Components");
+        var html = await Page("/Components/All");
         var css = File.ReadAllText(TestPaths.Web("wwwroot/css/site.css"));
 
         Assert.Contains("data-doc-code=\"beside\" aria-pressed=\"true\"", html);
@@ -144,7 +144,7 @@ public sealed partial class ComponentPageTests(WebApplicationFactory<Program> fa
     [Fact]
     public async Task A_component_with_many_classes_lists_the_first_ones_and_opens_the_rest_with_a_button()
     {
-        var html = await Page("/Components");
+        var html = await Page("/Components/All");
         string Section(string id) => html[html.IndexOf($"<section class=\"doc-component mat-anchor\" id=\"{id}\"", StringComparison.Ordinal)..][..html[html.IndexOf($"<section class=\"doc-component mat-anchor\" id=\"{id}\"", StringComparison.Ordinal)..].IndexOf("</header>", StringComparison.Ordinal)];
 
         var toolbar = Section("toolbar");
@@ -159,7 +159,7 @@ public sealed partial class ComponentPageTests(WebApplicationFactory<Program> fa
     [Fact]
     public async Task A_component_names_its_classes_and_attributes_under_its_rules()
     {
-        var html = await Page("/Components");
+        var html = await Page("/Components/All");
 
         Assert.Contains("<dt>Classes</dt>", html);
         Assert.Contains("<code>mat-btn--primary</code>", html);
@@ -214,7 +214,7 @@ public sealed partial class ComponentPageTests(WebApplicationFactory<Program> fa
     [Fact]
     public async Task The_components_page_has_a_panel_for_each_group_that_loads_nothing_until_it_is_opened()
     {
-        var html = await Page("/Components");
+        var html = await Page("/Components/All");
 
         foreach (var group in ComponentCatalog.Sections.Single(s => s.Id == "components").Groups)
         {
@@ -235,7 +235,7 @@ public sealed partial class ComponentPageTests(WebApplicationFactory<Program> fa
     [Fact]
     public async Task A_component_that_a_page_uses_has_a_button_that_shows_it_there_and_one_that_it_does_not_use_has_none()
     {
-        var html = await Page("/Components");
+        var html = await Page("/Components/All");
 
         foreach (var page in ContextPages.All.Where(p => ComponentCatalog.Sections.Single(s => s.Id == "components").Groups.Contains(p.Group)))
         {

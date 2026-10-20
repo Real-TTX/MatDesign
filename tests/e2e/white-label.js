@@ -5,7 +5,7 @@
 //         sprite the browser asks for is renamed on the way, and the address of a file (acmeui.css) is mapped back to the file the site has (matui.css). Then the real pages are used: a dialog opens and closes,
 //         a select picker opens and chooses, the theme button toggles, a tab switches, a toast shows, the number stepper steps, a tree, a rating and an upload work. No console error, no class, attribute,
 //         id or storage key of the old prefix in the DOM.
-// Part 3: the renamed toolkit looks the same: screenshots of the same places of the components page with the original files and with the renamed ones (light, dark, 390 px), compared pixel by pixel.
+// Part 3: the renamed toolkit looks the same: screenshots of the same places of the page of all the components (the overview and the page of a component too) with the original files and with the renamed ones (light, dark, 390 px), compared pixel by pixel.
 // The site has to have the Studio on with an administrator (STUDIO_NAME / STUDIO_PASSWORD, default admin / studio-dev; the setup assistant is used when there is none).
 const { chromium } = require('playwright-core');
 const crypto = require('crypto');
@@ -219,7 +219,7 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
   }
 
   {
-    const { ctx, page: p } = await renamedPage(desktop, '/Components#dialogs');
+    const { ctx, page: p } = await renamedPage(desktop, '/Components/All');
     await check('the page runs the renamed files: the global is AcmeUi, there is no MatUi, and nothing of the old prefix is left in the DOM, the styles or the storage', async () => {
       const s = await p.evaluate(({ prefix, name }) => {
         const all = [...document.querySelectorAll('*')];
@@ -379,7 +379,7 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
       let node;
       while ((node = walker.nextNode())) { const text = rename(node.nodeValue); if (text !== node.nodeValue) { node.nodeValue = text; } }
     }, { prefix: PREFIX, name: NAME });
-    const scenes = ['/Preview?app=matmail&view=list', '/Preview?app=matmail&view=form', '/Preview?app=matpaper&view=settings'];
+    const scenes = ['/Preview?app=matmail&view=list', '/Preview?app=matmail&view=form', '/Preview?app=matpaper&view=settings', '/Components', '/Components/buttons'];
     const looks = [
       ['light', { ...desktop, colorScheme: 'light' }],
       ['dark', { ...desktop, colorScheme: 'dark' }],
@@ -421,9 +421,9 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
         const original = await browser.newContext({ ...options, storageState: await admin.storageState() });
         const op = await original.newPage();
         watch(op, 'original components ' + label);
-        await op.goto(BASE + '/Components', { waitUntil: 'networkidle' });
+        await op.goto(BASE + '/Components/All', { waitUntil: 'networkidle' });
         await op.waitForFunction(() => document.readyState === 'complete');
-        const copy = await renamedPage(options, '/Components');
+        const copy = await renamedPage(options, '/Components/All');
         await normalizeText(op);
         for (const p of [op, copy.page]) { await p.evaluate(() => { document.documentElement.style.scrollBehavior = 'auto'; }); }
         const problems = [];

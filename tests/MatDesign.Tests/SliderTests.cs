@@ -217,7 +217,7 @@ public partial class SliderTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task The_page_draws_the_examples_and_the_rule_has_its_own_page()
     {
-        var page = await _client.GetAsync("/Components");
+        var page = await _client.GetAsync("/Components/slider");
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         var html = await page.Content.ReadAsStringAsync();
         Assert.Contains("id=\"slider\"", html);

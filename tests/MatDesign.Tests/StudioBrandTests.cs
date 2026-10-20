@@ -70,7 +70,8 @@ public sealed class StudioBrandTests : IClassFixture<WebApplicationFactory<Progr
         Assert.Contains("data-brand-preview", html);
         Assert.Contains("/js/brand.js", html);
         // the preview is not inside the form: nothing in it can submit the editor
-        var form = html[html.IndexOf("<form class=\"mat-form\"", StringComparison.Ordinal)..html.IndexOf("</form>", StringComparison.Ordinal)];
+        var formStart = html.IndexOf("<form class=\"mat-form\"", StringComparison.Ordinal);
+        var form = html[formStart..html.IndexOf("</form>", formStart, StringComparison.Ordinal)];
         Assert.DoesNotContain("data-brand-preview", form);
         Assert.Contains("data-pairings=\"", html);
         Assert.Contains("Reset to built-in", await Saved());

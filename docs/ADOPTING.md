@@ -110,6 +110,7 @@ Replace the app's own frame with the shell:
 | A long page has an index beside it ("On this page"), an icon in the header bar that opens it in a dialog on small screens | `SHELL-16` |
 | Icons at the right end of the header bar (`mat-topbar__actions`), at most four; the main action (scan, add) filled with the accent, last: `mat-btn--primary mat-btn--icon` instead of `mat-btn--ghost`, and a second one beside it as `mat-btn--secondary mat-btn--icon` | `SHELL-17` |
 | Sign-in, setup and error pages without a menu: a centred card (`mat-auth`) | `SHELL-11` |
+| A search of the whole app in the header bar, after the breadcrumb and before the icons: `<div class="mat-topbar__search">` around a `mat-search` in a `<form role="search">` (section 4: search with suggestions); below 640 px it is one icon button that opens a full-screen panel, and it is not one of the four icons | `SHELL-20`, `FORM-23` |
 
 Saving the theme: `data-theme-save-url` on the theme button posts the choice (`theme=system|light|dark`) so it can be kept per user; without it the choice stays in the browser.
 
@@ -129,6 +130,7 @@ that words them differently, changes any of them with an attribute on `<html>`; 
 | `data-copied` | The tip after *Copy*. |
 | `data-locale`, `data-week-start` | The language of the dates in the pickers (default `lang`) and the first day of the week (0 Sunday to 6, default 1). |
 | `data-up-<name>` | One text of the file upload (`FORM-21`), in lower case after `data-up-`: `data-up-refusedtype="{0}: Format nicht erlaubt."`. The names are the keys of `UP_TEXT` in `matui.js`; `{0}`, `{1}` and `{2}` are the file name, the allowed types and the sizes. |
+| `data-sr-<name>` | One text of the search with suggestions (`FORM-23`), in lower case after `data-sr-`: `data-sr-error="Die Suche ist gerade nicht erreichbar."`. The names are the keys of `SRCH_TEXT` in `matui.js`; `{0}` is the text that was typed or the key to press. |
 
 A text that goes into the markup of a page (a label, a hint, the words of a `data-confirm`) is the app's own and stays in the language of the app (`CODE-05`).
 
@@ -188,7 +190,10 @@ A text that goes into the markup of a page (a label, a hint, the words of a `dat
       <input class="mat-otp__input" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6}" />
     </div>
     <span class="mat-error" aria-live="polite"></span>
-  A dropdown that holds a **list of checkboxes** is the same select with plain options (a button with `data-value` and a label) and `data-multiple`; `data-select-all` adds a first row Select all
+  </div>
+  ```
+
+- A dropdown that holds a **list of checkboxes** is the same select with plain options (a button with `data-value` and a label) and `data-multiple`; `data-select-all` adds a first row Select all
   whose box is empty, ticked or in between and acts on the options that are shown, so `data-search` narrows it.
 - A number that people change by a step or two (a quantity, a timeout) is a **number stepper** (`FORM-20`): a native number field in `<div class="mat-stepper" data-stepper>` gets a button for less and one
   for more from the script (`data-unit="GB"` for a suffix, `mat-stepper--stacked` for two small arrows, `mat-input--sm` / `--lg` for the size); without the script it stays the native field:
@@ -273,6 +278,27 @@ A text that goes into the markup of a page (a label, a hint, the words of a `dat
   </div>
   ```
 
+- A search that finds while the user types is a **search with suggestions** (`FORM-23`): `<div class="mat-search" data-autocomplete>` around a real `<input class="mat-search__input" type="search">` with its label, in a
+  `<form role="search" action="/Search">`, so Enter sends it and without the script it is a plain search field. The script draws the magnifier, a clear button and the popup of a WAI-ARIA combobox (grouped suggestions that
+  are links, the part of a title that matches marked, a live region that counts them) and handles the keys: the arrow keys (they wrap), Home and End, Enter (the active option, else the form), Escape (closes, then clears) and Tab.
+  The suggestions are asked from `data-search-url="/api/search"` (`GET ?q=text&limit=8`, the answer `{ "groups": [ { "name": "Components", "items": [ { "title": "Buttons", "text": "…", "href": "/Components/buttons", "icon": "play", "kind": "component", "id": "buttons" } ] } ] }`:
+  the texts are put into the page as text, never as markup, and only http and https addresses are followed) or they are the page's own, `data-items='[…]'` or `MatUi.search.setItems(el, groups)`. `data-min`, `data-delay`
+  (120 ms), `data-limit` (8), `data-results-url="/Search"` (the last row, All results for …) and `data-recent="key"` (the last five choices, kept in the browser per app and key) are optional;
+  `data-key="/,mod+k"` focuses the field with `/` and Ctrl or Cmd with K (a key that another element has as `data-shortcut` stays that element's). On a phone the focused field is a full-screen panel with an X.
+  Your server answers `/api/search` itself (the toolkit sends nothing else): the answer for the site is built by `SearchIndex` of this repository, which an app can read as an example. `mat:search-select` (cancelable) tells the page
+  what was chosen; the texts are `data-sr-<name>` on `<html>` (section 3a); `--mat-search-radius`, `--mat-search-height` and `--mat-search-width` are the documented properties (section 4c):
+
+  ```html
+  <form role="search" action="/Search" method="get">
+    <label class="mat-sr-only" for="q">Search</label>
+    <div class="mat-search" data-autocomplete data-search-url="/api/search" data-results-url="/Search" data-recent="app">
+      <input class="mat-search__input" type="search" id="q" name="q" placeholder="Search" />
+    </div>
+  </form>
+  ```
+
+  In the **header bar** (`SHELL-20`) the same markup stands in `<div class="mat-topbar__search">` after the breadcrumb: a field of 18rem before the icons, one icon button below 640 px that opens the panel.
+
 ## 4a. Layout and utilities
 
 - **Containers and the grid:** a page inside the shell is `mat-page`; one without it (sign-in, a shared link) is `mat-container`. For a layout you have decided use the twelve columns
@@ -294,7 +320,7 @@ categories, an icon can be in several, with *General* and *Home automation* firs
 ## 4c. Change the shape of a control: component properties (`SPACE-06`)
 
 If the app wants its buttons square, its cards roomier or its tabs thicker, it does **not** override `.mat-btn`: it sets one of the documented properties `--mat-<component>-<aspect>`
-(68 of them: `--mat-btn-radius`, `--mat-card-pad`, `--mat-table-pad-y` ...; every one with its type and its default on **Foundations → Tokens → Component properties**, on the page of the component and at
+(71 of them: `--mat-btn-radius`, `--mat-card-pad`, `--mat-table-pad-y` ...; every one with its type and its default on **Foundations → Tokens → Component properties**, on the page of the component and at
 `/api/properties`). They have **no value in the toolkit**: each use is `var(--mat-btn-radius, var(--mat-radius))`, so an app that sets none looks exactly as before. Where you set it decides who gets it:
 
 ```css
@@ -305,7 +331,7 @@ If the app wants its buttons square, its cards roomier or its tabs thicker, it d
 
 A custom property inherits, so an element sets it for itself and everything inside it. Use a value of the type the table gives: a length (`6px`, `0`, `var(--mat-space-3)`), a number
 (a font weight), a duration; a colour or a font only as a token. Three things to know: a **height is a floor** (`--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-nav-item-height`,
-`--mat-menu-item-height`: their default is the control height, 40 px with a mouse and 44 px on a touch screen), so keep it at 44 px or more under `@media (pointer: coarse)` (`MOBILE-04`: set a smaller one
+`--mat-menu-item-height`, `--mat-search-height`: their default is the control height, 40 px with a mouse and 44 px on a touch screen), so keep it at 44 px or more under `@media (pointer: coarse)` (`MOBILE-04`: set a smaller one
 only inside `@media (pointer: fine)`); a property of the **default size** leaves the `sm` and `lg` sizes alone (the radius is the exception: one value for every size of a control); and a property
 changes a shape, never a colour or a shadow (`COLOR-01`, `SPACE-03`). The accent, the surfaces and the dark mode stay the tokens' business.
 

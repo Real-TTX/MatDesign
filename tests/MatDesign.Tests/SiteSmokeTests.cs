@@ -56,6 +56,10 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         yield return "/Foundations/Tokens";
         yield return "/Shell";
         yield return "/Components";
+        yield return "/Components/All";
+        yield return "/Components/buttons";
+        yield return "/Components/slot-picker";
+        yield return "/Components?q=picker&group=Forms";
         yield return "/Patterns";
         yield return "/Builder";
         yield return "/Builder?app=matmail&accent=%23ff6600";
@@ -63,6 +67,7 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         yield return "/Builder?app=matarchive&accent=%23ff6600&scheme=oled";
         yield return "/Foundations/Tokens?group=Schemes";
         yield return "/Download";
+        yield return "/Rules/Changes";
     }
 
     private async Task<(HttpStatusCode Status, string Html)> Get(string url)
@@ -223,7 +228,7 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     {
         // SHELL-16: one long page, an index beside it (and in a dialog for small screens), both marked by the scroll spy.
         var section = ComponentCatalog.Sections.Single(s => s.Id == sectionId);
-        var (status, html) = await Get(section.Path);
+        var (status, html) = await Get(section.Id == "components" ? ComponentCatalog.AllPath : section.Path);
         Assert.Equal(HttpStatusCode.OK, status);
         Assert.Single(Heading().Matches(html));
         Assert.Contains("class=\"mat-toc-aside\"", html);
@@ -252,7 +257,7 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     }
 
     [Theory]
-    [InlineData("/Components")]
+    [InlineData("/Components/All")]
     [InlineData("/Layout")]
     [InlineData("/Utilities")]
     public async Task The_ids_of_a_documentation_page_are_unique_and_every_fragment_link_leads_somewhere(string url)
@@ -273,6 +278,8 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
     [InlineData("/Identity", "design", "toolkit")]
     [InlineData("/Shell", "toolkit", "design")]
     [InlineData("/Components", "toolkit", "design")]
+    [InlineData("/Components/All", "toolkit", "design")]
+    [InlineData("/Components/buttons", "toolkit", "design")]
     public async Task The_menu_has_a_switcher_and_shows_only_the_menu_of_the_current_page(string url, string shown, string hidden)
     {
         var (_, html) = await Get(url);

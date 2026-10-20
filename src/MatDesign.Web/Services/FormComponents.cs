@@ -257,7 +257,7 @@ internal static class FormComponents
                     </div>
                     """, "Without data-range-format the output reads \"8 h – 18 h\". Each input has a name of its own for a screen reader, made from the label: \"Opening hours from\" and \"Opening hours to\" (in German \"von\" and \"bis\"), and says its value in the format (\"8 h\")."),
                 new("In a form: a filter that is sent and reset", $$"""
-                    <form class="mat-form" method="get" action="/Components#slider" novalidate>
+                    <form class="mat-form" method="get" action="/Components/slider" novalidate>
                       <div class="mat-field">
                         <div class="mat-field__meta"><label class="mat-label" for="sl-f-from">Price</label><output class="mat-range-out" id="sl-f-price-out">From 20 € to 80 €</output></div>
                         <div class="mat-slider mat-slider--range" data-slider data-min-gap="10" data-format="{0} €" data-range-format="From {0} to {1}" data-output="sl-f-price-out">
@@ -389,7 +389,7 @@ internal static class FormComponents
                     </div>
                     """),
                 new("In a form: required, with the message at the field", $"""
-                    <form class="mat-form" method="get" action="/Components#number-stepper" novalidate>
+                    <form class="mat-form" method="get" action="/Components/number-stepper" novalidate>
                       <div class="mat-form__grid">
                         <div class="mat-field">
                           <label class="mat-label" for="stp-seats">Seats <span class="mat-req" aria-hidden="true">*</span></label>
@@ -524,7 +524,7 @@ internal static class FormComponents
                     </div>
                     """, "Two columns by default, three or four with mat-form__grid--3 and --4; one column below 700 px. A field spans the row with mat-field--full."),
                 new("The label beside the field", """
-                    <form class="mat-form mat-form--horizontal" method="get" action="/Components#form-grid" novalidate>
+                    <form class="mat-form mat-form--horizontal" method="get" action="/Components/form-grid" novalidate>
                       <div class="mat-field"><label class="mat-label" for="grid-h-name">Name</label><input class="mat-input" id="grid-h-name" name="name" value="Alex Morgan" /><span class="mat-hint">As others see it.</span></div>
                       <div class="mat-field"><label class="mat-label" for="grid-h-role">Role</label><select class="mat-select" id="grid-h-role" name="role"><option>Administrator</option><option>User</option></select></div>
                       <div class="mat-field"><label class="mat-label" for="grid-h-about">About</label><textarea class="mat-textarea" id="grid-h-about" name="about" rows="2"></textarea></div>
@@ -532,7 +532,7 @@ internal static class FormComponents
                     </form>
                     """, "For settings pages on a wide screen. Below 700 px the label goes back above the field."),
                 new("In one line", $"""
-                    <form class="mat-form mat-form--inline" method="get" action="/Components#form-grid" novalidate>
+                    <form class="mat-form mat-form--inline" method="get" action="/Components/form-grid" novalidate>
                       <div class="mat-field"><label class="mat-label" for="grid-i-from">From</label><input class="mat-input" id="grid-i-from" name="from" type="date" value="2026-09-01" /></div>
                       <div class="mat-field"><label class="mat-label" for="grid-i-to">To</label><input class="mat-input" id="grid-i-to" name="to" type="date" value="2026-09-30" /></div>
                       <div class="mat-field"><label class="mat-label" for="grid-i-kind">Kind</label><select class="mat-select" id="grid-i-kind" name="kind"><option>All</option><option>Invoices</option></select></div>
@@ -540,7 +540,7 @@ internal static class FormComponents
                     </form>
                     """, "For a filter or a short action that fits in a line; it wraps on a narrow screen. A list's own filter belongs in the toolbar's dialog (LIST-03)."),
                 new("Sections", """
-                    <form class="mat-form" method="get" action="/Components#form-grid" novalidate>
+                    <form class="mat-form" method="get" action="/Components/form-grid" novalidate>
                       <div class="mat-form__section">
                         <div class="mat-form__section-head"><h3>Profile</h3><p>How you appear to others.</p></div>
                         <div class="mat-form__grid">
@@ -572,7 +572,7 @@ internal static class FormComponents
                     </div>
                     """, "The border and the text carry the state; the text says what is wrong and how to fix it (COLOR-04)."),
                 new("Required fields, messages and the summary", $"""
-                    <form class="mat-form" method="get" action="/Components#validation" novalidate>
+                    <form class="mat-form" method="get" action="/Components/validation" novalidate>
                       <div class="mat-alert mat-alert--danger" role="alert" data-validation-summary hidden>{I("x-circle")}<div class="mat-alert__body"><strong>Please check the form.</strong><ul class="mat-alert__list"></ul></div></div>
                       <div class="mat-form__grid">
                         <div class="mat-field"><label class="mat-label" for="val-name">Name <span class="mat-req" aria-hidden="true">*</span></label><input class="mat-input" id="val-name" name="name" required data-msg-required="Please enter a name." /><span class="mat-error" aria-live="polite"></span></div>

@@ -79,6 +79,7 @@ builder.Services.AddSingleton<AssetFiles>();
 builder.Services.AddSingleton<ToolkitFiles>();
 builder.Services.AddSingleton<IconLibrary>();
 builder.Services.AddSingleton<AuditData>();
+builder.Services.AddSingleton<SearchIndex>();
 
 // Behind a TLS-terminating reverse proxy (Matcad) the scheme, the host and the address of the client come from the X-Forwarded-* headers: from a proxy that is known, never from anybody (TrustedProxies).
 var trustedProxies = TrustedProxies.Parse(Environment.GetEnvironmentVariable(TrustedProxies.Variable));
@@ -201,6 +202,8 @@ api.MapGet("/changelog", (string? since) =>
         releases = releases.Select(Shape),
     });
 });
+// What changed in the rulebook (the changelog of the rules, RuleChanges): newest first; ?rule=, ?kind=, ?area= and ?since=2026-10-15 narrow it down.
+api.MapGet("/rules/changes", (DesignData design, string? rule, string? kind, string? area, string? since) => RuleChangesApi.Query(design, rule, kind, area, since));
 
 // ---- Demo endpoints of the documentation: what the examples of the select picker call (create what is missing, suggestions, FORM-16). They keep nothing, need no
 // Studio and no token (nothing is changed, so there is nothing to forge: the script sends the anti-forgery token when the page has one, an app's own handler checks it). ----
@@ -276,6 +279,7 @@ releases.MapGet("/{version}/{**file}", (string version, string file, ReleaseServ
 });
 
 app.MapGet("/health", () => Results.Text("ok"));
+app.MapSearch();
 app.MapWhiteLabel();
 app.MapRazorPages();
 

@@ -12,7 +12,9 @@ One container, no cloud, nothing loaded from another site.
 
 </div>
 
-![The components page: every example with its code beside it](docs/images/components-code.png)
+![The overview of the components: a tile for each, by group, with a search](docs/images/components-overview.png)
+
+![The page of a component: every example with its code beside it](docs/images/components-code.png)
 
 ---
 
@@ -29,9 +31,11 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **130 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **145 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
-- Searchable, a page per rule, and as JSON at `/api/rules`
+- Searchable, a page per rule with its history, and as JSON at `/api/rules`; the **search of the site** in the header bar finds a rule by its id (`form 15`)
+- A **changelog of the rulebook** – what was added, changed, removed or moved, and when, at `/Rules/Changes` and `/api/rules/changes`; a rule cannot change without a line that says so (a test fails)
+- A written **review** of the whole book, with what was found and what the owner has to decide: [docs/RULES-REVIEW.md](docs/RULES-REVIEW.md)
 
 **The toolkit – MatUi**
 - **Four files you copy**: `matui.css` (ten parts), `matui.js`, `matui.boot.js` and the icon sprite –
@@ -48,18 +52,19 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 - An optional **icon library** in files of its own: **1,925 icons in 54 categories** – an icon can be in several –
   with *General* and **Home automation** (302 icons: lighting, climate, doors and windows, alarm, appliances,
   energy, sensors, rooms, garden, scenes) first. SVG, as one sprite, as single files or as an archive; MatUi works without it
-- **68 documented component properties** (`--mat-btn-radius`, `--mat-card-pad`, `--mat-table-pad-y` ...) that change the shape of a control
+- A **search with suggestions** (`mat-search`, `data-autocomplete`, `FORM-23`): a real field in a form that works without the script, and with it a WAI-ARIA combobox with grouped suggestions from the page or a server, the arrow keys, recent choices and a full-screen panel on a phone; in the header bar (`SHELL-20`) it finds rules, components, tokens, icons, pages and apps, also by German words and with a typo (`Schalter` finds the switch)
+- **71 documented component properties** (`--mat-btn-radius`, `--mat-card-pad`, `--mat-table-pad-y` ...) that change the shape of a control
   from `:root`, `[data-app]` or one element, without overriding a class. They have no value in the toolkit (each use falls back to a global token),
   so an app that sets none sees no change; the list, with types and defaults, is read from the CSS
 
 **The documentation**
-- **68 components with 236 live examples**, each with its **code beside it** – coloured, with *Copy*, the classes
-  it uses and the rules it follows
+- **69 components with 245 live examples**, an **overview of tiles by group** and a **page for each** (one click from the tile, Previous and Next with the arrow keys), each example with its **code beside it** – coloured, with *Copy* –
+  and for each component how to use it: the classes it uses, its properties and the rules it follows
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined
 - **Layout** (twelve columns, breakpoints) and **utility classes**, the **page patterns**, the **foundations**
   (colour, type, space, motion, 112 icons)
-- A **builder** that checks an accent colour, a **palette check** for the 22 apps and an **audit** of how close
+- A **builder** that checks an accent colour, a **palette check** for the 24 apps and an **audit** of how close
   each app is to the rules
 
 **The Studio**
@@ -73,7 +78,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 - **Versions**: which release of MatUi each app carries, and which one is behind
 - **People and roles** (`CODE-10`): administrators, editors and viewers, decided on the server for every page and every change (a viewer reads everything and changes nothing, an editor maintains the design, only administrators make releases or manage people); each person signs in with their own name, a password an administrator chose has to be changed first, and the activity list names who did what to whom, never a secret
 - **Company and templates**: the instance belongs to one company, whose names the site, its releases and the archive carry; it starts from the **demo** (the Mat apps) or a **blank** brand with no apps
-- **Component properties and overrides**: the 68 `--mat-<component>-*` properties are editable next to the real control with a live preview, per brand, per app (`[data-app]`) and, for the surfaces, inside each colour scheme; a height under 44 px is written for a mouse only, so a touch screen keeps its 44 px; the order is toolkit, brand, app, scheme
+- **Component properties and overrides**: the 71 `--mat-<component>-*` properties are editable next to the real control with a live preview, per brand, per app (`[data-app]`) and, for the surfaces, inside each colour scheme; a height under 44 px is written for a mouse only, so a touch screen keeps its 44 px; the order is toolkit, brand, app, scheme
 
 ## The rules in one minute
 
@@ -178,15 +183,15 @@ The sample app is built from nothing but MatUi, in the accent of one of the apps
 | Section | What you find |
 |---|---|
 | **Identity** | The apps of the family and their accent, a contrast report per app, the palette check and the audit. |
-| **Rules** | The rulebook, searchable, with a page per rule. |
+| **Rules** | The rulebook, searchable, with a page per rule and its history, and **what changed in the rulebook**. |
 | **Foundations** | Colour (light and dark side by side), type, spacing, motion, the icon sprite, the optional **icon library**, and every design token. |
 | **Shell** | The frame around every page: switcher, items with badges and submenus, foot, header bar, footer – with a live sample and the HTML skeleton. |
-| **Components** | Buttons, forms, pickers, toolbar, table, pagination, cards, tabs, dialogs, alerts and more – live, with code beside, classes, rules and a real page per group. |
+| **Components** | An overview of tiles by group (with a search), and a page for each: buttons, forms, pickers, toolbar, table, pagination, cards, tabs, dialogs, alerts and more – live, with code beside, how to use it, the rules it follows and a real page per group; Previous and Next walk through them (the arrow keys too). Everything on one page: `/Components/All`. |
 | **Layout** | Breakpoints and containers, the grid of twelve columns, stack, row and auto grid. |
 | **Utilities** | One class, one property: spacing, display by width, flex, text, colour, borders, sizing, position. |
 | **Patterns** | The page types (list, gallery, edit, settings, dashboard, sign-in) in real frames, on a desktop and a phone. |
 | **Builder** | Try an accent: what the toolkit derives from it, contrast in both modes, the real screens in that colour. |
-| **Download** | MatUi as an archive or file by file, and the design system as JSON (`/api/rules`, `/api/tokens` …). |
+| **Download** | MatUi as an archive or file by file, and the design system as JSON (`/api/rules`, `/api/rules/changes`, `/api/tokens` …). |
 | **Studio** | Behind a sign-in; the first visit creates the first user, an administrator, in a setup assistant; administrators add editors and viewers – see [docs/STUDIO.md](docs/STUDIO.md). |
 
 ## Quick start
@@ -341,7 +346,8 @@ place that could.
 | Icon library | 1,925 icons in 54 categories, **Home automation** with its areas, search, single files, archive, in a release | ✅ |
 | Documentation | **Code beside every example**, a real page per group, a styleguide in every release | ✅ |
 | Releases | The real sample pages in a release (today: code and live examples only) | open |
-| Components | CSS variables per component, accessibility notes, a search across components | open |
+| Components | CSS variables per component, accessibility notes | open |
+| Search | A **search with suggestions** as a toolkit control (`FORM-23`) and in the header bar of every page (`SHELL-20`); the site searches rules, components, tokens, icons, pages, apps and patterns, in English and German, at `/api/search` and `/Search` | ✅ |
 
 ## Development
 
@@ -407,7 +413,7 @@ docs/                  ARCHITECTURE.md, ADOPTING.md, STUDIO.md, PLATFORM.md
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) records the decisions, [docs/ADOPTING.md](docs/ADOPTING.md) is the
 checklist for an app, [docs/STUDIO.md](docs/STUDIO.md) describes the Studio, [docs/PLATFORM.md](docs/PLATFORM.md) is the platform
-contract of the family (what every app offers besides its pages, and the sign-in through MatIdentity).
+contract of the family (what every app offers besides its pages, the sign-in through MatIdentity and the mail through MatSMTP).
 
 The site is in **English**; the apps keep the language of their own interface. The audit is a static scan of the other
 repositories (a snapshot in `src/MatDesign.Web/Data/audit.json`): it finds what is written in the files and cannot tell

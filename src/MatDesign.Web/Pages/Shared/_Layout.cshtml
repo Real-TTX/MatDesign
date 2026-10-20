@@ -95,6 +95,18 @@
                         }
                     </ol>
                 </nav>
+                @if (ViewData["Shell"] is null)
+                {
+                    @* The search of the site (SHELL-20, FORM-23): a field in the header bar of every page of the site and of the Studio, not of a sample app in a preview. It is a form that works without the script. *@
+                    <div class="mat-topbar__search">
+                        <form role="search" action="/Search" method="get">
+                            <label class="mat-sr-only" for="site-search">Search the site</label>
+                            <div class="mat-search" data-autocomplete data-search-url="/api/search" data-results-url="/Search" data-recent="site" data-key="/,mod+k">
+                                <input class="mat-search__input" type="search" id="site-search" name="q" placeholder="Search" maxlength="100" autocomplete="off" />
+                            </div>
+                        </form>
+                    </div>
+                }
                 @if (ViewData["IndexDialog"] is string indexDialog)
                 {
                     @* A page with an index (SHELL-16) offers it here where it is not drawn beside the content: one icon, always in reach. *@

@@ -208,6 +208,6 @@ public sealed class VersionTrackerTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Contains($"MatDock uses MatUi {Ver.First}, 1 release behind the latest ({Ver.Next(1)}).", found.Message);
         Assert.Equal("/Studio/Versions/Edit?id=matdock", _studio.Checks.UrlOf(found));
         Assert.True(_studio.Checks.Report.Passed);
-        Assert.Contains("1 of 23", await _studio.Get("/Studio"));
+        Assert.Contains("1 of 24", await _studio.Get("/Studio"));
     }
 }

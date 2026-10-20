@@ -41,7 +41,7 @@
 /* ---- Example: live area above, source below ---- */
 .doc-example { display: flex; flex-direction: column; border: 1px solid var(--mat-border); border-radius: var(--mat-radius-lg); background: var(--mat-surface); overflow: hidden; min-width: 0; }
 .doc-example__head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--mat-space-3); padding: var(--mat-space-4) var(--mat-space-6) 0; }
-.doc-example__head h4 { font-size: var(--mat-fs-md); }
+.doc-example__head :is(h3, h4) { font-size: var(--mat-fs-md); }
 
 /* ---- The components page: groups of components on one page, each with its examples ---- */
 .doc-group { display: flex; flex-direction: column; gap: var(--mat-space-6); }
@@ -103,7 +103,7 @@
 .doc-api code { padding: 1px 6px; border-radius: var(--mat-radius-xs); background: var(--mat-surface-3); overflow-wrap: anywhere; }
 .doc-api dd:not(.is-open) .doc-api__extra { display: none; }
 .doc-api__more { padding: 1px 6px; border: 0; background: transparent; color: var(--mat-accent-text); font: inherit; font-weight: 600; cursor: pointer; }
-@media (max-width: 700px) { .doc-api { display: none; } }
+@media (max-width: 700px) { .doc-api:not(.doc-api--full) { display: none; } }
 
 /* ---- Rules ---- */
 .doc-rule-id { font-family: var(--mat-mono); font-weight: 650; font-size: var(--mat-fs-xs); background: var(--mat-surface-3); border-radius: var(--mat-radius-xs); padding: 2px 8px; white-space: nowrap; }
@@ -367,6 +367,67 @@ ol.doc-changes > li { list-style: decimal; }
 .doc-assets__specimen { display: block; font-size: var(--mat-fs-xl); line-height: var(--mat-lh-tight); overflow-wrap: anywhere; }
 .doc-assets__stack { display: inline-block; margin-right: var(--mat-space-3); }
 
+/* ---- The components pages (LIST-18, docs/ARCHITECTURE.md "Components pages"): the overview of tiles at /Components and the page of one component at /Components/{id}.
+   Flat like the rest: a line around, a tint on hover, nothing lifts, no bar at one side, tokens only. ---- */
+.mat-list > .doc-tilearea { order: 2; }
+.doc-tilearea { display: flex; flex-direction: column; gap: var(--mat-space-8); min-width: 0; }
+.doc-group--tiles { gap: var(--mat-space-4); }
+.doc-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: var(--mat-space-3); }
+.doc-tile { display: flex; min-width: 0; }
+.doc-tile__link {
+  display: flex; flex-direction: column; flex: 1; gap: var(--mat-space-2); min-width: 0; min-height: 44px;
+  padding: var(--mat-space-4); border: 1px solid var(--mat-border); border-radius: var(--mat-radius-lg); background: var(--mat-surface);
+  color: var(--mat-text); text-decoration: none;
+}
+.doc-tile__link:hover { background: var(--mat-surface-2); border-color: var(--mat-text-faint); text-decoration: none; }
+.doc-tile__head { display: flex; align-items: center; gap: var(--mat-space-2); min-width: 0; }
+.doc-tile__head .mat-icon { flex: none; color: var(--mat-accent-text); }
+.doc-tile__name { font-weight: 650; overflow-wrap: anywhere; }
+.doc-tile__summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
+.doc-tile__facts { display: flex; flex-wrap: wrap; gap: var(--mat-space-1) var(--mat-space-3); margin-top: auto; padding-top: var(--mat-space-1); color: var(--mat-text-muted); font-size: var(--mat-fs-xs); }
+.doc-note { max-width: 70ch; }
+
+/* the page of one component: the sections, the way to the neighbours, the rules it follows, how to use it */
+.doc-section { display: flex; flex-direction: column; gap: var(--mat-space-4); min-width: 0; }
+.doc-examples { display: flex; flex-direction: column; gap: var(--mat-space-6); min-width: 0; }
+.doc-head { flex-wrap: wrap; }
+.doc-head > .mat-page__title { flex: 1 1 18rem; }
+.doc-head > .doc-show { margin-left: auto; flex: none; }
+.doc-pager { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--mat-space-3); min-width: 0; }
+.doc-pager__btn { min-width: 0; max-width: 100%; }
+.doc-pager__btn > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.doc-pager__btn > small { flex: none; color: var(--mat-text-muted); font-weight: 500; }
+.doc-pager__btn--prev { justify-self: start; }
+.doc-pager__btn--next { justify-self: end; }
+.doc-pager__pos, .doc-pager__all { justify-self: center; }
+.doc-pager__none { min-width: 0; } /* keeps the columns when there is no previous or no next */
+.doc-pager__pos { color: var(--mat-text-muted); font-size: var(--mat-fs-sm); white-space: nowrap; }
+/* on a phone: two buttons of half the width each; the position (above) or the way back to the overview (below) takes a row of its own */
+@media (max-width: 600px) {
+  .doc-pager { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .doc-pager__none { display: none; }
+  .doc-pager__btn--prev { grid-column: 1; grid-row: 2; }
+  .doc-pager__btn--next { grid-column: 2; grid-row: 2; }
+  .doc-pager__pos { grid-column: 1 / -1; grid-row: 1; }
+  .doc-pager--end .doc-pager__btn--prev, .doc-pager--end .doc-pager__btn--next { grid-row: 1; }
+  .doc-pager--end .doc-pager__all { grid-column: 1 / -1; grid-row: 2; justify-self: stretch; }
+}
+.doc-howto { display: flex; flex-direction: column; gap: var(--mat-space-6); min-width: 0; }
+.doc-howto__block { display: flex; flex-direction: column; gap: var(--mat-space-2); min-width: 0; }
+.doc-howto__block h3 { font-size: var(--mat-fs-md); }
+.doc-api--full { font-size: var(--mat-fs-sm); }
+.doc-rulecards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--mat-space-3); }
+.doc-rulecard { display: flex; flex-direction: column; gap: var(--mat-space-2); min-width: 0; padding: var(--mat-space-4); border: 1px solid var(--mat-border); border-radius: var(--mat-radius-lg); background: var(--mat-surface); }
+.doc-rulecard__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-2) var(--mat-space-3); }
+.doc-rulecard__title { font-weight: 650; color: var(--mat-text); text-decoration: none; }
+.doc-rulecard__title:hover { color: var(--mat-accent-text); text-decoration: underline; }
+.doc-rulecard__text { margin: 0; color: var(--mat-text-muted); font-size: var(--mat-fs-sm); }
+/* the group list of the index is a list of pages, not of sections: its own heading (the dialog hides the title of an index) */
+.doc-toc-heading { display: flex; justify-content: space-between; gap: var(--mat-space-2); margin: var(--mat-space-4) 0 var(--mat-space-1); padding: 0 var(--mat-space-3); font-size: var(--mat-fs-sm); font-weight: 600; color: var(--mat-text-muted); }
+.doc-toc-heading__count { font-weight: 500; }
+.doc-toc-all { margin-top: var(--mat-space-3); }
+.doc-toc-group { margin-top: var(--mat-space-2); }
+
 /* ---- Touch targets (MOBILE-04): the small links and buttons of the documentation keep their look and are 44 px on a touch screen (a centred ::after, no layout moves) ---- */
 @media (pointer: coarse) {
   .doc-api__more { position: relative; }
@@ -374,4 +435,6 @@ ol.doc-changes > li { list-style: decimal; }
   /* the chip of a rule is drawn by a ::before inside the 44 px that its link takes, so that two lines of chips do not take each other's targets */
   .doc-rule-id { position: relative; z-index: 0; display: inline-flex; align-items: center; min-height: 44px; background: transparent; }
   .doc-rule-id::before { content: ""; position: absolute; z-index: -1; inset: 11px 0; border-radius: var(--mat-radius-xs); background: var(--mat-surface-3); }
+  /* the title of a rule in its card is a link of its own: a line of text is not a target */
+  .doc-rulecard__title { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
 }

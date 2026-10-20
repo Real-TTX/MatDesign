@@ -18,6 +18,7 @@ public sealed partial class ListPageIdTests(WebApplicationFactory<Program> facto
     [InlineData("/Foundations/Icons")]
     [InlineData("/Foundations/Tokens")]
     [InlineData("/Patterns")]
+    [InlineData("/Rules/Changes")]
     public async Task A_list_page_has_no_id_twice(string url)
     {
         var html = await factory.CreateClient().GetStringAsync(url);

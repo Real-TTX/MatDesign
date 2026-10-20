@@ -53,6 +53,7 @@ public static partial class PropertyPreviews
         new("check", "checks", 0),
         new("nav", "navmenu", 0, Frame: "menu"),
         new("topbar", "topbar", 0, Frame: "bar"),
+        new("search", "search", 0),
     ];
 
     /// <summary>The preview of a component group, or null.</summary>
