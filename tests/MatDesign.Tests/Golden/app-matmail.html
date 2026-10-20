@@ -198,6 +198,14 @@
                                     <li aria-current="page">MatMail</li>
                     </ol>
                 </nav>
+                <div class="mat-topbar__search">
+                    <form role="search" action="/Search" method="get">
+                        <label class="mat-sr-only" for="site-search">Search the site</label>
+                        <div class="mat-search" data-autocomplete data-search-url="/api/search" data-results-url="/Search" data-recent="site" data-key="/,mod+k">
+                            <input class="mat-search__input" type="search" id="site-search" name="q" placeholder="Search" maxlength="100" autocomplete="off" />
+                        </div>
+                    </form>
+                </div>
             </header>
 
             <main class="mat-page " id="main">

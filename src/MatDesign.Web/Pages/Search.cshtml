@@ -1,0 +1,88 @@
+@page "/Search"
+@model MatDesign.Web.Pages.SearchModel
+@{
+    ViewData["Title"] = Model.Asked ? $"Search: {Model.Query}" : "Search";
+    ViewData["PageSub"] = "Rules, components, tokens, icons, pages, apps and patterns, found by the words you type: every word has to be found.";
+    ViewData["Crumbs"] = Crumbs.Of(("Search", null));
+
+    void Row(MatDesign.Web.Services.SearchHit hit)
+    {
+        <li class="mat-item">
+            <a class="mat-item__main" href="@hit.Doc.Href">
+                <span class="mat-item__lead">@Ui.Icon(hit.Doc.Icon)</span>
+                <span class="mat-item__body">
+                    <span class="mat-item__title">@SearchHighlight.Mark(hit.Doc.Title, Model.Results.Terms)</span>
+                    <span class="mat-item__text">@hit.Doc.Text</span>
+                </span>
+                <span class="mat-item__end"><span class="mat-pill mat-pill--plain">@SearchKinds.Singular(hit.Doc.Kind)</span></span>
+            </a>
+        </li>
+    }
+}
+
+<div class="mat-list">
+    <partial name="_Toolbar" model="Model.Toolbar" />
+
+    @if (!Model.Asked || Model.Results.Total == 0)
+    {
+        <div class="mat-empty">
+            <span class="mat-empty__icon">@Ui.Icon("search")</span>
+            <div class="mat-empty__title">@(Model.Asked ? $"No results for “{Model.Query}”" : "Search the design system")</div>
+            <p>
+                Try a rule id such as <a href="@SearchLinks.Results(SearchModel.Examples[0])">@SearchModel.Examples[0]</a>, a component such as <a href="@SearchLinks.Results(SearchModel.Examples[1])">@SearchModel.Examples[1]</a>,
+                a token such as <a href="@SearchLinks.Results(SearchModel.Examples[2])">@SearchModel.Examples[2]</a>.@(Model.Asked ? " Every word you type has to be found, so fewer words find more." : string.Empty)
+            </p>
+            @if (Model.Asked)
+            {
+                <a class="mat-btn mat-btn--primary" href="/Search">@Ui.Icon("refresh")<span>Clear the search</span></a>
+            }
+        </div>
+    }
+    else if (Model.Kind is null)
+    {
+        @foreach (var group in Model.Groups)
+        {
+            var id = "results-" + SearchKinds.Name(group.Kind);
+            <section class="mat-section" aria-labelledby="@id">
+                <div class="mat-section__head">
+                    <h2 id="@id">@group.Name <span class="mat-badge mat-badge--soft">@group.Count</span></h2>
+                </div>
+                <ul class="mat-itemlist mat-itemlist--inset">
+                    @foreach (var hit in group.Hits)
+                    {
+                        Row(hit);
+                    }
+                </ul>
+                @if (group.Count > group.Hits.Count)
+                {
+                    <div class="mat-actions">
+                        <a class="mat-btn mat-btn--ghost" href="@SearchLinks.Results(Model.Query, group.Kind)"><span>Show all @group.Count @group.Name.ToLowerInvariant()</span>@Ui.Icon("chevron-right")</a>
+                    </div>
+                }
+            </section>
+        }
+    }
+    else
+    {
+        <section class="mat-section" aria-labelledby="results-kind">
+            <div class="mat-section__head">
+                <h2 id="results-kind">@SearchKinds.Heading(Model.Kind.Value) <span class="mat-badge mat-badge--soft">@Model.Matching</span></h2>
+            </div>
+            <ul class="mat-itemlist mat-itemlist--inset">
+                @foreach (var hit in Model.Hits)
+                {
+                    Row(hit);
+                }
+            </ul>
+        </section>
+    }
+
+    <partial name="_Pager" model="Model.Pager" />
+
+    @if (Model.Asked && Model.Kind is not null)
+    {
+        <div class="mat-actions">
+            <a class="mat-btn mat-btn--secondary" href="@SearchLinks.Results(Model.Query)">@Ui.Icon("back")<span>All kinds of results</span></a>
+        </div>
+    }
+</div>

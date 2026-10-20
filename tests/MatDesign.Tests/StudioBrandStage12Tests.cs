@@ -79,7 +79,7 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
 
         Assert.Equal(1, html.Split("<h1").Length - 1);
         Assert.DoesNotMatch(StyleAttribute(), html);
-        Assert.Contains("68 properties in 16 components", html);
+        Assert.Contains("71 properties in 17 components", html);
         foreach (var property in Toolkit.EditableProperties)
         {
             Assert.Contains($"data-prop=\"{property.Name}\"", html);
@@ -87,12 +87,13 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
             Assert.Contains($"id=\"component-{property.Key}\"", html);
         }
 
-        Assert.Equal(16, Regex.Matches(html, "data-prop-group=\"").Count);
-        Assert.Equal(5, Regex.Matches(html, "data-touch=\"true\"").Count);
+        Assert.Equal(17, Regex.Matches(html, "data-prop-group=\"").Count);
+        Assert.Equal(6, Regex.Matches(html, "data-touch=\"true\"").Count);
         // the controls of the preview cannot submit the editor, and the inputs belong to the form by its id
         Assert.Contains("form=\"pv-none\"", html);
         Assert.Contains("form=\"components-form\"", html);
-        var form = html[html.IndexOf("<form id=\"components-form\"", StringComparison.Ordinal)..html.IndexOf("</form>", StringComparison.Ordinal)];
+        var formStart = html.IndexOf("<form id=\"components-form\"", StringComparison.Ordinal);
+        var form = html[formStart..html.IndexOf("</form>", formStart, StringComparison.Ordinal)];
         Assert.DoesNotContain("data-brand-preview", form);
         // the page and the tabs
         Assert.Contains("<a class=\"mat-tab is-active\" href=\"/Studio/Brand/Components\" aria-current=\"page\">", html);
@@ -420,7 +421,7 @@ public sealed partial class StudioBrandStage12Tests : IClassFixture<WebApplicati
             Assert.Contains($"name=\"property:{property.Name}\"", html);
         }
 
-        Assert.Equal(16, Regex.Matches(html, "data-app=\"matx\"").Count(m => m.Index > 0) - Regex.Matches(html, "<html[^>]*data-app=\"matx\"").Count);
+        Assert.Equal(17, Regex.Matches(html, "data-app=\"matx\"").Count(m => m.Index > 0) - Regex.Matches(html, "<html[^>]*data-app=\"matx\"").Count);
         Assert.Contains("/js/brand.js", html);
         Assert.DoesNotMatch(StyleAttribute(), html);
         // a new app has no id to scope a preview to

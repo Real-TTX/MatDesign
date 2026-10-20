@@ -37,7 +37,7 @@ public static class ComponentTokens
 
     /// <summary>The properties that are the height of a control that is pressed: they fall back to <c>--mat-control-h</c>, which is 44 px on a touch screen.</summary>
     public static readonly IReadOnlyList<string> TouchProperties =
-        ["--mat-btn-height", "--mat-input-height", "--mat-tabs-height", "--mat-menu-item-height", "--mat-nav-item-height"];
+        ["--mat-btn-height", "--mat-input-height", "--mat-tabs-height", "--mat-menu-item-height", "--mat-nav-item-height", "--mat-search-height"];
 
     /// <summary>The properties that the Studio may set, in the order of the CSS, each with its kind and limits.</summary>
     public static IReadOnlyList<PropertyToken> Editable(IReadOnlyList<ComponentProperty> properties, IReadOnlyList<DesignToken> tokens)
@@ -93,6 +93,7 @@ public static class ComponentTokens
             _ when name.EndsWith("-radius", StringComparison.Ordinal) => (0, 24, "A radius of 0 to 24 px: larger turns a control into something else."),
             _ when name.EndsWith("-border-width", StringComparison.Ordinal) || name.EndsWith("-indicator-width", StringComparison.Ordinal) => (0, 4, "A line of 0 to 4 px."),
             "--mat-dialog-width" or "--mat-toast-width" => (200, 960, "A dialog or a toast of 200 to 960 px: narrower cuts its content, wider is more than a screen."),
+            "--mat-search-width" => (160, 560, "A search field in the header bar of 160 to 560 px: narrower shows too little of what is typed, wider pushes the breadcrumb away."),
             "--mat-table-font-size" or "--mat-topbar-crumb-font-size" => (12, 22, "Text in a table and a breadcrumb stays readable: 12 px or more."),
             _ when name.EndsWith("-font-size", StringComparison.Ordinal) => (11, 18, "The text of a small label stays readable: 11 px or more."),
             "--mat-badge-size" => (14, 32, "The size of a count badge."),

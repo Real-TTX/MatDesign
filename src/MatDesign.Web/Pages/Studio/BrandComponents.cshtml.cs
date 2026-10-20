@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace MatDesign.Web.Pages.Studio;
 
 /// <summary>
-/// The component properties of the brand (docs/PRODUCT.md, stage 12): the 68 documented <c>--mat-&lt;component&gt;-*</c> properties grouped by component, each with its description, type, limits, what the control uses
+/// The component properties of the brand (docs/PRODUCT.md, stage 12): the 71 documented <c>--mat-&lt;component&gt;-*</c> properties grouped by component, each with its description, type, limits, what the control uses
 /// today and an input of its type, and the real control of the documentation beside them with a live preview. They belong to the one brand item: the same save, the same history and the same restore as
 /// <see cref="BrandModel"/>; this page keeps the names, the tokens and the colour schemes as they are saved and changes the properties only. What is wrong stays on the page with the form as it was typed.
 /// </summary>

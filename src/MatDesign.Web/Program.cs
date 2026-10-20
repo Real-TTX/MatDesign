@@ -79,6 +79,7 @@ builder.Services.AddSingleton<AssetFiles>();
 builder.Services.AddSingleton<ToolkitFiles>();
 builder.Services.AddSingleton<IconLibrary>();
 builder.Services.AddSingleton<AuditData>();
+builder.Services.AddSingleton<SearchIndex>();
 
 // Behind a TLS-terminating reverse proxy (Matcad) the scheme, the host and the address of the client come from the X-Forwarded-* headers: from a proxy that is known, never from anybody (TrustedProxies).
 var trustedProxies = TrustedProxies.Parse(Environment.GetEnvironmentVariable(TrustedProxies.Variable));
@@ -276,6 +277,7 @@ releases.MapGet("/{version}/{**file}", (string version, string file, ReleaseServ
 });
 
 app.MapGet("/health", () => Results.Text("ok"));
+app.MapSearch();
 app.MapWhiteLabel();
 app.MapRazorPages();
 

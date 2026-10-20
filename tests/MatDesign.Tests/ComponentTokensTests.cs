@@ -36,7 +36,7 @@ public class ComponentTokensTests
     public void Every_documented_property_is_editable_with_a_kind_and_limits()
     {
         Assert.Equal(Properties.Count, Props.Count);
-        Assert.Equal(68, Props.Count);
+        Assert.Equal(71, Props.Count);
         Assert.All(Props, p =>
         {
             Assert.False(string.IsNullOrWhiteSpace(p.Token.Hint));
@@ -105,7 +105,7 @@ public class ComponentTokensTests
     [Fact]
     public void The_heights_of_the_controls_that_are_pressed_have_a_floor_of_32_px()
     {
-        Assert.Equal(["--mat-btn-height", "--mat-input-height", "--mat-menu-item-height", "--mat-nav-item-height", "--mat-tabs-height"], ComponentTokens.TouchProperties.Order());
+        Assert.Equal(["--mat-btn-height", "--mat-input-height", "--mat-menu-item-height", "--mat-nav-item-height", "--mat-search-height", "--mat-tabs-height"], ComponentTokens.TouchProperties.Order());
         foreach (var name in ComponentTokens.TouchProperties)
         {
             Assert.True(Prop(name).Touch);
@@ -118,7 +118,7 @@ public class ComponentTokensTests
             Assert.Contains("above the most", Check(name, "73px"), StringComparison.Ordinal);
         }
 
-        Assert.Equal(5, Props.Count(p => p.Touch));
+        Assert.Equal(6, Props.Count(p => p.Touch));
         // a height under the touch target is for a fine pointer only
         Assert.True(ComponentTokens.AppliesToFinePointerOnly(Prop("--mat-btn-height"), "36px"));
         Assert.True(ComponentTokens.AppliesToFinePointerOnly(Prop("--mat-btn-height"), "2.25rem"));

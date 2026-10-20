@@ -192,6 +192,27 @@ const MAT_WORDS = ['MatDesign', 'Mat apps', 'Mat family', 'MatMail', 'Mattiverse
     await shot(sp, 'palette-one-app');
   });
 
+  // ---------------------------------------------------------------------------------------------------- the search of the site (SHELL-20, FORM-23)
+  console.log('\nSearch');
+  {
+    const { ctx: c, page: p } = await open(desktop, '/');
+    await check('the header bar of the blank site has the search: it finds the toolkit and the app of the company, no app of the Mat family, and says nothing of another company', async () => {
+      const answer = async (q) => (await p.request.get(BASE + '/api/search?limit=50&q=' + encodeURIComponent(q))).json();
+      expect((await answer('acmemail')).groups.filter(g => g.kind === 'app').map(g => g.items.map(i => i.title)), [['Acmemail']], 'the app of the company is found');
+      expect((await answer('matpaper')).groups.filter(g => g.kind === 'app'), [], 'no app of the family');
+      expect((await answer('button')).groups[0].items[0].href, '/Components/buttons', 'the toolkit is the same');
+      await p.focus('#site-search');
+      await p.keyboard.type('acme', { delay: 20 });
+      await p.waitForFunction(() => { const s = document.querySelector('#site-search').closest('.mat-search')._matSearch; return s.q === 'acme' && s.mode === 'results'; });
+      const text = await p.evaluate(() => document.querySelector('.mat-search__panel').innerText);
+      expectTrue(text.includes('Acmemail'), 'the app is not in the popup: ' + text.slice(0, 200));
+      expect(MAT_WORDS.filter(w => text.includes(w)), [], 'words of the demo in the popup');
+      expect(await p.evaluate(() => [document.querySelector('label[for="site-search"]').textContent, document.querySelector('#site-search').placeholder]), ['Search the site', 'Search'], 'the words of the field');
+      await shot(p, 'search-blank');
+    });
+    await c.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the company page: to the demo and back
   console.log('\nCompany page');
   // a switch is a post and a redirect: wait until the site shows it (the page is quiet for a moment before the answer comes)
