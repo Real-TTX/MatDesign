@@ -67,6 +67,7 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         yield return "/Builder?app=matarchive&accent=%23ff6600&scheme=oled";
         yield return "/Foundations/Tokens?group=Schemes";
         yield return "/Download";
+        yield return "/Rules/Changes";
     }
 
     private async Task<(HttpStatusCode Status, string Html)> Get(string url)

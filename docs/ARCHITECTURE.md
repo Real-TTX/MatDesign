@@ -46,6 +46,8 @@ the repository. `matui.apps.css` has to equal it (a test), so the family's colou
 already had it) and, where a test enforces it, a `Check`. In code they can be searched and linked, counted, cited by other rules and verified (a rule that cites an unknown
 ID fails a test). `/api/rules` gives the same list as JSON for tools and agents.
 
+What happens to the rules is code as well: `RuleChanges` (data in `RuleChangeEntries.cs`) is the changelog of the rulebook, a line for each rule that was added, changed, removed or moved, with a short hash of the rule after the change (its statement, level and source). A test compares the newest line of every rule with the hash of its text, so **a rule cannot change without a line that says so**, and the failure message is the line to add. The hash is computed twice, in C# and in `tools/rule-hash.js` (which reads `RuleBook.cs` as text, so a person can get the line without a build), and a test holds the two together. The page `/Rules/Changes`, the History block of every rule page and `/api/rules/changes` read it. Rules written in the Studio keep their own history there.
+
 ## 4. The site eats its own dog food
 
 The site's layout is the shell of the toolkit (`Pages/Shared/_Layout.cshtml`), driven by a `ShellModel`. The **Preview** page draws a *sample app* of the family with the same

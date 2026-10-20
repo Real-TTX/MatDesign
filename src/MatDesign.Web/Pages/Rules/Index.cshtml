@@ -3,9 +3,16 @@
 @inject MatDesign.Web.Studio.DesignData Design
 @{
     ViewData["Title"] = "Rulebook";
-    ViewData["PageSub"] = $"Every rule about how a {Design.Tenant.App} looks and behaves. Each has an id you can cite in a review, a commit or a prompt.";
+    ViewData["OwnHead"] = true;
     ViewData["Crumbs"] = Crumbs.Of(("Rules", "/Rules"), ("Rulebook", null));
 }
+
+<div class="mat-page__head">
+    <div class="mat-page__title">
+        <h1>Rulebook</h1>
+        <p class="mat-page__sub">Every rule about how a @Design.Tenant.App looks and behaves. Each has an id you can cite in a review, a commit or a prompt. @Design.Rules.Count rules in @RuleBook.Areas.Count areas, and <a href="/Rules/Changes">what changed in them</a>.</p>
+    </div>
+</div>
 
 <div class="mat-list">
     <partial name="_Toolbar" model="Model.Toolbar" />
@@ -52,6 +59,7 @@
     <partial name="_Pager" model="Model.Pager" />
 
     <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="/Rules/Changes">@Ui.Icon("file-text")<span>What changed</span></a>
         <a class="mat-btn mat-btn--secondary" href="/api/rules">@Ui.Icon("code")<span>Rules as JSON</span></a>
     </div>
 </div>

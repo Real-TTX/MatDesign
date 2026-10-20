@@ -9962,6 +9962,137 @@ function seenAt(page, selector) {
     }
   }
 
+  // ---------------------------------------------------------------------------------------------------- what changed in the rulebook
+  // The changelog of the rulebook (RuleChanges): /Rules/Changes, the History block of a rule, the link from the rulebook and /api/rules/changes. It needs no sign-in.
+  console.log('\nWhat changed in the rulebook');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Rules/Changes');
+    const api = await (await page.request.get(BASE + '/api/rules/changes')).json();
+    const rowIds = () => page.$$eval('tr.mat-group__item .doc-rule-id', els => els.map(e => e.textContent.trim()));
+    const rowKinds = () => page.$$eval('tr.mat-group__item td[data-label="Change"] .mat-pill', els => els.map(e => e.textContent.trim()));
+    const rowDates = () => page.$$eval('tr.mat-group__item td[data-label="Date"]', els => els.map(e => e.textContent.trim()));
+
+    await check('the page is a list: one title, the toolbar above the table with the search as a field, the count of the changes as the API has them', async () => {
+      expect(await page.$$eval('h1', h => h.length), 1, 'h1');
+      expect(await page.textContent('h1'), 'What changed in the rulebook', 'the title');
+      const bar = await page.locator('.mat-toolbar').boundingBox();
+      const table = await page.locator('table.mat-table').boundingBox();
+      expectTrue(bar.y + bar.height <= table.y + 1, 'the toolbar is not above the table');
+      expectTrue(await page.isVisible('.mat-toolbar .mat-toolbar__search input[type="search"]'), 'no search field in the toolbar');
+      expect(((await page.textContent('.mat-toolbar__info')) || '').trim(), `${api.length} changes`, 'the count in the toolbar');
+      expect(await page.$$eval('.mat-crumbs li', li => li.map(l => l.textContent.trim()).slice(1)), ['Rules', 'Rulebook', 'What changed'], 'the breadcrumb');
+    });
+    await check('the newest change is first and the changes are grouped by month under a heading that opens and closes', async () => {
+      const dates = await rowDates();
+      expectTrue(dates.length > 0 && dates.length <= 30, 'rows on the page: ' + dates.length);
+      expect([...dates].sort().reverse(), dates, 'newest first');
+      expect(dates[0], api[0].date, 'the newest date is the API\'s');
+      expectTrue((await page.textContent('tbody.mat-group .mat-group__title')).includes('2026'), 'the heading is a month and a year');
+      const first = page.locator('tbody.mat-group').first();
+      const rows = first.locator('tr.mat-group__item');
+      await first.locator('[data-group-toggle]').click();
+      expect(await first.locator('[data-group-toggle]').getAttribute('aria-expanded'), 'false', 'closed');
+      expect(await rows.first().isVisible(), false, 'the rows of a closed group are hidden');
+      await first.locator('[data-group-toggle]').click();
+      expect(await rows.first().isVisible(), true, 'the rows are back');
+    });
+    await check('every line names its rule as a link, the kind in a pill with its word and the day in mono', async () => {
+      expectTrue((await rowIds()).length > 0, 'no rows');
+      const first = page.locator('tr.mat-group__item').first();
+      const href = await first.locator('td[data-label="Rule"] a').getAttribute('href');
+      expectTrue(/^\/Rules\/Detail\?id=[A-Z0-9]+-\d+$/.test(href), 'the link: ' + href);
+      expectTrue(['Added', 'Changed', 'Removed', 'Moved'].includes((await rowKinds())[0]), 'the pill says a kind');
+      expect(await first.locator('td[data-label="Date"]').evaluate(td => getComputedStyle(td).fontFamily.includes('mono') || /mono|consolas|menlo|courier/i.test(getComputedStyle(td).fontFamily)), true, 'the date is in the mono font');
+    });
+    await check('the Filter dialog narrows the list by kind and shows a chip that takes the filter away again', async () => {
+      await page.click('[data-dialog-open="rulechanges-filter"]');
+      await page.waitForSelector('#rulechanges-filter[open]');
+      await page.selectOption('#rulechanges-f-kind', 'Changed');
+      await Promise.all([page.waitForURL('**kind=Changed**'), page.click('#rulechanges-filter button[type="submit"]')]);
+      const kinds = await rowKinds();
+      expectTrue(kinds.length > 0 && kinds.every(k => k === 'Changed'), 'kinds: ' + JSON.stringify([...new Set(kinds)]));
+      expect(((await page.textContent('.mat-toolbar__info')) || '').trim().startsWith(`${api.filter(c => c.kind === 'Changed').length} of ${api.length} changes`), true, 'the count says how many match');
+      expectTrue((await page.textContent('.mat-chips')).includes('Kind of change: Changed'), 'no chip for the filter');
+      await Promise.all([page.waitForURL(u => !u.href.includes('kind=')), page.click('.mat-chips .mat-chip__x')]);
+      expectTrue((await rowKinds()).includes('Added'), 'the chip did not take the filter away');
+    });
+    await check('the search field finds a rule by its id, "/" puts the cursor in it, and a search that finds nothing is an empty state with the way out', async () => {
+      await page.keyboard.press('/');
+      expect(await page.evaluate(() => document.activeElement && document.activeElement.type), 'search', '"/" focuses the field');
+      await page.fill('.mat-toolbar__search input', 'form-15');
+      await Promise.all([page.waitForURL('**q=form-15**'), page.keyboard.press('Enter')]);
+      const ids = await rowIds();
+      expectTrue(ids.length > 0 && ids.every(i => i === 'FORM-15'), 'the rows: ' + JSON.stringify([...new Set(ids)]));
+      await page.goto(BASE + '/Rules/Changes?q=zzzzzz', { waitUntil: 'networkidle' });
+      expect(await page.textContent('.mat-empty__title'), 'No change matches', 'the empty state');
+      await Promise.all([page.waitForURL(u => !u.search), page.click('.mat-empty a.mat-btn--primary')]);
+      expectTrue((await rowIds()).length > 0, 'the way out leads back to the list');
+    });
+    await check('the pager is directly under the table and leads to older changes', async () => {
+      const total = api.length;
+      if (total <= 30) { return; }
+      const first = await rowIds();
+      const table = await page.locator('table.mat-table').boundingBox();
+      const pager = await page.locator('.mat-pager').boundingBox();
+      expectTrue(pager.y >= table.y + table.height - 1 && pager.y - (table.y + table.height) < 80, 'the pager is not directly under the table');
+      await Promise.all([page.waitForURL('**page=2**'), page.click('.mat-pager a[aria-label="Next page"]')]);
+      expectTrue(JSON.stringify(await rowIds()) !== JSON.stringify(first), 'page 2 shows other lines');
+      expect(await page.getAttribute('.mat-pager [aria-current="page"]', 'aria-current'), 'page', 'the current page is marked');
+    });
+    await check('the rulebook leads to the changes: a link in its head and a button below the list', async () => {
+      await page.goto(BASE + '/Rules', { waitUntil: 'networkidle' });
+      expect(await page.$$eval('h1', h => h.length), 1, 'h1');
+      expectTrue((await page.textContent('.mat-page__sub')).includes('rules in'), 'the sub line names the number of rules');
+      expectTrue(await page.isVisible('.mat-page__sub a[href="/Rules/Changes"]'), 'no link in the head');
+      await Promise.all([page.waitForURL('**/Rules/Changes'), page.click('.mat-actions a[href="/Rules/Changes"]')]);
+      expect(await page.textContent('h1'), 'What changed in the rulebook', 'the button leads to the page');
+    });
+    await check('the page of a rule has its history, the newest line first, and a link to all changes', async () => {
+      const lines = api.filter(c => c.rule === 'A11Y-02');
+      expectTrue(lines.length >= 2, 'a rule with two lines is needed for this check: A11Y-02 has ' + lines.length);
+      await page.goto(BASE + '/Rules/Detail?id=A11Y-02', { waitUntil: 'networkidle' });
+      expect(await page.textContent('#history-title'), 'History', 'the heading');
+      const rows = await page.$$eval('section[aria-labelledby="history-title"] .mat-table-wrap tbody tr', trs => trs.map(tr => ({ date: tr.querySelector('[data-label="Date"]').textContent.trim(), kind: tr.querySelector('[data-label="Change"]').textContent.trim() })));
+      expect(rows.length, lines.length, 'a row for every line');
+      expect(rows.map(r => r.kind), lines.map(l => l.kind), 'the newest line first, as the API has them');
+      expect(rows.at(-1).kind, 'Added', 'the oldest line is the one that added the rule');
+      expectTrue(await page.isVisible('section[aria-labelledby="history-title"] .mat-actions a[href="/Rules/Changes"]'), 'no link to all changes');
+      expect(await page.$$eval('section[aria-labelledby="history-title"] .mat-actions a[href^="/Studio/History"]', a => a.length), 0, 'no link into the Studio for a visitor');
+    });
+    await check('the API gives the same lines as the page, newest first, and a filter and a bad value are answered', async () => {
+      expectTrue(api.length > 100, 'lines: ' + api.length);
+      expect(api.map(c => c.date), [...api.map(c => c.date)].sort().reverse(), 'newest first');
+      const changed = await (await page.request.get(BASE + '/api/rules/changes?kind=Changed&area=A11Y')).json();
+      expectTrue(changed.length > 0 && changed.every(c => c.kind === 'Changed' && c.rule.startsWith('A11Y-')), 'the filter');
+      expect((await page.request.get(BASE + '/api/rules/changes?kind=Renamed')).status(), 400, 'a kind that does not exist');
+    });
+    await ctx.close();
+
+    // a phone: no sideways scroll, the rows are cards with their labels, and the toolbar, the dialogs and the pager are reachable
+    const phone = await open(phoneOptions, '/Rules/Changes');
+    await check('on a phone the changes are cards with their labels, nothing scrolls sideways and the Filter dialog is full screen', async () => {
+      const s = await phone.page.$eval('tr.mat-group__item', tr => {
+        const cell = tr.querySelector('td');
+        return { display: getComputedStyle(tr).display, label: getComputedStyle(cell, '::before').content, head: getComputedStyle(document.querySelector('thead')).position, sideways: document.documentElement.scrollWidth > innerWidth };
+      });
+      expect(s.display, 'block', 'a row is a card');
+      expectTrue(s.label.includes('Rule'), 'the label of the first cell: ' + s.label);
+      expect(s.head, 'absolute', 'the head of the table is out of the way, kept for a screen reader');
+      expect(s.sideways, false, 'a sideways scroll');
+      await phone.page.click('[data-dialog-open="rulechanges-filter"]');
+      await phone.page.waitForSelector('#rulechanges-filter[open]');
+      const box = await phone.page.locator('#rulechanges-filter').boundingBox();
+      expectTrue(box.width >= 389 && box.height >= 800, 'the dialog fills the phone: ' + Math.round(box.width) + ' x ' + Math.round(box.height));
+      await phone.page.keyboard.press('Escape');
+    });
+    await check('on a phone the page of a rule has its history as cards too, and nothing scrolls sideways', async () => {
+      await phone.page.goto(BASE + '/Rules/Detail?id=A11Y-02', { waitUntil: 'networkidle' });
+      const s = await phone.page.$eval('section[aria-labelledby="history-title"] .mat-table-wrap tbody tr', tr => ({ display: getComputedStyle(tr).display, sideways: document.documentElement.scrollWidth > innerWidth }));
+      expect(s, { display: 'block', sideways: false }, 'the history on a phone');
+    });
+    await phone.ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {

@@ -31,9 +31,11 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 ## At a glance
 
 **The rulebook**
-- **131 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
+- **142 rules in 14 areas** – shell, lists, forms, dialogs, colour, mobile, code …
 - Each rule has a **stable ID**, a level (*Must*, *Should*, *May*), a source and, where a test enforces it, a check
-- Searchable, a page per rule, and as JSON at `/api/rules`; the **search of the site** in the header bar finds a rule by its id (`form 15`)
+- Searchable, a page per rule with its history, and as JSON at `/api/rules`; the **search of the site** in the header bar finds a rule by its id (`form 15`)
+- A **changelog of the rulebook** – what was added, changed, removed or moved, and when, at `/Rules/Changes` and `/api/rules/changes`; a rule cannot change without a line that says so (a test fails)
+- A written **review** of the whole book, with what was found and what the owner has to decide: [docs/RULES-REVIEW.md](docs/RULES-REVIEW.md)
 
 **The toolkit – MatUi**
 - **Four files you copy**: `matui.css` (ten parts), `matui.js`, `matui.boot.js` and the icon sprite –
@@ -181,7 +183,7 @@ The sample app is built from nothing but MatUi, in the accent of one of the apps
 | Section | What you find |
 |---|---|
 | **Identity** | The apps of the family and their accent, a contrast report per app, the palette check and the audit. |
-| **Rules** | The rulebook, searchable, with a page per rule. |
+| **Rules** | The rulebook, searchable, with a page per rule and its history, and **what changed in the rulebook**. |
 | **Foundations** | Colour (light and dark side by side), type, spacing, motion, the icon sprite, the optional **icon library**, and every design token. |
 | **Shell** | The frame around every page: switcher, items with badges and submenus, foot, header bar, footer – with a live sample and the HTML skeleton. |
 | **Components** | An overview of tiles by group (with a search), and a page for each: buttons, forms, pickers, toolbar, table, pagination, cards, tabs, dialogs, alerts and more – live, with code beside, how to use it, the rules it follows and a real page per group; Previous and Next walk through them (the arrow keys too). Everything on one page: `/Components/All`. |
@@ -189,7 +191,7 @@ The sample app is built from nothing but MatUi, in the accent of one of the apps
 | **Utilities** | One class, one property: spacing, display by width, flex, text, colour, borders, sizing, position. |
 | **Patterns** | The page types (list, gallery, edit, settings, dashboard, sign-in) in real frames, on a desktop and a phone. |
 | **Builder** | Try an accent: what the toolkit derives from it, contrast in both modes, the real screens in that colour. |
-| **Download** | MatUi as an archive or file by file, and the design system as JSON (`/api/rules`, `/api/tokens` …). |
+| **Download** | MatUi as an archive or file by file, and the design system as JSON (`/api/rules`, `/api/rules/changes`, `/api/tokens` …). |
 | **Studio** | Behind a sign-in; the first visit creates the first user, an administrator, in a setup assistant; administrators add editors and viewers – see [docs/STUDIO.md](docs/STUDIO.md). |
 
 ## Quick start

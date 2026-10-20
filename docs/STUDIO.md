@@ -42,6 +42,8 @@ do not change, because rules are cited by id in reviews, commits and the catalog
 the statement, the level and the source; `IsSafe` runs again for what is read from the disk. The level is stored by name, so a file can be read by a person. When stage 4 lets a component name
 the rules it follows, a rule that a component of the Studio names cannot be deleted before the component lets go of it.
 
+**The rulebook changelog and the Studio.** The built-in rules have a changelog in code (`RuleChanges`, docs/VERSIONING.md: `/Rules/Changes`, `/api/rules/changes`, the History block on the page of a rule). What the Studio saves has its own history, the revisions of the item (`/Studio/History?kind=rules&id=...`): a rule that was added in the Studio is not in the changelog of the rulebook, and a built-in rule that was changed in the Studio keeps the lines it has and says that its text is the Studio's. The page of a rule links to the revisions for a signed-in person who may open the Studio (every role may); a visitor sees no link. A change of a built-in rule in the code needs a line in the changelog of the rulebook in the same commit (a test fails without it).
+
 ### Components
 
 A component of the Studio is a `ComponentDoc`: an id (the address of its page, `/Components/{id}`, and the id of the element that holds its examples; `all` and the prefixes the pages use themselves are not allowed), a name, a group (the heading its tile stands under in the overview and its place in the walk with Previous and Next), a summary, the rules it follows, "good to know"

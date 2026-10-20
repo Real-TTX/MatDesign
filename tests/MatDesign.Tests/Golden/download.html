@@ -323,6 +323,7 @@
         <dl class="mat-kv">
             <dt>This version</dt><dd><strong>0.1.0</strong>, built by MatDesign <code>local-20261014</code></dd>
             <dt>What changed</dt><dd><a href="/Changelog">The changelog</a>, or as a file <a href="/ui/CHANGELOG.md">/ui/CHANGELOG.md</a>, or as data <a href="/api/changelog">/api/changelog</a> (<code>?since=0.1.0</code> gives what an app on 0.1.0 takes with an update)</dd>
+            <dt>What changed in the rules</dt><dd><a href="/Rules/Changes">The changelog of the rulebook</a>, or as data <a href="/api/rules/changes">/api/rules/changes</a></dd>
             <dt>For a program</dt><dd><a href="/ui/manifest.json">/ui/manifest.json</a>: the version and every file with its SHA-256; the archive carries it as <code>matui.manifest.json</code></dd>
             <dt>Check an app</dt><dd><code>node tools/matui-check.js &lt;folder of the app&gt;</code> finds its copy of MatUi, says which version it is, whether files were changed by hand and what an update takes with it</dd>
             <dt>How it works</dt><dd><code>docs/VERSIONING.md</code>: what is a breaking change, how a version is made and how an app updates</dd>
@@ -461,6 +462,7 @@
                     <tr><td data-label="Address"><a class="mat-mono" href="/api/accents">/api/accents</a></td><td data-label="What it returns">The accents a user can choose in the settings.</td></tr>
                     <tr><td data-label="Address"><a class="mat-mono" href="/api/schemes">/api/schemes</a></td><td data-label="What it returns">The colour schemes: id, name, and the tokens each sets in light and in dark.</td></tr>
                     <tr><td data-label="Address"><a class="mat-mono" href="/api/rules">/api/rules</a></td><td data-label="What it returns">The whole rulebook: id, area, title, statement, level, source.</td></tr>
+                    <tr><td data-label="Address"><a class="mat-mono" href="/api/rules/changes">/api/rules/changes</a></td><td data-label="What it returns">What changed in the rulebook, the newest first: date, rule, kind (Added, Changed, Removed, Moved) and note; ?rule=FORM-15, ?kind=Changed, ?area=FORM or ?since=2026-10-15 narrow it down.</td></tr>
                     <tr><td data-label="Address"><a class="mat-mono" href="/api/tokens">/api/tokens</a></td><td data-label="What it returns">Every design token with its light and dark value.</td></tr>
                     <tr><td data-label="Address"><a class="mat-mono" href="/api/properties">/api/properties</a></td><td data-label="What it returns">The documented component properties (--mat-btn-radius ...): component, name, type, the default it falls back to and what it changes.</td></tr>
                     <tr><td data-label="Address"><a class="mat-mono" href="/api/icons">/api/icons</a></td><td data-label="What it returns">The names of the icons in the sprite.</td></tr>
