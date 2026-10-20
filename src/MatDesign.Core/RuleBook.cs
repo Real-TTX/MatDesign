@@ -495,6 +495,9 @@ public static class RuleBook
         new("MOBILE-05", "MOBILE", "Installable",
             "An app that people use daily is a PWA: manifest, `theme-color`, icons and a service worker that caches the shell.",
             RuleLevel.May, MatMail),
+        new("MOBILE-06", "MOBILE", "Fields do not zoom a phone",
+            "On a touch screen the type of every text field is 16 px or more: an input of any kind that is typed into, a select, a text area, the small size too, and the fields that the script draws (the search field, the tags, the typed time, the hex of a colour, the field of a row). iOS Safari zooms into a field with smaller type when it takes the focus and leaves the page zoomed, wider than the screen. The CSS raises the type inside `@media (pointer: coarse)` with `max(1rem, 1em)`, so that a field is never made smaller than the text it stands in and a mouse sees no change; the height stays what MOBILE-04 says. A page does not stop the zoom with `maximum-scale` or `user-scalable=no`: the user must be able to zoom.",
+            RuleLevel.Should, Design, Why: "A page that zooms by itself when a field is touched is cut off at the side and needs a pinch to get back; the fix that costs nothing is the size of the type, the other fix, taking the zoom away from the user, is not one (WCAG 1.4.4).", Do: "@media (pointer: coarse) { .mat-input { font-size: max(1rem, 1em); } }", Dont: "a field of 13 or 15 px in a phone layout, user-scalable=no", Check: "Test (CSS contract) and browser (touch-audit.js measures the type of every text field, run.js the components page)"),
 
         // --------------------------------------------------------------------------------------------------- A11Y
         new("A11Y-01", "A11Y", "Focus",

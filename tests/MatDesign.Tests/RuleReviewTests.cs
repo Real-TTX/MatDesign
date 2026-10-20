@@ -165,7 +165,9 @@ public sealed partial class RuleReviewTests(WebApplicationFactory<Program> facto
         Assert.Matches(@"\.mat-toast \{\s*pointer-events: none;", Css("controls"));
         Assert.Contains(".mat-toast .mat-alert__close { pointer-events: auto; }", Css("controls"));
         Assert.Contains(".mat-toasts > .mat-toast:not(:last-child) { display: none; }", Css("controls"));
-        Assert.Matches(@"setTimeout\(remove, o\.timeout \|\| 6000\)", Script);
+        // it goes after six seconds (the time can be set with `timeout`), but not while it is being read (ScriptTests holds the waiting)
+        Assert.Contains("var TOAST_TIME = 6000", Script);
+        Assert.Matches(@"left: o\.timeout \|\| TOAST_TIME", Script);
         Assert.Contains("class=\"mat-alert__close\"", Script.Replace("'", "\""));
     }
 
@@ -474,9 +476,9 @@ public sealed partial class RuleReviewTests(WebApplicationFactory<Program> facto
         var events = Regex.Matches(Script, @"new CustomEvent\(['""]([^'""]+)['""]").Select(m => m.Groups[1].Value).Distinct().Order().ToList();
         Assert.True(events.Count >= 20, string.Join(", ", events));
         Assert.All(events, e => Assert.Matches(@"^mat:[a-z]+(-[a-z]+)*$", e));
-        // four events are sent and written down nowhere: they are not part of the contract until they are (docs/RULES-REVIEW.md); a new one that is not documented fails here
-        var undocumented = events.Where(e => !header.Contains(e, StringComparison.Ordinal) && !Adopting.Contains(e, StringComparison.Ordinal)).ToList();
-        Assert.Equal(["mat:accent", "mat:dialog-open", "mat:navset", "mat:theme"], undocumented);
+        // every event is written down in the header and in the table of ADOPTING.md, which ScriptEventsTests holds to the code (what is sent, bubbles, cancelable, detail); a new one that is not fails here
+        var undocumented = events.Where(e => !header.Contains(e, StringComparison.Ordinal) || !Adopting.Contains($"| `{e}` |", StringComparison.Ordinal)).ToList();
+        Assert.Empty(undocumented);
         // the public API is one object per control under window.MatUi
         foreach (var control in new[] { "picker", "calendar", "otp", "rating", "tree", "upload", "schedule", "groups", "theme", "scheme" })
         {

@@ -6761,7 +6761,8 @@ function seenAt(page, selector) {
           const picker = tr.querySelector('input[type="color"]');
           return { display: getComputedStyle(tr).display, label: getComputedStyle(tr.querySelector('td:nth-child(3)'), '::before').content, inputH: input.getBoundingClientRect().height, pickerH: picker.getBoundingClientRect().height };
         });
-        expect(row.display, 'block', 'a row is a card');
+        // a row with a cell of actions (Reset) is a card laid out as a grid since 0.3.0 (TABLE-02: its name is the title, the actions stand beside it), any other row is a block
+        expectTrue(['block', 'grid'].includes(row.display), 'a row is a card: ' + row.display);
         expect(row.label, '"Light"', 'the label of a cell');
         expectTrue(row.inputH >= 43.5 && row.pickerH >= 43.5, `targets: ${row.inputH} and ${row.pickerH} px`);
         await phone.page.fill('#light-mat-radius', '14px');
@@ -8086,7 +8087,7 @@ function seenAt(page, selector) {
           expectTrue(s.page <= s.window, `${url}: the page is ${s.page} px wide in a window of ${s.window} px`);
           expectTrue(s.inputH >= 43.5, `${url}: an input is ${s.inputH} px high`);
           expectTrue(s.previewRight <= s.window + 1, `${url}: a preview ends at ${s.previewRight}`);
-          if (s.display !== 'n/a') { expect(s.display, 'block', `${url}: a row is a card`); }
+          if (s.display !== 'n/a') { expectTrue(['block', 'grid'].includes(s.display), `${url}: a row is a card: ${s.display}`); }
         }
       });
       await phone.ctx.close();
@@ -10162,6 +10163,189 @@ function seenAt(page, selector) {
       expect(s, { display: 'block', sideways: false }, 'the history on a phone');
     });
     await phone.ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- the type of fields on a touch screen (MOBILE-06), toasts that wait (SHELL-12)
+  // The type of the fields is the second measure of touch-audit.js, here on the components page and on the panels the script opens: on a touch screen every text field has 16 px type or more (iOS
+  // zooms into a smaller one), with a mouse nothing changed. A toast waits while the pointer is over it (it lets taps through, so the pointer is found by its position) or the focus is inside it,
+  // runs the time that was left when both have gone (1.5 s at least), and Escape closes the one that has the focus.
+  console.log('\nThe type of fields on a touch screen, and toasts that wait');
+  {
+    const FIELDS = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), select, textarea';
+    // the text fields that are on show (not the invisible twin of a control that the script draws): their id, classes, computed type size and height
+    const fieldsOf = (page, selector) => page.evaluate(({ fields }) => [...document.querySelectorAll(fields)].filter(el => {
+      const cs = getComputedStyle(el);
+      return el.checkVisibility({ checkVisibilityCSS: true }) && !el.closest('[hidden], [inert]') && !(cs.opacity === '0' && cs.pointerEvents === 'none') && el.getBoundingClientRect().width > 0;
+    }).map(el => ({ id: el.id || el.getAttribute('name') || '', cls: String(el.className).split(/\s+/).slice(0, 3).join('.'), size: parseFloat(getComputedStyle(el).fontSize), h: Math.round(el.getBoundingClientRect().height) })), { fields: selector || FIELDS });
+    const sizeOf = (page, selector) => page.evaluate(({ selector }) => { const el = document.querySelector(selector); return el ? { size: parseFloat(getComputedStyle(el).fontSize), h: Math.round(el.getBoundingClientRect().height) } : null; }, { selector });
+
+    {
+      const { ctx, page } = await open(phoneOptions, '/Components/All');
+      expectTrue(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), 'the context is not a touch screen');
+      await check('on a touch screen every text field of the components page has 16 px type or more, whatever its kind and size', async () => {
+        const list = await fieldsOf(page);
+        expectTrue(list.length > 60, 'fields found: ' + list.length);
+        const small = list.filter(f => f.size < 16);
+        expectTrue(small.length === 0, small.length + ' of ' + list.length + ' fields are under 16 px: ' + small.slice(0, 6).map(f => `${f.cls}#${f.id} ${f.size}px`).join(', '));
+      });
+      await check('a field is 16 px and keeps its height: 44 px, the small size 36 px, and the large size keeps its 17 px', async () => {
+        for (const id of ['it-text', 'it-mail', 'it-num', 'it-date', 'it-area', 'sel-md']) {
+          const f = await sizeOf(page, '#' + id);
+          expectTrue(f && f.size === 16 && (id === 'it-area' || f.h >= 44), `#${id}: ${JSON.stringify(f)}`);
+        }
+        for (const id of ['it-sm', 'sel-sm']) {
+          const f = await sizeOf(page, '#' + id);
+          expectTrue(f && f.size === 16 && f.h >= 36 && f.h < 44, `#${id} is 16 px and stays a compact field: ${JSON.stringify(f)}`);
+        }
+        for (const id of ['it-lg', 'sel-lg']) {
+          const f = await sizeOf(page, '#' + id);
+          expectTrue(f && f.size === 17 && f.h >= 44, `#${id}: ${JSON.stringify(f)}`);
+        }
+      });
+      await check('the fields that the script draws have 16 px type: the stepper, the tags, the field of a row and the typed time', async () => {
+        for (const sel of ['#stp-qty', '.mat-picker:has(#pk-tags) .mat-tagfield__input', '#il-f-name']) {
+          const f = await sizeOf(page, sel);
+          expectTrue(f && f.size >= 16, `${sel}: ${JSON.stringify(f)}`);
+        }
+      });
+      await check('the panel of a select with a search field, the typed time and the hex of a colour have 16 px type', async () => {
+        const opened = async (wrapper, field) => {
+          await page.evaluate((w) => document.querySelector(w).scrollIntoView({ block: 'center' }), wrapper);
+          await page.locator(wrapper + ' .mat-picker__trigger').first().click();
+          await page.waitForSelector('.mat-picker__panel:not([hidden]) ' + field, { timeout: 3000 });
+          const f = await sizeOf(page, '.mat-picker__panel:not([hidden]) ' + field);
+          await page.keyboard.press('Escape');
+          await page.waitForTimeout(200);
+          return f;
+        };
+        const search = await opened('.mat-picker:has(#pk-apps)', '.mat-picker__search input');
+        expectTrue(search && search.size >= 16, 'the search field of a select: ' + JSON.stringify(search));
+        const time = await opened('.mat-picker[data-picker="time"]', '.mat-time__entry');
+        expectTrue(time && time.size >= 16, 'the typed time: ' + JSON.stringify(time));
+        const hex = await opened('.mat-picker[data-picker="colour"]', '.mat-colour__hex');
+        expectTrue(hex && hex.size >= 16, 'the hex of a colour: ' + JSON.stringify(hex));
+      });
+      await check('the search of the header bar is a full-screen panel with a field of 16 px type', async () => {
+        // the first one is the header bar of the site (the page of the components shows the header bar again as an example)
+        await page.locator('.mat-topbar__search .mat-search__open').first().click();
+        await page.waitForSelector('.mat-search.is-full .mat-search__input');
+        const f = await sizeOf(page, '.mat-search.is-full .mat-search__input');
+        expectTrue(f && f.size >= 16, JSON.stringify(f));
+        await page.keyboard.press('Escape');
+      });
+      await check('nothing of the components page scrolls sideways with the larger type', async () => {
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'a sideways scroll');
+      });
+      await ctx.close();
+    }
+    {
+      // with a mouse nothing changes: the sizes are the ones of the tokens (15 px, small 13 px, large 17 px)
+      const { ctx, page } = await open(desktopOptions, '/Components/All');
+      await check('with a mouse a field keeps the type it had: 15 px, the small size 13 px, the large size 17 px, the search field 15 px', async () => {
+        expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches), false, 'the desktop context is a touch screen');
+        const sizes = {};
+        for (const id of ['it-text', 'it-area', 'sel-md', 'it-sm', 'sel-sm', 'it-lg', 'sel-lg', 'stp-qty', 'il-f-name']) { sizes[id] = (await sizeOf(page, '#' + id)).size; }
+        expect(sizes, { 'it-text': 15, 'it-area': 15, 'sel-md': 15, 'it-sm': 13, 'sel-sm': 13, 'it-lg': 17, 'sel-lg': 17, 'stp-qty': 15, 'il-f-name': 15 }, 'type sizes with a mouse');
+        expect((await sizeOf(page, '.mat-topbar__search .mat-search__input')).size, 15, 'the search field of the header bar');
+        const h = await sizeOf(page, '#it-text');
+        expect(h.h, 40, 'the height of a field with a mouse');
+      });
+      await ctx.close();
+    }
+
+    // ------------------------------------------------------------------------------------------ toasts that wait
+    {
+      const { ctx, page } = await open(desktopOptions, '/Components/toasts');
+      const gone = (text, ms) => page.waitForFunction((t) => ![...document.querySelectorAll('.mat-toast')].some(e => e.textContent.includes(t)), text, { timeout: ms });
+      const count = (text) => page.evaluate((t) => [...document.querySelectorAll('.mat-toast')].filter(e => e.textContent.includes(t)).length, text);
+      await check('a toast waits while the pointer is over it and goes 1.5 s at least after the pointer left; one that nobody touched goes after six seconds', async () => {
+        await page.evaluate(() => { document.querySelectorAll('.mat-toast').forEach(t => t.remove()); MatUi.toast('Hovered one', { tone: 'success' }); MatUi.toast('Untouched one'); });
+        await page.waitForTimeout(5000);
+        const box = await page.locator('.mat-toast', { hasText: 'Hovered one' }).locator('.mat-alert__body').boundingBox();
+        // the text of the toast, not its X: a toast lets taps through, so the pointer is found by its position
+        await page.mouse.move(box.x + 20, box.y + box.height / 2);
+        await page.waitForTimeout(3000);
+        expect([await count('Hovered one'), await count('Untouched one')], [1, 0], 'toasts after 8 s, the pointer on the first one');
+        await page.mouse.move(8, 8);
+        // it had 1 s left when the pointer came: the least is 1.5 s, so it is still there after 1.2 s
+        await page.waitForTimeout(1200);
+        expect(await count('Hovered one'), 1, 'the toast 1.2 s after the pointer left');
+        await gone('Hovered one', 3000);
+      });
+      await check('a toast with the focus inside it, its X or a link, does not go; it goes 1.5 s at least after the focus left', async () => {
+        await page.evaluate(() => {
+          MatUi.toast('Focused one', { timeout: 1500 });
+          document.querySelector('.mat-toast .mat-alert__body').innerHTML = '<a href="#undo">Undo</a>';
+        });
+        await page.focus('.mat-toast a');
+        await page.waitForTimeout(3500);
+        expect(await count(''), 1, 'toasts 3.5 s after a time of 1.5 s, the focus on its link');
+        await page.focus('.mat-toast .mat-alert__close');
+        await page.waitForTimeout(500);
+        expect(await count(''), 1, 'toasts with the focus moved to its X');
+        await page.evaluate(() => document.activeElement.blur());
+        await page.waitForTimeout(1200);
+        expect(await count(''), 1, 'the toast 1.2 s after the focus left (the least is 1.5 s)');
+        await gone('', 3000);
+      });
+      await check('Escape closes the toast that has the focus, and the focus goes back to what had it', async () => {
+        await page.focus('[data-theme-toggle]');
+        await page.evaluate(() => MatUi.toast('Escape me', { timeout: 30000 }));
+        await page.focus('.mat-toast .mat-alert__close');
+        await page.keyboard.press('Escape');
+        expect(await count('Escape me'), 0, 'the toast after Escape');
+        expect(await page.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-theme-toggle')), true, 'the focus after Escape');
+      });
+      await check('a toast still goes by itself without the pointer or the focus on it, and leaves nothing behind', async () => {
+        await page.evaluate(() => MatUi.toast('Gone alone', { timeout: 800 }));
+        await page.waitForTimeout(300);
+        expect(await count('Gone alone'), 1, 'the toast at 0.3 s');
+        await gone('Gone alone', 2500);
+        expect(await page.locator('.mat-toast').count(), 0, 'toasts left');
+      });
+      await ctx.close();
+    }
+    {
+      const { ctx, page } = await open(desktopOptions, '/Components/dialogs');
+      await check('Escape on the toast inside an open dialog closes the toast and leaves the dialog open', async () => {
+        await page.evaluate(() => { document.querySelectorAll('.mat-toast').forEach(t => t.remove()); document.getElementById('dialogs').scrollIntoView(); });
+        await page.click('[data-dialog-open="dlg-side"]');
+        await page.waitForFunction(() => document.getElementById('dlg-side').getAnimations().length === 0);
+        await page.evaluate(() => MatUi.toast('In the dialog', { timeout: 30000 }));
+        await page.waitForTimeout(300);
+        await page.focus('#dlg-side .mat-toast .mat-alert__close');
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+        expect([await page.locator('.mat-toast').count(), await page.locator('dialog[open]').count()], [0, 1], 'toasts and open dialogs after Escape on the toast');
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+        expect(await page.locator('dialog[open]').count(), 0, 'open dialogs after a second Escape');
+      });
+      await check('a toast that has the focus inside a dialog that closes is not left waiting for ever', async () => {
+        await page.evaluate(() => document.getElementById('dialogs').scrollIntoView());
+        await page.click('[data-dialog-open="dlg-side"]');
+        await page.waitForFunction(() => document.getElementById('dlg-side').getAnimations().length === 0);
+        await page.evaluate(() => MatUi.toast('Closes with the dialog', { timeout: 1500 }));
+        await page.focus('#dlg-side .mat-toast .mat-alert__close');
+        await page.mouse.move(8, 8);
+        await page.waitForTimeout(2200);
+        expect(await page.locator('.mat-toast').count(), 1, 'the toast with the focus on it, after its time of 1.5 s');
+        await page.evaluate(() => MatUi.dialog.close('dlg-side'));
+        // the host goes back to the page and the focus goes to the opener, with or without a focus event: the timer has to run again
+        await page.waitForFunction(() => !document.querySelector('.mat-toast'), null, { timeout: 5000 });
+      });
+      await ctx.close();
+    }
+    {
+      const { ctx, page } = await open(phoneOptions, '/Components/toasts');
+      await check('on a touch screen a toast goes by itself when its time is up, whatever the finger did to it', async () => {
+        await page.evaluate(() => MatUi.toast('Touched', { timeout: 1200 }));
+        const box = await page.locator('.mat-toast .mat-alert__body').boundingBox();
+        await page.touchscreen.tap(box.x + 20, box.y + box.height / 2);
+        await page.waitForFunction(() => !document.querySelector('.mat-toast'), null, { timeout: 3500 });
+      });
+      await ctx.close();
+    }
   }
 
   // ---------------------------------------------------------------------------------------------------- the end

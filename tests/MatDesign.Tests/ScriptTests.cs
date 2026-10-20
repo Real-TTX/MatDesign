@@ -200,6 +200,47 @@ public partial class ScriptTests
     }
 
     [Fact]
+    public void A_toast_waits_while_the_pointer_is_over_it_or_the_focus_is_inside_it_and_it_is_documented()
+    {
+        // SHELL-12, WCAG 2.2.1: a message that goes while it is read, or while its X or a link has the focus, goes too soon. The timer is paused by the pointer or the focus and runs the time that was
+        // left when both have gone, 1.5 s at least. A toast lets taps through (pointer-events: none, only its X takes one), so it never receives a pointer event of its own: the pointer is found
+        // by its position, by one listener on the document, and a touch is never over (no hover). The focus is read from the document, because moving the host into a dialog takes it away silently.
+        var toast = Js[Js.IndexOf("var TOAST_TIME = 6000", StringComparison.Ordinal)..];
+        toast = toast[..toast.IndexOf("// ---", StringComparison.Ordinal)];
+        Assert.Contains("var TOAST_TIME = 6000, TOAST_LEAST = 1500;", toast);
+        Assert.DoesNotContain("setTimeout(remove, o.timeout || 6000)", Js);
+        Assert.Contains("s.left = Math.max(s.left - (Date.now() - s.since), TOAST_LEAST);", toast);
+        Assert.Contains("function toastHeld(s) { return s.over || s.el.contains(doc.activeElement); }", toast);
+        Assert.Contains("doc.addEventListener('pointermove'", toast);
+        Assert.Contains("e.pointerType === 'touch'", toast);
+        Assert.Contains("root.addEventListener('pointerleave'", toast);
+        Assert.Contains("t.addEventListener('focusin'", toast);
+        Assert.Contains("t.addEventListener('focusout'", toast);
+        Assert.Contains("e.key === 'Escape'", toast);
+        Assert.Contains("e.stopPropagation()", toast);
+        // the toast never listens for the pointer on itself (it has no pointer events), and the host that moves starts the timers again
+        Assert.DoesNotContain("t.addEventListener('mouseenter'", toast);
+        Assert.DoesNotContain("t.addEventListener('pointerenter'", toast);
+        Assert.Contains("toasts.slice().forEach(toastSettle)", Js[Js.IndexOf("function placeToasts()", StringComparison.Ordinal)..][..200]);
+        // a toast that had the focus gives it back
+        Assert.Contains("s.back.focus({ preventScroll: true })", toast);
+
+        // the CSS keeps the taps going through, only the X takes one
+        var css = TestPaths.ReadToolkit("css/matui.controls.css");
+        Assert.Contains(".mat-toast {\n  pointer-events: none;", css.Replace("\r\n", "\n"));
+        Assert.Contains(".mat-toast .mat-alert__close { pointer-events: auto; }", css);
+
+        var adopting = File.ReadAllText(Path.Combine(TestPaths.RepoRoot, "docs", "ADOPTING.md"));
+        Assert.Contains("A toast waits while it is being read", adopting);
+        Assert.Contains("1.5 seconds at least", adopting);
+        Assert.Contains("Escape on a toast that has the focus", adopting);
+        var behaviour = string.Concat(ComponentCatalog.All.Single(c => c.Id == "toasts").Behaviour);
+        Assert.Contains("while the pointer is over it or the focus is inside it", behaviour);
+        Assert.Contains("Escape closes the one that has the focus", behaviour);
+        Assert.Contains("1.5 seconds at least", behaviour);
+    }
+
+    [Fact]
     public void The_item_of_a_ticked_check_is_marked_whether_it_is_a_row_a_tile_or_a_card_and_it_is_documented()
     {
         // data-selectable is not only for the rows of a table: the item is the nearest tr, .mat-tile or [data-select-item], and it has to be inside the box that is selectable (a table

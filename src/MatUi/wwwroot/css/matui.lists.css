@@ -463,6 +463,8 @@ a.mat-item__main:active, button.mat-item__main:active, label.mat-item__main:acti
 .mat-item__input::placeholder { color: var(--mat-text-faint); }
 select.mat-item__input { width: calc(100% + 4px); margin-left: -4px; cursor: pointer; }
 .mat-item__input:focus-visible { box-shadow: none; }
+/* the type of a field on a touch screen is 16 px or more (MOBILE-06, matui.forms.css); this one has `font: inherit` and so its own rule */
+@media (pointer: coarse) { .mat-item__input { font-size: max(1rem, 1em); } }
 @media (min-width: 480px) {
   .mat-item--inline .mat-item__body { flex-direction: row; align-items: center; gap: var(--mat-item-gap); }
   .mat-item--inline .mat-item__label { flex: 0 0 7rem; color: var(--mat-text); font-size: var(--mat-fs-md); }

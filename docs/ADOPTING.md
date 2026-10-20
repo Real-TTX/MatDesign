@@ -134,6 +134,42 @@ that words them differently, changes any of them with an attribute on `<html>`; 
 
 A text that goes into the markup of a page (a label, a hint, the words of a `data-confirm`) is the app's own and stays in the language of the app (`CODE-05`).
 
+## 3b. Events the script sends
+
+The script tells a page what happened with `CustomEvent`s named `mat:<noun>-<verb>` (`CODE-13`). **These are all of them**, and what is written here is part of the contract (docs/VERSIONING.md): a new one is added to this table, to the header of `matui.js`
+and to the changelog, and a unit test fails for a script that sends one that is not in the table or whose row says something else than the code does. A `detail` that names an element is the element itself.
+
+- **On the element, bubbling:** all but the first four are sent on the element they are about and bubble, so `document.addEventListener('mat:rating-change', e => ...)` hears every rating of the page. A listener on the element is the same with less to filter.
+- **On `<html>`, not bubbling:** `mat:theme`, `mat:accent`, `mat:scheme` and `mat:navset` are sent on the root element and do not bubble: listen on `document.documentElement` (`window` hears them only in the capture phase). `mat:theme` is also sent once when the script starts.
+- **Cancelable:** `mat:otp-complete`, `mat:schedule-select` and `mat:search-select` are; `preventDefault()` stops what the script would do next (the form that `data-submit` would send, a link that would be followed, the choice that would be made).
+- **A white-labelled copy** (`CODE-09`) sends the same events under its prefix: `acme:theme`.
+
+| Event | Sent on | When | `detail` | Bubbles | Cancelable |
+|---|---|---|---|---|---|
+| `mat:theme` | `<html>` | The theme was applied: a click on the theme button or a `data-theme-set` button, `MatUi.theme.set`, and once when the script starts | `theme`: `system`, `light` or `dark` | no | no |
+| `mat:accent` | `<html>` | `MatUi.accent.set(name)`, `MatUi.accent.custom(hex)` and, once at the start, a `data-custom-accent` on `<html>` | `accent`: the name, `null` when it was removed or `custom` (then `color` is the `#rrggbb`) | no | no |
+| `mat:scheme` | `<html>` | The colour scheme was chosen: a `data-scheme-set` button, `MatUi.scheme.set` | `scheme`: `standard`, `paper`, `contrast` or `oled` | no | no |
+| `mat:navset` | `<html>` | The menu switcher shows another menu: an entry that is a button (not a link), `MatUi.nav.set` | `set`: the id of the menu | no | no |
+| `mat:dialog-open` | the `dialog.mat-dialog` | A dialog was opened: `data-dialog-open`, `data-autoopen`, `MatUi.dialog.open`, `MatUi.confirm`, `alert` or `prompt` | none | yes | no |
+| `mat:group-toggle` | the `tbody.mat-group` | A group of a grouped table opened or closed (not when it was already so) | `group`: its name, `open`: true or false | yes | no |
+| `mat:item-action` | the `li.mat-item` | A sliding option of a row was pressed | `item`, `list`, `action`: its `data-item-action`, else its text in lower case | yes | no |
+| `mat:reorder` | the `li.mat-item` that moved | A row was dropped in another place of a `data-reorder` list | `list`, `item`, `from` and `to`: the positions, `order`: the keys of the rows now | yes | no |
+| `mat:item-filter` | the list | The filter field of a list changed which rows are shown | `list`, `text`: what was typed, `shown` and `total`: the number of rows | yes | no |
+| `mat:slots-needed` | the `.mat-picker` | An appointment picker shows a month it has no times for: answer with `MatUi.picker.setSlots(detail.picker, data, detail.month)` | `month`: `2026-10`, `from` and `to`: its first and last day, `picker`: the wrapper | yes | no |
+| `mat:otp-complete` | the `.mat-otp` | Every box of a code input has a character | `value`: the code | yes | yes |
+| `mat:rating-change` | the `.mat-rating` | The user chose a value | `value`: the number, `rating`: the element | yes | no |
+| `mat:schedule-select` | the `.mat-schedule` | An event of the schedule was chosen | the event as the app gave it in `data-events` | yes | yes |
+| `mat:schedule-range` | the `.mat-schedule` | The range that is shown changed, and once when the schedule is drawn: load the events of it | `from` and `to`: days, `view`, `date`: the day shown | yes | no |
+| `mat:schedule-day` | the `.mat-schedule` | The user chose a day | `date`, `view` | yes | no |
+| `mat:tree-select` | the `li.mat-tree__item` | An item was selected or, with `data-multiple`, ticked or unticked | `tree`, `item`, `selected`: the items, `values`: their values | yes | no |
+| `mat:tree-toggle` | the `li.mat-tree__item` | A parent opened or closed (not when what was remembered is restored) | `tree`, `item`, `open`: true or false | yes | no |
+| `mat:tree-load` | the `li.mat-tree__item` | A lazy parent (`data-lazy`) opens for the first time: answer with `MatUi.tree.setChildren(item, html)` | `tree`, `item`, `id`, `value` | yes | no |
+| `mat:tree-filter` | the `ul.mat-tree` | The filter field of a tree changed which items are shown | `tree`, `text`, `shown` and `total`: the number of items | yes | no |
+| `mat:upload-change` | the `.mat-upload` | The list of files changed | `files`: all of them now, `added`, `removed`, `source`: `picker`, `drop`, `paste`, `remove`, `reset` or `api` | yes | no |
+| `mat:upload-refused` | the `.mat-upload` | Files were not taken (type, size, number, a folder, a duplicate) | `refused`: each with its reason, `source` as above | yes | no |
+| `mat:search-results` | the `.mat-search` | Suggestions were drawn, or the question failed | `query`, `count`, `source`: `local`, `server` or `error` | yes | no |
+| `mat:search-select` | the `.mat-search` | An option was chosen (a click, Enter): `preventDefault()` means the app takes over and nothing is followed | `item`: its title, text, link, icon, kind and id (`null` for All results and for a recent query), `group`, `query`, `source`: `result`, `recent` or `all` | yes | yes |
+
 ## 4. Lists and forms (`LIST-*`, `FORM-*`)
 
 - **CRUD is a list and a separate page** for create and edit (`LIST-01`). No inline editing, no modal for create or edit.
@@ -354,6 +390,9 @@ Do the same in an app's own CSS (the example above). `(pointer: fine)` is the de
 - Destructive confirmations: *Cancel* first, a space, the red button last (`DIALOG-06`).
 - **A toast is seen above an open dialog** (`SHELL-12`): `MatUi.toast(message, { tone })` keeps the toasts inside the topmost dialog the toolkit has opened and puts them back on the page when it closes. A modal dialog
   is in the top layer of the browser, so nothing outside of it is seen above it, whatever its `z-index`: an app does not need a toast layer of its own for its dialogs (and one outside the dialog would be hidden).
+- **A toast waits while it is being read** (`SHELL-12`): it goes after 6 seconds (`MatUi.toast(message, { tone, timeout })`: `timeout` in milliseconds), but not while the pointer is over it or the focus is inside it (its X); the time that was left then runs
+  again when both have gone, 1.5 seconds at least. A toast lets taps through to what lies under it, so the pointer is found by its position and a touch screen has no hover. Escape on a toast that has the focus closes that toast only, and the focus goes back to where it was.
+  An app that needs a message to stay until the user has read it uses an alert (`mat-alert`), not a toast: a toast is for what just happened.
 
 ## 6. Delete your own design code
 
@@ -398,7 +437,8 @@ Without them the folder does not exist and nothing below applies. They are files
 
 ## 7. Check it
 
-1. Run the app, look at **every page in light and dark, and at 390 px** (`MOBILE-01`). Take screenshots and look at them.
+1. Run the app, look at **every page in light and dark, and at 390 px** (`MOBILE-01`). Take screenshots and look at them. Touch every field in a touch-emulating browser: none may zoom the page (`MOBILE-06`: the toolkit gives its own fields 16 px type
+   or more inside `@media (pointer: coarse)`; a field of the app's own does the same, with `font-size: max(1rem, 1em)`, and the page never sets `maximum-scale` or `user-scalable=no`). `node tests/e2e/touch-audit.js <url>` of this repository measures the hit area and the type of every field of a whole site.
 2. Open the dialogs on the phone width: full screen, X at the top right.
 3. Press `/` on a list: the search dialog opens. Tab through a page: the focus ring is visible, the order makes sense (`A11Y-01`, `A11Y-02`).
 4. Run the audit again (`node tools/audit.js`) and commit the new `Data/audit.json`: the row of the app should be green where the code allows it.

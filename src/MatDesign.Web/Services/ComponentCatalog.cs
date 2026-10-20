@@ -215,7 +215,7 @@ public static class ComponentCatalog
             [
                 "Required fields get the star (mat-req) in the label and the attribute required; the message comes from data-msg-required.",
                 "novalidate is set on the form: the browser's own bubbles are never shown.",
-                "On a touch screen inputs are 44 px high and 16 px type, so iOS does not zoom.",
+                "On a touch screen inputs are 44 px high (the small size 36 px) and every text field, the small size, a select, the search field and the tags included, has 16 px type at least, so iOS does not zoom in. With a mouse nothing changes.",
             ]),
 
         new("choices", "Switches, checks and segments", "Forms", "toggle",
@@ -1155,7 +1155,8 @@ public static class ComponentCatalog
                     Live: false),
             ],
             [
-                "Toasts stack at the bottom, are announced politely (role=status) and stop after a few seconds; hovering keeps them.",
+                "Toasts stack at the bottom right (on a phone at the top, one at a time), are announced politely (role=status) and go after six seconds. A tap on a toast goes to what lies under it; only its X takes the tap.",
+                "A toast waits while the pointer is over it or the focus is inside it (its X); it runs the time that was left when both have gone, 1.5 seconds at least, and Escape closes the one that has the focus.",
                 "While a dialog is open the toasts are shown inside the topmost one and go back to the page when it closes: a modal dialog is in the top layer of the browser, so a message outside of it would be hidden behind it whatever its `z-index`. Nothing to do for the app.",
             ]),
 
