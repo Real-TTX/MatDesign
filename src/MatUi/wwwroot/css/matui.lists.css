@@ -116,6 +116,17 @@
   /* The check of a selectable row is the first thing of its card, without a label (it has an accessible name of its own). */
   .mat-table td.mat-table__select { width: 100%; justify-content: flex-start; }
   .mat-table td.mat-table__select::before { content: none; }
+  /* The card of a row with actions reads like a phone list: its first cell (the name) is the title, without its label, and the actions stand at its right
+     end in the same line; the other cells follow under it with their labels. A grouped table and a selectable row keep the plain card. */
+  .mat-table > tbody:not(.mat-group) > tr:has(> td.mat-table__cell-actions):not(:has(> td.mat-table__select)) {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: var(--mat-space-3); align-items: center;
+  }
+  .mat-table > tbody:not(.mat-group) > tr:has(> td.mat-table__cell-actions):not(:has(> td.mat-table__select)) > td { grid-column: 1 / -1; }
+  .mat-table > tbody:not(.mat-group) > tr:has(> td.mat-table__cell-actions):not(:has(> td.mat-table__select)) > td:first-child {
+    grid-column: 1; grid-row: 1; justify-content: flex-start; font-weight: 600; text-align: left;
+  }
+  .mat-table > tbody:not(.mat-group) > tr:has(> td.mat-table__cell-actions):not(:has(> td.mat-table__select)) > td:first-child::before { content: none; }
+  .mat-table > tbody:not(.mat-group) > tr:has(> td.mat-table__cell-actions):not(:has(> td.mat-table__select)) > td.mat-table__cell-actions { grid-column: 2; grid-row: 1; width: auto; padding: 0; }
 }
 
 /* ---- Groups in a table (LIST-16): rows under a heading that opens and closes. The items hang on a line below the heading, and the action that adds one

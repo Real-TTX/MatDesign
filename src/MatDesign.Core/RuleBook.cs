@@ -349,7 +349,7 @@ public static class RuleBook
             "Numbers are right-aligned with tabular figures. IDs, IP addresses, versions, ports and timestamps use the mono font.",
             RuleLevel.Should, Matthix),
         new("TABLE-02", "TABLE", "Every cell has a label",
-            "Every `<td>` has `data-label` with the name of its column. Below 720 px a row becomes a card and the label is drawn in front of the value.",
+            "Every `<td>` has `data-label` with the name of its column. Below 720 px a row becomes a card and the label is drawn in front of the value. A row with actions reads like a phone list: its first cell (the name) is the title of the card, without its label, and the actions stand at its right end in the same line.",
             RuleLevel.Must, MatSplit, Check: "Test (CSS contract)"),
         new("TABLE-03", "TABLE", "Status is a pill with text",
             "A state is shown as a pill with a dot and a word (Online, Warning, Offline, Unknown). Colour alone never carries the information.",

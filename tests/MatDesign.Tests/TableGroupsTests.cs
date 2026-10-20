@@ -102,6 +102,16 @@ public partial class TableGroupsTests
     }
 
     [Fact]
+    public void On_a_phone_a_row_with_actions_is_a_card_with_the_name_as_its_title_and_the_actions_beside_it()
+    {
+        const string row = ".mat-table > tbody:not(.mat-group) > tr:has(> td.mat-table__cell-actions):not(:has(> td.mat-table__select))";
+        Assert.Contains(row + " {\n    display: grid; grid-template-columns: minmax(0, 1fr) auto;", Css);
+        Assert.Contains(row + " > td:first-child::before { content: none; }", Css);
+        Assert.Contains(row + " > td.mat-table__cell-actions { grid-column: 2; grid-row: 1; width: auto; padding: 0; }", Css);
+        Assert.Contains("its first cell (the name) is the title of the card", RuleBook.All.Single(r => r.Id == "TABLE-02").Statement);
+    }
+
+    [Fact]
     public void On_a_phone_the_line_is_gone_and_the_heading_is_a_bar_over_the_cards()
     {
         var phone = Css[Css.IndexOf("@media (max-width: 720px) {\n  /* A row is a card here: no line", StringComparison.Ordinal)..];
