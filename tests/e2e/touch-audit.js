@@ -24,6 +24,7 @@ const ALLOW = {
 const PAGES = ['/', '/Rules', '/Identity', '/Foundations', '/Shell', '/Components', '/Layout', '/Utilities', '/Patterns', '/Builder', '/Download',
   '/Preview?app=matmail&view=list', '/Preview?app=matmail&view=gallery', '/Preview?app=matmail&view=form', '/Preview?app=matmail&view=dashboard',
   '/Preview?app=matmail&view=settings', '/Preview?app=matmail&view=auth'];
+PAGES.push('/Rules/Changes', '/Rules/Detail?id=A11Y-02');
 
 // What is measured. An invisible input (a switch, a radio of a rating) stands for its label.
 // A row of a tree is the target (the script takes the tap on the row), not its label link or the list item that holds its children.

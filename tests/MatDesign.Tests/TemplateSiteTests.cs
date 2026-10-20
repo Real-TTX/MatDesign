@@ -307,6 +307,7 @@ public sealed partial class TemplateSiteTests : IClassFixture<WebApplicationFact
         yield return "/Builder?accent=%23ff6600&scheme=oled";
         yield return "/Download";
         yield return "/Changelog";
+        yield return "/Rules/Changes";
         yield return "/Preview?view=list";
         yield return "/Preview?view=gallery";
         yield return "/Preview?view=form";

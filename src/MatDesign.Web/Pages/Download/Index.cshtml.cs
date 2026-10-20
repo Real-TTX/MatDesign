@@ -52,6 +52,7 @@ public class IndexModel : PageModel
         ("/api/accents", "The accents a user can choose in the settings."),
         ("/api/schemes", "The colour schemes: id, name, and the tokens each sets in light and in dark."),
         ("/api/rules", "The whole rulebook: id, area, title, statement, level, source."),
+        ("/api/rules/changes", "What changed in the rulebook, the newest first: date, rule, kind (Added, Changed, Removed, Moved) and note; ?rule=FORM-15, ?kind=Changed, ?area=FORM or ?since=2026-10-15 narrow it down."),
         ("/api/tokens", "Every design token with its light and dark value."),
         ("/api/properties", "The documented component properties (--mat-btn-radius ...): component, name, type, the default it falls back to and what it changes."),
         ("/api/icons", "The names of the icons in the sprite."),

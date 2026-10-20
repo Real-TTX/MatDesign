@@ -44,6 +44,9 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
 - **MatPlatform** (the platform contract for .NET apps, `src/MatPlatform/README.md`): apps copy it with `node tools/matplatform-copy.js <web project folder of the app>` (rule `CODE-03`); never edit a copy in an app.
   A change here needs a test in `tests/MatPlatform.Tests` and, when an app can see it, a new `MatPlatformVersion` (in `MatPlatform.csproj`) together with `MatPlatformInfo.Version`. Its JSON is read by Mattiverse and MatIdentity: a change of a name or a shape raises the contract version of docs/PLATFORM.md. It is not part of the site or its image.
 - **Audit:** `node tools/audit.js [folder with the repositories]` rewrites `src/MatDesign.Web/Data/audit.json`, a snapshot of how close the other apps are to the rules.
+- **Changelog of the rulebook:** a rule is changed together with a line in `src/MatDesign.Core/RuleChangeEntries.cs` (oldest first, a new line at the END). `node tools/rule-hash.js FORM-15 "What changed."` prints the line with
+  the hash of the rule as it is now (`--all` prints every hash, `--kind Added|Changed|Removed|Moved`); `RuleChangesTests` fails, and its message gives the line, when a rule changed without one. `node tools/rule-history.js [--first|--changes]`
+  reads from git when each rule first stood in `RuleBook.cs` (it made the baseline). The hash covers statement, level and source only: a new title, reason, example or check text needs no line, but a line may say so.
 
 ## Map
 
@@ -70,6 +73,8 @@ src/MatDesign.Core         no web types
   PaletteAdvisor.cs          accents that are too close, proposals
   CssTokens.cs               parser for matui.tokens.css (tokens, description from the comment, group from the heading; Schemes = what each colour scheme sets)
   RuleBook.cs                the rules (id, area, level, source, text)
+  RuleChanges.cs             the changelog of the rulebook: RuleChange (date, rule, kind Added | Changed | Removed | Moved, note, hash), HashOf (first eight hex digits of SHA-256 of statement, level and source), For(id), Problems (what a test holds it to)
+  RuleChangeEntries.cs       its data, oldest first, written with Add / Chg / Rem / Mov (day, id, hash, note): the baseline (every rule on the day it first stood in RuleBook.cs), then what each change did
   Studio/StudioStore.cs      what the Studio saves: an append-only log per item (studio/<kind>/<id>/<revision>.json), history, restore, activity
   Studio/AdminAccount.cs     the old administrator file (admin.json, only read to migrate it) and the one place that hashes and verifies a password (HashPassword, VerifyHash, IsKnownHashFormat), what the setup assistant accepts
   Studio/StudioRole.cs       the three roles (administrator, editor, viewer), Capability, StudioRole.Can(role, capability): the one decision, data in code (CODE-10)
@@ -107,7 +112,8 @@ src/MatDesign.Web          the site
                              ComponentCatalog (+ FormComponents, PickerComponents, CodeInputComponents, ContentComponents, ListComponents, LayoutComponents, ScheduleComponents, RatingComponents, TreeComponents, UploadComponents; CatalogSection = what a page shows),
                              ComponentApi (classes and attributes of an example), ContextPages (the real page and the marks of each group),
                              PatternCatalog, ShellSkeleton, SchemeDocs (the numbers and tokens of the colour schemes for the pages), AuditData (Navigation: NavSet > NavGroup > NavItem with NavBadge and children)
-  Pages/                     Index, Rules, Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
+  Pages/                     Index, Rules (the rulebook; Detail has the History block of a rule; Changes = `/Rules/Changes`, what changed in the rulebook: a list by month, filter by kind and area, LIST-16 groups; `/api/rules/changes` is its JSON, Services/RuleChangesApi.cs),
+                             Identity, Foundations, Shell, Components, Layout, Utilities, Patterns, Builder, Download, Preview (the sample app)
   Pages/Shared/              _Layout (the shell), _Bare (no menu), _Menu (items, badges, submenus; the switcher under the logo or at the end of the menu), _MenuSwitcher (the switcher button, under the logo,
                              in the foot or at the end of the menu: `ShellModel.SwitcherPlace`), _MenuSwitchPopup (its popup; menus grouped below a `NavSetParent`), _Head, _Toolbar, _Pager,
                              _DocSection + _Toc + _Component + _ContextPage (the components, layout and utilities pages), _AccentSwatches, _ContrastCard (+ _ContrastRows, _SchemeChecks), _FoundationsTabs
@@ -127,14 +133,17 @@ tests/MatDesign.Tests      unit tests + the site in memory
 tests/MatPlatform.Tests    MatPlatform: a demo app in memory (TestServer, DemoApp.cs), the endpoints, the sign-in, the validator, the backchannel, the package files
 tests/e2e                  run.js: the behaviour in a real browser against a running site; white-label.js: the white label build (the Studio page, the renamed toolkit behind the renamer of the site, the look of the original and the copy compared pixel by pixel)
 tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js, bump.js (makes a version of the toolkit), matui-check.js (checks an app's copy of it),
-                           matplatform-copy.js (+ .ps1: copies MatPlatform into an app)
+                           matplatform-copy.js (+ .ps1: copies MatPlatform into an app), rule-hash.js (the hash and the line for the changelog of the rulebook), rule-history.js (when a rule first stood in the book, from git),
+                           rulebook-source.js (reads RuleBook.cs as text for the two; a test holds its hashes to the C# ones)
 ```
 
 ## Conventions
 
 **The rules are the product.** A rule has an ID (`AREA-NN`), a level (Must / Should / May), a source and, where a test enforces it, a `Check`. The rules the owner stated
-in their own words have the source `Owner` and are not weakened without asking. When a rule changes, change `RuleBook.cs`, the CSS or script that implements it and the test that
-checks it in one commit. Rule text that cites another rule must cite one that exists (a test checks).
+in their own words have the source `Owner` and are not weakened without asking. When a rule changes, change `RuleBook.cs`, the CSS or script that implements it, the test that
+checks it **and a line of the rulebook changelog** (`RuleChangeEntries.cs`, below) in one commit. Rule text that cites another rule must cite one that exists (a test checks).
+A rule is never added for the sake of a count: it needs a reason from what the code or the docs already do (or an accessibility gap), a level, and a `Check` that is true. `docs/RULES-REVIEW.md` is the
+review of the whole book (what was found, what was added, what the owner has to decide); a new review is a new dated section there.
 
 **The toolkit**
 - One code base per control: the site draws itself with the same layout and partials as the sample apps (`/Preview`). A page is built only from toolkit classes: **no inline
@@ -286,3 +295,6 @@ checks it in one commit. Rule text that cites another rule must cite one that ex
   (`Directory.Build.props`, `.github/workflows/build.yml`).
 - **The toolkit has a version of its own** (`MatUiVersion` in `Directory.Build.props`, semantic versioning, docs/VERSIONING.md: the number an app compares with its copy). Every change under `src/MatUi` that an app can see gets a line under `## [Unreleased]` of `CHANGELOG.md` **in the same commit** (CI fails a pull request that changes `src/MatUi` without it); a change that makes an app change something is a **Breaking** entry with a **Migration**. A version is made with `node tools/bump.js`, never by editing the number: `MatUiVersion`, the newest entry of the changelog and the literals in `matui.js` and `matui.boot.js` are held to each other by tests. **No test names a version of the toolkit**: the versions of the releases a test makes come from `tests/MatDesign.Tests/Ver.cs` (`Ver.First` = the toolkit's, `Ver.Next(n)`, `Ver.Below` for the refusal tests), a page that shows the version is masked in the golden compare and a browser check reads `/api/version`, so a bump never needs a test edit.
 - Push without asking (the user's standing instruction, 2026-10-11); a push to `main` or `dev` starts the GitHub action, which builds and publishes the image. The audit snapshot and the screenshots in `docs/images` show real content of this site only, never user data.
+- **The rulebook has a changelog of its own, and no version number** (docs/VERSIONING.md, "The rulebook has a changelog too"): `/Rules/Changes`, `/api/rules/changes`, the History block on the page of a rule. **A rule is changed together with a line of it**
+  (`RuleChangeEntries.cs`; `RuleChangesTests` fails for a rule whose newest line does not carry the hash of its statement, level and source, and prints the line to add). A rule that is added gets an `Add` line, one that is taken out a `Rem` (or `Mov`, with the new id in the note: an id is never used twice).
+  A change under `src/MatUi` still needs its line in `CHANGELOG.md`; a change to a rule that is not under `src/MatUi` needs only the line of the rulebook. Rules that are written or changed in the Studio keep their own revisions there and are not in this list.

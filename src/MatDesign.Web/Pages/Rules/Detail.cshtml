@@ -1,5 +1,6 @@
 @page "/Rules/Detail"
 @model MatDesign.Web.Pages.Rules.DetailModel
+@using MatDesign.Web.Studio
 @{
     var rule = Model.Rule;
     ViewData["Title"] = rule.Id + " " + rule.Title;
@@ -40,6 +41,45 @@
         </dl>
     </div>
 </article>
+
+<section class="mat-section" aria-labelledby="history-title">
+    <div class="mat-section__head"><h2 id="history-title">History</h2></div>
+    @if (Model.Changes.Count > 0)
+    {
+        <div class="mat-table-wrap">
+            <table class="mat-table">
+                <caption class="mat-sr-only">Changes of @rule.Id in the changelog of the rulebook, the newest first</caption>
+                <thead><tr><th scope="col">Date</th><th scope="col">Change</th><th scope="col">What changed</th></tr></thead>
+                <tbody>
+                    @foreach (var change in Model.Changes)
+                    {
+                        <tr>
+                            <td data-label="Date" class="mat-mono mat-text-nowrap">@change.DateText</td>
+                            <td data-label="Change"><span class="mat-pill @ChangesModel.KindClass(change.Kind)">@ChangesModel.KindLabel(change.Kind)</span></td>
+                            <td data-label="What changed"><span>@Ui.Inline(ChangesModel.NoteOf(change))</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    @if (Model.Origin == ItemSource.Added)
+    {
+        <p class="mat-muted">This rule was written in the Studio, so it has no line in the changelog of the rulebook: the revisions that the Studio keeps are its history.</p>
+    }
+    else if (Model.Origin == ItemSource.Changed)
+    {
+        <p class="mat-muted">The text above was changed in the Studio. The lines above are those of the rule as it came with the program; the revisions of the Studio are kept there.</p>
+    }
+
+    <div class="mat-actions">
+        <a class="mat-btn mat-btn--secondary" href="/Rules/Changes">@Ui.Icon("file-text")<span>What changed in the rulebook</span></a>
+        @if (Model.StudioHistoryUrl is not null)
+        {
+            <a class="mat-btn mat-btn--ghost" href="@Model.StudioHistoryUrl">@Ui.Icon("restore")<span>History in the Studio</span></a>
+        }
+    </div>
+</section>
 
 <section class="mat-section" aria-labelledby="area-title">
     <div class="mat-section__head"><h2 id="area-title">More in @Model.Area.Name</h2></div>

@@ -89,6 +89,21 @@ An app **copies** the toolkit (rule `CODE-03`) and never loads it from another s
 
 An app that references the project `MatUi` (a Razor class library) updates by taking the commit or tag `matui-v<version>` of this repository; the files carry the same version.
 
+## The rulebook has a changelog too
+
+The rules are the product, so what happens to them is written down like what happens to the toolkit. It has **no version number**: a rule is cited by its id, and an app follows the rules, not a release of them.
+
+- **Where it is read:** the page **/Rules/Changes** ("What changed in the rulebook": newest first, by month, with a filter by kind and area), the **History** block on the page of every rule, and `/api/rules/changes` as data
+  (`?rule=FORM-15`, `?kind=Changed`, `?area=FORM`, `?since=2026-10-15`). The data is `src/MatDesign.Core/RuleChangeEntries.cs`: one line for each event, oldest first.
+- **What a line says:** the day, the rule, the kind (**Added**, **Changed**, **Removed**, or **Moved**: the rule has another id, which the note names; an id is never used twice), one short sentence, and the **hash** of the rule after the change:
+  the first eight hex digits of the SHA-256 of its statement, its level and its source.
+- **The baseline:** every rule that existed when the changelog was started (2026-10-20) has an Added line on the day it first stood in `RuleBook.cs`, read from the history of git (`node tools/rule-history.js`). What changed between then and the start is not in it.
+- **Making a line:** change the rule, then `node tools/rule-hash.js FORM-15 "What changed."` and paste the line it prints at the end of the file. `RuleChangesTests` fails for a rule whose newest line was not written for its text, says which line to add, and
+  holds the order, the dates, the notes and the ids (no line about a rule that is not in the book unless it says Removed or Moved; every rule has its Added line).
+- **What is not in it:** rules that were written or changed in the Studio keep their own revisions there (Studio, Rules, History); the page of such a rule says so and links to them for a person who may open the Studio. A new title, reason, example or check text does not change the hash;
+  a line may still say it.
+- **Not the toolkit's changelog:** a change of a rule that also changes something under `src/MatUi` needs its line under Unreleased in `CHANGELOG.md` as before, because an app can see it. A change that is only about the rule needs only its line of the rulebook.
+
 ## Why not a package
 
 The toolkit is a handful of plain files with no build step, and the apps are in several languages. A copy of the files, a number that is in the first line of each, a manifest with their hashes and a
