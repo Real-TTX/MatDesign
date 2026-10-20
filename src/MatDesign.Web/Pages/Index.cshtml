@@ -37,7 +37,7 @@
         is the CSS and script an app copies to follow them.
     </p>
     <p class="mat-muted">
-        <a href="/Rules">@Design.Rules.Count rules</a> in @RuleBook.Areas.Count areas, <a href="/Identity">@apps.Count apps</a>,
+        <a href="/Rules">@Design.Rules.Count rules</a> in @RuleBook.Areas.Count areas, <a href="/Identity">@apps.Count @(apps.Count == 1 ? "app" : "apps")</a>,
         <a href="/Foundations/Tokens">@Toolkit.Tokens.Count design tokens</a> and <a href="/Foundations/Icons">@Toolkit.IconNames.Count icons</a>.
     </p>
     <div class="mat-btn-row mat-btn-row--plain">

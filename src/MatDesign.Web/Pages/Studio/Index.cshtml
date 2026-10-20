@@ -19,7 +19,7 @@
             <dt>Signed in as</dt>
             <dd><a href="/Studio/Account" data-me>@Model.Me.Name</a><span class="mat-muted">, @Model.RoleName.ToLowerInvariant()</span></dd>
             <dt>Built in</dt>
-            <dd>@Design.Apps.Count apps, @Design.Rules.Count rules, @Design.Components.Count components, @Toolkit.Tokens.Count tokens</dd>
+            <dd>@Design.Apps.Count @(Design.Apps.Count == 1 ? "app" : "apps"), @Design.Rules.Count rules, @Design.Components.Count components, @Toolkit.Tokens.Count tokens</dd>
             <dt>Saved in the Studio</dt>
             <dd>
                 @if (Model.Saved.Count == 0)

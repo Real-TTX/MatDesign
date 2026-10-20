@@ -479,7 +479,7 @@ public sealed partial class TenantStudioTests : IClassFixture<WebApplicationFact
         var home = await _studio.Get("/");
         Assert.Contains("data-app=\"matx\"", home);
         Assert.DoesNotContain("No apps yet", home);
-        Assert.Contains("1 apps</a>", home);
+        Assert.Contains("1 app</a>", home);
         var identity = await _studio.Get("/Identity");
         Assert.Contains("<table", identity);
         Assert.Contains("MatX", identity);
