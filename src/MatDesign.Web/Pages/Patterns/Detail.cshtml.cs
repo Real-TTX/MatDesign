@@ -24,7 +24,7 @@ public class DetailModel(MatDesign.Web.Studio.DesignData design) : PageModel
 
     public IActionResult OnGet(string? id, string? app)
     {
-        var pattern = id is null ? null : PatternCatalog.Get(id);
+        var pattern = design.Pattern(id);
         if (pattern is null)
         {
             return NotFound();
@@ -37,7 +37,7 @@ public class DetailModel(MatDesign.Web.Studio.DesignData design) : PageModel
             : design.Apps.Count > 0 ? design.Apps.Take(PatternCatalog.Apps.Count).ToList() : [design.SiteApp];
         App = Apps.FirstOrDefault(a => a.Id.Equals(app, StringComparison.OrdinalIgnoreCase)) ?? Apps[0];
         Rules = pattern.Rules.Select(design.Rule).OfType<Rule>().ToList();
-        var all = PatternCatalog.All.ToList();
+        var all = design.Patterns.ToList();
         var index = all.IndexOf(pattern);
         Previous = index > 0 ? all[index - 1] : null;
         Next = index < all.Count - 1 ? all[index + 1] : null;

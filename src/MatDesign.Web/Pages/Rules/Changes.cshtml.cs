@@ -77,7 +77,7 @@ public class ChangesModel(DesignData design) : PageModel
             area = null;
         }
 
-        var all = RuleChanges.All.Select((c, index) => new ChangeRow(c, design.Rule(c.RuleId)?.Title, AreaOf(c.RuleId)?.Name, index)).ToList();
+        var all = design.RuleChanges.Select((c, index) => new ChangeRow(c, design.Rule(c.RuleId)?.Title, AreaOf(c.RuleId)?.Name, index)).ToList();
         IEnumerable<ChangeRow> rows = all;
         if (q is not null)
         {
@@ -143,16 +143,16 @@ public class ChangesModel(DesignData design) : PageModel
             Filters =
             [
                 new("kind", "Kind of change", Kinds.Select(k => new FilterOption(k.ToString(), KindLabel(k))).ToList(), kindText),
-                new("area", "Area", RuleBook.Areas.Select(a => new FilterOption(a.Id, a.Name)).ToList(), area),
+                new("area", "Area", design.Areas.Select(a => new FilterOption(a.Id, a.Name)).ToList(), area),
             ],
         };
 
         Pager = new PagerModel { Page = page, PageSize = PageSize, Total = matching.Count, Url = Toolbar.UrlWithPage };
     }
 
-    private static RuleArea? AreaOf(string ruleId)
+    private RuleArea? AreaOf(string ruleId)
     {
         var dash = ruleId.LastIndexOf('-');
-        return dash < 0 ? null : RuleBook.Areas.FirstOrDefault(a => a.Id == ruleId[..dash]);
+        return dash < 0 ? null : design.Areas.FirstOrDefault(a => a.Id == ruleId[..dash]);
     }
 }

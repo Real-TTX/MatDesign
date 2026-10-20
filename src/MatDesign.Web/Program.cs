@@ -96,6 +96,8 @@ if (!app.Environment.IsDevelopment())
     app.UseStatusCodePagesWithReExecute("/Error", "?code={0}");
 }
 
+// The icon of the site: the file for the demo, the same glyph in the accent of the site for a company that is not the demo (IDENT-09).
+app.UseSiteFavicon();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
@@ -116,7 +118,7 @@ ui.MapGet("/matui-icons.svg", (ToolkitFiles files, HttpContext http) => ToolkitF
 ui.MapGet("/matui.zip", (ToolkitFiles files) => Results.File(files.Zip, "application/zip", files.ZipName));
 // What version this is, and what changed in each: the manifest is what a program compares (version, hash and SHA-256 of every file), the changelog is what a person reads.
 ui.MapGet("/manifest.json", (ToolkitFiles files, HttpContext http) => ToolkitFiles.Result(http, files.ManifestText(), "application/json; charset=utf-8", files.Hash));
-ui.MapGet("/CHANGELOG.md", (HttpContext http) => { var text = Changelog.LoadText(); return ToolkitFiles.Result(http, text, "text/markdown; charset=utf-8", ToolkitFiles.ShortHash(text)); });
+ui.MapGet("/CHANGELOG.md", (DesignData design, HttpContext http) => { var text = design.ChangelogText; return ToolkitFiles.Result(http, text, "text/markdown; charset=utf-8", ToolkitFiles.ShortHash(text)); });
 ui.MapGet("/css/{name}", (string name, ToolkitFiles files, HttpContext http) =>
     files.Css(name) is { } css ? ToolkitFiles.Result(http, css, "text/css; charset=utf-8", files.Hash) : Results.NotFound());
 
@@ -173,14 +175,14 @@ api.MapGet("/iconlib", (IconLibrary library) => Results.Content(library.Catalogu
 // toolkit = the build of the site, matui = the version of the toolkit (semantic versioning: the number an app compares with its copy)
 api.MapGet("/version", (ToolkitFiles files) => new { toolkit = AppVersion.Current, matui = AppVersion.MatUi, hash = files.Hash });
 // What an app takes with an update: the versions after <since> (all of them without it), each with its sections and, where it breaks something, its migration steps.
-api.MapGet("/changelog", (string? since) =>
+api.MapGet("/changelog", (DesignData design, string? since) =>
 {
     if (since is not null && !Changelog.IsVersion(since))
     {
         return Results.BadRequest(new { error = "since is a version of three numbers, like 0.1.0." });
     }
 
-    var log = Changelog.Current;
+    var log = design.Changelog;
     var releases = since is null ? log.Releases : log.Since(since);
     static object Shape(ChangelogEntry e) => new
     {

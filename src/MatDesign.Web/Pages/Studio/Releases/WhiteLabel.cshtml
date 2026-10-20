@@ -1,6 +1,7 @@
 @page "/Studio/Releases/WhiteLabel"
 @model MatDesign.Web.Pages.Studio.Releases.WhiteLabelModel
 @inject StudioHistory History
+@inject MatDesign.Web.Studio.DesignData Design
 @using MatDesign.Core.Studio
 @using MatDesign.Web.Studio
 @{
@@ -92,7 +93,7 @@
     <section class="mat-section" aria-labelledby="examples-title">
         <div class="mat-section__head">
             <h2 id="examples-title">Before and after</h2>
-            <p class="mat-section__lead">What the build turns the names of the toolkit into. It follows what you type. A name is renamed only as a whole token: <code>format-</code>, <code>Mattiverse</code>, addresses and the other names of the family are left alone.</p>
+            <p class="mat-section__lead">What the build turns the names of the toolkit into. It follows what you type. A name is renamed only as a whole token: <code>format-</code>, <code>@Design.Pick("mattiverse").Name</code>, addresses and the other names of the family are left alone.</p>
         </div>
         <div class="mat-table-wrap">
             <table class="mat-table" data-wl-examples>

@@ -1,5 +1,6 @@
 @page "/Foundations/Type"
 @inject ToolkitFiles Toolkit
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     ViewData["Title"] = "Type";
     ViewData["PageSub"] = "System fonts, one scale, mono for technical values.";
@@ -66,7 +67,7 @@
 <section class="mat-section" aria-labelledby="rules-title">
     <div class="mat-section__head"><h2 id="rules-title">Rules for type</h2></div>
     <div class="mat-grid">
-        @foreach (var rule in RuleBook.In("TYPE"))
+        @foreach (var rule in Design.RulesIn("TYPE"))
         {
             <a class="mat-card" href="/Rules/Detail?id=@rule.Id"><div class="mat-card__body mat-stack mat-stack--sm"><span class="doc-rule-id">@rule.Id</span><strong>@rule.Title</strong></div></a>
         }

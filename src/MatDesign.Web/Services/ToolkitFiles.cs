@@ -427,7 +427,7 @@ public sealed partial class ToolkitFiles
         // the files, then the manifest that lists them with their hashes, then the README: an app that copies the archive keeps what it needs to check its copy later
         var files = new List<(string Name, string Content)> { ("matui.css", bundle), ("matui.js", script), ("matui.boot.js", boot), ("matui-icons.svg", Sprite) };
         files.AddRange(CssParts.Select(part => ($"css/{part}", part == AppsPart ? PartCss(appsCss) : _css[part])));
-        files.Add(("CHANGELOG.md", Changelog.LoadText()));
+        files.Add(("CHANGELOG.md", _design.ChangelogText));
         // the files of the brand (binary: a logo, a favicon, fonts) go in under brand/, with their hashes in the manifest; a brand without any adds nothing
         var brand = _assets.Files();
         var manifest = WithBrandFiles(ManifestOf(version, hash, files.Select(f => (f.Name, f.Name, f.Content)), "CHANGELOG.md"), name => $"{BrandAssets.Folder}/{name}");

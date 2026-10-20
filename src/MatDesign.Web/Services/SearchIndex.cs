@@ -286,7 +286,7 @@ public sealed partial class SearchIndex
     {
         foreach (var rule in _design.Rules)
         {
-            var area = RuleBook.Areas.FirstOrDefault(a => a.Id == rule.Area);
+            var area = _design.Areas.FirstOrDefault(a => a.Id == rule.Area);
             var areaName = area?.Name ?? rule.Area;
             entries.Add(new Entry(
                 new SearchDoc(SearchKind.Rule, rule.Id, $"{rule.Id} {rule.Title}", $"{areaName} · {rule.Level} · {First(rule.Statement, 100)}", SearchLinks.Rule(rule.Id), SearchKinds.Icon(SearchKind.Rule), areaName),
@@ -405,9 +405,9 @@ public sealed partial class SearchIndex
         }
     }
 
-    private static void AddPatterns(List<Entry> entries)
+    private void AddPatterns(List<Entry> entries)
     {
-        foreach (var pattern in PatternCatalog.All)
+        foreach (var pattern in _design.Patterns)
         {
             entries.Add(new Entry(
                 new SearchDoc(SearchKind.Pattern, pattern.Id, pattern.Name, $"{pattern.Kind} · {First(pattern.Summary, 100)}", SearchLinks.Pattern(pattern.Id), pattern.Icon, pattern.Kind),

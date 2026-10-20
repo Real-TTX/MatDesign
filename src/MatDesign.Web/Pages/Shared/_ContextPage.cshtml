@@ -22,10 +22,10 @@
                     <button type="button" class="mat-btn mat-btn--ghost mat-btn--sm" data-context-mark="@mark.Selector" data-context-component="@mark.Component" data-context-view="@(mark.View ?? Model.View)" data-context-open="@mark.Open" aria-pressed="false">@(Design.Component(mark.Component)?.Name ?? mark.Component)</button>
                 }
             </div>
-            <a class="mat-btn mat-btn--ghost mat-btn--sm" data-context-open-page href="@ContextPages.Url(Model.View)" target="_blank" rel="noopener">@Ui.Icon("external")<span>Open the page</span></a>
+            <a class="mat-btn mat-btn--ghost mat-btn--sm" data-context-open-page href="@ContextPages.Url(Model.View, Design.SiteApp.Id)" target="_blank" rel="noopener">@Ui.Icon("external")<span>Open the page</span></a>
         </div>
         <div class="doc-context__stage">
-            <iframe class="doc-frame" title="@Model.Title: the @Model.Group.ToLowerInvariant() in a page of the sample app" data-src="@ContextPages.Url(Model.View)"></iframe>
+            <iframe class="doc-frame" title="@Model.Title: the @Model.Group.ToLowerInvariant() in a page of the sample app" data-src="@ContextPages.Url(Model.View, Design.SiteApp.Id)"></iframe>
         </div>
     </div>
 </details>

@@ -125,7 +125,7 @@ public static class Styleguide
     {
         line("<section class=\"sg__section\" id=\"rules\" aria-labelledby=\"h-rules\">");
         line($"<h2 id=\"h-rules\">Rules ({design.Rules.Count})</h2>");
-        foreach (var area in RuleBook.Areas)
+        foreach (var area in design.Areas)
         {
             var rules = design.RulesIn(area.Id).ToList();
             if (rules.Count == 0)

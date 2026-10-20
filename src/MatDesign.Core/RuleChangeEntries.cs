@@ -188,5 +188,6 @@ public static partial class RuleChanges
         Add("2026-10-20", "LIST-18", "f7906524", "A catalogue is an overview of tiles by category and one page per item with its own address, never everything on one page."),
         Chg("2026-10-20", "TABLE-02", "24d1f1f3", "A row with actions reads like a phone list on a phone: the name is the title of the card, without its label, and the actions stand beside it."),
         Chg("2026-10-20", "SHELL-12", "78c4fcb1", "A toast stands at the top on a phone, under the header bar, and a tap on it goes to what lies under it; only its X takes the tap."),
+        Chg("2026-10-20", "IDENT-09", "1748d9b5", "A blank site shows no other word of the family either: the toolkit's own texts are read in the company's words through one map, and a crawl of a blank site finds none of them."),
     ];
 }

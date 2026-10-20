@@ -107,7 +107,7 @@
             <caption class="mat-sr-only">Rules of the shell</caption>
             <thead><tr><th scope="col">Rule</th><th scope="col">Level</th></tr></thead>
             <tbody>
-                @foreach (var rule in RuleBook.In("SHELL"))
+                @foreach (var rule in Design.RulesIn("SHELL"))
                 {
                     <tr>
                         <td data-label="Rule"><div class="mat-table__name"><span class="doc-rule-id">@rule.Id</span><span><a href="/Rules/Detail?id=@rule.Id">@rule.Title</a></span></div></td>

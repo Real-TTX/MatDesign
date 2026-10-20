@@ -65,7 +65,7 @@
                         {
                             <label class="mat-choice">
                                 <input type="radio" name="Template" value="@template.Id" checked="@(string.Equals(Model.Template, template.Id, StringComparison.OrdinalIgnoreCase))" />
-                                <span class="mat-choice__text"><strong>@template.Name</strong><small>@template.Description</small></span>
+                                <span class="mat-choice__text"><strong>@template.Name</strong><small>@Design.Words.Text(template.Description)</small></span>
                             </label>
                         }
                     </div>

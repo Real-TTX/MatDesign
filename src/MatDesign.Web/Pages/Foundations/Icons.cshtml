@@ -1,5 +1,6 @@
 @page "/Foundations/Icons"
 @model MatDesign.Web.Pages.Foundations.IconsModel
+@inject MatDesign.Web.Studio.DesignData Design
 @{
     ViewData["Title"] = "Icons";
     ViewData["PageSub"] = $"{Model.Count} icons in one sprite. Line icons, 24 px grid, they take the colour of the text around them.";
@@ -51,7 +52,7 @@
 <section class="mat-section" aria-labelledby="rules-title">
     <div class="mat-section__head"><h2 id="rules-title">Rules for icons</h2></div>
     <div class="mat-grid">
-        @foreach (var rule in RuleBook.In("ICON"))
+        @foreach (var rule in Design.RulesIn("ICON"))
         {
             <a class="mat-card" href="/Rules/Detail?id=@rule.Id"><div class="mat-card__body mat-stack mat-stack--sm"><span class="doc-rule-id">@rule.Id</span><strong>@rule.Title</strong></div></a>
         }

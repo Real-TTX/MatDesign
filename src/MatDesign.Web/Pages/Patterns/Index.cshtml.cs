@@ -1,10 +1,11 @@
 using MatDesign.Web.Services;
+using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
 namespace MatDesign.Web.Pages.Patterns;
 
 /// <summary>The page types of the family as a list or a gallery, with the toolbar above.</summary>
-public class IndexModel : PageModel
+public class IndexModel(DesignData design) : PageModel
 {
     private const int PageSize = 12;
 
@@ -21,7 +22,7 @@ public class IndexModel : PageModel
         var sort = ListQuery.Text(Request, "sort") ?? "kind";
         var descending = ListQuery.Descending(Request);
 
-        IEnumerable<PatternDoc> items = PatternCatalog.All;
+        IEnumerable<PatternDoc> items = design.Patterns;
         if (q is not null)
         {
             items = items.Where(p => p.Name.Contains(q, StringComparison.OrdinalIgnoreCase) || p.Summary.Contains(q, StringComparison.OrdinalIgnoreCase));
@@ -52,7 +53,7 @@ public class IndexModel : PageModel
             Search = q,
             SearchPlaceholder = "A page type, for example list or sign-in",
             Noun = "patterns",
-            Total = PatternCatalog.All.Count,
+            Total = design.Patterns.Count,
             Matching = matching.Count,
             Sort = sort,
             Descending = descending,
