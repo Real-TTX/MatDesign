@@ -95,7 +95,6 @@ public sealed partial class TenantWords
         new(WordScope.Changelog, "a new app, MatIdentity (the single sign-on of the family)", "a new app of the family (the single sign-on)", "The changelog names the app that needed the new colour."),
         new(WordScope.Changelog, "a new app, MatSMTP (the mail relay of the family)", "a new app of the family (the mail relay)", "The changelog names the app that needed the new colour."),
         new(WordScope.Changelog, "the glyph of the MatMail logo", "the glyph of an app's logo", "The changelog names the app whose logo needed the new icon; with the fallback alone the sentence would have two articles."),
-        new(WordScope.Changelog, "the glyph of the MatPaper logo", "the glyph of an app's logo", "The same sentence for another app."),
         new(WordScope.Changelog, "the glyph of the MatTrakr logo", "the glyph of an app's logo", "The same sentence for another app."),
         new(WordScope.Changelog, "like `whale` for MatDock", "like `whale` for another app", "The example of an earlier app that has its own glyph."),
     ];
