@@ -189,6 +189,34 @@ under a tint that is transparent; they are `inert` and `visibility: hidden` whil
 Escape) moves the node at once and puts the focus back on its handle, and a live region says every step. Both paths end in `mat:reorder` with the keys of the rows in their new order. The checks of rows are the ones of tables
 (`data-selectable`), and a filter hides rows by their text, ignoring case and accents. All texts are English and German (`IL_TEXT`).
 
+### Search
+
+**The control** (`FORM-23`, `mat-search[data-autocomplete]`, in `matui.pickers.css` and one section of `matui.js`) is a wrapper around a **real `input type="search"`**, like the pickers: in a `<form role="search">` Enter sends it and without the
+script it is a plain search field, which is also what makes it usable in a page that has no `/api/search`. The script moves the input into a bar next to a magnifier and a clear button and adds the popup, a WAI-ARIA 1.2 combobox with a
+listbox: the input keeps the focus for good and names the active option with `aria-activedescendant`, the options are links (so a click, Ctrl and click, a touch and a browser without the script all do the one thing a link does) that are not in
+the Tab order, and **choosing is one path**: Enter dispatches a click, with the modifier keys, on the active option and the one click handler asks the app (`mat:search-select`, cancelable), remembers the choice and lets the browser follow the link.
+The typed text is never replaced while the arrow keys walk. Three decisions are worth knowing. **What a server or a page says is data, not markup**: titles, lines, headings and kinds are `textContent`, the highlight is made of text nodes and a
+`mark`, an icon name has to be `[a-z0-9-]+`, and an address is followed only when it is http or https, so a result called `<img onerror>` is shown as text (a test and a browser check hold that). **Answers can be late**: every question counts up a number and an
+`AbortController`, an answer is shown only if it is the latest, and whatever closes the popup invalidates the one on its way; a failure is a row ("Search is not available", the way to the page of the results stays) and a slow answer a loading row after
+200 ms, so typing is never blocked. **A key that the page already has is not taken**: `data-key="/,mod+k"` names the keys that focus the field, a plain key that another element has as `data-shortcut` (the list pages' own search) stays
+that element's and the hint in the field then names the other, and the first visible search of a page that claims a key gets it. On a phone the focused field becomes a **full-screen panel** (`is-full`, `position: fixed; inset: 0`, the field and an X on top, the
+suggestions below, the page locked like under a picker): the same input, so the soft keyboard does not flicker, and in the header bar (`mat-topbar__search`, `SHELL-20`) a phone shows an icon button instead of the field. The bar's order is
+enforced by CSS (`order` 1 for the search, 2 for the icons; the burger and the breadcrumb keep 0); the width is the documented `--mat-search-width`, the shape `--mat-search-radius` and `--mat-search-height` (a floor: 44 px on a touch screen).
+Recent choices are five entries in `localStorage` per app and key, read again like data from a server. The texts are `SRCH_TEXT` (English and German).
+
+**The site's search** (`/api/search`, `/Search`, the field in the header bar of every page of the site and of the Studio, not of a sample app) is `SearchIndex` (`MatDesign.Web/Services`): documents of rules, components, tokens (the custom
+properties and the documented component properties), icons (the sprite, and the library, whose tags and categories also make the sprite's icons findable), the pages of the menu, the apps and the patterns, built in memory from what `DesignData`
+merges (so a rule saved in the Studio is found) and rebuilt when `DesignData.Version` moves; a query reads a snapshot, so it never waits for a rebuild. **Not searched**: the Studio's own pages and content, the changelog and the docs.
+A document has fields with weights (title 10, id 9, keywords 7, code 6, group 3, references 2, text 1.5): the *code* field holds what people copy (the classes and attributes of a component, a token's values), a rule is shown as `FORM-21 File upload` and
+searched by `File upload` with its id as a field of its own, and a token is searched without its `--mat-` prefix (`accent` finds `--mat-accent`). A word of the query is looked up in the vocabulary of all documents: the same word, its singular or plural (0.95),
+a word it starts (the closer in length the better), a word that holds it (0.35), a word one letter off for a word of five letters or more and two for nine (only where nothing is the word or starts with it: a typo; a swap of two letters is one), and the
+words of the **synonyms** (`SearchSynonyms`, English and German, by hand: a group of words that mean the same, found exactly, as a start, as a compound that begins with one, or with a typo). **Every word must be found** (AND), each with the score of its best
+place; little words (the, a, how, der, die, mode …) need not be found and count when they are. Bonuses: the exact id of a rule (`form-15`, `FORM 15`, `form15`, `FORM-5`) wins before everything; a title that is the query (or its plural) +200, that starts with it +80,
+that holds it at a word +35; a thing that is *named by a synonym* of the word (the page called Switches for "toggle") +25; the whole phrase in the text +8 (only for a query without little words); the bonus of an icon or a token is worth a tenth or a third. Kinds
+weigh (pages 1.25, components 1.2, apps 1.05, rules and patterns 1, tokens 0.85, icons 0.7). Text is **folded** by a table, not by `string.Normalize`: the image runs with the invariant globalization, where a normalisation form does nothing for an umlaut (found by running
+the site: `haekchen` found nothing in the container while the unit tests, which run with ICU, passed). A query is under 5 ms for the whole index (a test holds it), the answer for a text is cached until the data changes, `/api/search` has an ETag of the version of
+the data, and `/Search` is a list page like the others: the search as a field in the toolbar, the kinds as the filter, groups with counts and a link to all of a kind, a pager under a long list.
+
 ### Layout and utilities
 
 `matui.layout.css` is the last part before the apps: containers, a grid of twelve columns (`mat-cols`, `mat-col-N`, with `sm`, `md` and `lg` variants from 600, 900 and 1200 px, mobile first) and
@@ -221,14 +249,14 @@ All of this is values in `matui.tokens.css` and a few rules per file, so a diffe
 ### Component properties: handles for the shape of a control
 
 The tokens set the look of everything at once (the radius of a button *and* of an input and a menu item is `--mat-radius`). A brand, and later the Studio's editor, also needs to change one control: square
-buttons with round inputs, a card with more room. The toolkit offers that through a small, deliberate set of **`--mat-<component>-<aspect>` properties** (`SPACE-06`; 68, three to six per component: radius,
-padding, a height, a border width, a gap, a type size or weight; button, field, card, dialog, context menu, tag, pill, badge, tabs, table, alert, toast, switch, check, menu item, header bar). The decisions:
+buttons with round inputs, a card with more room. The toolkit offers that through a small, deliberate set of **`--mat-<component>-<aspect>` properties** (`SPACE-06`; 71, three to six per component: radius,
+padding, a height, a border width, a gap, a type size or weight; button, field, card, dialog, context menu, tag, pill, badge, tabs, table, alert, toast, switch, check, menu item, header bar, search field). The decisions:
 
 - **The fallback is the default, the property has no value.** Every use is `border-radius: var(--mat-btn-radius, var(--mat-radius))`: no default in `:root`, so an app that sets nothing computes exactly what it did
   before (a browser check compares the computed styles of every example with and without). The fallback is a global token; only where the toolkit has none (a border of 1 px, the 42 px of a switch) it is a literal
   of the type. A property that is used with two defaults (`--mat-btn-radius` is `--mat-radius-sm` for a small button) says the first in its declaration; the small button follows the same property, so one value squares every size.
 - **Set where it should apply.** Custom properties inherit, so `:root` sets one for the app, `[data-app]` for one app and an element for what is inside it: the same three places as the tokens, no class to override.
-- **A height is a floor.** `--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-nav-item-height` and `--mat-menu-item-height` fall back to `--mat-control-h`, which the tokens make 44 px under
+- **A height is a floor.** `--mat-btn-height`, `--mat-input-height`, `--mat-tabs-height`, `--mat-nav-item-height`, `--mat-menu-item-height` and `--mat-search-height` fall back to `--mat-control-h`, which the tokens make 44 px under
   `(pointer: coarse)` (`MOBILE-04`); a brand that wants less sets it for `(pointer: fine)` only. The editor of stage 12 does exactly that: a value under 44 px is written inside `@media (pointer: fine)` (so a touch screen never sees it and keeps the 44 px of the control height), a value under 32 px is refused, and a browser
   check with a touch-emulating context holds that the button, field, menu item, tab and menu item of the shell stay 44 px high. The limits of every property are in `ComponentTokens` (docs/STUDIO.md, "Components, apps and schemes").
 - **The target is the hit area, not the mark.** What is 44 px on a touch screen is what takes the tap (`MOBILE-04`), and it never depends on a property that draws the mark: `--mat-check-size` and `--mat-switch-*` change the

@@ -112,6 +112,8 @@ function measure(args) {
       add('[data-menu-toggle]', 'menu');
       add('.mat-picker__trigger', 'picker');
       add('[data-switcher], .mat-switcher', 'switcher');
+      // the search of the header bar is an icon button on a phone; its panel is the whole screen (FORM-23)
+      add('.mat-search__open', 'search');
       return out;
     });
     const done = new Set();
@@ -124,7 +126,12 @@ function measure(args) {
         await page.evaluate(({ sel, i }) => { document.querySelectorAll(sel)[i].scrollIntoView({ block: 'center' }); }, o);
         await page.locator(o.sel).nth(o.i).click({ timeout: 2000 });
         await page.waitForTimeout(350);
-        record(name + ' (' + o.kind + ' ' + String(key).slice(0, 20) + ')', width, await measureNow(page, o.kind === 'drawer' ? '.mat-nav' : o.kind === 'dialog' ? 'dialog[open]' : o.kind === 'picker' ? '.mat-picker__panel, dialog[open]' : ''));
+        // the panel of a search shows its rows once there is a text; the answer comes from the site
+        if (o.kind === 'search') {
+          await page.keyboard.type('button', { delay: 20 });
+          await page.waitForFunction(() => document.querySelectorAll('.mat-search.is-full .mat-search__option').length > 2, null, { timeout: 4000 }).catch(() => { /* a search that answers nothing has no rows to measure */ });
+        }
+        record(name + ' (' + o.kind + ' ' + String(key).slice(0, 20) + ')', width, await measureNow(page, o.kind === 'drawer' ? '.mat-nav' : o.kind === 'dialog' ? 'dialog[open]' : o.kind === 'picker' ? '.mat-picker__panel, dialog[open]' : o.kind === 'search' ? '.mat-search.is-full' : ''));
         measured++;
         await page.keyboard.press('Escape');
         await page.waitForTimeout(150);

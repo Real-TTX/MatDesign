@@ -7776,8 +7776,8 @@ function seenAt(page, selector) {
         expect(await page.locator('main h1').count(), 1, 'h1');
         expect(await page.locator('a.mat-tab.is-active[href="/Studio/Brand/Components"]').count(), 1, 'the tab');
         expect(await page.locator('a.mat-nav__item.is-active[href="/Studio/Brand"]').count(), 1, 'the menu item');
-        expect(await page.locator('[data-prop-row]').count(), 68, 'rows');
-        expect(await page.locator('[data-brand-preview][data-prop-group]').count(), 16, 'previews');
+        expect(await page.locator('[data-prop-row]').count(), 71, 'rows');
+        expect(await page.locator('[data-brand-preview][data-prop-group]').count(), 17, 'previews');
         expect(await page.locator('form [data-brand-preview]').count(), 0, 'a preview is not in the form');
         expect(await page.locator('[data-prop-group="btn"] .mat-btn').count() > 0, true, 'the real buttons of the documentation');
         expect(await page.locator('[data-prop-group="dialog"] dialog.mat-dialog:visible').count(), 1, 'the dialog is drawn');
@@ -7896,7 +7896,7 @@ function seenAt(page, selector) {
         await page.waitForURL('**/Studio/Apps');
         await page.goto(BASE + '/Studio/Apps/Edit?id=' + appId, { waitUntil: 'networkidle' });
         expect(await page.locator('#overrides-title').count(), 1, 'the section');
-        expect(await page.locator(`[data-brand-preview][data-prop-group][data-app="${appId}"]`).count(), 16, 'previews of the app');
+        expect(await page.locator(`[data-brand-preview][data-prop-group][data-app="${appId}"]`).count(), 17, 'previews of the app');
         expect(await page.locator('[name="light:--mat-bg"]').count(), 0, 'no colours');
         await page.evaluate(() => document.querySelectorAll('.doc-overrides details').forEach(d => { d.open = true; }));
         await page.fill('#property-mat-card-radius', '0');
@@ -8892,6 +8892,9 @@ function seenAt(page, selector) {
       }
       await holds('.mat-picker__clear', 2);
     });
+    await check('the button that opens the search in the header bar is a target of 44 px (the X, the clear button and the rows of its panel are measured in the search block above)', async () => {
+      await holds('.mat-topbar .mat-search__open', 1);
+    });
     await ctx.close();
 
     // a tablet (768 px, touch): the table keeps its header, so its sort links are there, and the picker panels are popups
@@ -8945,6 +8948,517 @@ function seenAt(page, selector) {
       expect(sizes, { check: '32px', sw: '32px', pager: 32, chipX: 'none', swatch: 'none', rating: 0 }, 'the sizes with a mouse');
     });
     await desktop.ctx.close();
+  }
+
+  // ---------------------------------------------------------------------------------------------------- search with suggestions (FORM-23, SHELL-20)
+  // The search in the header bar of every page of the site (the same control as the catalogue's), against /api/search: structure, the keys, German words, a rule id, a typo, the states (empty, error, slow, a late
+  // answer), recent searches, the page of the results, a hostile title, the full-screen panel of a phone and the targets of 44 px, and the contrast of the popup in light and dark.
+  console.log('\nSearch (FORM-23, SHELL-20)');
+  {
+    const field = '#site-search';
+    // the answer for the text that is in the field is on show (the script keeps the text it asked for in the state of the control)
+    const asked = (page, text) => page.waitForFunction((q) => { const s = document.querySelector('#site-search').closest('.mat-search')._matSearch; return !!s && s.q === q && s.mode !== ''; }, text);
+    const typeIn = async (page, text) => {
+      await page.focus(field);
+      await page.fill(field, '');
+      await page.keyboard.type(text, { delay: 12 });
+      await asked(page, text);
+    };
+    // the options of the popup; the rows "All results" and "Clear recent" only when `rows` is true (they are not results)
+    const options = (page, rows = false) => page.evaluate((rows) => [...document.querySelectorAll('.mat-search__panel .mat-search__option')]
+      .filter(o => rows || !o.classList.contains('mat-search__option--all') && !o.classList.contains('mat-search__option--clear')).map(o => ({
+        id: o.id, tag: o.tagName, role: o.getAttribute('role'), href: o.getAttribute('href'), title: o.querySelector('.mat-search__title').textContent, active: o.classList.contains('is-active'),
+        text: (o.querySelector('.mat-search__desc') || { textContent: '' }).textContent, kind: (o.querySelector('.mat-search__kind') || { textContent: '' }).textContent,
+      })), rows);
+    const state = (page) => page.evaluate(() => { const i = document.querySelector('#site-search'); return { value: i.value, expanded: i.getAttribute('aria-expanded'), active: i.getAttribute('aria-activedescendant'), focused: document.activeElement === i }; });
+    const live = (page) => page.evaluate(() => document.querySelector('#site-search').closest('.mat-search').querySelector('[role="status"].mat-sr-only').textContent);
+    // text and background as they are seen: every layer of the backgrounds is painted over the page, so a tint with an alpha counts as what it is
+    const seen = (page, selector) => page.evaluate((selector) => {
+      const el = document.querySelector(selector);
+      if (!el) { return null; }
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 1;
+      const g = canvas.getContext('2d', { willReadFrequently: true });
+      const read = () => { const d = g.getImageData(0, 0, 1, 1).data; return `rgb(${d[0]}, ${d[1]}, ${d[2]})`; };
+      g.fillStyle = '#ffffff';
+      g.fillRect(0, 0, 1, 1);
+      const layers = [];
+      for (let n = el; n; n = n.parentElement) { layers.push(getComputedStyle(n).backgroundColor); }
+      layers.reverse().forEach(c => { g.fillStyle = c; g.fillRect(0, 0, 1, 1); });
+      const bg = read();
+      g.fillStyle = getComputedStyle(el).color;
+      g.fillRect(0, 0, 1, 1);
+      return { bg, fg: read() };
+    }, selector);
+
+    // ---- a desktop
+    {
+      const { ctx, page } = await open(desktopOptions, '/');
+      await check('every page has the field in its header bar after the breadcrumb: a combobox with a label, a magnifier and the hint of the key that focuses it', async () => {
+        const facts = await page.evaluate(() => {
+          const input = document.querySelector('#site-search');
+          const label = document.querySelector('label[for="site-search"]');
+          const box = (el) => { const r = el.getBoundingClientRect(); return { l: Math.round(r.left), r: Math.round(r.right), t: Math.round(r.top), b: Math.round(r.bottom) }; };
+          return {
+            role: input.getAttribute('role'), expanded: input.getAttribute('aria-expanded'), auto: input.getAttribute('aria-autocomplete'), popup: input.getAttribute('aria-haspopup'), type: input.type, name: input.name,
+            controls: !!document.getElementById(input.getAttribute('aria-controls')), label: label.textContent, labelHidden: getComputedStyle(label).position === 'absolute',
+            lens: !!document.querySelector('.mat-search__lens svg'), hint: document.querySelector('.mat-search__key').textContent, hintOn: getComputedStyle(document.querySelector('.mat-search__key')).display !== 'none',
+            shortcuts: input.getAttribute('aria-keyshortcuts'), crumbs: box(document.querySelector('.mat-crumbs')), field: box(document.querySelector('.mat-topbar__search')), bar: box(document.querySelector('.mat-topbar')),
+            inForm: input.form && input.form.getAttribute('action'), role2: input.form && input.form.getAttribute('role'), ids: document.querySelectorAll('#site-search').length,
+          };
+        });
+        expect([facts.role, facts.expanded, facts.auto, facts.popup, facts.type, facts.name], ['combobox', 'false', 'list', 'listbox', 'search', 'q'], 'the attributes of the field');
+        expect([facts.controls, facts.label, facts.labelHidden, facts.lens, facts.inForm, facts.role2, facts.ids], [true, 'Search the site', true, true, '/Search', 'search', 1], 'the control around it');
+        expect([facts.hint, facts.hintOn], ['/', true], 'the hint of the key on a wide screen');
+        expectTrue(facts.shortcuts.includes('Control+K') && facts.shortcuts.includes('/'), 'aria-keyshortcuts: ' + facts.shortcuts);
+        expectTrue(facts.field.l >= facts.crumbs.l && facts.field.t >= facts.bar.t && facts.field.b <= facts.bar.b, 'the field is inside the bar: ' + JSON.stringify(facts));
+        expectTrue(facts.field.r - facts.field.l >= 200 && facts.field.r - facts.field.l <= 300, 'the width of the field comes from --mat-search-width (18rem): ' + (facts.field.r - facts.field.l));
+        expectTrue(facts.field.r > facts.bar.r - 160, 'the field stands at the right end of the bar: ' + JSON.stringify(facts));
+      });
+      await check('the toolkit puts the field before the icons whatever the markup says, and the breadcrumb keeps its place', async () => {
+        await page.evaluate(() => {
+          const bar = document.querySelector('.mat-topbar');
+          const actions = document.createElement('div');
+          actions.className = 'mat-topbar__actions';
+          actions.id = 'probe-actions';
+          actions.innerHTML = '<button type="button" class="mat-btn mat-btn--ghost mat-btn--icon" aria-label="Help">?</button>';
+          bar.insertBefore(actions, bar.firstChild);
+        });
+        const lefts = await page.evaluate(() => ['.mat-crumbs', '.mat-topbar__search', '#probe-actions'].map(s => Math.round(document.querySelector(s).getBoundingClientRect().left)));
+        expectTrue(lefts[0] < lefts[1] && lefts[1] < lefts[2], 'breadcrumb, search, icons from the left: ' + JSON.stringify(lefts));
+        await page.evaluate(() => document.getElementById('probe-actions').remove());
+      });
+      await check('typing shows suggestions in groups: headings, options that are links with ids, the row of all results, a count that is announced, the popup under the field', async () => {
+        await typeIn(page, 'button');
+        const opts = await options(page);
+        const rows = await options(page, true);
+        expectTrue(opts.length >= 6 && opts.length <= 8, 'the options: ' + opts.length);
+        expect(rows.length, opts.length + 1, 'and the row of all results');
+        expect(rows[rows.length - 1].href, '/Search?q=button', 'which leads to the page of the results');
+        expectTrue(opts.every(o => o.tag === 'A' && o.role === 'option' && o.href.startsWith('/') && o.id && o.title && o.text && o.kind), 'every option is a link with an id, a title, a line and a kind');
+        expect(new Set(rows.map(o => o.id)).size, rows.length, 'the ids are unique');
+        expect(opts[0].href, '/Components/buttons', 'the first option');
+        const shape = await page.evaluate(() => {
+          const input = document.querySelector('#site-search');
+          const list = document.getElementById(input.getAttribute('aria-controls'));
+          const groups = [...list.querySelectorAll('[role="group"]')];
+          const panel = list.closest('.mat-search__panel');
+          const f = input.closest('.mat-search__field').getBoundingClientRect(), p = panel.getBoundingClientRect();
+          return {
+            listRole: list.getAttribute('role'), expanded: input.getAttribute('aria-expanded'), groups: groups.map(g => document.getElementById(g.getAttribute('aria-labelledby')).textContent),
+            tabindexes: [...list.querySelectorAll('[role="option"]')].every(o => o.getAttribute('tabindex') === '-1'), top: Math.round(p.top - f.bottom), left: Math.round(p.left - f.left), width: Math.round(p.width),
+            inside: p.left >= 0 && p.right <= window.innerWidth && p.bottom <= window.innerHeight, position: getComputedStyle(panel).position,
+          };
+        });
+        expect([shape.listRole, shape.expanded, shape.tabindexes, shape.position], ['listbox', 'true', true, 'fixed'], 'the popup');
+        expectTrue(shape.groups[0] === 'Components' && shape.groups.length >= 2, 'the groups: ' + shape.groups);
+        expectTrue(shape.top >= 0 && shape.top <= 12 && shape.inside && shape.width >= 380, 'the popup stands under the field: ' + JSON.stringify(shape));
+        expectTrue(/^\d+ suggestions$/.test(await live(page)), 'the live region says how many: ' + await live(page));
+        const hit = await page.evaluate(() => document.querySelector('.mat-search__option .mat-search__hit').textContent.toLowerCase());
+        expect(hit, 'button', 'the part that matches is marked');
+      });
+      await check('the arrow keys move the active option and wrap, Home and End jump, and the typed text stays', async () => {
+        const first = await options(page, true);
+        await page.keyboard.press('ArrowDown');
+        let s = await state(page);
+        expect([s.active, s.value], [first[0].id, 'button'], 'the first option is active');
+        await page.keyboard.press('ArrowDown');
+        expect((await state(page)).active, first[1].id, 'the second');
+        await page.keyboard.press('ArrowUp');
+        await page.keyboard.press('ArrowUp');
+        s = await state(page);
+        expect([s.active, s.value], [first[first.length - 1].id, 'button'], 'up from the first wraps to the last, the text is what was typed');
+        await page.keyboard.press('ArrowDown');
+        expect((await state(page)).active, first[0].id, 'down from the last wraps to the first');
+        await page.keyboard.press('End');
+        expect((await state(page)).active, first[first.length - 1].id, 'End');
+        await page.keyboard.press('Home');
+        expect((await state(page)).active, first[0].id, 'Home');
+        expect(await page.evaluate(() => [...document.querySelectorAll('.mat-search__option[aria-selected="true"]')].map(o => o.id)), [first[0].id], 'only the active option is selected');
+        expect((await options(page, true)).filter(o => o.active).length, 1, 'one tint');
+      });
+      await check('Escape closes the popup and keeps the text, a second Escape clears it, Tab closes it and the focus moves on', async () => {
+        await page.keyboard.press('Escape');
+        let s = await state(page);
+        expect([s.expanded, s.value, s.focused, s.active], ['false', 'button', true, null], 'after one Escape');
+        await page.keyboard.press('Escape');
+        s = await state(page);
+        expect([s.value, s.focused], ['', true], 'after the second');
+        await typeIn(page, 'tooltip');
+        await page.keyboard.press('Tab');
+        s = await state(page);
+        expect([s.expanded, s.value, s.focused], ['false', 'tooltip', false], 'Tab closes it and leaves the field');
+        await page.fill(field, '');
+      });
+      await check('a German word finds the switch: Schalter; a typo of a long word finds the buttons: buton; and a word without the umlaut finds the check: haekchen', async () => {
+        await typeIn(page, 'Schalter');
+        let opts = await options(page);
+        expectTrue(opts.some(o => o.href === '/Components/choices' && /^Switches/.test(o.title)), 'Schalter: ' + opts.map(o => o.title).join(' | '));
+        expect(opts[0].href, '/Components/choices', 'the switch is the first');
+        await typeIn(page, 'buton');
+        opts = await options(page);
+        expect(opts[0].href, '/Components/buttons', 'buton finds the buttons');
+        await typeIn(page, 'haekchen');
+        opts = await options(page);
+        expect(opts[0].href, '/Components/checks', 'haekchen: ' + opts.map(o => o.title).join(' | '));
+      });
+      await check('the id of a rule finds the rule first, however it is written; Enter on the active option follows its link', async () => {
+        for (const text of ['FORM-15', 'form 15', 'form15']) {
+          await typeIn(page, text);
+          const opts = await options(page);
+          expect([opts[0].href, opts[0].title.slice(0, 7)], ['/Rules/Detail?id=FORM-15', 'FORM-15'], 'the first for ' + text);
+        }
+        await typeIn(page, 'FORM-15');
+        await page.keyboard.press('ArrowDown');
+        await Promise.all([page.waitForURL('**/Rules/Detail?id=FORM-15'), page.keyboard.press('Enter')]);
+        expect(await page.locator('h1').first().textContent(), 'Pickers', 'the rule page is open');
+      });
+      await check('Enter without an active option sends the form to the page of the results, which shows the same query and the groups', async () => {
+        await page.focus(field);
+        await page.keyboard.type('toast', { delay: 12 });
+        await Promise.all([page.waitForURL('**/Search?q=toast'), page.keyboard.press('Enter')]);
+        expect(await page.locator('h1').first().textContent(), 'Search: toast', 'the page');
+        expect(await page.inputValue('#results-q'), 'toast', 'the field of the toolbar has the query');
+        const groups = await page.$$eval('section[aria-labelledby^="results-"] h2', hs => hs.map(h => h.textContent.replace(/\s+/g, ' ').trim()));
+        expectTrue(groups.length >= 2 && groups.every(g => /^[A-Za-z]+ \d+$/.test(g)) && groups.some(g => /^Components \d+$/.test(g)), 'the groups with counts: ' + groups);
+        expectTrue((await page.locator('.mat-itemlist .mat-search__hit').count()) > 0, 'the words found are marked');
+        expect(await page.locator('.mat-search__input').first().evaluate(i => i.id), 'site-search', 'the field of the header is on the page too');
+      });
+      await ctx.close();
+    }
+
+    // ---- keys
+    {
+      const { ctx, page } = await open(desktopOptions, '/Shell');
+      await check('the / key and Ctrl+K focus the field, and neither takes the focus from another field', async () => {
+        await page.evaluate(() => document.activeElement && document.activeElement.blur());
+        await page.keyboard.press('/');
+        expect((await state(page)).focused, true, '/ focuses it');
+        expect((await state(page)).value, '', 'the key itself is not typed');
+        await page.evaluate(() => document.activeElement.blur());
+        await page.keyboard.press('Control+k');
+        expect((await state(page)).focused, true, 'Ctrl+K focuses it');
+        await page.keyboard.press('Escape');
+        await page.evaluate(() => { const i = document.createElement('input'); i.id = 'probe-other'; i.type = 'text'; document.querySelector('.mat-page').appendChild(i); i.focus(); });
+        await page.keyboard.type('a/b');
+        expect(await page.inputValue('#probe-other'), 'a/b', 'a / typed in another field stays there');
+        await page.keyboard.press('Control+k');
+        expect((await state(page)).focused, false, 'Ctrl+K does not take the focus from another field');
+        await page.evaluate(() => document.getElementById('probe-other').remove());
+      });
+      await ctx.close();
+    }
+    {
+      // a list page has its own search on the / key: the search of the header bar leaves it that key and names Ctrl K
+      const { ctx, page } = await open(desktopOptions, '/Rules');
+      await check('on a list page the / key stays the list\'s own, the hint of the header bar names Ctrl K, and Ctrl+K focuses the header search', async () => {
+        expectTrue(/^(Ctrl K|⌘K)$/.test(await page.locator('.mat-search__key').textContent()), 'the hint: ' + await page.locator('.mat-search__key').textContent());
+        await page.evaluate(() => document.activeElement && document.activeElement.blur());
+        await page.keyboard.press('/');
+        expect(await page.evaluate(() => document.activeElement.id), 'rules-q', '/ goes to the search of the list');
+        await page.evaluate(() => document.activeElement.blur());
+        await page.keyboard.press('Control+k');
+        expect(await page.evaluate(() => document.activeElement.id), 'site-search', 'Ctrl+K goes to the search of the site');
+      });
+      await ctx.close();
+    }
+
+    // ---- states
+    {
+      const { ctx, page } = await open(desktopOptions, '/Shell');
+      await check('a text that nothing matches says so in the popup and in the live region, and offers no All results row', async () => {
+        await typeIn(page, 'zzzzzzzz');
+        expect(await page.evaluate(() => document.querySelector('.mat-search__note').textContent.trim()), 'No results for “zzzzzzzz”', 'the note');
+        expect(await live(page), 'No results', 'the live region');
+        expect((await options(page, true)).length, 0, 'no option');
+        expect((await state(page)).expanded, 'true', 'the popup is open to say it');
+      });
+      await check('a failed request shows a row with the way on, typing goes on, and the next text asks again', async () => {
+        const before = consoleErrors.length;
+        await page.route('**/api/search*', (route) => route.abort());
+        await typeIn(page, 'abc');
+        const row = await page.evaluate(() => ({ note: document.querySelector('.mat-search__note').textContent.replace(/\s+/g, ' ').trim(), error: document.querySelector('.mat-search__note').classList.contains('is-error'), all: !!document.querySelector('.mat-search__option--all') }));
+        expectTrue(row.note.startsWith('Search is not available') && row.note.includes('press Enter') && row.error && row.all, 'the row: ' + JSON.stringify(row));
+        expect(await live(page), 'Search is not available', 'the live region');
+        await page.keyboard.type('d', { delay: 12 });
+        await asked(page, 'abcd');
+        expect((await state(page)).value, 'abcd', 'typing goes on');
+        await page.unroute('**/api/search*');
+        // the browser reports the request that was refused on purpose as an error of the console: it is not one of the page
+        for (let i = consoleErrors.length - 1; i >= before; i -= 1) { if (/Failed to load resource|ERR_FAILED/.test(consoleErrors[i])) { consoleErrors.splice(i, 1); } }
+        await typeIn(page, 'button');
+        expectTrue((await options(page)).length > 3, 'the next text is answered');
+        expect(await page.evaluate(() => document.querySelector('.mat-search__note').hidden), true, 'the row is gone');
+      });
+      await check('a slow answer shows a loading row after 200 ms and a late answer never replaces a newer one (the counter alone holds it: the browser\'s abort is switched off here)', async () => {
+        await page.evaluate(() => { window.__abort = window.AbortController; window.AbortController = undefined; });
+        const answer = (title) => JSON.stringify({ groups: [{ name: 'Test', items: [{ title, text: 'one line', href: '/Rules', icon: 'book', kind: 'rule', id: title }] }] });
+        await page.route('**/api/search*', async (route) => {
+          const q = new URL(route.request().url()).searchParams.get('q');
+          if (q === 'late') { await new Promise(r => setTimeout(r, 900)); }
+          await route.fulfill({ status: 200, contentType: 'application/json', body: answer(q === 'late' ? 'LATE ANSWER' : 'NEW ANSWER') });
+        });
+        await page.focus(field);
+        await page.fill(field, '');
+        await page.keyboard.type('late', { delay: 12 });
+        await page.waitForFunction(() => { const n = document.querySelector('.mat-search__note'); return !n.hidden && n.classList.contains('is-busy'); });
+        expectTrue(/Searching/.test(await page.evaluate(() => document.querySelector('.mat-search__note').textContent)), 'the loading row');
+        expect(await page.evaluate(() => document.querySelector('.mat-search__panel').getAttribute('aria-busy')), 'true', 'the popup is busy');
+        expect(await live(page), 'Searching …', 'and says so');
+        await page.keyboard.type('x', { delay: 12 });
+        await asked(page, 'latex');
+        expect((await options(page)).map(o => o.title), ['NEW ANSWER'], 'the newer text is answered');
+        await page.waitForTimeout(1100);
+        expect((await options(page)).map(o => o.title), ['NEW ANSWER'], 'the late answer was dropped');
+        expect(await page.evaluate(() => document.querySelector('#site-search').value), 'latex', 'and the text is what was typed');
+        await page.unroute('**/api/search*');
+        await page.evaluate(() => { window.AbortController = window.__abort; });
+      });
+      await ctx.close();
+    }
+
+    // ---- recent choices
+    {
+      const { ctx, page } = await open(desktopOptions, '/Shell');
+      const recent = () => page.evaluate(() => { const all = JSON.parse(localStorage.getItem('mat-search-recent') || '{}'); const key = Object.keys(all).find(k => k.endsWith(':site')); return key ? all[key] : []; });
+      await check('recent choices: a chosen result and a sent query are remembered, shown while the field is empty and focused, and forgotten by Clear recent', async () => {
+        await typeIn(page, 'FORM-15');
+        await page.keyboard.press('ArrowDown');
+        await Promise.all([page.waitForURL('**/Rules/Detail?id=FORM-15'), page.keyboard.press('Enter')]);
+        await page.focus(field);
+        await page.keyboard.type('toast', { delay: 12 });
+        await Promise.all([page.waitForURL('**/Search?q=toast'), page.keyboard.press('Enter')]);
+        expect((await recent()).map(e => e.q || e.title), ['toast', 'FORM-15 Pickers'], 'the last choices, the newest first');
+        await page.click(field);
+        await page.waitForSelector('.mat-search__option');
+        const shown = await options(page, true);
+        expect(shown.map(o => o.title), ['toast', 'FORM-15 Pickers', 'Clear recent'], 'what is shown while the field is empty');
+        expect(shown[0].href, '/Search?q=toast', 'a query leads to the page of its results');
+        expect(await page.evaluate(() => document.querySelector('.mat-search__heading').textContent), 'Recent searches', 'the heading');
+        expect(await live(page), '2 suggestions', 'what is announced');
+        await page.click('.mat-search__option--clear');
+        expect(await page.evaluate(() => localStorage.getItem('mat-search-recent')), '{}', 'forgotten');
+        expect((await state(page)).expanded, 'false', 'the popup closes');
+        expect((await state(page)).focused, true, 'and the focus stays');
+        await page.keyboard.press('Escape');
+        await page.evaluate(() => document.activeElement.blur());
+        await page.focus(field);
+        expect((await state(page)).expanded, 'false', 'nothing to show now: the popup stays closed');
+      });
+      await check('at most five choices are remembered and one is not remembered twice', async () => {
+        await page.evaluate(() => { localStorage.removeItem('mat-search-recent'); });
+        for (const q of ['a1', 'a2', 'a3', 'a4', 'a5', 'a6', 'a3']) {
+          await page.focus(field);
+          await page.fill(field, q);
+          await page.evaluate(() => document.querySelector('#site-search').form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })));
+        }
+        expect((await recent()).map(e => e.q), ['a3', 'a6', 'a5', 'a4', 'a2'], 'five, the newest first, a3 once');
+      });
+      await ctx.close();
+    }
+
+    // ---- the page of the results
+    {
+      const { ctx, page } = await open(desktopOptions, '/Search?q=a&kind=icon');
+      await check('the page of the results: a kind in pages of twenty with a pager that leads to the next page; the filter has the kinds with counts and a link to all of a kind', async () => {
+        expect(await page.locator('.mat-itemlist .mat-item').count(), 20, 'rows');
+        await Promise.all([page.waitForURL('**/Search?q=a&kind=icon&page=2'), page.click('.mat-pager a[rel="next"]')]);
+        expect(await page.locator('.mat-itemlist .mat-item').count(), 20, 'the second page');
+        await page.goto(BASE + '/Search?q=button', { waitUntil: 'networkidle' });
+        const kinds = await page.$$eval('select[name="kind"] option', os => os.map(o => o.textContent));
+        expectTrue(kinds.length >= 4 && kinds[0] === 'All' && kinds.slice(1).every(k => /^[A-Za-z]+ \(\d+\)$/.test(k)) && kinds.some(k => /^Components \(\d+\)$/.test(k)), 'the kinds: ' + kinds);
+        expectTrue(await page.locator('a:has-text("Show all")').count() > 0, 'a link to all of a kind');
+      });
+      await check('the page of the results shows a text that nothing matches with a way on, and never takes the query for markup', async () => {
+        await page.goto(BASE + '/Search?q=' + encodeURIComponent('<img src=x onerror="window.__pwned=1"> zz'), { waitUntil: 'networkidle' });
+        expect(await page.evaluate(() => window.__pwned), undefined, 'nothing ran');
+        expect(await page.locator('.mat-empty__title').textContent(), 'No results for “<img src=x onerror="window.__pwned=1"> zz”', 'the query is text');
+        expect(await page.locator('.mat-empty img').count(), 0, 'no picture was made of it');
+        expect(await page.locator('.mat-empty a[href="/Search?q=FORM-15"]').count(), 1, 'a rule id to try');
+      });
+      await ctx.close();
+    }
+
+    // ---- a result that is not what it says
+    {
+      const { ctx, page } = await open(desktopOptions, '/Shell');
+      await check('a hostile result is shown as text: no element is made of a title, a line, a heading or a kind, and an address that is not http is no link', async () => {
+        await page.route('**/api/search*', (route) => route.fulfill({
+          status: 200, contentType: 'application/json',
+          body: JSON.stringify({ groups: [{ name: '<b>Heading</b>', items: [
+            { title: '<img src=x onerror="window.__pwned=1">', text: '<script>window.__pwned=2</script>', href: 'javascript:window.__pwned=3', icon: 'x" onload="window.__pwned=4', kind: '<i>kind</i>', id: '"><b>' },
+            { title: 'Plain <b>bold</b> test', text: 'a line', href: '/Rules', icon: 'book', kind: 'rule', id: 'plain' },
+            { title: 'Data link test', text: 'a line', href: 'data:text/html,<script>window.__pwned=5</script>', icon: 'book', kind: 'rule', id: 'data' },
+          ] }] }),
+        }));
+        await typeIn(page, 'test');
+        const facts = await page.evaluate(() => {
+          const panel = document.querySelector('.mat-search__panel');
+          const mine = [...panel.querySelectorAll('.mat-search__option:not(.mat-search__option--all)')];
+          return {
+            made: panel.querySelectorAll('img, script, b, i').length, marks: [...panel.querySelectorAll('mark')].map(m => m.textContent),
+            titles: mine.map(o => o.querySelector('.mat-search__title').textContent), heading: panel.querySelector('.mat-search__heading').textContent,
+            kinds: mine.map(o => (o.querySelector('.mat-search__kind') || { textContent: '' }).textContent), tags: mine.map(o => o.tagName + ':' + (o.getAttribute('href') || '')),
+            icons: mine.map(o => o.querySelectorAll('.mat-search__icon use').length), pwned: window.__pwned,
+          };
+        });
+        expect([facts.made, facts.pwned], [0, undefined], 'no element was made of the data');
+        expect(facts.titles[0], '<img src=x onerror="window.__pwned=1">', 'the title is its own text');
+        expect(facts.heading, '<b>Heading</b>', 'the heading');
+        expect(facts.kinds[0], '<i>kind</i>', 'the kind');
+        expect(facts.marks, ['test', 'test'], 'the part that matches, in a mark, in the two titles that have it');
+        expect(facts.tags, ['BUTTON:', 'A:/Rules', 'BUTTON:'], 'an address that is not http or https is no link');
+        expect(facts.icons, [0, 1, 1], 'an icon with a name that is no name is left out');
+        // choosing the one without an address does nothing but close the popup
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('Enter');
+        expect(await page.evaluate(() => window.__pwned), undefined, 'choosing it ran nothing');
+        expect(page.url().startsWith(BASE + '/Shell'), true, 'and went nowhere');
+        expect((await state(page)).expanded, 'false', 'the popup is closed');
+        await page.unroute('**/api/search*');
+      });
+      await ctx.close();
+    }
+
+    // ---- the app can take over a choice
+    {
+      const { ctx, page } = await open(desktopOptions, '/Shell');
+      await check('mat:search-select can be cancelled by the app (nothing is followed), and local items work through the API without case and accents', async () => {
+        await page.evaluate(() => {
+          const holder = document.createElement('div');
+          holder.innerHTML = '<div class="mat-field"><label class="mat-label" for="probe-local">Local</label><div class="mat-search" id="probe-wrap" data-autocomplete><input class="mat-search__input" type="search" id="probe-local" name="q"></div></div>';
+          document.querySelector('.mat-page').appendChild(holder);
+          MatUi.refresh(holder);
+          MatUi.search.setItems('probe-local', [{ name: 'Pages', items: [{ title: 'Häkchen setzen', text: 'a page', href: '/Rules', icon: 'check', kind: 'page', keywords: 'checkbox' }, { title: 'Other thing', href: '/Rules', icon: 'book' }] }]);
+          window.__chosen = [];
+          document.getElementById('probe-wrap').addEventListener('mat:search-select', (e) => { window.__chosen.push(e.detail.item && e.detail.item.title); e.preventDefault(); });
+        });
+        await page.focus('#probe-local');
+        await page.keyboard.type('hakchen', { delay: 12 });
+        // the answer for the whole text, not for the first letter (local items answer at once, but a busy page can run the last timer late)
+        await page.waitForFunction(() => { const s = document.getElementById('probe-wrap')._matSearch; return s.q === 'hakchen' && s.mode === 'results'; });
+        const titles = await page.$$eval('#probe-wrap .mat-search__option .mat-search__title', ts => ts.map(t => t.textContent));
+        expect(titles, ['Häkchen setzen'], 'local items are found without accents and case');
+        await page.keyboard.press('ArrowDown');
+        await page.keyboard.press('Enter');
+        expect(await page.evaluate(() => window.__chosen), ['Häkchen setzen'], 'the app was told');
+        expect(page.url().startsWith(BASE + '/Shell'), true, 'and nothing was followed');
+        expect(await page.evaluate(() => MatUi.search.value('probe-local')), 'hakchen', 'the text stays');
+        await page.evaluate(() => { MatUi.search.clear('probe-local'); });
+        expect(await page.inputValue('#probe-local'), '', 'clear');
+        await page.evaluate(() => document.getElementById('probe-wrap').closest('.mat-field').remove());
+      });
+      await ctx.close();
+    }
+
+    // ---- the popup in light and in dark: contrast of what is written in it
+    {
+      const { ctx, page } = await open(desktopOptions, '/Shell');
+      await check('in light and in dark every text of the popup reaches AA on the surface it is on, also in the active row; the active row is a tint, not a fill', async () => {
+        for (const theme of ['light', 'dark']) {
+          await page.evaluate((t) => document.documentElement.setAttribute('data-theme', t), theme);
+          await typeIn(page, 'button');
+          await page.keyboard.press('ArrowDown');
+          const plain = '.mat-search__option:not(.is-active):not(.mat-search__option--all)';
+          const rows = [
+            ['the heading', await seen(page, '.mat-search__heading')], ['the title', await seen(page, plain + ' .mat-search__title')], ['the line', await seen(page, plain + ' .mat-search__desc')],
+            ['the kind', await seen(page, plain + ' .mat-search__kind')], ['the matching part', await seen(page, plain + ' .mat-search__hit')], ['the row All results', await seen(page, '.mat-search__option--all')],
+            ['the title of the active row', await seen(page, '.is-active .mat-search__title')], ['the line of the active row', await seen(page, '.is-active .mat-search__desc')],
+            ['the matching part of the active row', await seen(page, '.is-active .mat-search__hit')], ['the typed text', await seen(page, '#site-search')],
+          ];
+          for (const [name, c] of rows) {
+            expectTrue(c, `${theme}: ${name} is not there`);
+            const ratio = contrastOf(c.fg, c.bg);
+            expectTrue(ratio >= 4.5, `${theme}: ${name} has ${ratio.toFixed(2)}:1 (${c.fg} on ${c.bg})`);
+          }
+          const tint = await page.evaluate(() => { const a = getComputedStyle(document.querySelector('.mat-search__option.is-active')); const p = getComputedStyle(document.querySelector('.mat-search__panel')); return { active: a.backgroundColor, panel: p.backgroundColor, bar: a.borderLeftWidth }; });
+          expectTrue(tint.active !== tint.panel && tint.bar === '0px', theme + ': the active row is a tint of its own, with no bar at one side: ' + JSON.stringify(tint));
+        }
+        await page.evaluate(() => document.documentElement.removeAttribute('data-theme'));
+      });
+      await ctx.close();
+    }
+
+    // ---- a phone
+    {
+      const { ctx, page } = await open(phoneOptions, '/Rules');
+      await page.evaluate(installTouchHit);
+      await check('on a phone the header bar has an icon button instead of the field; it opens a full-screen panel with the field on top and an X at the top right', async () => {
+        const closed = await page.evaluate(() => {
+          const open = document.querySelector('.mat-search__open');
+          const input = document.querySelector('#site-search');
+          const r = open.getBoundingClientRect();
+          return { open: open.checkVisibility(), input: input.checkVisibility(), w: Math.round(r.width), h: Math.round(r.height), label: open.getAttribute('aria-label'), full: document.querySelector('.mat-search').classList.contains('is-full') };
+        });
+        expect([closed.open, closed.input, closed.label, closed.full], [true, false, 'Search', false], 'closed: an icon button');
+        expectTrue(closed.w >= 44 && closed.h >= 44, `the button is ${closed.w} x ${closed.h}`);
+        await page.tap('.mat-search__open');
+        await page.waitForFunction(() => document.activeElement && document.activeElement.id === 'site-search');
+        const open = await page.evaluate(() => {
+          const wrap = document.querySelector('.mat-search');
+          const r = wrap.getBoundingClientRect();
+          const close = document.querySelector('.mat-search__close').getBoundingClientRect();
+          const input = document.querySelector('#site-search').getBoundingClientRect();
+          return { full: wrap.classList.contains('is-full'), rect: [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)], vw: window.innerWidth, vh: window.innerHeight, closeRight: Math.round(close.right), closeTop: Math.round(close.top), inputTop: Math.round(input.top), lock: document.documentElement.classList.contains('mat-lock'), fontSize: getComputedStyle(document.querySelector('#site-search')).fontSize };
+        });
+        expectTrue(open.full && open.lock, 'the panel is open and the page is locked');
+        expect(open.rect, [0, 0, open.vw, open.vh], 'the panel is the whole screen');
+        expectTrue(open.closeRight >= open.vw - 16 && open.closeTop < 60 && open.inputTop < 70, 'the X is at the top right, the field on top: ' + JSON.stringify(open));
+        expect(open.fontSize, '16px', 'the type is 16 px, so that a phone does not zoom');
+        await page.keyboard.type('farbe', { delay: 15 });
+        await page.waitForFunction(() => document.querySelectorAll('.mat-search__option').length > 3);
+        const shown = await page.evaluate(() => {
+          const panel = document.querySelector('.mat-search__panel').getBoundingClientRect();
+          const bar = document.querySelector('.mat-search__bar').getBoundingClientRect();
+          return { top: Math.round(panel.top - bar.bottom), bottom: Math.round(panel.bottom), vh: window.innerHeight, right: Math.round(panel.right), vw: window.innerWidth, position: getComputedStyle(document.querySelector('.mat-search__panel')).position, overflow: getComputedStyle(document.querySelector('.mat-search__panel')).overflowY };
+        });
+        expectTrue(shown.top >= 0 && shown.top <= 4 && shown.bottom <= shown.vh + 1 && shown.right <= shown.vw + 1 && shown.position === 'static' && shown.overflow === 'auto', 'the suggestions fill the screen below the field: ' + JSON.stringify(shown));
+      });
+      await check('on a phone the X, the clear button, the icon button and the rows of the popup are targets of 44 px', async () => {
+        const measure = (selector, limit) => page.evaluate(({ selector, limit }) => [...document.querySelectorAll(selector)].filter(e => e.checkVisibility({ checkVisibilityCSS: true })).slice(0, limit).map(el => { const h = window.__touchHit(el, 44); return h ? { w: Math.round(h.w), h: Math.round(h.h), covered: h.covered || '' } : null; }), { selector, limit });
+        for (const [selector, limit] of [['.mat-search__close', 1], ['.mat-search__clear', 1], ['.mat-search__option', 5]]) {
+          const list = await measure(selector, limit);
+          expectTrue(list.length > 0, 'no element matches ' + selector);
+          list.forEach((h, i) => expectTrue(h && !h.covered && h.w >= 43.5 && h.h >= 43.5, `${selector} no. ${i + 1} is ${h ? h.w + ' x ' + h.h + (h.covered ? ', covered by ' + h.covered : '') : 'not on show'}`));
+        }
+        await page.tap('.mat-search__close');
+        const list = await page.evaluate(() => { const h = window.__touchHit(document.querySelector('.mat-search__open'), 44); return { w: Math.round(h.w), h: Math.round(h.h) }; });
+        expectTrue(list.w >= 43.5 && list.h >= 43.5, 'the icon button: ' + JSON.stringify(list));
+      });
+      await check('the X closes the panel, the page is unlocked and the focus is back on the button; Escape does the same, and a tap on a suggestion leads to its page', async () => {
+        const closed = await page.evaluate(() => ({ full: document.querySelector('.mat-search').classList.contains('is-full'), lock: document.documentElement.classList.contains('mat-lock'), focus: document.activeElement.className, text: document.querySelector('#site-search').value }));
+        expectTrue(!closed.full && !closed.lock && closed.focus.includes('mat-search__open'), 'after the X: ' + JSON.stringify(closed));
+        expect(closed.text, 'farbe', 'the text is kept');
+        await page.tap('.mat-search__open');
+        await page.waitForFunction(() => document.querySelector('.mat-search').classList.contains('is-full'));
+        await page.keyboard.press('Escape');
+        expect(await page.evaluate(() => document.querySelector('.mat-search').classList.contains('is-full')), false, 'Escape closes it');
+        await page.tap('.mat-search__open');
+        await page.keyboard.press('Control+a');
+        await page.keyboard.type('FORM-15', { delay: 15 });
+        await asked(page, 'FORM-15');
+        await Promise.all([page.waitForURL('**/Rules/Detail?id=FORM-15'), page.tap('.mat-search__option')]);
+        expect(await page.locator('h1').first().textContent(), 'Pickers', 'the page of the rule');
+        expect(await page.evaluate(() => document.querySelector('.mat-search').classList.contains('is-full')), false, 'the panel is not open on the new page');
+      });
+      await check('on a phone a search of a page (not the header bar) opens the same full-screen panel when it is focused, and a finger does not get the keyboard back after the X', async () => {
+        await page.evaluate(() => {
+          const holder = document.createElement('div');
+          holder.innerHTML = '<div class="mat-field"><label class="mat-label" for="probe-phone">Phone</label><div class="mat-search" id="probe-phone-wrap" data-autocomplete data-items=\'[{"name":"A","items":[{"title":"Alpha one","href":"/Rules","icon":"book"}]}]\'><input class="mat-search__input" type="search" id="probe-phone" name="q"></div></div>';
+          document.querySelector('.mat-page').appendChild(holder);
+          MatUi.refresh(holder);
+        });
+        await page.tap('#probe-phone');
+        await page.waitForFunction(() => document.getElementById('probe-phone-wrap').classList.contains('is-full'));
+        const rect = await page.evaluate(() => { const r = document.getElementById('probe-phone-wrap').getBoundingClientRect(); return [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height), window.innerWidth, window.innerHeight]; });
+        expect(rect, [0, 0, rect[4], rect[5], rect[4], rect[5]], 'a field of the page is the whole screen too');
+        await page.tap('#probe-phone-wrap .mat-search__close');
+        expect(await page.evaluate(() => document.getElementById('probe-phone-wrap').classList.contains('is-full')), false, 'closed');
+        expect(await page.evaluate(() => document.activeElement === document.getElementById('probe-phone')), false, 'no keyboard');
+        await page.evaluate(() => document.getElementById('probe-phone-wrap').closest('.mat-field').remove());
+      });
+      await ctx.close();
+    }
   }
 
   // ---------------------------------------------------------------------------------------------------- the end

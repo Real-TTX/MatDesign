@@ -52,6 +52,7 @@ public static partial class ComponentProperties
         new("check", "Checkbox and radio button", ["choices", "checks"]),
         new("nav", "Menu item", ["navmenu"]),
         new("topbar", "Header bar", ["topbar"]),
+        new("search", "Search field", ["search", "topbar"]),
     ];
 
     [GeneratedRegex(@"^[ \t]*/\*[ \t]*@prop[ \t]+([a-z][a-z0-9]*)[ \t]*\|[ \t]*(--mat-[a-z0-9-]+)[ \t]*\|[ \t]*([a-z]+)[ \t]*\|[ \t]*([^|]+?)[ \t]*\|[ \t]*([^|]+?)[ \t]*\*/[ \t]*$", RegexOptions.Multiline)]

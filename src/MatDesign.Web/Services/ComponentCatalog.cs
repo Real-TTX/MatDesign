@@ -1204,7 +1204,7 @@ public static class ComponentCatalog
     private static readonly string[] Order =
     [
         "buttons", "button-group", "dropdown", "button-row",
-        "fields", "input-types", "selects", "checks", "choices", "range", "slider", "number-stepper", "input-groups", "special-inputs", "rich-select", "checkbox-select", "tag-input", "date-picker", "time-picker", "colour-picker", "code-input", "rating", "floating-labels", "form-layout", "form-grid", "validation",
+        "fields", "input-types", "selects", "checks", "choices", "range", "slider", "number-stepper", "input-groups", "special-inputs", "rich-select", "checkbox-select", "tag-input", "search", "date-picker", "time-picker", "colour-picker", "code-input", "rating", "floating-labels", "form-layout", "form-grid", "validation",
         "toolbar", "table", "table-groups", "pager", "gallery",
         "typography", "cards", "list-group", "accordion", "carousel", "avatars", "stat", "pills", "kv", "meter", "empty", "code",
         "tabs", "menu", "breadcrumb", "topbar", "steps", "navmenu", "switcher", "toc", "footer",
@@ -1229,12 +1229,13 @@ public static class ComponentCatalog
         .. RatingComponents.All,
         .. TreeComponents.All,
         .. UploadComponents.All,
+        .. SearchComponents.All,
     ]);
 
     /// <summary>A component with the examples that other files add to it.</summary>
     private static ComponentDoc Extend(ComponentDoc doc)
     {
-        var more = ContentComponents.Extensions.Where(e => e.Id == doc.Id).ToList();
+        var more = ContentComponents.Extensions.Concat(SearchComponents.Extensions).Where(e => e.Id == doc.Id).ToList();
         return more.Count == 0
             ? doc
             : doc with
