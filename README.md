@@ -64,7 +64,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   the component outlined
 - **Layout** (twelve columns, breakpoints) and **utility classes**, the **page patterns**, the **foundations**
   (colour, type, space, motion, 112 icons)
-- A **builder** that checks an accent colour, a **palette check** for the 22 apps and an **audit** of how close
+- A **builder** that checks an accent colour, a **palette check** for the 24 apps and an **audit** of how close
   each app is to the rules
 
 **The Studio**
@@ -413,7 +413,7 @@ docs/                  ARCHITECTURE.md, ADOPTING.md, STUDIO.md, PLATFORM.md
 
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) records the decisions, [docs/ADOPTING.md](docs/ADOPTING.md) is the
 checklist for an app, [docs/STUDIO.md](docs/STUDIO.md) describes the Studio, [docs/PLATFORM.md](docs/PLATFORM.md) is the platform
-contract of the family (what every app offers besides its pages, and the sign-in through MatIdentity).
+contract of the family (what every app offers besides its pages, the sign-in through MatIdentity and the mail through MatSMTP).
 
 The site is in **English**; the apps keep the language of their own interface. The audit is a static scan of the other
 repositories (a snapshot in `src/MatDesign.Web/Data/audit.json`): it finds what is written in the files and cannot tell

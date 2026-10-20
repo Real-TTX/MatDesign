@@ -133,7 +133,7 @@ An app that defines no `pages` gets one page `overview` with all tiles and all a
 **`configure`:** the **rudimentary** settings: what someone has to set to make the app work, and nothing else; the app's own settings pages stay the place for everything.
 Rule of thumb: at most ten fields. A field: `key`, `label`, `type` (`text`, `number`, `bool`, `select`, `url`, `email`, `secret`), optional `required`, `options` (for `select`),
 `min` / `max` (number, or length of a text), `pattern` (a regular expression the server checks too), `placeholder`, `hint`, `showIf` (shown only when all named fields have these
-values: dependent fields only when they are needed), `restart: true` (takes effect after a restart).
+values: dependent fields only when they are needed), `restart: true` (takes effect after a restart), `fixed: true` (set from outside the app, for instance by the `MATSMTP_*` variables: shown, never changed; `PUT /api/configure` refuses it).
 
 **`actions`:** `id` (camelCase), `label`, `icon`, `kind` = `link` (open `url`, relative to the app) or `post` (`POST /api/actions/{id}`), optional `confirm` (asked first) and `danger`.
 
@@ -255,6 +255,31 @@ Optional for every app, on as soon as the environment names MatIdentity:
 - Mattiverse sets these variables when it installs or updates an app and MatIdentity is installed (the catalog entry says `identity: {}`, and `platform: true` for `MAT_API_KEY`); the client is created in MatIdentity through its API at the same time (`managedBy: mattiverse`, client id = the slug of the app) and removed with the app. When MatIdentity comes or goes, Mattiverse connects or disconnects every such app and redeploys it. Mattiverse signs in through MatIdentity itself too (client `mattiverse`).
 - The local sign-in stays at `?local=1` (`1` or `true`) in every app.
 
+## Mail through MatSMTP
+
+**MatSMTP** is the mail relay of the family and one of the engines of Mattiverse (Mattiverse `docs/ENGINES.md`): the apps hand their mail to it on the shared Docker network
+and it delivers it (directly or through a smarthost). Optional for every app that sends mail, on as soon as the environment names MatSMTP:
+
+| Variable | Meaning |
+|---|---|
+| `MATSMTP_HOST` | the address of MatSMTP, inside Docker its container name (`mattiverse-matsmtp-matsmtp`). Set = all mail of the app goes through MatSMTP |
+| `MATSMTP_PORT` | its SMTP port (`2025` in the container) |
+| `MATSMTP_USERNAME` | the relay user of this app in MatSMTP (SMTP AUTH) |
+| `MATSMTP_PASSWORD` | its password (a secret) |
+| `MATSMTP_FROM` | the sender address the app uses for all its mail (`matsplit@example.com`) |
+| `MATSMTP_TLS` | `none`, `starttls` or `tls`: how the connection is secured. Inside the Docker network a relay user may authenticate without TLS (`none`) |
+
+- **Set:** the app sends **all** its mail (notifications, invitations, password resets, reports) through MatSMTP with these values and the sender `MATSMTP_FROM`. Its own SMTP
+  settings (server, port, user, password, sender, encryption) are **shown as fixed**: on its settings page as values that cannot be edited, with one sentence that says where the
+  mail goes and that Mattiverse sets it (never the password), and in its `/api/configure` as fields with `fixed: true` (a consumer draws them without letting them be changed;
+  `PUT /api/configure` answers `400` for such a key). What the app stored before stays stored and comes back when the variables are gone.
+- **Unset:** the app behaves exactly as before: its own SMTP settings, editable.
+- **Mattiverse** sets these variables when it installs or updates an app whose catalog entry says `mail: {}` and MatSMTP is installed: it creates one **relay user per app** in
+  MatSMTP through its API (`managedBy: mattiverse`, id = the slug of the app, allowed sender = `MATSMTP_FROM`), keeps its password and renews it only when it is missing, and removes
+  the user with the app. When MatSMTP comes or goes, Mattiverse connects or disconnects every such app and redeploys it (the variables are then empty).
+- In .NET apps **MatPlatform** reads them (`MatSmtpSettings.From(configuration)`: `IsConfigured`, `Host`, `Port`, `Username`, `Password`, `FromAddress`, `Tls` with
+  `UseStartTls` / `UseTls`) and describes the fixed state (`Describe(language)` for the sentence, `Fix(field, language)` for a field of `/api/configure`).
+
 ## What an app has to do (definition of done)
 
 1. The MatApiDefinition at `/api` and `/api/health`, `/api/state`, `/api/configure`, `/api/actions/{id}` as above; the Docker `HEALTHCHECK` calls `/api/health`.
@@ -263,9 +288,11 @@ Optional for every app, on as soon as the environment names MatIdentity:
 4. Tests: the definition is valid (every key a section names exists, every icon is in the sprite, every `showIf` names a field), the answers of the endpoints (shape, status codes,
    a secret never sent back, `401` without key), the sign-in with and without MatIdentity.
 5. A catalog entry in Mattiverse (`src/Mattiverse.Core/Catalog/apps/<app>.yml`) that passes `MAT_API_KEY` and, when present, the `MATIDENTITY_*` variables.
+6. An app that sends mail reads the `MATSMTP_*` variables (see "Mail through MatSMTP"): set = all its mail through MatSMTP and its own SMTP settings fixed, in its pages and in
+   `/api/configure`; its catalog entry says `mail: {}` and passes the six variables; README and release `docker-compose.yml` name them like the others.
 
 **Shared code.** For .NET apps the endpoints, the key check, the checks of the settings, the validation of the definition and the OIDC wiring come as one package,
-**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 1.1.0), so that an app only describes its pages and supplies its values:
+**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 1.3.0), so that an app only describes its pages and supplies its values:
 `builder.AddMatPlatform<AppPlatform>(AppPlatform.Describe)` (a description with `o.App(...)`, `o.Page(...)`, `o.Tile(...)`, `o.Field(...)`, `o.LinkAction(...)` / `o.PostAction(...)`,
 `o.Role(...)`), the values from the interfaces `IMatPlatformState`, `IMatPlatformConfiguration`, `IMatPlatformActions` and `IMatPlatformHealth`, `.AddMatIdentitySignIn<AppUsers>(...)` with
 `IMatIdentityUsers` for the local user, and `app.MapMatPlatform()`. `MatPlatformValidator` checks a definition in the app's tests (keys of the sections, `showIf`, unique ids,

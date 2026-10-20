@@ -19,6 +19,7 @@ const apps = {
   matcad: { dir: 'Matcad/src/Matcad' },
   matddns: { dir: 'Matddns/src' },
   matgate: { dir: null, note: 'The repository has no UI of its own (Apache Guacamole and a browser farm).' },
+  matsmtp: { dir: null, note: 'New app (2026-10-19), the mail relay: not scanned yet.' },
   matbu: { dir: 'MatBu', layoutFiles: ['wwwroot/index.html'] },
   matarchive: { dir: 'Matarchive/src/Matarchive.Web' },
   matmail: { dir: 'MatMail/src/MatMail' },

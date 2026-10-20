@@ -17,7 +17,7 @@ automation. The browser checks create the administrator when they find none (`ST
 The instance belongs to **one company** (docs/PRODUCT.md): the setup assistant also asks for its name and for the **template** the site starts from, `demo` (the Mat apps as sample data) or `blank`; the site names itself after the company (`IDENT-09`).
 `MATDESIGN_TEMPLATE` / `MATDESIGN_COMPANY` are only for automation, like the password (the browser checks start a blank site with them); an instance without a tenant is the demo.
 
-Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and [docs/ADOPTING.md](docs/ADOPTING.md) for what an app has to do to use MatUi; [docs/PLATFORM.md](docs/PLATFORM.md) is the platform contract of the family (what every app offers besides its pages: `/api`, health, state, actions, the sign-in through MatIdentity).
+Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and [docs/ADOPTING.md](docs/ADOPTING.md) for what an app has to do to use MatUi; [docs/PLATFORM.md](docs/PLATFORM.md) is the platform contract of the family (what every app offers besides its pages: `/api`, health, state, actions, the sign-in through MatIdentity, the mail through MatSMTP).
 
 ## Build / run / test
 
@@ -58,6 +58,7 @@ src/MatPlatform            the platform contract for .NET apps (docs/PLATFORM.md
   MatPlatformValues.cs       what the app implements: IMatPlatformState, IMatPlatformConfiguration, IMatPlatformActions, IMatPlatformHealth; MatPlatformCall
   MatPlatformEndpoints.cs    AddMatPlatform<TApp>, AddMatPlatformValues<TApp>, MapMatPlatform (the endpoints, secrets as {isSet}, 304, 503, 401, 404, 409)
   MatApiAccess.cs            X-Api-Key in constant time or a bearer token of MatIdentity (audience = client id); MatPlatformSettings.cs the MAT_API_KEY / MATIDENTITY_* variables
+  MatSmtpSettings.cs         the six MATSMTP_* variables (mail through MatSMTP): IsConfigured, the TLS mode, Describe (the sentence of the fixed state), Fix (a field with `fixed: true`)
   MatValueChecker.cs         the checks of PUT /api/configure from the definition; MatPlatformValidator.cs the checks of a definition (for the apps' tests)
   MatIdentitySignIn.cs       AddMatIdentitySignIn<TUsers> (OIDC code + PKCE, JWT bearer), IMatIdentityUsers, CompleteSignInAsync, SignOutAtIdentity; MatIdentityBackchannelHandler.cs (MATIDENTITY_INTERNAL_URL)
   MatForwardedProto.cs       behind a TLS proxy the scheme from X-Forwarded-Proto (only the scheme, never the address or host); an IStartupFilter AddMatIdentitySignIn registers (TrustForwardedProto)
