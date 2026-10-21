@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text.Json;
 using MatPlatform;
 using Microsoft.AspNetCore.Authentication;
@@ -12,6 +13,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
+using Microsoft.IdentityModel.Tokens;
 
 namespace MatPlatform.Tests;
 
@@ -118,6 +120,30 @@ public sealed class DemoStore
 
     /// <summary>What <see cref="DemoUsers"/> answers to a person, null: success.</summary>
     public Func<MatIdentityPerson, MatIdentitySignInResult>? SignInAnswer { get; set; }
+
+    /// <summary>What <see cref="DemoSessionUsers"/> was asked to end: subject and sid.</summary>
+    public List<(string? Subject, string? SessionId)> Ended { get; } = [];
+
+    /// <summary>The app fails to end the sessions.</summary>
+    public bool FailEnding { get; set; }
+}
+
+/// <summary>The demo's users with the optional back-channel logout (1.4.0): records what it ends.</summary>
+public sealed class DemoSessionUsers(DemoStore store) : IMatIdentityUsers, IMatIdentitySessions
+{
+    public Task<MatIdentitySignInResult> SignInAsync(MatIdentityPerson person, HttpContext http, CancellationToken ct)
+        => Task.FromResult(store.SignInAnswer?.Invoke(person) ?? MatIdentitySignInResult.Success());
+
+    public Task EndSessionsAsync(string? subject, string? sessionId, CancellationToken ct)
+    {
+        if (store.FailEnding)
+        {
+            throw new InvalidOperationException("The session store is gone.");
+        }
+
+        store.Ended.Add((subject, sessionId));
+        return Task.CompletedTask;
+    }
 }
 
 /// <summary>The demo app's side of the sign-in through MatIdentity: answers what <see cref="DemoStore.SignInAnswer"/> says (default: success).</summary>
@@ -134,15 +160,24 @@ public static class DemoHost
 
     public const string Authority = "http://identity.test";
 
+    /// <summary>The key MatIdentity signs with in the tests (made here, no network); it is in the fixed configuration's keys.</summary>
+    public static readonly SigningCredentials Credentials = NewCredentials("demo-key");
+
+    /// <summary>An RSA key of its own (another identity provider, or a forger).</summary>
+    public static SigningCredentials NewCredentials(string keyId)
+        => new(new RsaSecurityKey(RSA.Create(2048)) { KeyId = keyId }, SecurityAlgorithms.RsaSha256);
+
     /// <param name="signIn">More options of the sign-in, after the demo's own.</param>
     /// <param name="pipeline">Middleware of the app itself, before rate limiter and authentication (for example its own ForwardedHeaders).</param>
+    /// <param name="withSessions">The users class also implements <see cref="IMatIdentitySessions"/> (<see cref="DemoSessionUsers"/>).</param>
     public static async Task<WebApplication> StartAsync(
         bool withKey = true,
         string? authority = null,
         Action<MatPlatformOptions>? configure = null,
         DemoStore? store = null,
         Action<MatIdentitySignInOptions>? signIn = null,
-        Action<WebApplication>? pipeline = null)
+        Action<WebApplication>? pipeline = null,
+        bool withSessions = false)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
         builder.WebHost.UseTestServer();
@@ -156,14 +191,22 @@ public static class DemoHost
 
         var settings = builder.AddMatPlatform<DemoApp>(DemoApp.Describe, configure);
         builder.Services.AddSingleton(store ?? new DemoStore());
-        builder.Services.AddAuthentication("cookie")
-            .AddCookie("cookie")
-            .AddMatIdentitySignIn<DemoUsers>(settings, o =>
-            {
-                o.CookieScheme = "cookie";
-                o.LoginPath = "/login";
-                signIn?.Invoke(o);
-            });
+        void SignInOptions(MatIdentitySignInOptions o)
+        {
+            o.CookieScheme = "cookie";
+            o.LoginPath = "/login";
+            signIn?.Invoke(o);
+        }
+
+        var authentication = builder.Services.AddAuthentication("cookie").AddCookie("cookie");
+        if (withSessions)
+        {
+            authentication.AddMatIdentitySignIn<DemoSessionUsers>(settings, SignInOptions);
+        }
+        else
+        {
+            authentication.AddMatIdentitySignIn<DemoUsers>(settings, SignInOptions);
+        }
         builder.Services.AddAuthorization();
 
         if (authority is not null)
@@ -176,6 +219,7 @@ public static class DemoHost
                 TokenEndpoint = authority + "/connect/token",
                 EndSessionEndpoint = authority + "/connect/logout",
             };
+            configuration.SigningKeys.Add(Credentials.Key);
             builder.Services.PostConfigure<OpenIdConnectOptions>(MatIdentitySignIn.Scheme, options =>
             {
                 options.Configuration = configuration;

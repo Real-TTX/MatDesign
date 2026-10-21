@@ -61,7 +61,8 @@ src/MatPlatform            the platform contract for .NET apps (docs/PLATFORM.md
   MatApiAccess.cs            X-Api-Key in constant time or a bearer token of MatIdentity (audience = client id); MatPlatformSettings.cs the MAT_API_KEY / MATIDENTITY_* variables
   MatSmtpSettings.cs         the six MATSMTP_* variables (mail through MatSMTP): IsConfigured, the TLS mode, Describe (the sentence of the fixed state), Fix (a field with `fixed: true`)
   MatValueChecker.cs         the checks of PUT /api/configure from the definition; MatPlatformValidator.cs the checks of a definition (for the apps' tests)
-  MatIdentitySignIn.cs       AddMatIdentitySignIn<TUsers> (OIDC code + PKCE, JWT bearer), IMatIdentityUsers, CompleteSignInAsync, SignOutAtIdentity; MatIdentityBackchannelHandler.cs (MATIDENTITY_INTERNAL_URL)
+  MatIdentitySignIn.cs       AddMatIdentitySignIn<TUsers> (OIDC code + PKCE, JWT bearer), IMatIdentityUsers, IMatIdentitySessions (optional), CompleteSignInAsync, SignOutAtIdentity, MapMatIdentityBackchannelLogout (POST /signout-backchannel, 501 without IMatIdentitySessions); MatIdentityBackchannelHandler.cs (MATIDENTITY_INTERNAL_URL: the server-to-server calls, not the logout)
+  MatIdentityLogoutToken.cs  the check of a logout token (OIDC Back-Channel Logout 1.0: signature with the handler's keys, typ, iss, aud, iat window, events, sub/sid, no nonce) and the jti replay cache
   MatForwardedProto.cs       behind a TLS proxy the scheme from X-Forwarded-Proto (only the scheme, never the address or host); an IStartupFilter AddMatIdentitySignIn registers (TrustForwardedProto)
   MatIdentityPendingLink.cs  an account that matches by address is linked only after its password: the pending link (protected cookie, 10 minutes), LinkRequired sends to ?local=1&link=1
   MatPlatformInfo.cs         the version (= MatPlatformVersion in MatPlatform.csproj, a test holds them equal)
@@ -139,7 +140,7 @@ tests/e2e                  run.js: the behaviour in a real browser against a run
   Pages/Studio/Releases/WhiteLabel  the white label page (CODE-09): prefix and name with live validation (wwwroot/js/whitelabel.js), before and after, the trial build, save and reset; Studio/WhiteLabelBuild.cs (WhiteLabelStore; WhiteLabelBuild.Apply renames the files of a release, the JSON and the archive, writes the hash of the copy and runs the checks), Studio/WhiteLabelEndpoints.cs (POST .../WhiteLabel/rename: the renamer as an address, for the browser checks)
   wwwroot/css/site.css       the few documentation-only styles (doc-*); wwwroot/js/doc.js the "Try it" buttons, where the code is shown and the group-in-a-page panels
 tests/MatDesign.Tests      unit tests + the site in memory
-tests/MatPlatform.Tests    MatPlatform: a demo app in memory (TestServer, DemoApp.cs), the endpoints, the sign-in, the validator, the backchannel, the package files
+tests/MatPlatform.Tests    MatPlatform: a demo app in memory (TestServer, DemoApp.cs), the endpoints, the sign-in, the validator, the backchannel handler, the back-channel logout (test keys made in memory), the package files
 tests/e2e                  run.js: the behaviour in a real browser against a running site; white-label.js: the white label build (the Studio page, the renamed toolkit behind the renamer of the site, the look of the original and the copy compared pixel by pixel)
 tools/                     icons.js, iconlib.js (+ iconlib/: the sources of the icon library), audit.js, bump.js (makes a version of the toolkit), matui-check.js (checks an app's copy of it),
                            matplatform-copy.js (+ .ps1: copies MatPlatform into an app)

@@ -166,6 +166,15 @@ public sealed class PendingLinkTests : IAsyncLifetime
     }
 
     [Fact]
+    public void The_link_keeps_the_session_id_of_matidentity()
+    {
+        var http = Context();
+        MatIdentityPendingLink.Store(http, Person() with { SessionId = "sid-1" }, "42");
+
+        Assert.Equal("sid-1", MatIdentityPendingLink.TakeFor(Next(http), "42")!.SessionId);
+    }
+
+    [Fact]
     public void Link_required_needs_an_account_and_is_not_a_success()
     {
         var result = MatIdentitySignInResult.LinkRequired("42");

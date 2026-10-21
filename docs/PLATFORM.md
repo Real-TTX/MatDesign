@@ -248,6 +248,22 @@ Optional for every app, on as soon as the environment names MatIdentity:
   app follows it at every sign-in) or *Managed by the app* (no claim `role`; the app gives rights itself, as before). An app reads `role` when it is there and keeps its
   own role management when it is not.
 - **Sign-out** ends the session in the app and at MatIdentity (end-session endpoint).
+- **Back-channel logout** (OpenID Connect Back-Channel Logout 1.0): when a person signs out at MatIdentity, or an administrator ends their sessions there (a disabled account,
+  a new password, "sign out everywhere"), MatIdentity posts a **logout token** to every app the person was signed in to, server to server, and the app ends its own sessions
+  too, so nobody stays signed in to an app after leaving MatIdentity.
+  - The app answers **`POST /signout-backchannel`** (form field `logout_token`, anonymous, no anti-forgery), only when `MATIDENTITY_AUTHORITY` is set.
+  - It checks the token: a JWT signed with a key of MatIdentity's discovery document (read through `MATIDENTITY_INTERNAL_URL` like the other server-to-server calls), `typ`
+    `logout+jwt`, `iss` = the issuer of the document, `aud` contains the client id, `iat` at most five minutes old and not in the future, `exp` when present, `events` with the
+    member `http://schemas.openid.net/event/backchannel-logout` (an object), `sub` and/or `sid`, **no** `nonce`, and a `jti` it has not seen in that time (a replay cache).
+  - Then it ends the sessions: with `sid` the local session(s) that started with that MatIdentity session (the app keeps the claim `sid` of the ID token with its session at
+    sign-in; an app that keeps none ends every session of the `sub`); with `sub` alone (MatIdentity sends that when the person is signed out everywhere) every session of the
+    person. A subject or session the app does not know is no error.
+  - Answers: `200` done; `400` with `{"error": "invalid_request", "error_description": "..."}` for a token that is not valid or a failure to end the sessions; `501` for an app
+    that cannot end sessions yet; every answer `Cache-Control: no-store`. MatIdentity tries once more after a failure and writes it to its log.
+  - The address is registered at MatIdentity as the client's `backchannelLogoutUri`; Mattiverse passes the app's **internal** address on the shared Docker network
+    (`http://<container>:<port>/signout-backchannel`), since MatIdentity calls it directly.
+  - In .NET apps MatPlatform maps the endpoint and checks the token (`MapMatPlatform`, 1.4.0); the app implements `IMatIdentitySessions.EndSessionsAsync(subject, sessionId)`
+    and stores `MatIdentityPerson.SessionId` with its session.
 - **Behind a TLS proxy** (Matcad) the scheme comes from `X-Forwarded-Proto`: the first value `https` makes the request https, so the `redirect_uri` is `https://.../signin-oidc` and the
   correlation cookies are `Secure` (only the scheme; the client address and the host stay the app's own policy; `X-Forwarded-Prefix` is not needed, every app is served at the root of its address).
   In .NET apps MatPlatform does this when MatIdentity is on (`MatIdentitySignInOptions.TrustForwardedProto`, default on).
@@ -286,16 +302,16 @@ and it delivers it (directly or through a smarthost). Optional for every app tha
 2. `MAT_API_KEY` and the `MATIDENTITY_*` variables, documented in the README's settings table and in the release `docker-compose.yml` as comments (not required).
 3. MatUi as the toolkit ([ADOPTING.md](ADOPTING.md)), the app in the registry here (`AppRegistry.cs`, `matui.apps.css`) with its accent and port.
 4. Tests: the definition is valid (every key a section names exists, every icon is in the sprite, every `showIf` names a field), the answers of the endpoints (shape, status codes,
-   a secret never sent back, `401` without key), the sign-in with and without MatIdentity.
+   a secret never sent back, `401` without key), the sign-in with and without MatIdentity, the back-channel logout (a valid logout token ends the session, `404` without MatIdentity).
 5. A catalog entry in Mattiverse (`src/Mattiverse.Core/Catalog/apps/<app>.yml`) that passes `MAT_API_KEY` and, when present, the `MATIDENTITY_*` variables.
 6. An app that sends mail reads the `MATSMTP_*` variables (see "Mail through MatSMTP"): set = all its mail through MatSMTP and its own SMTP settings fixed, in its pages and in
    `/api/configure`; its catalog entry says `mail: {}` and passes the six variables; README and release `docker-compose.yml` name them like the others.
 
 **Shared code.** For .NET apps the endpoints, the key check, the checks of the settings, the validation of the definition and the OIDC wiring come as one package,
-**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 1.3.0), so that an app only describes its pages and supplies its values:
+**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 1.4.0), so that an app only describes its pages and supplies its values:
 `builder.AddMatPlatform<AppPlatform>(AppPlatform.Describe)` (a description with `o.App(...)`, `o.Page(...)`, `o.Tile(...)`, `o.Field(...)`, `o.LinkAction(...)` / `o.PostAction(...)`,
 `o.Role(...)`), the values from the interfaces `IMatPlatformState`, `IMatPlatformConfiguration`, `IMatPlatformActions` and `IMatPlatformHealth`, `.AddMatIdentitySignIn<AppUsers>(...)` with
-`IMatIdentityUsers` for the local user, and `app.MapMatPlatform()`. `MatPlatformValidator` checks a definition in the app's tests (keys of the sections, `showIf`, unique ids,
+`IMatIdentityUsers` for the local user (and `IMatIdentitySessions` for the back-channel logout), and `app.MapMatPlatform()`. `MatPlatformValidator` checks a definition in the app's tests (keys of the sections, `showIf`, unique ids,
 kinds, icons of the sprite). Like MatUi it is **copied** (`CODE-03`): `node tools/matplatform-copy.js <web project of the app>` writes the files to `<app>/MatPlatform/` with a
 first line that names the version, and `matplatform.version`. The first app on it is MatSplit. The same types (`MatApiDefinition` and its records, `MatApiDefinition.Json`) read
 a definition on the consumer's side; Mattiverse (`PlatformClient`) and MatIdentity still carry their own copies. Not there yet: a JSON Schema of the MatApiDefinition and a page

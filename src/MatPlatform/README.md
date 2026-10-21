@@ -5,7 +5,7 @@ builder for it, the endpoints (`/api`, `/api/health`, `/api/state[/{key}]`, `GET
 MatIdentity's tokens, the checks of the settings, a validator of a definition for the app's tests and the sign-in through MatIdentity (OpenID Connect).
 An app only **describes** itself and **supplies its values**.
 
-Version **1.3.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
+Version **1.4.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
 The first app on it is MatSplit (`src/MatSplit.Web/Platform/SplitPlatform.cs` there is the example to read).
 
 ## How an app gets it: a copy (CODE-03)
@@ -16,7 +16,7 @@ Like MatUi, an app **copies** the package; nothing is loaded from elsewhere and 
 node tools/matplatform-copy.js <folder of the app's web project>      # or: ./tools/matplatform-copy.ps1 -Target <folder>
 ```
 
-It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.3.0 – a copy from MatDesign, do not edit here`, and
+It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.4.0 – a copy from MatDesign, do not edit here`, and
 `matplatform.version` (the version, then the SHA-256 of each file as copied, with LF line ends). Copying again updates the files and removes the ones the package no longer has.
 **Never change the copy in the app**: change `src/MatPlatform` here (with a test in `tests/MatPlatform.Tests`), raise the version and copy it to the apps.
 
@@ -35,7 +35,8 @@ MatPlatformSettings builder.AddMatPlatform<TApp>(Action<MatPlatformBuilder> desc
 MatPlatformSettings builder.AddMatPlatform(Action<MatPlatformBuilder> describe, Action<MatPlatformOptions>? configure = null)
 IServiceCollection  services.AddMatPlatformValues<TApp>()
 AuthenticationBuilder authentication.AddMatIdentitySignIn<TUsers>(MatPlatformSettings settings, Action<MatIdentitySignInOptions>? configure = null) // TUsers : IMatIdentityUsers
-RouteGroupBuilder   app.MapMatPlatform()      // returns the protected group /api, for the app's own /api/provides/...
+RouteGroupBuilder   app.MapMatPlatform()      // returns the protected group /api, for the app's own /api/provides/...; with MatIdentity on also POST /signout-backchannel
+IEndpointConventionBuilder? app.MapMatIdentityBackchannelLogout() // what MapMatPlatform calls (once; null when MatIdentity is off or it is mapped already)
 
 // What the app implements (each optional; one class may implement all four)
 interface IMatPlatformState         { Task<IReadOnlyDictionary<string, MatStateValue>> GetStateAsync(MatPlatformCall call, CancellationToken ct); }
@@ -44,13 +45,20 @@ interface IMatPlatformConfiguration { Task<IReadOnlyDictionary<string, object?>>
 interface IMatPlatformActions       { Task<MatActionResult?> RunActionAsync(string id, MatPlatformCall call, CancellationToken ct); }
 interface IMatPlatformHealth        { Task<IReadOnlyList<MatHealthCheck>> CheckHealthAsync(MatPlatformCall call, CancellationToken ct); }
 interface IMatIdentityUsers         { Task<MatIdentitySignInResult> SignInAsync(MatIdentityPerson person, HttpContext http, CancellationToken ct); }
+interface IMatIdentitySessions      { Task EndSessionsAsync(string? subject, string? sessionId, CancellationToken ct); } // 1.4.0, optional: the back-channel logout
 
 record MatPlatformCall(HttpContext Http, string Language, string Caller) { string T(string de, string en); }
-record MatIdentityPerson(string Subject, string? Email, string? Name, string? PreferredUserName, string? Role, string? IdToken, ClaimsPrincipal Principal);
+record MatIdentityPerson(string Subject, string? Email, string? Name, string? PreferredUserName, string? Role, string? IdToken, ClaimsPrincipal Principal)
+    { string? SessionId { init; } }  // 1.4.0: the claim sid of the ID token
 record MatIdentitySignInResult(bool Succeeded, string? Error) { string? LinkAccount; static Success(); static Refused(string error); static LinkRequired(string account); }
 record MatIdentityPendingLink(string Subject, string? Email, string? Name, string? PreferredUserName, string? Role, string? IdToken, string Account)
-    { static Store(HttpContext, MatIdentityPerson, string account); static Peek(HttpContext); static Take(HttpContext); static TakeFor(HttpContext, string account); static Clear(HttpContext);
+    { string? SessionId { init; }; static Store(HttpContext, MatIdentityPerson, string account); static Peek(HttpContext); static Take(HttpContext); static TakeFor(HttpContext, string account); static Clear(HttpContext);
       CookieName, Purpose, Lifetime (10 minutes) }
+record MatIdentityLogoutToken(string? Subject, string? SessionId)
+    { EventType, TokenType ("logout+jwt"), ClockSkew (1 minute);
+      static Task<MatIdentityLogoutTokenCheck> ValidateAsync(string? token, OpenIdConnectOptions oidc, string clientId, TimeSpan maxAge, MatIdentityLogoutReplayCache replay, DateTimeOffset now, CancellationToken ct) }
+record MatIdentityLogoutTokenCheck(MatIdentityLogoutToken? Token, string? Error) { bool IsValid; }
+class MatIdentityLogoutReplayCache { bool TryRemember(string id, DateTimeOffset until, DateTimeOffset now); int Count; } // a singleton AddMatIdentitySignIn registers
 
 // The description (called at startup and for each GET /api with the caller's language)
 MatPlatformBuilder: Language, T(de, en), App(id, name, description, version, icon?, accent?, home = "/"),
@@ -60,7 +68,9 @@ MatPlatformBuilder: Language, T(de, en), App(id, name, description, version, ico
     static Build(describe, language = "de", auth?) -> MatApiDefinition
 MatSection.Tiles(keys...), MatSection.Form(label?, keys...), MatSection.Actions(ids...), MatSection.Link(label, url); MatField.When((key, value)...) for showIf
 MatPlatformOptions: DefaultLanguage = "de", CheckValues = true, AnonymousPermitPerMinute = 120, LanguageOf(http)
-MatIdentitySignInOptions: CookieScheme, LoginPath = "/Account/Login", SignedOutRedirect (?signedOut=1), FailedRedirect (?local=1&ssoError=1), LinkRedirect (?local=1&link=1), AccessDeniedPath = "/AccessDenied", RoleClaim = "role", Scopes, TrustForwardedProto = true
+MatIdentitySignInOptions: CookieScheme, LoginPath = "/Account/Login", SignedOutRedirect (?signedOut=1), FailedRedirect (?local=1&ssoError=1), LinkRedirect (?local=1&link=1), AccessDeniedPath = "/AccessDenied", RoleClaim = "role", Scopes, TrustForwardedProto = true,
+    BackchannelLogoutPath = "/signout-backchannel", LogoutTokenMaxAge = 5 minutes
+MatIdentitySignIn.BackchannelLogoutPath ("/signout-backchannel")
 MatForwardedProto.Apply(HttpContext), MatForwardedProto.IsHttps(header): the scheme from X-Forwarded-Proto (registered by AddMatIdentitySignIn, see below)
 MatIdentitySignIn.Scheme ("MatIdentity"), MatIdentitySignIn.SignOutAtIdentity(HttpContext http, string idToken) -> SignOutResult
 MatIdentitySignIn.CompleteSignInAsync(HttpContext http, MatIdentityPerson person, string? returnUrl) -> where the browser goes (what /signin-oidc does; for the apps' tests)
@@ -86,6 +96,34 @@ changes nothing. Without it the app sees `http`, the `redirect_uri` is `http://.
 browser drops them and the sign-in fails. **Only the scheme**: `RemoteIpAddress` (`X-Forwarded-For`, which guards the rate limits) and `Host` stay the app's own
 ForwardedHeaders policy, and that policy, before or after it, comes to the same scheme. `X-Forwarded-Prefix` is not read: Matcad serves every app at the root of its own
 address. `MatIdentitySignInOptions.TrustForwardedProto = false` turns it off.
+
+## Back-channel logout (1.4.0)
+
+When a person signs out at MatIdentity, or an administrator ends their sessions there, MatIdentity posts a signed **logout token** to the app (OpenID Connect Back-Channel
+Logout 1.0, docs/PLATFORM.md "Sign-in with MatIdentity"). With MatIdentity on, `MapMatPlatform` maps **`POST /signout-backchannel`** (`BackchannelLogoutPath`; anonymous, no
+anti-forgery, nothing without `MATIDENTITY_AUTHORITY`: `404`) and checks the token with `MatIdentityLogoutToken.ValidateAsync`: the signature with the keys of the discovery
+document of the OpenID Connect handler (through `MATIDENTITY_INTERNAL_URL` too; the keys are read again once for an unknown key), `typ` `logout+jwt`, `iss` = the issuer, `aud`
+contains the client id, `iat` within `LogoutTokenMaxAge` (five minutes) and one minute of clock skew, `exp` when present, `events` with the back-channel event, `sub` or `sid`,
+no `nonce`, a `jti` not seen before (`MatIdentityLogoutReplayCache`, in memory). Then it calls the app:
+
+```csharp
+// The class of IMatIdentityUsers implements it too (AddMatIdentitySignIn registers it), or register your own IMatIdentitySessions.
+public async Task EndSessionsAsync(string? subject, string? sessionId, CancellationToken ct)
+{
+    // sessionId set: end the session(s) that started with that sid (an app that keeps no sid: every session of the subject).
+    // subject alone: the person was signed out everywhere, end every session of the local user with that external subject.
+    // Unknown subject or sid: nothing to do (no error). Write it to the activity log.
+}
+```
+
+Answers: `200`; `400` (`{"error": "invalid_request", "error_description": ...}`) for an invalid token or when `EndSessionsAsync` throws (MatIdentity tries once more); **`501`
+when the app has no `IMatIdentitySessions`** (the token is not even read; the app's session then lasts until it expires, as before 1.4.0); always `Cache-Control: no-store`.
+
+**How to end a cookie session**: a cookie cannot be deleted from a server-to-server call, so the app remembers what ended and rejects it at the next request. At sign-in keep
+`person.SessionId` (the claim `sid`) and the subject as claims of the app's cookie (and the `sid` of a pending link, `MatIdentityPendingLink.SessionId`, when it is linked). In
+`EndSessionsAsync` either store the ended `sid` (with a time, kept as long as a cookie can live) or set a "signed out at" time on the local user for `sub` alone; the cookie's
+`OnValidatePrincipal` then calls `RejectPrincipal()` and signs out when the cookie's `sid` is ended or it was issued before the user's "signed out at". An app with
+server-side sessions (a session table) deletes the rows instead. Either way it must survive the number of app instances it runs (one, in the family) and, ideally, a restart.
 
 ## Mail through MatSMTP (1.3.0)
 
@@ -154,7 +192,7 @@ What the app stored for its own server stays stored and is used again when the v
 7. **Docker**: `HEALTHCHECK ... CMD curl -fsS http://127.0.0.1:<port>/api/health || exit 1` (200 for `ok` and `degraded`, 503 for `down`; a degraded app is not restarted).
 8. **README**: the settings table gets `MAT_API_KEY`, `MATIDENTITY_AUTHORITY`, `MATIDENTITY_CLIENT_ID` (default: the app id), `MATIDENTITY_CLIENT_SECRET`, `MATIDENTITY_INTERNAL_URL`;
    a section on the platform API (the endpoints and what the tiles, fields and actions are) and on the sign-in through MatIdentity (`?local=1`, redirect address `/signin-oidc`,
-   signed-out address `/signout-callback-oidc`).
+   signed-out address `/signout-callback-oidc`, back-channel logout `/signout-backchannel`).
 9. **Release `docker-compose.yml`**: the same variables as comments, none of them required:
    ```yaml
    # MAT_API_KEY: ""                    # the key of /api/* (Mattiverse sets it)
@@ -166,6 +204,11 @@ What the app stored for its own server stays stored and is used again when the v
 10. The Mattiverse catalog entry (`platform: true`, `identity: {}`, and `mail: {}` for an app that sends mail), see docs/PLATFORM.md "What an app has to do".
 11. **Mail** (an app that sends any): `MatSmtpSettings` as in "Mail through MatSMTP" above, the six `MATSMTP_*` variables in the README's settings table and as comments in the
     release `docker-compose.yml`, and tests that the SMTP fields are fixed with the variables and editable without them.
+12. **Back-channel logout** (1.4.0, see "Back-channel logout" above): keep `MatIdentityPerson.SessionId` (and `MatIdentityPendingLink.SessionId` when linking) with the session,
+    implement `IMatIdentitySessions.EndSessionsAsync` (on the users class, or registered on its own) so that the next request of an ended session is signed out, and test it:
+    a logout token signed with a test key that is in the fixed `OpenIdConnectConfiguration.SigningKeys` (see `tests/MatPlatform.Tests/BackchannelLogoutTests.cs`) answers `200` and
+    the session's next request lands on the sign-in page; `sub` alone ends every session of the person; without `MATIDENTITY_AUTHORITY` the path is `404`. Nothing to configure:
+    Mattiverse registers `http://<container>:<port>/signout-backchannel` as the client's `backchannelLogoutUri` in MatIdentity for every app with `identity: {}`.
 
 ## Changing the package
 
