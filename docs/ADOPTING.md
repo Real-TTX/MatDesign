@@ -128,7 +128,7 @@ that words them differently, changes any of them with an attribute on `<html>`; 
 | `data-dlg-ok`, `data-dlg-cancel`, `data-dlg-close`, `data-dlg-confirm`, `data-dlg-notice`, `data-dlg-input` | The buttons and titles of `MatUi.confirm`, `alert`, `prompt` and `data-confirm`, and the X of a dialog or a toast. English when absent: set them on a page that is not in English. |
 | `data-msg-required`, `data-msg-type`, `data-msg-pattern`, `data-msg-range` | The messages of a form (`FORM-05`); each can also be set on one field. |
 | `data-copied` | The tip after *Copy*. |
-| `data-locale`, `data-week-start` | The language of the dates in the pickers (default `lang`) and the first day of the week (0 Sunday to 6, default 1). |
+| `data-locale`, `data-week-start` | The language of the dates in the pickers (default `lang`) and the first day of the week (0 Sunday to 6, default 1). A date field inside an element with its own `lang` (a German document in an English page), or with `data-locale` on its wrapper, writes its value in that language; its panel stays in the language of the page. |
 | `data-up-<name>` | One text of the file upload (`FORM-21`), in lower case after `data-up-`: `data-up-refusedtype="{0}: Format nicht erlaubt."`. The names are the keys of `UP_TEXT` in `matui.js`; `{0}`, `{1}` and `{2}` are the file name, the allowed types and the sizes. |
 | `data-sr-<name>` | One text of the search with suggestions (`FORM-23`), in lower case after `data-sr-`: `data-sr-error="Die Suche ist gerade nicht erreichbar."`. The names are the keys of `SRCH_TEXT` in `matui.js`; `{0}` is the text that was typed or the key to press. |
 
