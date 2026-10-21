@@ -309,6 +309,21 @@ function seenAt(page, selector) {
           chevron: getComputedStyle(row.querySelector('.mat-table__primary'), '::after').content,
         };
       });
+      // a long value in a cell wraps before the chevron: the chevron keeps a column of its own on the right of the whole card
+      const clear = await page.evaluate(() => {
+        const row = document.querySelector('.mat-table tbody tr:has(> td.mat-table__primary)');
+        const cell = row.querySelector('td:not(.mat-table__primary):not(.mat-table__cell-actions)');
+        cell.textContent = 'a long value of a cell that does not fit into one line of the card on a phone';
+        const after = getComputedStyle(row.querySelector('.mat-table__primary'), '::after');
+        const chevronLeft = row.getBoundingClientRect().right - parseFloat(after.right) - parseFloat(after.width) - 2;
+        return { right: Math.max(...[...row.children].map(c => c.getBoundingClientRect().right)), chevronLeft };
+      });
+      expectTrue(clear.right <= clear.chevronLeft, 'a cell runs into the chevron: ' + JSON.stringify(clear));
+      const kept = await page.evaluate(() => {
+        const cell = document.querySelector('.mat-table tbody tr:has(> td.mat-table__primary) > td.mat-table__keep-label');
+        return { position: getComputedStyle(cell, '::before').position, clip: getComputedStyle(cell, '::before').clipPath, text: getComputedStyle(cell, '::before').content };
+      });
+      expectTrue(kept.position === 'static' && kept.clip === 'none' && kept.text === '"Size"', 'a mat-table__keep-label cell shows its label in the card: ' + JSON.stringify(kept));
       expect(card.display, 'flex', 'the card');
       expectTrue(card.primaryFirst, 'the name is the title');
       expectTrue(card.actionsLast, 'the actions are below the other cells');

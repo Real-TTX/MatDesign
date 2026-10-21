@@ -59,7 +59,7 @@
                                 <td class="mat-table__primary" data-label="Name"><div class="mat-table__name"><a href="@Model.Query("form")">@s.Name</a></div></td>
                                 <td data-label="Category">@s.Detail</td>
                                 <td data-label="Status"><span class="mat-pill mat-pill--@s.Tone">@s.Status</span></td>
-                                <td data-label="Size" class="mat-num mat-mono">@PreviewModel.Size(s.Size)</td>
+                                <td data-label="Size" class="mat-num mat-mono mat-table__keep-label">@PreviewModel.Size(s.Size)</td>
                                 <td data-label="Date" class="mat-mono">@s.Date.ToString("yyyy-MM-dd")</td>
                                 <td class="mat-table__cell-actions">
                                     <div class="mat-table__actions">

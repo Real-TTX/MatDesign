@@ -12,6 +12,13 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+### Added
+
+- A cell of a record card (`TABLE-02`) that says nothing without the name of its column (an open sum, the date of the next run) keeps its label: `mat-table__keep-label` on the `<td>` writes its `data-label` in front of the value in the line of the card ("Open 399.69 €"). The other cells stay without labels. Nothing changes for an app that does not set the class.
+
+### Fixed
+
+- A record card (`TABLE-02`) keeps a column of its own on the right for its chevron: before, only the title left room for it, and a long value of another cell (a pill followed by a link) ran under the chevron. The whole card has the room as padding now. Nothing to do for an app but copy the files.
 
 ## [0.6.0] - 2026-10-21
 ### Added

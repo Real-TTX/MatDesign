@@ -124,6 +124,9 @@ public partial class TableGroupsTests
         Assert.Contains(row + " > td:not(.mat-table__primary) :is(a[href], button, input, select, textarea, label, summary) {\n    position: relative; z-index: 1;", Css);
         // the actions are a row of their own, an icon button shows its text
         Assert.Contains(row + " > td.mat-table__cell-actions { order: 1; flex: 1 1 100%;", Css);
+        Assert.Contains(".mat-table > tbody:not(.mat-group) > tr:has(> td.mat-table__primary a[href]):not(:has(> td.mat-table__select)) { padding-right: calc(var(--mat-table-pad-x, var(--mat-space-4)) + var(--mat-space-6)); }", Css);
+        // a cell that says nothing without its column keeps its label
+        Assert.Contains(row + " > td.mat-table__keep-label::before {\n    position: static; width: auto; height: auto; overflow: visible; clip-path: none;", Css);
         Assert.Contains(row + " .mat-table__actions .mat-btn--icon[data-tip]::after {\n    content: attr(data-tip); display: inline; position: static;", Css);
         Assert.Contains("is a record card", RuleBook.All.Single(r => r.Id == "TABLE-02").Statement);
     }
