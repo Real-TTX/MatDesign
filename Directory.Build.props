@@ -20,7 +20,7 @@
        Change it with `node tools/bump.js <patch|minor|major>`, not by hand: a unit test holds it equal to the newest released version of CHANGELOG.md.
        (MatDesignMajor/Minor below are the version of the SITE, the container image; they do not tell an app what to update.) -->
   <PropertyGroup>
-    <MatUiVersion>0.6.0</MatUiVersion>
+    <MatUiVersion>0.7.0</MatUiVersion>
   </PropertyGroup>
 
   <PropertyGroup>
