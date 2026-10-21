@@ -492,6 +492,8 @@ button.mat-nav__item:hover { background: var(--mat-surface-3); }
   .mat-app.is-nav-open .mat-nav { transform: none; visibility: visible; transition-delay: 0s; }
   .mat-app.is-nav-open .mat-backdrop { opacity: 1; pointer-events: auto; }
   .mat-burger { display: inline-grid; }
+  /* on a touch screen a sideways swipe at the edge is the app's (the drawer), not the browser's back and forward (a trackpad on a wide screen keeps them) */
+  html { overscroll-behavior-x: none; }
   .mat-topbar { padding-top: var(--mat-safe-top); padding-left: calc(var(--mat-topbar-pad-x, var(--mat-content-pad)) + var(--mat-safe-left)); padding-right: calc(var(--mat-topbar-pad-x, var(--mat-content-pad)) + var(--mat-safe-right)); }
 }
 

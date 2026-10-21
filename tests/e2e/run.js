@@ -371,6 +371,32 @@ function seenAt(page, selector) {
       await page.waitForTimeout(300);
       expect((await state()).open, false, 'open after a click on the backdrop');
     });
+    await check('a swipe from the left edge opens the drawer, a swipe to the left closes it, and a tap at the edge still reaches the burger (MOBILE-02)', async () => {
+      const cdp = await ctx.newCDPSession(page);
+      const swipe = async (x0, x1, y) => {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y }] });
+        for (let i = 1; i <= 8; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + (x1 - x0) * i / 8, y }] }); }
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await page.waitForTimeout(450);
+      };
+      await swipe(4, 220, 420);
+      expect((await state()).open, true, 'open after a swipe from the left edge');
+      await swipe(250, 30, 420);
+      expect((await state()).open, false, 'open after a swipe to the left');
+      await swipe(150, 330, 420);
+      expect((await state()).open, false, 'a swipe that starts in the middle of the page opens the drawer');
+      const html = await page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorX);
+      expect(html, 'none', 'overscroll-behavior-x of html on a phone (the browser\'s sideways back)');
+      const burger = await page.locator('[data-nav-toggle]').first().boundingBox();
+      if (burger.x <= 20) {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: Math.max(2, burger.x + 4), y: burger.y + burger.height / 2 }] });
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+        await page.waitForTimeout(450);
+        expect((await state()).open, true, 'open after a tap on the burger at the edge');
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(300);
+      }
+    });
     await ctx.close();
     const desktop = await open(desktopOptions, '/Preview?app=matmail&view=list');
     await check('on a desktop there is no X and no burger', async () => {

@@ -192,5 +192,6 @@ public static partial class RuleChanges
         Chg("2026-10-20", "IDENT-09", "1748d9b5", "A blank site shows no other word of the family either: the toolkit's own texts are read in the company's words through one map, and a crawl of a blank site finds none of them."),
         Chg("2026-10-21", "TABLE-02", "7534ea04", "A record card on a phone: a row with a primary cell opens from anywhere on the card, the other cells have no labels on the screen, the actions stand below with their text."),
         Chg("2026-10-21", "TABLE-02", "b84585fd", "A cell of a record card whose value says nothing without its column keeps its label (mat-table__keep-label)."),
+        Chg("2026-10-21", "MOBILE-02", "1aa6c933", "A swipe from the left edge opens the drawer and a swipe to the left closes it; the edges of a touch screen are then the app's."),
     ];
 }

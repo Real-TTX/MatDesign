@@ -205,6 +205,22 @@ public partial class ToolkitCssTests
     }
 
     [Fact]
+    public void On_a_phone_a_swipe_from_the_left_edge_opens_the_drawer_and_the_edges_are_the_apps()
+    {
+        // MOBILE-02: the drawer follows the finger; the browser's sideways back and forward do not start at the edges of a touch screen
+        var drawer = Css("shell")[Css("shell").IndexOf("@media (max-width: 900px)", StringComparison.Ordinal)..];
+        Assert.Contains("html { overscroll-behavior-x: none; }", drawer[..drawer.IndexOf("\n}", StringComparison.Ordinal)]);
+        var script = TestPaths.ReadToolkit("js/matui.js");
+        Assert.Contains("var EDGE_OPEN = 32, EDGE_BLOCK = 20, EDGE_DISTANCE = 48;", script);
+        Assert.Matches(@"doc\.addEventListener\('touchstart', function \(e\) \{[\s\S]*?\}, \{ passive: false \}\);", script);
+        Assert.Contains("if (s.side === 'open' && sideways && dx > 0) { setNav(true); return; }", script);
+        Assert.Contains("if (s.side === 'close' && sideways && dx < 0) { setNav(false); return; }", script);
+        // a sliding row does not start where the swipe of the drawer starts
+        Assert.Contains("!(e.pointerType === 'touch' && nearEdge(e.clientX))", script);
+        Assert.Contains("a swipe from the left edge of the screen opens", MatDesign.Core.RuleBook.All.Single(r => r.Id == "MOBILE-02").Statement);
+    }
+
+    [Fact]
     public void On_a_phone_the_drawer_covers_the_top_bar_so_the_logo_stays_visible_and_has_an_X()
     {
         // SHELL-01: the logo is above the items also in the drawer. The top bar (z-index 200) must not hide it.
