@@ -426,6 +426,25 @@ function seenAt(page, selector) {
       await page.keyboard.press('ArrowRight');
       expect(await page.evaluate(() => document.activeElement.id), 'tab-notify', 'focus after ArrowRight');
     });
+    await check('a bar of tabs that is too wide for a phone scrolls sideways only, and the line of the current tab lies on the line of the bar', async () => {
+      const phone = await open(phoneOptions, '/Preview?app=matmail&view=settings');
+      try {
+        // narrow enough that the three tabs do not fit (the CSSOM, not a style attribute)
+        const bar = await phone.page.evaluate(() => {
+          const t = document.querySelector('.mat-tabs');
+          t.style.setProperty('max-width', '180px');
+          const current = t.querySelector('[aria-selected="true"]').getBoundingClientRect();
+          const box = t.getBoundingClientRect();
+          return { up: t.scrollHeight - t.clientHeight, side: t.scrollWidth - t.clientWidth, overflowY: getComputedStyle(t).overflowY, line: Math.round(box.bottom - current.bottom) };
+        });
+        expect(bar.up, 0, 'the bar scrolls up and down by');
+        expectTrue(bar.side > 0, 'the narrow bar does not scroll sideways');
+        expect(bar.overflowY, 'hidden', 'overflow-y of the bar');
+        expect(bar.line, 0, 'the current tab does not reach the line of the bar (px between them)');
+      } finally {
+        await phone.ctx.close();
+      }
+    });
     await check('the theme chosen in the settings (data-theme-set) is applied and the pressed button follows', async () => {
       await page.click('#tab-look');
       await page.click('[data-theme-set="dark"]');
