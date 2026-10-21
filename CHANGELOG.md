@@ -12,6 +12,8 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+
+## [0.8.0] - 2026-10-21
 ### Added
 
 - The drawer menu follows the finger on a phone (below 900 px, `MOBILE-02`): a swipe to the right that starts at the left edge of the screen (the first 32 px) opens it, a swipe to the left closes it. While it is closed, the outer 20 px of a touch screen are the app's: a swipe there no longer goes back (left) or forward (right) in the browser, and a tap there still reaches what lies under the finger; a sliding row does not start at the left edge. Below 900 px `html` has `overscroll-behavior-x: none` (no sideways history gesture of the browser). Nothing to do for an app but copy the files. The back gesture of the system on Android stays the system's; there a swipe that starts a little further in opens the drawer.
