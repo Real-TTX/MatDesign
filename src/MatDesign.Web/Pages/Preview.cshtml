@@ -56,7 +56,7 @@
                         @foreach (var s in Model.Items)
                         {
                             <tr>
-                                <td data-label="Name"><div class="mat-table__name"><span>@s.Name</span></div></td>
+                                <td class="mat-table__primary" data-label="Name"><div class="mat-table__name"><a href="@Model.Query("form")">@s.Name</a></div></td>
                                 <td data-label="Category">@s.Detail</td>
                                 <td data-label="Status"><span class="mat-pill mat-pill--@s.Tone">@s.Status</span></td>
                                 <td data-label="Size" class="mat-num mat-mono">@PreviewModel.Size(s.Size)</td>

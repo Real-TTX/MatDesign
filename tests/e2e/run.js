@@ -283,6 +283,46 @@ function seenAt(page, selector) {
     await ctx.close();
   }
 
+  {
+    const { ctx, page } = await open(phoneOptions, '/Preview?app=matmail&view=list');
+    await check('on a phone a row with a primary cell is a record card: the name as title, no labels, a tap anywhere opens it, the actions below with text', async () => {
+      const card = await page.evaluate(() => {
+        const row = document.querySelector('.mat-table tbody tr:has(> td.mat-table__primary)');
+        const cells = [...row.children];
+        const primary = row.querySelector('.mat-table__primary').getBoundingClientRect();
+        const actions = row.querySelector('.mat-table__cell-actions').getBoundingClientRect();
+        const others = cells.filter(c => !c.matches('.mat-table__primary, .mat-table__cell-actions'));
+        const label = getComputedStyle(others[0], '::before');
+        const r = row.getBoundingClientRect();
+        // a point in the card that is not on the name: what does a tap there hit?
+        const hit = document.elementFromPoint(r.right - 40, others[0].getBoundingClientRect().top + 4);
+        const button = row.querySelector('.mat-table__actions .mat-btn');
+        const b = button.getBoundingClientRect();
+        return {
+          display: getComputedStyle(row).display,
+          primaryFirst: primary.top <= Math.min(...others.map(c => c.getBoundingClientRect().top)),
+          actionsLast: actions.top >= Math.max(...others.map(c => c.getBoundingClientRect().bottom)) - 1,
+          labelWidth: parseFloat(label.width) || 0,
+          hitOpens: !!(hit && hit.closest('a') === row.querySelector('.mat-table__primary a')),
+          actionText: getComputedStyle(button, '::after').content,
+          actionOnTop: document.elementFromPoint(b.x + 6, b.y + b.height / 2)?.closest('.mat-btn') === button,
+          chevron: getComputedStyle(row.querySelector('.mat-table__primary'), '::after').content,
+        };
+      });
+      expect(card.display, 'flex', 'the card');
+      expectTrue(card.primaryFirst, 'the name is the title');
+      expectTrue(card.actionsLast, 'the actions are below the other cells');
+      expectTrue(card.labelWidth <= 1, 'the label of a cell is not seen: ' + card.labelWidth);
+      expectTrue(card.hitOpens, 'a tap on the card beside the name opens the record');
+      expect(card.actionText, '"Edit"', 'the icon button shows its text');
+      expectTrue(card.actionOnTop, 'the action is tapped, not the card');
+      expect(card.chevron, '""', 'the chevron');
+      const wide = await page.evaluate(() => document.documentElement.scrollWidth);
+      expectTrue(wide <= 390, 'the page scrolls sideways: ' + wide);
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the phone drawer
   console.log('\nThe menu on a phone');
   {

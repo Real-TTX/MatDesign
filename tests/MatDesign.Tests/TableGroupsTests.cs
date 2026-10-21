@@ -104,11 +104,28 @@ public partial class TableGroupsTests
     [Fact]
     public void On_a_phone_a_row_with_actions_is_a_card_with_the_name_as_its_title_and_the_actions_beside_it()
     {
-        const string row = ".mat-table > tbody:not(.mat-group) > tr:has(> td.mat-table__cell-actions):not(:has(> td.mat-table__select))";
+        const string row = ".mat-table > tbody:not(.mat-group) > tr:has(> td.mat-table__cell-actions):not(:has(> td.mat-table__select, > td.mat-table__primary))";
         Assert.Contains(row + " {\n    display: grid; grid-template-columns: minmax(0, 1fr) auto;", Css);
         Assert.Contains(row + " > td:first-child::before { content: none; }", Css);
         Assert.Contains(row + " > td.mat-table__cell-actions { grid-column: 2; grid-row: 1; width: auto; padding: 0; }", Css);
         Assert.Contains("its first cell (the name) is the title of the card", RuleBook.All.Single(r => r.Id == "TABLE-02").Statement);
+    }
+
+    [Fact]
+    public void On_a_phone_a_row_with_a_primary_cell_is_a_record_card_that_opens_from_anywhere()
+    {
+        const string row = ".mat-table > tbody:not(.mat-group) > tr:has(> td.mat-table__primary):not(:has(> td.mat-table__select))";
+        // the old card with actions beside the title leaves such a row alone
+        Assert.Contains("tr:has(> td.mat-table__cell-actions):not(:has(> td.mat-table__select, > td.mat-table__primary)) {", Css);
+        Assert.Contains(row + " {\n    position: relative; display: flex; flex-wrap: wrap;", Css);
+        // the labels are for a screen reader only, the link of the title covers the card, the other controls stay above it
+        Assert.Contains(row + " > td::before {\n    position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);", Css);
+        Assert.Contains(row + " > td.mat-table__primary a[href]::after { content: \"\"; position: absolute; inset: 0; }", Css);
+        Assert.Contains(row + " > td:not(.mat-table__primary) :is(a[href], button, input, select, textarea, label, summary) {\n    position: relative; z-index: 1;", Css);
+        // the actions are a row of their own, an icon button shows its text
+        Assert.Contains(row + " > td.mat-table__cell-actions { order: 1; flex: 1 1 100%;", Css);
+        Assert.Contains(row + " .mat-table__actions .mat-btn--icon[data-tip]::after {\n    content: attr(data-tip); display: inline; position: static;", Css);
+        Assert.Contains("is a record card", RuleBook.All.Single(r => r.Id == "TABLE-02").Statement);
     }
 
     [Fact]
