@@ -12,6 +12,8 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+
+## [0.4.0] - 2026-10-21
 ### Added
 
 - The events the script sends are written down (`CODE-13`, docs/VERSIONING.md: events and their `detail` are part of the contract): the header of `matui.js` has an Events block and `docs/ADOPTING.md` a table (section 3b, Events the script sends) with all 23 events: where each is sent, when, its `detail`, whether it bubbles and whether it can be cancelled. Four of them had been sent and named nowhere (`mat:theme`, `mat:accent`, `mat:navset` and `mat:dialog-open`) and are part of the contract now. `mat:theme`, `mat:accent`, `mat:scheme` and `mat:navset` are sent on `<html>` and do not bubble (listen on `document.documentElement`); `mat:dialog-open` is sent on the dialog and bubbles; `mat:theme` and, for a `data-custom-accent`, `mat:accent` are also sent once when the script starts. A unit test holds the table and the header to the code, so an event that is added without a row fails the build. Nothing to do for an app but copy the files.
