@@ -3192,6 +3192,21 @@ function seenAt(page, selector) {
     const valueOf = id => page.$eval(`#${id}`, el => el.value);
     const shown = async id => (await page.textContent(`#${id}-trigger .mat-picker__value`)).replace(/\s+/g, ' ').trim();
 
+    await check('a date field in an element with lang writes its value in that language (a German document in an English page); the page keeps its own', async () => {
+      await page.evaluate(() => {
+        const field = (id, lang) => '<div' + (lang ? ' lang="' + lang + '"' : '') + '><div class="mat-field"><label class="mat-label" for="' + id + '">Date</label>' +
+          '<div class="mat-picker" data-picker="date"><input class="mat-picker__input" id="' + id + '" name="' + id + '" value="2026-10-14" /></div></div></div>';
+        const host = document.createElement('div');
+        host.id = 'pk-lang-host';
+        host.innerHTML = field('pk-lang-de', 'de') + field('pk-lang-page', null);
+        document.querySelector('.mat-page').appendChild(host);
+        window.MatUi.refresh(host);
+      });
+      expect(await shown('pk-lang-de'), '14.10.2026', 'the value in the German element');
+      expect(await shown('pk-lang-page'), '14 Oct 2026', 'the value in the English page');
+      await page.evaluate(() => document.getElementById('pk-lang-host').remove());
+    });
+
     await check('a picker panel is drawn at its place from the first frame on and only fades in (it does not move or grow into place)', async () => {
       for (const id of ['pk-plan', 'pk-date', 'pk-period', 'pk-time', 'pk-colour']) {
         await page.evaluate(sel => document.querySelector(sel).scrollIntoView({ block: 'center' }), `#${id}-trigger`);
