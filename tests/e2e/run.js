@@ -115,6 +115,44 @@ function seenAt(page, selector) {
       expect(['auto', 'scroll'].includes(overflow.nav), true, 'the menu does not scroll on its own');
       expect(['auto', 'scroll'].includes(overflow.main), true, 'the content does not scroll on its own');
     });
+    await check('a wheel over the foot of the menu never scrolls the document, even when something makes it taller than the window (SHELL-07)', async () => {
+      // something taller than the window at the end of body (a popover, a toast, rounding at a zoom): before 0.8.2 the wheel over the user moved the whole app out of the window
+      await page.evaluate(() => {
+        const tall = document.createElement('div');
+        tall.id = 'e2e-tall';
+        tall.style.cssText = 'position:absolute;top:0;left:0;width:10px;height:1400px;pointer-events:none';
+        document.body.appendChild(tall);
+      });
+      const wheelOver = async (selector) => {
+        const box = await page.locator(selector).first().boundingBox();
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        for (let i = 0; i < 4; i++) { await page.mouse.wheel(0, 400); await page.waitForTimeout(100); }
+        await page.waitForTimeout(250);
+      };
+      await wheelOver('.mat-nav__account');
+      expect(await page.evaluate(() => [window.scrollY, document.scrollingElement.scrollTop]), [0, 0], 'the document after a wheel over the account');
+      const canScroll = await page.evaluate(() => { const m = document.querySelector('.mat-main'); return m.scrollHeight > m.clientHeight; });
+      await wheelOver('.mat-main');
+      const after = await page.evaluate(() => ({ main: document.querySelector('.mat-main').scrollTop, page: window.scrollY }));
+      expect(after.page, 0, 'the document after a wheel over the content');
+      if (canScroll) { expectTrue(after.main > 0, 'the content does not scroll under the wheel'); }
+      await page.evaluate(() => { document.getElementById('e2e-tall').remove(); document.querySelector('.mat-main').scrollTop = 0; });
+    });
+    await check('a page without the shell (sign-in) still scrolls', async () => {
+      const { ctx: bare, page: login } = await open(desktopOptions, '/Studio/Login');
+      try {
+        expect(await login.evaluate(() => !!document.querySelector('body > .mat-app')), false, 'the sign-in has the shell');
+        await login.evaluate(() => {
+          const tall = document.createElement('div');
+          tall.style.cssText = 'height:1400px';
+          document.body.appendChild(tall);
+        });
+        await login.mouse.move(640, 400);
+        await login.mouse.wheel(0, 400);
+        await login.waitForTimeout(300);
+        expectTrue(await login.evaluate(() => window.scrollY) > 0, 'the sign-in page does not scroll');
+      } finally { await bare.close(); }
+    });
     await check('the theme button cycles system, light, dark, system and saves the choice', async () => {
       const state = () => page.evaluate(() => ({ attr: document.documentElement.getAttribute('data-theme'), state: document.querySelector('[data-theme-toggle]').getAttribute('data-theme-state') }));
       expect((await state()).state, 'system', 'start');
