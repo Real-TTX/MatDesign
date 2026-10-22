@@ -484,7 +484,7 @@ public static class RuleBook
             "Every page is designed and checked at 390 px wide, not only at desktop width. Nothing scrolls sideways.",
             RuleLevel.Must, Owner),
         new("MOBILE-02", "MOBILE", "What changes below 900 px",
-            "The menu becomes a drawer behind a burger button in the top bar, which a swipe from the left edge of the screen opens and a swipe to the left closes (the edges of a touch screen are then the app's, not the browser's back and forward); the breadcrumb shows its last two items; two- and three-column grids become one column; secondary table columns can be hidden (`mat-hide-sm`).",
+            "The menu becomes a drawer behind a burger button in the top bar, which a swipe from the left edge of the screen opens and a swipe to the left closes (the edges of a touch screen are then the app's, not the browser's back and forward); the breadcrumb shows its last two items; two- and three-column grids become one column (a grid of key figures, mat-stat, keeps two down to 340 px: a figure is short); secondary table columns can be hidden (`mat-hide-sm`).",
             RuleLevel.Must, Design),
         new("MOBILE-03", "MOBILE", "Dialogs and tables",
             "Dialogs are full screen (DIALOG-03), tables become cards (TABLE-02).",

@@ -13,6 +13,18 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-22
+### Fixed
+
+- A key-and-value list in a narrow card has room for its values again (`mat-kv`): 0.9.0 gave every label a `min-width` of 200 px, so in a card of 250 px (a side panel, a two-column grid on a tablet) the value got 33 px and broke after every few letters. The label column is now `minmax(min(200px, 40%), max-content)` and the value column `minmax(40%, 1fr)`: 200 px in a normal list as before, 40 % of a narrow one, growing with a long label while the value keeps at least 40 % (a longer label still wraps). Nothing to do for an app but copy the files.
+- The busy ring of a button (`.mat-btn.is-loading`) takes the colour that stands on the button: the colour on the accent on a primary button, the colour on the danger colour on a solid danger button, the danger text colour on a danger button and the muted text colour on every other (secondary, ghost). It was the colour on the accent everywhere, so on a secondary button it was white on white and the button looked dead while it worked. An app that set `--mat-on-accent` on its light buttons for this can drop those lines.
+- A table that fills a card no longer draws a doubled edge: a `.mat-table-wrap` straight under a `.mat-card` (or alone in the body of a `.mat-card--flush`) drops its own border, radius, shadow and background - the card is its frame - and its last row keeps inside the card's round corners. Nothing to do for an app.
+- A visually hidden element far down a long page no longer makes the document taller (`SHELL-07`): `.mat-main` is `position: relative`, so a `.mat-sr-only` caption or a table head hidden on a phone is placed inside the content, not against the document. Since 0.9.0 the taller document could not be scrolled by hand, but focusing such an element (or searching the page) still scrolled it and slid the whole app out of the window - measured in an app: a hidden table caption moved it by 1227 px. Menus, pickers and dialogs are `position: fixed` and are not affected. One browser check more in run.js.
+
+### Changed
+
+- A grid of key figures keeps two columns on a phone (`MOBILE-02`): a `.mat-grid` whose items are `.mat-stat`, or cards whose body is a `.mat-stat`, has two columns below 600 px and one only below 340 px. Before, `mat-grid--2/3/4` went to one column, and a row of key figures became a long column of mostly empty cards. Nothing to do for an app; a grid that should stay one column on a phone is not a grid of figures.
+
 ## [0.9.0] - 2026-10-22
 ### Added
 

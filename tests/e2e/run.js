@@ -138,6 +138,42 @@ function seenAt(page, selector) {
       if (canScroll) { expectTrue(after.main > 0, 'the content does not scroll under the wheel'); }
       await page.evaluate(() => { document.getElementById('e2e-tall').remove(); document.querySelector('.mat-main').scrollTop = 0; });
     });
+    await check('a visually hidden element far down the content stays inside the content and does not make the document taller (SHELL-07)', async () => {
+      // a caption (mat-sr-only) or a table head hidden on a phone, at the end of a long page: before 0.8.3 it was placed against the document
+      await page.evaluate(() => {
+        const main = document.querySelector('.mat-main');
+        const spacer = document.createElement('div');
+        spacer.id = 'e2e-spacer';
+        spacer.style.cssText = 'height:2400px';
+        const hidden = document.createElement('button');
+        hidden.id = 'e2e-hidden';
+        hidden.className = 'mat-sr-only';
+        hidden.textContent = 'hidden';
+        main.append(spacer, hidden);
+      });
+      const taller = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
+      expectTrue(taller <= 1, `the document is ${taller}px taller than the window`);
+      await page.evaluate(() => document.getElementById('e2e-hidden').focus());
+      await page.waitForTimeout(100);
+      expect(await page.evaluate(() => [window.scrollY, document.scrollingElement.scrollTop]), [0, 0], 'the document after focusing a hidden element far down');
+      await page.evaluate(() => { document.getElementById('e2e-spacer').remove(); document.getElementById('e2e-hidden').remove(); document.querySelector('.mat-main').scrollTop = 0; });
+    });
+    await check('a key-and-value list keeps room for its values in a narrow card and a 200 px label column in a normal one (mat-kv)', async () => {
+      const cols = await page.evaluate(() => {
+        const box = document.createElement('div');
+        box.innerHTML = '<div style="width:260px"><dl class="mat-kv" id="e2e-kv-narrow"><dt>Heartbeat interval</dt><dd>30 s</dd></dl></div>'
+          + '<div style="width:700px"><dl class="mat-kv" id="e2e-kv-wide"><dt>Mode</dt><dd>Primary</dd></dl>'
+          + '<dl class="mat-kv" id="e2e-kv-long"><dt>com.docker.compose.project.working_dir</dt><dd>/srv/stack</dd></dl></div>';
+        document.querySelector('.mat-main').prepend(box);
+        const widths = (id) => getComputedStyle(document.getElementById(id)).gridTemplateColumns.split(' ').map(parseFloat);
+        const result = { narrow: widths('e2e-kv-narrow'), wide: widths('e2e-kv-wide'), long: widths('e2e-kv-long') };
+        box.remove();
+        return result;
+      });
+      expectTrue(cols.narrow[1] >= 0.4 * 260 - 1, `the value in a 260 px list has ${cols.narrow[1]} px`);
+      expect(Math.round(cols.wide[0]), 200, 'the label column of a normal list');
+      expectTrue(cols.long[0] > 200 && cols.long[1] >= 0.4 * 700 - 1, `a long label: ${cols.long.join(' / ')}`);
+    });
     await check('a page without the shell (sign-in) still scrolls', async () => {
       const { ctx: bare, page: login } = await open(desktopOptions, '/Studio/Login');
       try {
