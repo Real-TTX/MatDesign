@@ -63,7 +63,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
 - **Every group in a real page**: the page of a sample app next to the components, on a desktop or a phone,
   the component outlined
 - **Layout** (twelve columns, breakpoints) and **utility classes**, the **page patterns**, the **foundations**
-  (colour, type, space, motion, 112 icons)
+  (colour, type, space, motion, 113 icons)
 - A **builder** that checks an accent colour, a **palette check** for the 24 apps and an **audit** of how close
   each app is to the rules
 

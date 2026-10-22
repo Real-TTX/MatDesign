@@ -364,7 +364,7 @@ public sealed partial class TemplateSiteTests : IClassFixture<WebApplicationFact
         {
             var html = await Html(client, url);
             var text = Regex.Replace(Sprite().Replace(html, string.Empty), @"<[^>]*>", " ");
-            foreach (var needle in new[] { "MatDesign", "Mat apps", "Mat family", "Mat app ", "MatMail", "Mattiverse", "MatPaper", "Matdo", "data-app=\"mat" })
+            foreach (var needle in new[] { "MatDesign", "Mat apps", "Mat family", "Mat app ", "MatMail", "Mattiverse", "MatPaper", "MatDo", "Matdo", "data-app=\"mat" })
             {
                 // an app of the family named in the text of a frame or a link is the visible sign of the demo
                 if ((needle.StartsWith("data-app") ? html : text).Contains(needle, StringComparison.Ordinal)) { problems.Add($"{url}: says {needle}"); }

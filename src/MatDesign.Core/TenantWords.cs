@@ -96,7 +96,10 @@ public sealed partial class TenantWords
         new(WordScope.Changelog, "a new app, MatSMTP (the mail relay of the family)", "a new app of the family (the mail relay)", "The changelog names the app that needed the new colour."),
         new(WordScope.Changelog, "the glyph of the MatMail logo", "the glyph of an app's logo", "The changelog names the app whose logo needed the new icon; with the fallback alone the sentence would have two articles."),
         new(WordScope.Changelog, "the glyph of the MatTrakr logo", "the glyph of an app's logo", "The same sentence for another app."),
-        new(WordScope.Changelog, "like `whale` for MatDock", "like `whale` for another app", "The example of an earlier app that has its own glyph."),
+        new(WordScope.Changelog, "the glyph of the MatDo logo", "the glyph of an app's logo", "The same sentence for another app."),
+        new(WordScope.Changelog, "The colour of MatDo:", "The colour of an app of the family:", "The changelog names the app whose colour changed."),
+        new(WordScope.Changelog, "The registry of this site writes the name MatDo and draws its logo with `list-checks`. MatDo takes it", "The registry of this site draws the app's logo with `list-checks`. The app takes it", "The changelog names the app, its name and when it takes the colour."),
+        new(WordScope.Changelog, "like `whale` for MatDock","like `whale` for another app", "The example of an earlier app that has its own glyph."),
     ];
 
     /// <summary>The sources of a rule that name the documentation an app of the family was written from, and what a company reads instead.</summary>

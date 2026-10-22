@@ -12,6 +12,13 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+### Added
+
+- A new icon in the sprite, `list-checks` (two checks, each with a line beside it): the glyph of the MatDo logo, the short checklist of its new app icon (`IDENT-03`, one glyph per app logo, like `whale` for MatDock). `<svg class="mat-icon"><use href="#mat-i-list-checks"></use></svg>`. Nothing to do for an app but copy the files; `check-square` stays.
+
+### Changed
+
+- The colour of MatDo: `[data-app="matdo"]` sets `--mat-app-accent: #d03d33` (it was the purple `#8300bc`), the red of the rewritten task app and of its new logo; white text on it reaches 4.78:1 (AA). The registry of this site writes the name MatDo and draws its logo with `list-checks`. MatDo takes it with its next copy of the toolkit; the other apps have nothing to do but copy the files.
 
 ## [0.8.1] - 2026-10-22
 ### Fixed

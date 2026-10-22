@@ -38,7 +38,7 @@ function expectTrue(value, what) {
 }
 
 // What the site must not say for a company that is not Mat: the name of the demo and the apps of its family, in the text of a page (not in the code of an example).
-const MAT_WORDS = ['MatDesign', 'Mat apps', 'Mat family', 'Mat app', 'MatMail', 'Mattiverse', 'MatPaper', 'Matdo', 'Matcad', 'MatDock', 'MatOS', 'MatSplit', 'Matmon', 'Matthix', 'MatCMS', 'MatFile', 'MatSMTP', 'MatIdentity'];
+const MAT_WORDS = ['MatDesign', 'Mat apps', 'Mat family', 'Mat app', 'MatMail', 'Mattiverse', 'MatPaper', 'MatDo', 'Matdo', 'Matcad', 'MatDock', 'MatOS', 'MatSplit', 'Matmon', 'Matthix', 'MatCMS', 'MatFile', 'MatSMTP', 'MatIdentity'];
 
 (async () => {
   const browser = await chromium.launch({ channel: 'msedge', headless: true }).catch(() => chromium.launch({ channel: 'chrome', headless: true }));
