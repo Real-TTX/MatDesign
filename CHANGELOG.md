@@ -19,6 +19,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 ### Changed
 
 - The colour of MatDo: `[data-app="matdo"]` sets `--mat-app-accent: #d03d33` (it was the purple `#8300bc`), the red of the rewritten task app and of its new logo; white text on it reaches 4.78:1 (AA). The registry of this site writes the name MatDo and draws its logo with `list-checks`. MatDo takes it with its next copy of the toolkit; the other apps have nothing to do but copy the files.
+- A long label in a key-and-value list no longer runs over its value (`mat-kv`): the label column was capped at 200 px and the label did not wrap, so a label such as a Docker option name (`com.docker.compose.project.working_dir`) lay on top of the value. The column is now at least 200 px (as it was in effect) and grows with the longest label up to 60 % of the list, and a label that is longer still wraps (`overflow-wrap: anywhere`). Lists with short labels look as before; on a phone the label stays above the value. Nothing to do for an app but copy the files.
 
 ## [0.8.1] - 2026-10-22
 ### Fixed
