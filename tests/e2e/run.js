@@ -10507,6 +10507,28 @@ function seenAt(page, selector) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the icon inside a field
+  // The room for an icon is at the side of the icon: a field whose icon is at its end (the eye of a password) starts like every field, a search field with its icon at the start keeps the room.
+  console.log('\nThe icon inside a field');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components/special-inputs');
+    await check('the password field with its eye at the end has the padding of a plain field at its start, and the search field keeps the room of its icon', async () => {
+      const pads = await page.evaluate(() => {
+        const of = el => { const c = getComputedStyle(el); return { left: parseFloat(c.paddingLeft), right: parseFloat(c.paddingRight) }; };
+        const plain = document.createElement('input');
+        plain.className = 'mat-input';
+        document.body.appendChild(plain);
+        const out = { plain: of(plain), search: of(document.getElementById('spc-search')), password: of(document.getElementById('spc-pw')) };
+        plain.remove();
+        return out;
+      });
+      expect(pads.password.left, pads.plain.left, 'the left padding of the password field');
+      expectTrue(pads.password.right >= 40, 'the eye has room at the end: ' + pads.password.right);
+      expectTrue(pads.search.left >= pads.plain.left + 20, 'the search field keeps the room of its icon: ' + pads.search.left + ' against ' + pads.plain.left);
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the end
   console.log('');
   await check('no script error and no error in the console on any page above', async () => {
