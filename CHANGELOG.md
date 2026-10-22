@@ -12,6 +12,8 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+
+## [0.9.0] - 2026-10-22
 ### Added
 
 - A new icon in the sprite, `list-checks` (two checks, each with a line beside it): the glyph of the MatDo logo, the short checklist of its new app icon (`IDENT-03`, one glyph per app logo, like `whale` for MatDock). `<svg class="mat-icon"><use href="#mat-i-list-checks"></use></svg>`. Nothing to do for an app but copy the files; `check-square` stays.
