@@ -12,6 +12,9 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+### Changed
+
+- A long label in a key-and-value list no longer runs over its value (`mat-kv`): the label column was capped at 200 px and the label did not wrap, so a label such as a Docker option name (`com.docker.compose.project.working_dir`) lay on top of the value. The column is now at least 200 px (as it was in effect) and grows with the longest label up to 60 % of the list, and a label that is longer still wraps (`overflow-wrap: anywhere`). Lists with short labels look as before; on a phone the label stays above the value. Nothing to do for an app but copy the files.
 
 ## [0.8.0] - 2026-10-21
 ### Added

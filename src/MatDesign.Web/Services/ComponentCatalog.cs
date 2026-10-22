@@ -549,8 +549,17 @@ public static class ComponentCatalog
                       </dl>
                     </div></div>
                     """),
+                new("Long keys", """
+                    <div class="mat-card"><div class="mat-card__body">
+                      <dl class="mat-kv">
+                        <dt>Name</dt><dd class="mat-mono">mattiverse_default</dd>
+                        <dt class="mat-mono">com.docker.compose.project.working_dir</dt><dd class="mat-mono">/srv/mattiverse/stacks/matdock</dd>
+                        <dt class="mat-mono">com.docker.network.bridge.enable_ip_masquerade</dt><dd class="mat-mono">true</dd>
+                      </dl>
+                    </div></div>
+                    """),
             ],
-            ["The labels are muted; they sit left on a desktop and above the value on a phone."]),
+            ["The labels are muted; they sit left on a desktop and above the value on a phone.", "The label column is 200 px wide and grows with a longer label (up to 60 % of the list); beyond that the label wraps, it never runs over the value."]),
 
         new("meter", "Meter", "Content", "bar-chart",
             "A bar for a share of something. It has a role and a name, and the width comes from data-value.",
