@@ -2632,6 +2632,42 @@ function seenAt(page, selector) {
     await ctx.close();
   }
   {
+    // A POST form is sent once: before 0.9.2, Enter pressed while a complete code sent itself made two requests, and the second one
+    // reached a sign-in that had already happened (a 400 in an app).
+    const { ctx, page } = await open(desktopOptions, '/Components/code-input');
+    await check('a POST form is sent once: Enter while a complete code sends itself makes one request, a GET form is not held back', async () => {
+      const seen = [];
+      // a submit right after another, without leaving the page: dispatchEvent answers false when it was cancelled
+      const second = await page.evaluate(() => {
+        const make = (method) => { const f = document.createElement('form'); f.setAttribute('method', method); document.body.appendChild(f); return f; };
+        const send = (f) => f.dispatchEvent(new SubmitEvent('submit', { bubbles: true, cancelable: true }));
+        const get = make('get'), post = make('post');
+        const result = { get: [send(get), send(get)], post: [send(post), send(post)] };
+        get.remove();
+        post.remove();
+        return result;
+      });
+      expect(second, { get: [true, true], post: [true, false] }, 'a second submit right after the first (true = sent)');
+      // the case it is for: a code that sends itself, and Enter pressed in the same moment
+      await page.route('**/e2e-sent-once**', route => { seen.push(route.request().method()); setTimeout(() => route.fulfill({ status: 200, contentType: 'text/html', body: '<p>ok</p>' }), 400); });
+      await page.evaluate(() => {
+        const host = document.createElement('div');
+        host.innerHTML = '<form class="mat-form" id="once-form" method="post" action="/e2e-sent-once" novalidate>' +
+          '<div class="mat-field"><label class="mat-label" for="once">Code</label>' +
+          '<div class="mat-otp" data-otp data-length="6" data-chars="digits" data-submit="#once-go"><input class="mat-otp__input" id="once" name="code" required /></div></div>' +
+          '<button type="submit" class="mat-btn mat-btn--primary" id="once-go">Verify</button></form>';
+        document.getElementById('code-input').appendChild(host);
+        MatUi.refresh(host);
+      });
+      await page.click('#once-1');
+      await page.keyboard.type('135790');
+      await page.keyboard.press('Enter');
+      await page.waitForTimeout(1200);
+      expect(seen, ['POST'], 'requests for one code');
+    });
+    await ctx.close();
+  }
+  {
     // markup that is added later, a form that is reset, another language and a code input outside a field
     const { ctx, page } = await open(desktopOptions, '/Components/code-input');
     await check('MatUi.refresh draws the boxes of markup added later: 12 boxes in three groups, in German, that a form reset puts back', async () => {
