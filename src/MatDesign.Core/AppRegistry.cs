@@ -99,7 +99,7 @@ public static class AppRegistry
         new("matmail", "MatMail", "Mail gateway with a web mail client", Productivity, "#475569", "mail-m", "MatMail",
             FoundAccent: "#475569", LogoColor: "#475569", Port: 9933, CssPrefix: "mm-", TokenScheme: "--color-*",
             Notes: "The accent is slate, the colour MatMail started with (user-selectable), and the logo follows it. The app icon is an envelope whose flap is an M, with a seal and a stamp in warm colours."),
-        new("matpaper", "MatPaper", "Document management system", Productivity, "#268538", "folder", "MatPaper",
+        new("matpaper", "MatPaper", "Document management system", Productivity, "#268538", "paperclip", "MatPaper",
             FoundAccent: "#2f9e44", LogoColor: "#268538", Port: 4994, CssPrefix: "mp-", TokenScheme: "--color-*",
             Notes: "Has schemes (standard, paper, contrast, black) and a user-selectable accent. Green darkened for white text."),
         new("matdo", "MatDo", "Tasks and projects", Productivity, "#d03d33", "list-checks", "Matdo",
