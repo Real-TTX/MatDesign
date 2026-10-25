@@ -13,6 +13,11 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-10-25
+### Fixed
+
+- The check for all of a table, a gallery or a list of cards (`data-selectable`, `data-select-all`) acts only on the checks that are **shown and can be chosen**: a row that a filter of the app hid (`hidden` on the row or on an element around it) and a check that is `disabled` (an item in use) are left as they are. It ticked every check before, so with a filter on "select all" also chose the rows nobody saw, and a bulk action (a delete) reached them; a disabled check was ticked too and counted, although a form never sends it. Its own state (ticked, in between) now follows the open checks as well, so it is ticked when everything that is shown is chosen, and the count in the bulk bar is what the form sends: the ticked checks that are not disabled. A list of rows (`.mat-itemlist`) already left hidden rows alone and now skips disabled checks too. Nothing to do for an app but copy the files; an app that unticked the hidden rows after a select-all itself can drop that. One browser check more in run.js.
+
 ## [0.9.2] - 2026-10-23
 ### Fixed
 

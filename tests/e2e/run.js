@@ -2866,6 +2866,31 @@ function seenAt(page, selector) {
       expect(await marked(), [true, true, false], 'after the check for all');
       await page.evaluate(() => document.getElementById('e2e-sel').remove());
     });
+    await check('the check for all leaves a row a filter hid and a disabled check alone, its state follows the rows that are shown, and the count is what a form sends', async () => {
+      await page.evaluate(() => {
+        document.body.insertAdjacentHTML('beforeend', '<div id="e2e-open" data-selectable><div data-bulk-bar hidden><span data-bulk-count>0</span></div>' +
+          '<input type="checkbox" id="e2e-oall" data-select-all aria-label="Select all" /><table><tbody>' +
+          '<tr><td><input type="checkbox" id="e2e-o1" data-select-row aria-label="One" /></td></tr>' +
+          '<tr hidden><td><input type="checkbox" id="e2e-o2" data-select-row aria-label="Two, hidden by a filter" /></td></tr>' +
+          '<tr><td><input type="checkbox" id="e2e-o3" data-select-row disabled aria-label="Three, in use" /></td></tr>' +
+          '<tr><td><input type="checkbox" id="e2e-o4" data-select-row aria-label="Four" /></td></tr></tbody></table></div>');
+      });
+      const state = () => page.evaluate(() => {
+        const all = document.getElementById('e2e-oall');
+        return {
+          rows: ['e2e-o1', 'e2e-o2', 'e2e-o3', 'e2e-o4'].map(id => document.getElementById(id).checked),
+          all: all.checked, between: all.indeterminate, count: document.querySelector('#e2e-open [data-bulk-count]').textContent,
+        };
+      });
+      await page.check('#e2e-oall');
+      expect(await state(), { rows: [true, false, false, true], all: true, between: false, count: '2' }, 'after the check for all (a hidden row, a disabled check)');
+      await page.uncheck('#e2e-o4');
+      expect(await state(), { rows: [true, false, false, false], all: false, between: true, count: '1' }, 'after a shown row was taken away');
+      await page.check('#e2e-oall');
+      await page.uncheck('#e2e-oall');
+      expect(await state(), { rows: [false, false, false, false], all: false, between: false, count: '0' }, 'after the check for all was taken away');
+      await page.evaluate(() => document.getElementById('e2e-open').remove());
+    });
     await check('the width of a progress bar comes from data-value, and a stack shows its parts side by side', async () => {
       const share = await page.$eval('.mat-meter--lg[aria-label="Large"] .mat-meter__fill', el => Math.round(100 * el.getBoundingClientRect().width / el.parentElement.getBoundingClientRect().width));
       expect(share, 75, 'width of the large bar in per cent');

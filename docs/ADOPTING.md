@@ -198,7 +198,8 @@ and to the changelog, and a unit test fails for a script that sends one that is 
   ```
 - A list that acts on several items at once is a `data-selectable` element: a check per item (`data-select-row`, with an `aria-label` that says which item), maybe one that selects all of them (`data-select-all`) and a
   `data-bulk-bar` with a `data-bulk-count` that shows while something is selected. **The item of a ticked check is marked `is-selected`**, a tint behind the whole item (`COLOR-08`): its table row, its `.mat-tile`, or the
-  nearest element with `data-select-item`, so a list of cards, or of rows of your own, needs no script of its own to show what is selected.
+  nearest element with `data-select-item`, so a list of cards, or of rows of your own, needs no script of its own to show what is selected. The check for all acts on the checks that are **shown and not disabled**:
+  a filter of yours hides a row with `hidden` (on the row or on an element around it) and "select all" leaves it alone; an item that cannot be chosen gets a `disabled` check. The count is what the form sends.
 - A value that a native control cannot show well is chosen in a **picker** (`FORM-15`): an option with a picture, a description and tags, a date or a period, a time or a time range, a colour.
   The markup is a wrapper around the real input, which posts one value in a fixed format (`2026-10-10`, `2026-10-10..2026-10-14`, `09:30`, `09:00..17:30`, `#b4235f`, the key of an option);
   the script draws the button and the panel, which is full screen with an X on a phone. The MatCMS `richselect` and date pickers map onto `data-picker="select"` (with `data-multiple` for
