@@ -300,6 +300,19 @@ and to the changelog, and a unit test fails for a script that sends one that is 
     an option (made with `textContent`, never markup). Texts: `data-create-label='Create tag "{0}"'` on the wrapper, and `data-pk-create`, `-creating`, `-created`, `-createfailed`, `-createhint`, `-suggestions`, `-all`,
     `-suggestioncount`, `-suggestionone` on the wrapper or on `<html>` (section 3a).
 
+- A choice from a list that can grow without limit (accounts, customers, instances) is a select whose options come from the **server** (`FORM-25`): `data-source-url` on the wrapper; the endpoint answers
+  `GET <url>?q=<text>&page=<n>` with `{ "items": [ { "value", "name", "description" } ], "more": true, "total": 2400 }`, only with what this user may choose. Put the chosen value into the wrapper as an option so the
+  closed field can name it:
+
+  ```html
+  <div class="mat-picker" data-picker="select" data-source-url="/api/accounts/lookup" data-placeholder="Choose an account">
+    <input class="mat-picker__input" id="account" name="account" value="7" required />
+    <div class="mat-picker__options" hidden>
+      <button type="button" class="mat-picker__option" data-value="7"><span class="mat-picker__text"><span class="mat-picker__name">Anna Albers</span></span></button>
+    </div>
+  </div>
+  ```
+
 - Files that the user sends (documents, photos, attachments) are chosen in a **file upload** (`FORM-21`): `<div class="mat-upload" data-upload>` around the real `<input type="file" class="mat-upload__input">`, which is
   what the form posts and validates (`accept`, `multiple`, `required` are its own; without the script it is the native file field). The script draws a drop zone, the list of the chosen files with a remove button
   each (a thumbnail for an image) and names every refused file with its reason. `data-max-size="10MB"` and `data-max-files="5"` are checked as the files arrive, `data-paste` adds pasted images, `mat-upload--compact`

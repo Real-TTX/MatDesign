@@ -140,6 +140,18 @@ internal static class PickerComponents
                       <span class="mat-hint">Without <code>data-create-url</code> only options that are there can be suggested.</span>
                     </div>
                     """),
+                new("A list too long for the page: searched on the server", $"""
+                    <div class="mat-field">
+                      <label class="mat-label" for="pk-person">Person</label>
+                      <div class="mat-picker" data-picker="select" data-source-url="/api/demo/people" data-clearable data-placeholder="Choose a person">
+                        <input class="mat-picker__input" id="pk-person" name="person" value="u7" />
+                        <div class="mat-picker__options" hidden>
+                    {Plain("u7", "Hannes Albers", "hannes.albers@example.com")}
+                        </div>
+                      </div>
+                      <span class="mat-hint">2400 people; the page carries only the one that is chosen.</span>
+                    </div>
+                    """, "`data-source-url` (FORM-25) asks `GET /api/demo/people?q=<text>&page=<n>` when the panel opens and as the text changes, and takes `{ items: [ { value, name, description } ], more, total }`. Show more appends the next page; the line under the list says how much of how many is shown."),
                 new("Both, in a form: required, with the message at the field", $"""
                     <form class="mat-form" method="get" action="/Components/rich-select" novalidate>
                       <div class="mat-field">

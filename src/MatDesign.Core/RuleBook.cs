@@ -324,6 +324,13 @@ public static class RuleBook
             Do: "<form class=\"mat-form\" novalidate> <div data-validation-summary hidden>...</div> <div class=\"mat-field is-invalid\"> ... <span class=\"mat-error\" aria-live=\"polite\">Please fill in this field.</span> </div> </form>",
             Dont: "a message on every key stroke of a field the user has not left yet, an error that stays after the field is right, a server that draws its errors in another way than the script does",
             Check: "Test (script) and browser"),
+        new("FORM-25", "FORM", "A list too long for the page is searched on the server",
+            "A choice from a list that can grow without limit (accounts, customers, instances, devices) is never a native select or a picker that carries every entry in the page, and never a list of every entry: it is a select picker whose options come from the server (`data-source-url`). The panel always has the search field; the server is asked as the text changes (after a short pause) and when the panel opens, it answers one page of matches and whether there are more, and \"Show more\" fetches the next page. The panel says how much of how many it shows, that it is loading, and when the list could not be loaded, with Try again. The chosen value is written into the page as an option, so the closed field names it without asking the server. An answer that arrives after a newer question is thrown away. The server decides what the user may see: an entry the user may not choose is never in an answer, and the posted value is checked again.",
+            RuleLevel.Must, Design,
+            Why: "A dropdown of a thousand names cannot be read or scrolled, a page that carries every account of a platform tells every user who else is on it, and both get slower with every customer. Searching where the data is keeps the page small and the list private.",
+            Do: "<div class=\"mat-picker\" data-picker=\"select\" data-source-url=\"/api/accounts/lookup\"><input class=\"mat-picker__input\" id=\"owner\" name=\"owner\"><div class=\"mat-picker__options\" hidden></div></div>",
+            Dont: "a <select> of every customer, a dialog that lists every user of the platform to pick one, a client-side filter over a list the page should never have had",
+            Check: "Test (script) and browser"),
 
         // ------------------------------------------------------------------------------------------------- BUTTON
         new("BUTTON-01", "BUTTON", "Four kinds",

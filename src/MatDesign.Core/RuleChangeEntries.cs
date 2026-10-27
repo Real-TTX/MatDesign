@@ -194,5 +194,6 @@ public static partial class RuleChanges
         Chg("2026-10-21", "TABLE-02", "b84585fd", "A cell of a record card whose value says nothing without its column keeps its label (mat-table__keep-label)."),
         Chg("2026-10-21", "MOBILE-02", "1aa6c933", "A swipe from the left edge opens the drawer and a swipe to the left closes it; the edges of a touch screen are then the app's."),
         Chg("2026-10-22", "MOBILE-02", "aa0afcb3", "A grid of key figures (mat-stat) keeps two columns on a phone, one only below 340 px."),
+        Add("2026-10-27", "FORM-25", "69deafcc", "A list that can grow without limit (accounts, customers, instances) is searched and paged on the server, never put into the page whole."),
     ];
 }

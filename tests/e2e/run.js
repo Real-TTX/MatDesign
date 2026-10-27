@@ -5516,6 +5516,45 @@ function seenAt(page, selector) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the select: options from the server (FORM-25)
+  console.log('\nSelect: options from the server');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components#rich-select');
+    const panel = '#pk-person-trigger ~ .mat-picker__panel';
+    const shownOptions = () => page.locator(`${panel} .mat-picker__option:not([hidden])`);
+    const status = async () => (await page.textContent(`${panel} .mat-picker__source .mat-picker__status`)).trim();
+    await check('the closed field names the chosen entry without asking; opening asks page 1 and shows how much of how many', async () => {
+      expect((await page.textContent('#pk-person-trigger .mat-picker__value')).trim(), 'Hannes Albers', 'the closed field');
+      await page.evaluate(() => document.getElementById('pk-person-trigger').scrollIntoView({ block: 'center' }));
+      const [request] = await Promise.all([page.waitForRequest(r => r.url().includes('/api/demo/people')), page.click('#pk-person-trigger')]);
+      expectTrue(/[?&]q=&page=1$/.test(request.url()), 'the first request: ' + request.url());
+      await page.waitForFunction(p => document.querySelectorAll(p + ' .mat-picker__option:not([hidden])').length === 20, panel);
+      expect(await status(), '20 of 2400 shown', 'the status line');
+      expect(await page.getAttribute(`${panel} .mat-picker__option[data-value="u7"]`, 'aria-selected'), 'true', 'the chosen entry is marked in the answer');
+    });
+    await check('Show more appends the next page; a search asks again after a pause and replaces the list; nothing found is said', async () => {
+      await page.click(`${panel} .mat-picker__more`);
+      await page.waitForFunction(p => document.querySelectorAll(p + ' .mat-picker__option:not([hidden])').length === 40, panel);
+      expect(await status(), '40 of 2400 shown', 'after Show more');
+      await page.fill(`${panel} input[type=search]`, 'noah nowak');
+      await page.waitForFunction(p => document.querySelectorAll(p + ' .mat-picker__option:not([hidden])').length === 7, panel);
+      expect((await shownOptions().first().locator('.mat-picker__name').textContent()).trim(), 'Noah Nowak', 'the first hit');
+      expectTrue(await page.locator(`${panel} .mat-picker__more`).isHidden(), 'Show more is offered without more');
+      await page.fill(`${panel} input[type=search]`, 'zzzz');
+      await page.waitForSelector(`${panel} .mat-picker__empty:not([hidden])`);
+      expect(await shownOptions().count(), 0, 'options for "zzzz"');
+    });
+    await check('choosing an entry of the answer sets the real input, names it in the closed field and closes the panel', async () => {
+      await page.fill(`${panel} input[type=search]`, 'Greta Albers');
+      await page.waitForFunction(p => [...document.querySelectorAll(p + ' .mat-picker__option:not([hidden]) .mat-picker__name')].some(n => n.textContent === 'Greta Albers'), panel);
+      await page.click(`${panel} .mat-picker__option:not([hidden]) >> text=Greta Albers`);
+      expect(await page.$eval('#pk-person', el => el.value), 'u6', 'the value');
+      expect((await page.textContent('#pk-person-trigger .mat-picker__value')).trim(), 'Greta Albers', 'the closed field');
+      expectTrue(!(await page.locator(panel).isVisible()), 'the panel is still shown');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- coloured marks (COLOR-10)
   console.log('\nColoured marks');
   {

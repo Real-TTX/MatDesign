@@ -14,6 +14,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 ## [Unreleased]
 ### Added
 
+- A select whose options come from the server (`FORM-25`): `data-source-url="/x"` on a `data-picker="select"` asks `GET /x?q=<text>&page=<n>` when the panel opens and as the search text changes (after 250 ms), takes `{ "items": [ { "value", "name", "description"? } ], "more": bool, "total"?: n }` and offers "Show more" for the next page; `data-source-with="customer"` sends the values of those fields of the form along (a list that depends on another choice); the panel says how much of how many it shows, that it is loading, and when it failed (Try again). The options written into the wrapper are the chosen values, so the closed field names them without a request. For accounts, customers, instances: every list that can grow without limit. New texts `loading`, `loadFailed`, `retry`, `showMore`, `shownOf` (`data-pk-*`). Nothing to do for an app but copy the files; a field that lists every entry today should move to it.
 - The colour of a new app, Schulio (the school registration platform; only its administration runs on MatUi): `[data-app="schulio"]` sets `--mat-app-accent: #2d5fb8` (white text on it, 6.1:1, passes AA). Nothing to do for the other apps but copy the files.
 
 ## [0.9.3] - 2026-10-25

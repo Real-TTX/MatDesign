@@ -98,7 +98,7 @@ public sealed partial class RuleReviewTests(WebApplicationFactory<Program> facto
         Assert.Equal(["A11Y-01", "A11Y-02", "A11Y-03", "A11Y-04", "A11Y-05", "A11Y-06", "A11Y-07", "A11Y-08", "A11Y-09", "A11Y-10"], RuleBook.In("A11Y").Select(r => r.Id));
         Assert.Equal("CODE-15", RuleBook.In("CODE").Last().Id);
         Assert.Equal("TABLE-05", RuleBook.In("TABLE").Last().Id);
-        Assert.Equal("FORM-24", RuleBook.In("FORM").Last().Id);
+        Assert.Equal("FORM-25", RuleBook.In("FORM").Last().Id); // FORM-25 came after the review (the select from the server)
         // FORM-23, SHELL-20 and LIST-18 were given to other changes that were made at the same time (the search, the components pages): they exist now, and the review did not write them
         Assert.NotNull(RuleBook.Get("FORM-23"));
         Assert.NotNull(RuleBook.Get("SHELL-20"));

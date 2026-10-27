@@ -243,6 +243,29 @@ api.MapGet("/demo/suggest", (string? set) => Results.Json(new
     },
 }));
 
+// A list too long for the page (FORM-25): 2400 made-up people, searched and paged here as an app's own endpoint would do it.
+var demoPeople = Enumerable.Range(1, 2400).Select(n =>
+{
+    string[] first = ["Anna", "Ben", "Clara", "David", "Elif", "Felix", "Greta", "Hannes", "Ida", "Jonas", "Karla", "Luca", "Mila", "Noah", "Olga", "Paul"];
+    string[] last = ["Albers", "Brandt", "Conrad", "Dietz", "Engel", "Fuchs", "Graf", "Hahn", "Imhof", "Jung", "Krause", "Lorenz", "Maier", "Nowak", "Otto", "Peters", "Quandt", "Richter", "Schulz", "Thiel"];
+    var round = n / (first.Length * last.Length);
+    var name = first[n % first.Length] + " " + last[n / first.Length % last.Length] + (round > 0 ? " " + (round + 1) : "");
+    return (Value: "u" + n, Name: name, Email: name.ToLowerInvariant().Replace(' ', '.') + "@example.com");
+}).ToArray();
+api.MapGet("/demo/people", (string? q, int? page) =>
+{
+    const int size = 20;
+    var term = (q ?? string.Empty).Trim();
+    var hits = demoPeople.Where(p => term.Length == 0 || p.Name.Contains(term, StringComparison.OrdinalIgnoreCase) || p.Email.Contains(term, StringComparison.OrdinalIgnoreCase)).ToArray();
+    var at = Math.Max(1, page ?? 1);
+    return Results.Json(new
+    {
+        items = hits.Skip((at - 1) * size).Take(size).Select(p => new { value = p.Value, name = p.Name, description = p.Email }),
+        more = hits.Length > at * size,
+        total = hits.Length,
+    });
+});
+
 // ---- The releases of the design system (the Studio makes them): what an app copies from, and how it learns that there is a newer one. Public and read-only, like /ui. ----
 api.MapGet("/releases", (ReleaseService service) => service.Releases().Select(m => new { m.Version, m.At, m.Hash, m.Note, files = m.Files.Count, url = $"/releases/{m.Version}/" }));
 api.MapGet("/releases/latest", (ReleaseService service) => service.Latest is { } latest ? Results.Json(latest) : Results.NotFound());
