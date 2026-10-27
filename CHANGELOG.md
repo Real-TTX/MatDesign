@@ -12,6 +12,9 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+### Added
+
+- The colour of a new app, Schulio (the school registration platform; only its administration runs on MatUi): `[data-app="schulio"]` sets `--mat-app-accent: #2d5fb8` (white text on it, 6.1:1, passes AA). Nothing to do for the other apps but copy the files.
 
 ## [0.9.3] - 2026-10-25
 ### Fixed

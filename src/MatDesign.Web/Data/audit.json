@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-12",
+ "generated": "2026-10-27",
  "checks": [
   {
    "id": "shell.menu-left",
@@ -141,7 +141,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "23 max-width media queries."
+     "note": "29 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
@@ -241,7 +241,7 @@
     },
     "dialog.used": {
      "state": "yes",
-     "note": "46 dialog or modal elements."
+     "note": "67 dialog or modal elements."
     },
     "color.tokens": {
      "state": "yes",
@@ -265,7 +265,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "28 max-width media queries."
+     "note": "36 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
@@ -344,36 +344,36 @@
      "note": "Sidebar with a brand in the layout."
     },
     "shell.breadcrumb": {
-     "state": "partial",
-     "note": "Only on some pages (6 places)."
+     "state": "yes",
+     "note": "In the layout."
     },
     "shell.theme": {
      "state": "yes",
      "note": "Dark mode and a system option."
     },
     "shell.user": {
-     "state": "partial",
-     "note": "Account or sign-out link, but no menu around it."
+     "state": "yes",
+     "note": "Sign-out and a menu around it."
     },
     "shell.version": {
      "state": "yes",
      "note": "A version is shown in the layout."
     },
     "dialog.native": {
-     "state": "partial",
-     "note": "2 call(s) of confirm, alert or prompt."
+     "state": "yes",
+     "note": "No browser dialogs."
     },
     "dialog.used": {
-     "state": "no",
-     "note": "No dialog elements found."
+     "state": "yes",
+     "note": "8 dialog or modal elements."
     },
     "color.tokens": {
      "state": "yes",
-     "note": "9 literal colours outside the variables."
+     "note": "0 literal colours outside the variables."
     },
     "code.inline": {
-     "state": "no",
-     "note": "224 inline style attributes."
+     "state": "yes",
+     "note": "0 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -384,16 +384,16 @@
      "note": "System fonts."
     },
     "icon.inline": {
-     "state": "unknown",
-     "note": "No icons found."
+     "state": "yes",
+     "note": "Inline SVG."
     },
     "mobile.query": {
      "state": "yes",
-     "note": "5 max-width media queries."
+     "note": "35 max-width media queries."
     },
     "a11y.motion": {
-     "state": "no",
-     "note": "prefers-reduced-motion is not mentioned."
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
     }
    }
   },
@@ -406,16 +406,16 @@
      "note": "Sidebar with a brand in the layout."
     },
     "shell.breadcrumb": {
-     "state": "no",
-     "note": "None found."
+     "state": "yes",
+     "note": "In the layout."
     },
     "shell.theme": {
      "state": "yes",
      "note": "Dark mode and a system option."
     },
     "shell.user": {
-     "state": "partial",
-     "note": "Account or sign-out link, but no menu around it."
+     "state": "yes",
+     "note": "Sign-out and a menu around it."
     },
     "shell.version": {
      "state": "yes",
@@ -426,16 +426,16 @@
      "note": "No browser dialogs."
     },
     "dialog.used": {
-     "state": "no",
-     "note": "No dialog elements found."
+     "state": "yes",
+     "note": "24 dialog or modal elements."
     },
     "color.tokens": {
      "state": "yes",
-     "note": "13 literal colours outside the variables."
+     "note": "0 literal colours outside the variables."
     },
     "code.inline": {
-     "state": "no",
-     "note": "46 inline style attributes."
+     "state": "yes",
+     "note": "0 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -446,12 +446,12 @@
      "note": "System fonts."
     },
     "icon.inline": {
-     "state": "partial",
-     "note": "Inline SVG and an icon font."
+     "state": "yes",
+     "note": "Inline SVG."
     },
     "mobile.query": {
      "state": "yes",
-     "note": "3 max-width media queries."
+     "note": "32 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
@@ -464,40 +464,40 @@
    "layout": "Matddns/src/Pages/Shared/_Layout.cshtml",
    "results": {
     "shell.menu-left": {
-     "state": "partial",
-     "note": "Only a top navigation."
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
     },
     "shell.breadcrumb": {
-     "state": "no",
-     "note": "None found."
+     "state": "yes",
+     "note": "In the layout."
     },
     "shell.theme": {
-     "state": "no",
-     "note": "No dark mode found."
+     "state": "yes",
+     "note": "Dark mode and a system option."
     },
     "shell.user": {
-     "state": "partial",
-     "note": "Account or sign-out link, but no menu around it."
+     "state": "yes",
+     "note": "Sign-out and a menu around it."
     },
     "shell.version": {
-     "state": "no",
-     "note": "No version in the layout."
+     "state": "yes",
+     "note": "A version is shown in the layout."
     },
     "dialog.native": {
-     "state": "no",
-     "note": "9 calls of confirm, alert or prompt."
+     "state": "yes",
+     "note": "No browser dialogs."
     },
     "dialog.used": {
      "state": "yes",
-     "note": "6 dialog or modal elements."
+     "note": "32 dialog or modal elements."
     },
     "color.tokens": {
-     "state": "partial",
-     "note": "17 literal colours outside the variables."
+     "state": "yes",
+     "note": "0 literal colours outside the variables."
     },
     "code.inline": {
-     "state": "no",
-     "note": "47 inline style attributes."
+     "state": "yes",
+     "note": "0 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -508,16 +508,16 @@
      "note": "System fonts."
     },
     "icon.inline": {
-     "state": "unknown",
-     "note": "No icons found."
+     "state": "yes",
+     "note": "Inline SVG."
     },
     "mobile.query": {
      "state": "yes",
-     "note": "1 max-width media queries."
+     "note": "33 max-width media queries."
     },
     "a11y.motion": {
-     "state": "no",
-     "note": "prefers-reduced-motion is not mentioned."
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
     }
    }
   },
@@ -671,7 +671,7 @@
     },
     "dialog.native": {
      "state": "no",
-     "note": "6 calls of confirm, alert or prompt."
+     "note": "8 calls of confirm, alert or prompt."
     },
     "dialog.used": {
      "state": "yes",
@@ -679,11 +679,11 @@
     },
     "color.tokens": {
      "state": "partial",
-     "note": "51 literal colours outside the variables."
+     "note": "55 literal colours outside the variables."
     },
     "code.inline": {
      "state": "no",
-     "note": "48 inline style attributes."
+     "note": "52 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -699,7 +699,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "25 max-width media queries."
+     "note": "26 max-width media queries."
     },
     "a11y.motion": {
      "state": "no",
@@ -794,20 +794,20 @@
      "note": "A version is shown in the layout."
     },
     "dialog.native": {
-     "state": "partial",
-     "note": "2 call(s) of confirm, alert or prompt."
+     "state": "yes",
+     "note": "No browser dialogs."
     },
     "dialog.used": {
-     "state": "yes",
-     "note": "8 dialog or modal elements."
+     "state": "no",
+     "note": "No dialog elements found."
     },
     "color.tokens": {
-     "state": "partial",
-     "note": "30 literal colours outside the variables."
+     "state": "yes",
+     "note": "0 literal colours outside the variables."
     },
     "code.inline": {
      "state": "yes",
-     "note": "3 inline style attributes."
+     "note": "0 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -818,16 +818,16 @@
      "note": "System fonts."
     },
     "icon.inline": {
-     "state": "unknown",
-     "note": "No icons found."
+     "state": "yes",
+     "note": "Inline SVG."
     },
     "mobile.query": {
      "state": "yes",
-     "note": "5 max-width media queries."
+     "note": "34 max-width media queries."
     },
     "a11y.motion": {
-     "state": "no",
-     "note": "prefers-reduced-motion is not mentioned."
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
     }
    }
   },
@@ -848,8 +848,8 @@
      "note": "Dark mode and a system option."
     },
     "shell.user": {
-     "state": "partial",
-     "note": "Account or sign-out link, but no menu around it."
+     "state": "yes",
+     "note": "Sign-out and a menu around it."
     },
     "shell.version": {
      "state": "yes",
@@ -857,19 +857,19 @@
     },
     "dialog.native": {
      "state": "partial",
-     "note": "3 call(s) of confirm, alert or prompt."
+     "note": "2 call(s) of confirm, alert or prompt."
     },
     "dialog.used": {
      "state": "yes",
-     "note": "27 dialog or modal elements."
+     "note": "32 dialog or modal elements."
     },
     "color.tokens": {
-     "state": "partial",
-     "note": "106 literal colours outside the variables."
+     "state": "yes",
+     "note": "0 literal colours outside the variables."
     },
     "code.inline": {
-     "state": "no",
-     "note": "58 inline style attributes."
+     "state": "yes",
+     "note": "0 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -885,7 +885,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "33 max-width media queries."
+     "note": "69 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
@@ -895,43 +895,43 @@
   },
   {
    "id": "matdo",
-   "layout": "Matdo/src/Matdo.Web/Pages/Shared/_Layout.cshtml",
+   "layout": "(none found)",
    "results": {
     "shell.menu-left": {
-     "state": "partial",
-     "note": "Only a top navigation."
+     "state": "no",
+     "note": "No sidebar in the layout."
     },
     "shell.breadcrumb": {
-     "state": "yes",
-     "note": "In the layout."
+     "state": "no",
+     "note": "None found."
     },
     "shell.theme": {
-     "state": "partial",
-     "note": "Dark mode, but no system option found."
+     "state": "no",
+     "note": "No dark mode found."
     },
     "shell.user": {
-     "state": "partial",
-     "note": "Account or sign-out link, but no menu around it."
+     "state": "no",
+     "note": "No account or sign-out in the layout."
     },
     "shell.version": {
-     "state": "yes",
-     "note": "A version is shown in the layout."
+     "state": "no",
+     "note": "No version in the layout."
     },
     "dialog.native": {
-     "state": "no",
-     "note": "13 calls of confirm, alert or prompt."
+     "state": "yes",
+     "note": "No browser dialogs."
     },
     "dialog.used": {
      "state": "no",
      "note": "No dialog elements found."
     },
     "color.tokens": {
-     "state": "partial",
-     "note": "19 literal colours outside the variables."
+     "state": "yes",
+     "note": "0 literal colours outside the variables."
     },
     "code.inline": {
-     "state": "no",
-     "note": "131 inline style attributes."
+     "state": "yes",
+     "note": "0 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -942,16 +942,16 @@
      "note": "System fonts."
     },
     "icon.inline": {
-     "state": "yes",
-     "note": "Inline SVG."
+     "state": "unknown",
+     "note": "No icons found."
     },
     "mobile.query": {
-     "state": "yes",
-     "note": "8 max-width media queries."
+     "state": "no",
+     "note": "No max-width media query."
     },
     "a11y.motion": {
-     "state": "yes",
-     "note": "prefers-reduced-motion is honoured."
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
     }
    }
   },
@@ -1027,7 +1027,7 @@
     },
     "shell.breadcrumb": {
      "state": "partial",
-     "note": "Only on some pages (3 places)."
+     "note": "Only on some pages (5 places)."
     },
     "shell.theme": {
      "state": "partial",
@@ -1047,23 +1047,23 @@
     },
     "dialog.used": {
      "state": "yes",
-     "note": "74 dialog or modal elements."
+     "note": "59 dialog or modal elements."
     },
     "color.tokens": {
      "state": "no",
-     "note": "422 literal colours outside the variables."
+     "note": "498 literal colours outside the variables."
     },
     "code.inline": {
      "state": "no",
-     "note": "121 inline style attributes."
+     "note": "131 inline style attributes."
     },
     "code.external": {
      "state": "no",
-     "note": "3 outside resource(s) in the layout."
+     "note": "1 outside resource(s) in the layout."
     },
     "type.system": {
-     "state": "no",
-     "note": "A web font is loaded."
+     "state": "yes",
+     "note": "System fonts."
     },
     "icon.inline": {
      "state": "partial",
@@ -1071,7 +1071,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "42 max-width media queries."
+     "note": "60 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
@@ -1104,20 +1104,20 @@
      "note": "A version is shown in the layout."
     },
     "dialog.native": {
-     "state": "no",
-     "note": "31 calls of confirm, alert or prompt."
+     "state": "yes",
+     "note": "No browser dialogs."
     },
     "dialog.used": {
      "state": "yes",
-     "note": "14 dialog or modal elements."
+     "note": "134 dialog or modal elements."
     },
     "color.tokens": {
-     "state": "no",
-     "note": "400 literal colours outside the variables."
+     "state": "yes",
+     "note": "0 literal colours outside the variables."
     },
     "code.inline": {
-     "state": "no",
-     "note": "202 inline style attributes."
+     "state": "partial",
+     "note": "13 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -1133,7 +1133,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "12 max-width media queries."
+     "note": "74 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
@@ -1278,94 +1278,32 @@
      "note": "In the layout."
     },
     "shell.theme": {
-     "state": "partial",
-     "note": "Dark mode, but no system option found."
-    },
-    "shell.user": {
-     "state": "no",
-     "note": "No account or sign-out in the layout."
-    },
-    "shell.version": {
-     "state": "yes",
-     "note": "A version is shown in the layout."
-    },
-    "dialog.native": {
-     "state": "no",
-     "note": "32 calls of confirm, alert or prompt."
-    },
-    "dialog.used": {
-     "state": "yes",
-     "note": "10 dialog or modal elements."
-    },
-    "color.tokens": {
-     "state": "no",
-     "note": "205 literal colours outside the variables."
-    },
-    "code.inline": {
-     "state": "no",
-     "note": "172 inline style attributes."
-    },
-    "code.external": {
-     "state": "no",
-     "note": "3 outside resource(s) in the layout."
-    },
-    "type.system": {
-     "state": "yes",
-     "note": "System fonts."
-    },
-    "icon.inline": {
-     "state": "partial",
-     "note": "Inline SVG and an icon font."
-    },
-    "mobile.query": {
-     "state": "yes",
-     "note": "1 max-width media queries."
-    },
-    "a11y.motion": {
-     "state": "no",
-     "note": "prefers-reduced-motion is not mentioned."
-    }
-   }
-  },
-  {
-   "id": "matsplit",
-   "layout": "MatSplit/src/MatSplit.Web/Pages/Shared/_Layout.cshtml",
-   "results": {
-    "shell.menu-left": {
-     "state": "no",
-     "note": "No sidebar in the layout."
-    },
-    "shell.breadcrumb": {
-     "state": "partial",
-     "note": "Only on some pages (18 places)."
-    },
-    "shell.theme": {
      "state": "yes",
      "note": "Dark mode and a system option."
     },
     "shell.user": {
-     "state": "no",
-     "note": "No account or sign-out in the layout."
+     "state": "partial",
+     "note": "Account or sign-out link, but no menu around it."
     },
     "shell.version": {
      "state": "yes",
      "note": "A version is shown in the layout."
     },
     "dialog.native": {
-     "state": "partial",
-     "note": "1 call(s) of confirm, alert or prompt."
+     "state": "yes",
+     "note": "No browser dialogs."
     },
     "dialog.used": {
      "state": "no",
      "note": "No dialog elements found."
     },
     "color.tokens": {
-     "state": "partial",
-     "note": "23 literal colours outside the variables."
+     "state": "yes",
+     "note": "8 literal colours outside the variables."
     },
     "code.inline": {
      "state": "yes",
-     "note": "3 inline style attributes."
+     "note": "0 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -1381,7 +1319,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "8 max-width media queries."
+     "note": "62 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
@@ -1390,24 +1328,24 @@
    }
   },
   {
-   "id": "mattrakr",
-   "layout": "MatTrakr/src/MatTrakr/Pages/Shared/_Layout.cshtml",
+   "id": "schulio",
+   "layout": "Schulio/src/Schulio.Web/Pages/Shared/_Layout.cshtml",
    "results": {
     "shell.menu-left": {
      "state": "partial",
-     "note": "Sidebar, but no brand found in it."
+     "note": "Only a top navigation."
     },
     "shell.breadcrumb": {
-     "state": "no",
-     "note": "None found."
+     "state": "partial",
+     "note": "Only on some pages (58 places)."
     },
     "shell.theme": {
-     "state": "yes",
-     "note": "Dark mode and a system option."
+     "state": "no",
+     "note": "No dark mode found."
     },
     "shell.user": {
-     "state": "no",
-     "note": "No account or sign-out in the layout."
+     "state": "yes",
+     "note": "Sign-out and a menu around it."
     },
     "shell.version": {
      "state": "yes",
@@ -1415,49 +1353,49 @@
     },
     "dialog.native": {
      "state": "no",
-     "note": "7 calls of confirm, alert or prompt."
+     "note": "9 calls of confirm, alert or prompt."
     },
     "dialog.used": {
      "state": "yes",
-     "note": "1 dialog or modal elements."
+     "note": "9 dialog or modal elements."
     },
     "color.tokens": {
-     "state": "yes",
-     "note": "15 literal colours outside the variables."
+     "state": "no",
+     "note": "429 literal colours outside the variables."
     },
     "code.inline": {
-     "state": "partial",
-     "note": "15 inline style attributes."
+     "state": "no",
+     "note": "81 inline style attributes."
     },
     "code.external": {
-     "state": "yes",
-     "note": "The layout loads nothing from another site."
+     "state": "no",
+     "note": "5 outside resource(s) in the layout."
     },
     "type.system": {
-     "state": "yes",
-     "note": "System fonts."
+     "state": "no",
+     "note": "A web font is loaded."
     },
     "icon.inline": {
-     "state": "partial",
-     "note": "An icon font."
+     "state": "yes",
+     "note": "Inline SVG."
     },
     "mobile.query": {
      "state": "yes",
-     "note": "3 max-width media queries."
+     "note": "10 max-width media queries."
     },
     "a11y.motion": {
-     "state": "yes",
-     "note": "prefers-reduced-motion is honoured."
+     "state": "no",
+     "note": "prefers-reduced-motion is not mentioned."
     }
    }
   },
   {
-   "id": "matplay",
-   "layout": "MatPlay/src/MatPlay/Pages/Shared/_Layout.cshtml",
+   "id": "matsplit",
+   "layout": "MatSplit/src/MatSplit.Web/Pages/Shared/_Layout.cshtml",
    "results": {
     "shell.menu-left": {
-     "state": "yes",
-     "note": "Sidebar with a brand in the layout."
+     "state": "no",
+     "note": "No sidebar in the layout."
     },
     "shell.breadcrumb": {
      "state": "yes",
@@ -1476,20 +1414,20 @@
      "note": "A version is shown in the layout."
     },
     "dialog.native": {
-     "state": "no",
-     "note": "8 calls of confirm, alert or prompt."
+     "state": "yes",
+     "note": "No browser dialogs."
     },
     "dialog.used": {
      "state": "no",
      "note": "No dialog elements found."
     },
     "color.tokens": {
-     "state": "partial",
-     "note": "41 literal colours outside the variables."
+     "state": "yes",
+     "note": "0 literal colours outside the variables."
     },
     "code.inline": {
      "state": "yes",
-     "note": "4 inline style attributes."
+     "note": "0 inline style attributes."
     },
     "code.external": {
      "state": "yes",
@@ -1500,16 +1438,140 @@
      "note": "System fonts."
     },
     "icon.inline": {
-     "state": "unknown",
-     "note": "No icons found."
+     "state": "yes",
+     "note": "Inline SVG."
     },
     "mobile.query": {
      "state": "yes",
-     "note": "3 max-width media queries."
+     "note": "63 max-width media queries."
     },
     "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "mattrakr",
+   "layout": "MatTrakr/src/MatTrakr/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "partial",
+     "note": "Only a top navigation."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
      "state": "no",
-     "note": "prefers-reduced-motion is not mentioned."
+     "note": "No account or sign-out in the layout."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "yes",
+     "note": "No browser dialogs."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "14 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "yes",
+     "note": "2 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "yes",
+     "note": "0 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "33 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
+   "id": "matplay",
+   "layout": "MatPlay/src/MatPlay/Pages/Shared/_Layout.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "partial",
+     "note": "Only a top navigation."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "no",
+     "note": "No account or sign-out in the layout."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "yes",
+     "note": "No browser dialogs."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "14 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "yes",
+     "note": "0 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "yes",
+     "note": "0 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "33 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
     }
    }
   },

@@ -64,7 +64,7 @@ revision, and a change becomes a numbered, immutable **release** of the design s
   the component outlined
 - **Layout** (twelve columns, breakpoints) and **utility classes**, the **page patterns**, the **foundations**
   (colour, type, space, motion, 113 icons)
-- A **builder** that checks an accent colour, a **palette check** for the 24 apps and an **audit** of how close
+- A **builder** that checks an accent colour, a **palette check** for the 25 apps and an **audit** of how close
   each app is to the rules
 
 **The Studio**

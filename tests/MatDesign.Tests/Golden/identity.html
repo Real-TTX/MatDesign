@@ -7,9 +7,9 @@
     <meta name="theme-color" content="#d6336c" />
     <title>Apps · MatDesign</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <script src="/ui/matui.boot.js?v=d2126bc2b9"></script>
-    <link rel="stylesheet" href="/ui/matui.css?v=d2126bc2b9" />
-    <link rel="stylesheet" href="/css/site.css?v=IZvpJ2UeI9K3HqAhIei-X7zZuGLPnvIsY0um4HUd2mE" />
+    <script src="/ui/matui.boot.js?v=f6ba676695"></script>
+    <link rel="stylesheet" href="/ui/matui.css?v=f6ba676695" />
+    <link rel="stylesheet" href="/css/site.css?v=NSQLEIjsJOMUxBOPlBO4HiSWLXvWRsFT-qkc8tKiQ80" />
 </head>
 
 <body>
@@ -48,7 +48,7 @@
                         <li>
                             <a class="mat-nav__item " href="/Identity/Palette">
 <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><span>Palette</span>
-<span class="mat-nav__badge mat-nav__badge--warn">16<span class="mat-sr-only"> pairs of accents that are too close</span></span>                            </a>
+<span class="mat-nav__badge mat-nav__badge--warn">17<span class="mat-sr-only"> pairs of accents that are too close</span></span>                            </a>
                         </li>
                         <li>
                             <a class="mat-nav__item " href="/Identity/Audit">
@@ -120,7 +120,7 @@
                         <li>
                             <a class="mat-nav__item " href="/Components">
 <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-toggle"></use></svg><span>Components</span>
-<span class="mat-nav__badge mat-nav__badge--plain">68<span class="mat-sr-only"> components</span></span>                            </a>
+<span class="mat-nav__badge mat-nav__badge--plain">69<span class="mat-sr-only"> components</span></span>                            </a>
                         </li>
                         <li>
                             <a class="mat-nav__item " href="/Layout">
@@ -183,7 +183,7 @@
                         <svg class="mat-icon" data-theme-icon="dark" aria-hidden="true" focusable="false"><use href="#mat-i-moon"></use></svg>
                     </button>
                 </div>
-                <div class="mat-nav__version">MatDesign local-20261019</div>
+                <div class="mat-nav__version">MatDesign local-20261027</div>
             </div>
         </aside>
 
@@ -197,14 +197,14 @@
                                     <li aria-current="page">Apps</li>
                     </ol>
                 </nav>
-                <div class="mat-topbar__search">
-                    <form role="search" action="/Search" method="get">
-                        <label class="mat-sr-only" for="site-search">Search the site</label>
-                        <div class="mat-search" data-autocomplete data-search-url="/api/search" data-results-url="/Search" data-recent="site" data-key="/,mod+k">
-                            <input class="mat-search__input" type="search" id="site-search" name="q" placeholder="Search" maxlength="100" autocomplete="off" />
-                        </div>
-                    </form>
-                </div>
+                    <div class="mat-topbar__search">
+                        <form role="search" action="/Search" method="get">
+                            <label class="mat-sr-only" for="site-search">Search the site</label>
+                            <div class="mat-search" data-autocomplete data-search-url="/api/search" data-results-url="/Search" data-recent="site" data-key="/,mod+k">
+                                <input class="mat-search__input" type="search" id="site-search" name="q" placeholder="Search" maxlength="100" autocomplete="off" />
+                            </div>
+                        </form>
+                    </div>
             </header>
 
             <main class="mat-page " id="main">
@@ -230,7 +230,7 @@
                     <button type="button" class="mat-seg__btn" data-view-switch="list" data-view-key="apps" aria-pressed="true" aria-label="List" data-tip="List"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-list"></use></svg></button>
                     <button type="button" class="mat-seg__btn" data-view-switch="gallery" data-view-key="apps" aria-pressed="false" aria-label="Gallery" data-tip="Gallery"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-grid"></use></svg></button>
             </div>
-        <span class="mat-toolbar__info" aria-live="polite">24 apps</span>
+        <span class="mat-toolbar__info" aria-live="polite">25 apps</span>
 </div>
 
 
@@ -860,7 +860,18 @@
                 </a>
         </div>
 
-    
+        <nav class="mat-pager" aria-label="Pagination">
+        <span class="mat-pager__info">1 to 24 of 25</span>
+        <div class="mat-pager__pages">
+                <span class="mat-pager__btn is-disabled" aria-hidden="true"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-left"></use></svg></span>
+
+                    <span class="mat-pager__btn is-current" aria-current="page">1</span>
+                    <a class="mat-pager__btn" href="/Identity?view=list&amp;page=2" aria-label="Page 2">2</a>
+
+                <a class="mat-pager__btn" href="/Identity?view=list&amp;page=2" aria-label="Next page" rel="next"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-right"></use></svg></a>
+        </div>
+    </nav>
+
 
     <div class="mat-actions">
         <a class="mat-btn mat-btn--secondary" href="/Identity/Palette"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><span>Check the palette</span></a>
@@ -906,7 +917,7 @@
 
 
 
-    <script src="/ui/matui.js?v=d2126bc2b9"></script>
+    <script src="/ui/matui.js?v=f6ba676695"></script>
     
 </body>
 </html>

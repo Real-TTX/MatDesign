@@ -121,6 +121,9 @@ public static class AppRegistry
 
         new("matbiz", "Matbiz", "Modular ERP", Business, "#1b6ec2", "briefcase", "Matbiz",
             FoundAccent: "#1b6ec2", Port: 8040, CssPrefix: "(none)", TokenScheme: "none (literal colours)"),
+        new("schulio", "Schulio", "School registration for parents and schools", Business, "#2d5fb8", "book", "Schulio",
+            FoundAccent: "#2d5fb8", Port: 8020, CssPrefix: "admin-, ui-", TokenScheme: "--ui-*, --schulio-*",
+            Notes: "Only the administration uses MatUi (compact). The parent area and the school pages keep their own CSS: every school brings four colours of its own and a top navigation."),
 
         new("matsplit", "MatSplit", "Shared expenses for trips and flats", Home, "#bf5610", "dollar", "MatSplit",
             FoundAccent: "#ef6c14", LogoColor: "#e4570a", Port: 4774, CssPrefix: "ms-", TokenScheme: "--ms-*",

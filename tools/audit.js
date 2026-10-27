@@ -31,6 +31,7 @@ const apps = {
   matstat: { dir: 'Matstat/src/Matstat.Web' },
   msbi: { dir: 'msBi/src/msBi.Web' },
   matbiz: { dir: 'Matbiz/src/Matbiz.Web' },
+  schulio: { dir: 'Schulio/src/Schulio.Web', layoutFiles: ['Pages/Shared/_AdminLayout.cshtml', 'Pages/Shared/_Layout.cshtml'] },
   matsplit: { dir: 'MatSplit/src/MatSplit.Web' },
   mattrakr: { dir: 'MatTrakr/src/MatTrakr' },
   matplay: { dir: 'MatPlay/src/MatPlay' },

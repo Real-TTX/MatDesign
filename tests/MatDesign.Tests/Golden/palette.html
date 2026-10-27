@@ -7,9 +7,9 @@
     <meta name="theme-color" content="#d6336c" />
     <title>Palette · MatDesign</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <script src="/ui/matui.boot.js?v=d2126bc2b9"></script>
-    <link rel="stylesheet" href="/ui/matui.css?v=d2126bc2b9" />
-    <link rel="stylesheet" href="/css/site.css?v=IZvpJ2UeI9K3HqAhIei-X7zZuGLPnvIsY0um4HUd2mE" />
+    <script src="/ui/matui.boot.js?v=f6ba676695"></script>
+    <link rel="stylesheet" href="/ui/matui.css?v=f6ba676695" />
+    <link rel="stylesheet" href="/css/site.css?v=NSQLEIjsJOMUxBOPlBO4HiSWLXvWRsFT-qkc8tKiQ80" />
 </head>
 
 <body>
@@ -48,7 +48,7 @@
                         <li>
                             <a class="mat-nav__item is-active" href="/Identity/Palette" aria-current="page">
 <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-palette"></use></svg><span>Palette</span>
-<span class="mat-nav__badge mat-nav__badge--warn">16<span class="mat-sr-only"> pairs of accents that are too close</span></span>                            </a>
+<span class="mat-nav__badge mat-nav__badge--warn">17<span class="mat-sr-only"> pairs of accents that are too close</span></span>                            </a>
                         </li>
                         <li>
                             <a class="mat-nav__item " href="/Identity/Audit">
@@ -120,7 +120,7 @@
                         <li>
                             <a class="mat-nav__item " href="/Components">
 <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-toggle"></use></svg><span>Components</span>
-<span class="mat-nav__badge mat-nav__badge--plain">68<span class="mat-sr-only"> components</span></span>                            </a>
+<span class="mat-nav__badge mat-nav__badge--plain">69<span class="mat-sr-only"> components</span></span>                            </a>
                         </li>
                         <li>
                             <a class="mat-nav__item " href="/Layout">
@@ -183,7 +183,7 @@
                         <svg class="mat-icon" data-theme-icon="dark" aria-hidden="true" focusable="false"><use href="#mat-i-moon"></use></svg>
                     </button>
                 </div>
-                <div class="mat-nav__version">MatDesign local-20261019</div>
+                <div class="mat-nav__version">MatDesign local-20261027</div>
             </div>
         </aside>
 
@@ -197,14 +197,14 @@
                                     <li aria-current="page">Palette</li>
                     </ol>
                 </nav>
-                <div class="mat-topbar__search">
-                    <form role="search" action="/Search" method="get">
-                        <label class="mat-sr-only" for="site-search">Search the site</label>
-                        <div class="mat-search" data-autocomplete data-search-url="/api/search" data-results-url="/Search" data-recent="site" data-key="/,mod+k">
-                            <input class="mat-search__input" type="search" id="site-search" name="q" placeholder="Search" maxlength="100" autocomplete="off" />
-                        </div>
-                    </form>
-                </div>
+                    <div class="mat-topbar__search">
+                        <form role="search" action="/Search" method="get">
+                            <label class="mat-sr-only" for="site-search">Search the site</label>
+                            <div class="mat-search" data-autocomplete data-search-url="/api/search" data-results-url="/Search" data-recent="site" data-key="/,mod+k">
+                                <input class="mat-search__input" type="search" id="site-search" name="q" placeholder="Search" maxlength="100" autocomplete="off" />
+                            </div>
+                        </form>
+                    </div>
             </header>
 
             <main class="mat-page " id="main">
@@ -281,6 +281,10 @@
                         <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#3472d8"><rect width="4" height="4" fill="#3472d8"></rect></svg>
                         <small>MatFile</small>
                     </a>
+                    <a class="doc-strip__item" role="listitem" href="/Identity/App?id=schulio">
+                        <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2d5fb8"><rect width="4" height="4" fill="#2d5fb8"></rect></svg>
+                        <small>Schulio</small>
+                    </a>
                     <a class="doc-strip__item" role="listitem" href="/Identity/App?id=matcad">
                         <svg class="doc-sw doc-sw--bar" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2f6feb"><rect width="4" height="4" fill="#2f6feb"></rect></svg>
                         <small>Matcad</small>
@@ -337,7 +341,7 @@
             <button type="button" class="mat-btn mat-btn--ghost mat-toolbar__btn " data-dialog-open="pairs-sort" aria-haspopup="dialog">
                 <svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-sort"></use></svg><span>Sort</span>            </button>
         <span class="mat-toolbar__spacer"></span>
-        <span class="mat-toolbar__info" aria-live="polite">16 pairs</span>
+        <span class="mat-toolbar__info" aria-live="polite">17 pairs</span>
 </div>
 
 
@@ -515,7 +519,7 @@
             </div>
 
             <nav class="mat-pager" aria-label="Pagination">
-        <span class="mat-pager__info">1 to 12 of 16</span>
+        <span class="mat-pager__info">1 to 12 of 17</span>
         <div class="mat-pager__pages">
                 <span class="mat-pager__btn is-disabled" aria-hidden="true"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-chevron-left"></use></svg></span>
 
@@ -603,25 +607,32 @@
                         <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23116b00&app=matbiz"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
                     </tr>
                     <tr>
-                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="mattrakr" role="img" aria-label="MatTrakr"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-progress-play"></use></svg></span><a href="/Identity/App?id=mattrakr">MatTrakr</a></span></td>
-                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6c5ce7"><rect width="4" height="4" fill="#6c5ce7"></rect></svg><code>#6c5ce7</code></span></td>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="schulio" role="img" aria-label="Schulio"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-book"></use></svg></span><a href="/Identity/App?id=schulio">Schulio</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#2d5fb8"><rect width="4" height="4" fill="#2d5fb8"></rect></svg><code>#2d5fb8</code></span></td>
                         <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#625dab"><rect width="4" height="4" fill="#625dab"></rect></svg><code>#625dab</code></span></td>
                         <td data-label="Then nearest" class="mat-num">0.89 (MatDock)</td>
-                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23625dab&app=mattrakr"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23625dab&app=schulio"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                    </tr>
+                    <tr>
+                        <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="mattrakr" role="img" aria-label="MatTrakr"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-progress-play"></use></svg></span><a href="/Identity/App?id=mattrakr">MatTrakr</a></span></td>
+                        <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#6c5ce7"><rect width="4" height="4" fill="#6c5ce7"></rect></svg><code>#6c5ce7</code></span></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#5935be"><rect width="4" height="4" fill="#5935be"></rect></svg><code>#5935be</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">0.83 (MatOS)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%235935be&app=mattrakr"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
                     </tr>
                     <tr>
                         <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matplay" role="img" aria-label="MatPlay"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-gamepad"></use></svg></span><a href="/Identity/App?id=matplay">MatPlay</a></span></td>
                         <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#00819b"><rect width="4" height="4" fill="#00819b"></rect></svg><code>#00819b</code></span></td>
-                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#5935be"><rect width="4" height="4" fill="#5935be"></rect></svg><code>#5935be</code></span></td>
-                        <td data-label="Then nearest" class="mat-num">0.83 (MatOS)</td>
-                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%235935be&app=matplay"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#b25977"><rect width="4" height="4" fill="#b25977"></rect></svg><code>#b25977</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">0.82 (Matcad)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23b25977&app=matplay"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
                     </tr>
                     <tr>
                         <td data-label="App"><span class="mat-table__name"><span class="mat-logo mat-logo--sm" data-app="matlan" role="img" aria-label="Matlan"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-message-square"></use></svg></span><a href="/Identity/App?id=matlan">Matlan</a></span></td>
                         <td data-label="Now"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#418251"><rect width="4" height="4" fill="#418251"></rect></svg><code>#418251</code></span></td>
-                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#b25977"><rect width="4" height="4" fill="#b25977"></rect></svg><code>#b25977</code></span></td>
-                        <td data-label="Then nearest" class="mat-num">0.82 (Matcad)</td>
-                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23b25977&app=matlan"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
+                        <td data-label="Proposed"><span class="mat-row mat-row--nowrap"><svg class="doc-sw doc-sw--dot" viewBox="0 0 4 4" preserveAspectRatio="none" role="img" aria-label="#005e93"><rect width="4" height="4" fill="#005e93"></rect></svg><code>#005e93</code></span></td>
+                        <td data-label="Then nearest" class="mat-num">0.78 (Matddns)</td>
+                        <td class="mat-table__cell-actions"><div class="mat-table__actions"><a class="mat-btn mat-btn--ghost mat-btn--sm" href="/Builder?accent=%23005e93&app=matlan"><svg class="mat-icon" aria-hidden="true" focusable="false"><use href="#mat-i-wrench"></use></svg><span>Try it</span></a></div></td>
                     </tr>
             </tbody>
         </table>
@@ -666,7 +677,7 @@
 
 
 
-    <script src="/ui/matui.js?v=d2126bc2b9"></script>
+    <script src="/ui/matui.js?v=f6ba676695"></script>
     
 </body>
 </html>
