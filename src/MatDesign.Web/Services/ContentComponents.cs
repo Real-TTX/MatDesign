@@ -270,6 +270,15 @@ internal static class ContentComponents
             "One number that matters with its label and change; what happened, newest first.",
             ["COLOR-04", "COLOR-03", "TYPE-03", "A11Y-03"],
             [
+                new("A strip of key figures", $"""
+                    <div class="mat-stats">
+                      <div class="mat-stat"><span class="mat-stat__label">Processed</span><span class="mat-stat__value">12,408</span><span class="mat-stat__delta">in the last 24 hours</span></div>
+                      <div class="mat-stat mat-stat--success">{I("check", "mat-stat__icon")}<span class="mat-stat__label">Delivered</span><span class="mat-stat__value">12,391</span><span class="mat-stat__delta mat-stat__delta--up">{I("arrow-up")}<span>99.9 %</span></span></div>
+                      <div class="mat-stat mat-stat--info">{I("clock", "mat-stat__icon")}<span class="mat-stat__label">Queued</span><span class="mat-stat__value">9</span><span class="mat-stat__delta">oldest 2 minutes</span></div>
+                      <a class="mat-stat mat-stat--danger" href="#">{I("x-circle", "mat-stat__icon")}<span class="mat-stat__label">Failed</span><span class="mat-stat__value">5</span><span class="mat-stat__delta">Show the failed ones</span></a>
+                      <a class="mat-stat mat-stat--warning" href="#">{I("alert", "mat-stat__icon")}<span class="mat-stat__label">Dropped</span><span class="mat-stat__value">3</span><span class="mat-stat__delta">after five tries</span></a>
+                    </div>
+                    """, "A row of compact tiles, no card around each: five or six share a row on a desktop, two on a phone. A tone (danger, warning, success, info, accent) tints the tile and draws a bar at its start, the label and the line under the number still say it in words. A tile that leads somewhere is a link."),
                 new("Stats in cards", $"""
                     <div class="mat-grid mat-grid--4">
                       <div class="mat-card"><div class="mat-card__body mat-stat"><span class="mat-stat__label">Items</span><span class="mat-stat__value">128</span><span class="mat-stat__delta mat-stat__delta--up">{I("arrow-up")}<span>6 more than last week</span></span></div></div>
@@ -290,6 +299,7 @@ internal static class ContentComponents
             [
                 "A number is in a tabular style (`font-variant-numeric`), so numbers in a row line up.",
                 "A dashboard has few stats: the ones somebody acts on.",
+                "A row of key figures above a list or a dashboard is a `mat-stats` strip: its tiles are `mat-stat` (or `a.mat-stat`) with `mat-stat--danger`, `--warning`, `--success`, `--info` or `--accent` and an optional `mat-stat__icon`. A stat in a card keeps the larger number.",
             ]),
 
         new("typography", "Text and pictures", "Content", "type",
