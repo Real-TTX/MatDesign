@@ -42,6 +42,19 @@ The app sets one colour and nothing else:
 - Check it in the **Builder** (derived colours, contrast in light and dark, the nearest app) and on **Identity → Palette** (is it too close to another app, `IDENT-04`).
 - If the app already has a colour users know, keep it where AA allows and say so in the registry (`FoundAccent`); the site then shows what changed and why.
 
+## 2b. Density (optional)
+
+A back office with a long menu, many fields and long tables needs less air than a sparse page. One attribute on `<html>` makes the app compact:
+
+```html
+<html lang="en" data-app="yourapp" data-density="compact">
+```
+
+- **What changes.** The menu is 236 px wide, the top bar 52 px, the body type 14 px and the page padding 28 / 24 / 16 px by width; with a **mouse** the controls are 34 px (large 40 px), a menu row 32 px and the table cells tighter.
+  A **touch screen** keeps the 44 px targets (`MOBILE-04`) and the 16 px type of a field (`MOBILE-06`), so a phone looks the same either way; nothing is ever under 32 px.
+- **Opt-in, per app, not per user.** Without the attribute, or with any other value, the app looks as it always did. Set it in the layout of the app's own pages; leave it off pages that are not the back office (a sign-in card, a public page).
+- Used by MatCMS, Matmon and Matmon.Cloud. The tokens it sets are in `matui.tokens.css`, the menu's own spacing in `matui.shell.css`.
+
 ## 2a. Colour schemes (optional, `COLOR-09`)
 
 An app can let its users choose the surfaces besides the standard look: **`paper`** (warm, slightly yellowed), **`contrast`** (pure white or pure black, strong lines instead of shadows, the borders of controls at 3:1 or
