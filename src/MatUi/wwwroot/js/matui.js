@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Version 0.11.0 of the toolkit MatUi (what changed in each version: CHANGELOG.md; how to update an app: docs/VERSIONING.md).
+   Version 0.12.0 of the toolkit MatUi (what changed in each version: CHANGELOG.md; how to update an app: docs/VERSIONING.md).
    `node tools/bump.js` writes the version here, in matui.boot.js and in MatUiVersion (Directory.Build.props); window.MatUi.version has it.
    MatUi · behaviour
    Dependency-free. Everything is wired by delegated listeners and data-attributes, so server-rendered and dynamically added
@@ -133,6 +133,11 @@
                                             that another element has as data-shortcut stays that element's). In the header bar (.mat-topbar__search, SHELL-20) a phone gets an icon button; on a phone
                                             the focused field is a full-screen panel with an X. Events: mat:search-select (cancelable), mat:search-results. API: MatUi.search.init / setItems /
                                             open / close / clear / focus / value. The texts: data-sr-<name> on <html>
+     data-wizard                            an assistant that leads through steps in one page (FORM-26): <form class="mat-form mat-wizard" data-wizard novalidate> of several .mat-wizard__step, the bar
+                                            .mat-steps, [data-wizard-status] ("Step 3 of 5: Contact") and the buttons [data-wizard-next], [data-wizard-back], [data-wizard-skip] and [data-wizard-submit]. The script shows
+                                            one step, checks it before Continue (FORM-05), marks the bar, moves the focus to the title of the step and says the step in a live region. data-optional on a step offers
+                                            Skip, data-label names it, data-start="2" is the first one shown (a step with an error is shown first). A wizard of one page per step is plain markup and needs no
+                                            script. Event: mat:wizard-step (cancelable). API: MatUi.wizard.init / go / next / back / current. The texts: data-wz-<name> on <html>
 
    Events (CustomEvents named after the control and what happened; this is all of them, docs/ADOPTING.md section 3b has the same list as a table and a test holds both to the code).
    Each is sent on the element it is about and bubbles, so one listener on document hears them all, except the first four: they are sent on <html> and do not bubble
@@ -160,6 +165,7 @@
      mat:upload-refused   .mat-upload      { refused, source }: files that were not taken, each with its reason
      mat:search-results   .mat-search      { query, count, source }: suggestions were drawn (source: local, server or error)
      mat:search-select    .mat-search      { item, group, query, source }: an option was chosen (source: result, recent or all); cancelable: preventDefault means the app takes over, nothing is followed
+     mat:wizard-step      .mat-wizard      { wizard, from, to, direction }: another step is about to be shown (steps count from 1, direction: forward or back); cancelable: preventDefault keeps the wizard on its step
    ========================================================================== */
 (function () {
   'use strict';
@@ -1313,19 +1319,25 @@
     }
     box.hidden = bad.length === 0;
   }
+  // The fields of `scope` (the whole form, or one step of a wizard) are checked: a wrong one gets its message and an entry in the summary, a right one loses its message.
+  // The wrong ones come back (a group of radio buttons once); the first of them is for the focus.
+  function validateFields(form, scope) {
+    var fields = $$('input, select, textarea', scope);
+    var bad = fields.filter(function (i) { return !i.disabled && !i.checkValidity(); });
+    fields.forEach(function (i) { if (!bad.includes(i)) { showError(i, ''); } });
+    bad = bad.filter(function (i, n) { return i.type !== 'radio' || !i.name || bad.findIndex(function (o) { return o.type === 'radio' && o.name === i.name; }) === n; });
+    summarize(form, bad);
+    bad.forEach(function (i) { showError(i, messageFor(i)); });
+    return bad;
+  }
   doc.addEventListener('submit', function (e) {
     var form = e.target;
     if (!form.matches || !form.matches('form.mat-form, form[data-validate]') || e.defaultPrevented) { return; }
     // A submit button with formnovalidate (Delete, Save as draft) sends the form as it is, like the browser does: nothing is checked and no message is written.
     if (e.submitter && e.submitter.hasAttribute('formnovalidate')) { return; }
-    var bad = $$('input, select, textarea', form).filter(function (i) { return !i.disabled && !i.checkValidity(); });
-    $$('input, select, textarea', form).forEach(function (i) { if (!bad.includes(i)) { showError(i, ''); } });
-    // a group of radio buttons has one message
-    bad = bad.filter(function (i, n) { return i.type !== 'radio' || !i.name || bad.findIndex(function (o) { return o.type === 'radio' && o.name === i.name; }) === n; });
-    summarize(form, bad);
+    var bad = validateFields(form, form);
     if (bad.length) {
       e.preventDefault();
-      bad.forEach(function (i) { showError(i, messageFor(i)); });
       bad[0].focus();
     }
   }, true);
@@ -8181,6 +8193,159 @@
   }
   var search = { init: initSearches, setItems: srSetItems, open: srApiOpen, close: srApiClose, clear: srApiClear, focus: function (ref) { var s = srOf(ref); if (s) { srFocus(s); } }, value: srApiValue };
 
+  // ------------------------------------------------------------------------------------------------ wizard (FORM-26, matui.controls.css)
+  // An assistant that leads through steps. There are two ways to build one. Server-driven, one page per step, it is plain markup (.mat-wizard, the bar .mat-steps, one .mat-wizard__step, the
+  // buttons as links) and needs no script. All in one page it is <form class="mat-form mat-wizard" data-wizard novalidate> with several .mat-wizard__step; this is the script that makes it
+  // one: it shows one step at a time (the others are hidden, their fields stay in the form), draws the bar (is-done, is-active with aria-current="step", the hidden text of every step),
+  // writes "Step 3 of 5: Contact" into [data-wizard-status], and moves the focus to the title of the step that comes up. The live region says the same politely. Continue
+  // ([data-wizard-next]) checks the fields of the step that is shown, like a form is checked when it is sent (FORM-05), and stays where it is when one is wrong. Back ([data-wizard-back])
+  // never checks. Skip ([data-wizard-skip]) is offered on a step that has data-optional and does not check. Enter in a field is Continue until the last step; the last step shows the real
+  // submit button ([data-wizard-submit]), which sends the form (and takes the person back to a step whose field is wrong, if one of the earlier ones is). The buttons start hidden in the
+  // markup (without the script every step is shown, one under the other, and only the submit button works). A step the server sends back with an error is the one that is shown first;
+  // otherwise data-start="2" or the first one. A step is named by its data-label, or else by the text of its title. Every move sends mat:wizard-step (cancelable: the wizard stays).
+  // The words the script writes (the bar, the status, the announcement) are WZ_TEXT, English and German; data-wz-<name> on <html> changes one. API: MatUi.wizard.init / go / next / back / current,
+  // a step is a number from 1.
+  var WZ_TEXT = {
+    en: { progress: 'Setup progress', step: 'Step {0}', stepNamed: 'Step {0}, {1}', done: 'done', current: 'current', status: 'Step {0} of {1}', statusNamed: 'Step {0} of {1}: {2}' },
+    de: { progress: 'Fortschritt der Einrichtung', step: 'Schritt {0}', stepNamed: 'Schritt {0}, {1}', done: 'erledigt', current: 'aktuell', status: 'Schritt {0} von {1}', statusNamed: 'Schritt {0} von {1}: {2}' }
+  };
+
+  function wzText(key, a, b, c) {
+    var table = WZ_TEXT[(root.lang || 'en').slice(0, 2).toLowerCase()] || WZ_TEXT.en;
+    var s = root.getAttribute('data-wz-' + key.toLowerCase()) || table[key] || WZ_TEXT.en[key] || key;
+    // a function as the replacement: a label may hold a "$&"
+    return s.replace('{0}', function () { return a === undefined ? '' : a; }).replace('{1}', function () { return b === undefined ? '' : b; }).replace('{2}', function () { return c === undefined ? '' : c; });
+  }
+  function wzOf(ref) {
+    var el = typeof ref === 'string' ? (doc.getElementById(ref) || $(ref)) : ref;
+    var r = el && el.closest ? el.closest('[data-wizard]') : null;
+    return r && r._matWizard ? r._matWizard : null;
+  }
+  function wzLabel(step) {
+    var own = step.getAttribute('data-label');
+    if (own) { return own; }
+    var title = $('.mat-wizard__title', step);
+    return title ? title.textContent.replace(/\s+/g, ' ').trim() : '';
+  }
+  function wzStatus(w) {
+    var n = w.steps.length, label = wzLabel(w.steps[w.index]);
+    return label ? wzText('statusNamed', w.index + 1, n, label) : wzText('status', w.index + 1, n);
+  }
+  // the bar: an existing ol.mat-steps is kept, one is made when there is none, and it has one item for every step
+  function wzBar(w) {
+    var bar = $('.mat-steps', w.root);
+    if (!bar) {
+      bar = doc.createElement('ol');
+      bar.className = 'mat-steps';
+      bar.setAttribute('aria-label', wzText('progress'));
+      w.steps[0].parentNode.insertBefore(bar, w.steps[0]);
+    }
+    while (bar.children.length < w.steps.length) { bar.appendChild(doc.createElement('li')); }
+    while (bar.children.length > w.steps.length) { bar.removeChild(bar.lastElementChild); }
+    return bar;
+  }
+  function wzRender(w, announce) {
+    var n = w.steps.length, cur = w.index, last = cur === n - 1;
+    w.steps.forEach(function (s, i) { s.hidden = i !== cur; });
+    $$('li', wzBar(w)).forEach(function (li, i) {
+      li.classList.toggle('is-done', i < cur);
+      li.classList.toggle('is-active', i === cur);
+      if (i === cur) { li.setAttribute('aria-current', 'step'); } else { li.removeAttribute('aria-current'); }
+      var hidden = $('.mat-sr-only', li);
+      if (!hidden) { hidden = doc.createElement('span'); hidden.className = 'mat-sr-only'; li.appendChild(hidden); }
+      var label = wzLabel(w.steps[i]);
+      var text = label ? wzText('stepNamed', i + 1, label) : wzText('step', i + 1);
+      hidden.textContent = i < cur ? text + ', ' + wzText('done') : (i === cur ? text + ', ' + wzText('current') : text);
+    });
+    var status = wzStatus(w);
+    if (w.status) { w.status.textContent = status; }
+    if (w.next) { w.next.hidden = last; }
+    if (w.submit) { w.submit.hidden = !last; }
+    if (w.back) { w.back.hidden = cur === 0; }
+    if (w.skip) { w.skip.hidden = last || !w.steps[cur].hasAttribute('data-optional'); }
+    if (announce) { w.live.textContent = status; }
+  }
+  // to a step (1 to the number of steps); false when it is the one that is shown, or when mat:wizard-step was cancelled. silent = true sends no event (an app that answers it itself)
+  function wzGo(ref, step, silent) {
+    var w = wzOf(ref);
+    var to = Math.round(Number(step)) - 1;
+    if (!w || !(to >= 0 && to < w.steps.length) || to === w.index) { return false; }
+    if (silent !== true && !w.root.dispatchEvent(new CustomEvent('mat:wizard-step', { bubbles: true, cancelable: true, detail: { wizard: w.root, from: w.index + 1, to: to + 1, direction: to > w.index ? 'forward' : 'back' } }))) { return false; }
+    w.index = to;
+    wzRender(w, true);
+    var title = $('.mat-wizard__title', w.steps[to]) || w.steps[to];
+    if (!title.hasAttribute('tabindex')) { title.setAttribute('tabindex', '-1'); }
+    title.focus();
+    return true;
+  }
+  function wzNext(ref) {
+    var w = wzOf(ref);
+    if (!w || w.index >= w.steps.length - 1) { return false; }
+    var bad = validateFields(w.form || w.root, w.steps[w.index]);
+    if (bad.length) { bad[0].focus(); return false; }
+    return wzGo(w.root, w.index + 2);
+  }
+  function wzBack(ref) { var w = wzOf(ref); return w ? wzGo(w.root, w.index) : false; }
+  function wzSkip(ref) { var w = wzOf(ref); return w && w.index < w.steps.length - 1 ? wzGo(w.root, w.index + 2) : false; }
+
+  function wzInit(el) {
+    var steps = $$('.mat-wizard__step', el).filter(function (s) { return s.closest('[data-wizard]') === el; });
+    if (!steps.length) { return; }
+    var w = el._matWizard;
+    var first = !w;
+    if (first) {
+      w = el._matWizard = { root: el, index: 0 };
+      w.live = doc.createElement('div');
+      w.live.className = 'mat-sr-only';
+      w.live.setAttribute('role', 'status');
+      w.live.setAttribute('aria-live', 'polite');
+      el.appendChild(w.live);
+    }
+    w.steps = steps;
+    w.form = el.matches('form') ? el : (el.closest('form') || $('form', el));
+    if (w.form) { w.form._matWizard = w; }
+    w.status = $('[data-wizard-status]', el);
+    w.next = $('[data-wizard-next]', el);
+    w.back = $('[data-wizard-back]', el);
+    w.skip = $('[data-wizard-skip]', el);
+    w.submit = $('[data-wizard-submit]', el);
+    if (first) {
+      var start = parseInt(el.getAttribute('data-start'), 10) - 1;
+      steps.some(function (s, i) { if ($('[aria-invalid="true"], .is-invalid', s)) { start = i; return true; } return false; });
+      w.index = start >= 0 && start < steps.length ? start : 0;
+    }
+    w.index = Math.min(w.index, steps.length - 1);
+    wzRender(w, false);
+  }
+  function initWizards(scope) {
+    if (scope && scope.matches && scope.matches('[data-wizard]')) { wzInit(scope); }
+    $$('[data-wizard]', scope).forEach(wzInit);
+  }
+  doc.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('[data-wizard-next], [data-wizard-back], [data-wizard-skip]') : null;
+    var w = b && wzOf(b);
+    if (!w) { return; }
+    e.preventDefault();
+    if (b.hasAttribute('data-wizard-next')) { wzNext(w.root); } else if (b.hasAttribute('data-wizard-back')) { wzBack(w.root); } else { wzSkip(w.root); }
+  });
+  // Sending the form before the last step (Enter in a field) is Continue. This listener is on the window, so it runs before the check of the form, which is not made then.
+  window.addEventListener('submit', function (e) {
+    var w = e.target && e.target._matWizard;
+    if (!w || w.index >= w.steps.length - 1 || (e.submitter && e.submitter.hasAttribute('formnovalidate'))) { return; }
+    e.preventDefault();
+    e.stopPropagation();
+    wzNext(w.root);
+  }, true);
+  // Sent from the last step and refused by the check of the form: a field of an earlier step is wrong, so that step is shown (the check ran first: this listener was added after it)
+  doc.addEventListener('submit', function (e) {
+    var w = e.target && e.target._matWizard;
+    if (!w || !e.defaultPrevented) { return; }
+    var field = $$('input, select, textarea', e.target).filter(function (i) { return i.getAttribute('aria-invalid') === 'true' && i.closest('.mat-wizard__step'); })[0];
+    var at = field ? w.steps.indexOf(field.closest('.mat-wizard__step')) : -1;
+    if (at >= 0 && at !== w.index && wzGo(w.root, at + 1)) { field.focus(); }
+  }, true);
+  var wizard = { init: initWizards, go: wzGo, next: wzNext, back: wzBack, current: function (ref) { var w = wzOf(ref); return w ? w.index + 1 : 0; } };
+
   // ------------------------------------------------------------------------------------------------------- init
   // a meter is filled by data: <div class="mat-meter__fill" data-value="63"> (no inline style in the markup)
   function fillMeters(scope) {
@@ -8220,6 +8385,7 @@
     initTrees();
     initUploads();
     initSearches();
+    initWizards();
     // the saved state of the submenus is applied without animating them
     root.classList.add('mat-nav-init');
     restoreBranches();
@@ -8246,7 +8412,7 @@
   if (doc.readyState === 'loading') { doc.addEventListener('DOMContentLoaded', init); } else { init(); }
 
   window.MatUi = {
-    version: '0.11.0',
+    version: '0.12.0',
     dialog: { open: openDialog, close: closeDialog },
     confirm: confirmDialog,
     alert: alertDialog,
@@ -8269,6 +8435,7 @@
     tree: tree,
     upload: { init: initUploads, files: upFiles, add: upAddFiles, remove: upRemoveFile, clear: upClearFiles, setProgress: upSetProgress, setError: upSetError },
     search: search,
-    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); initRatings(scope); initTables(scope); initTrees(scope); initUploads(scope); initSearches(scope); restoreGroups(scope); }
+    wizard: wizard,
+    refresh: function (scope) { refreshDependents(scope); fillMeters(scope); initForms(scope); applyColours(scope); initPickers(scope); initOtps(scope); initCalendars(scope); initCarousels(scope); initSchedules(scope); initItemLists(scope); initRatings(scope); initTables(scope); initTrees(scope); initUploads(scope); initSearches(scope); initWizards(scope); restoreGroups(scope); }
   };
 })();

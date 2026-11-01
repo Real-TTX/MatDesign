@@ -144,6 +144,7 @@ that words them differently, changes any of them with an attribute on `<html>`; 
 | `data-locale`, `data-week-start` | The language of the dates in the pickers (default `lang`) and the first day of the week (0 Sunday to 6, default 1). A date field inside an element with its own `lang` (a German document in an English page), or with `data-locale` on its wrapper, writes its value in that language; its panel stays in the language of the page. |
 | `data-up-<name>` | One text of the file upload (`FORM-21`), in lower case after `data-up-`: `data-up-refusedtype="{0}: Format nicht erlaubt."`. The names are the keys of `UP_TEXT` in `matui.js`; `{0}`, `{1}` and `{2}` are the file name, the allowed types and the sizes. |
 | `data-sr-<name>` | One text of the search with suggestions (`FORM-23`), in lower case after `data-sr-`: `data-sr-error="Die Suche ist gerade nicht erreichbar."`. The names are the keys of `SRCH_TEXT` in `matui.js`; `{0}` is the text that was typed or the key to press. |
+| `data-wz-<name>` | One text of the wizard (`FORM-26`), in lower case after `data-wz-`: `data-wz-statusnamed="Schritt {0} von {1}: {2}"`. The names are the keys of `WZ_TEXT` in `matui.js` (the bar's hidden texts, the status line, the announcement); `{0}`, `{1}` and `{2}` are the step number, the number of steps and the name of the step. |
 
 A text that goes into the markup of a page (a label, a hint, the words of a `data-confirm`) is the app's own and stays in the language of the app (`CODE-05`).
 
@@ -154,7 +155,7 @@ and to the changelog, and a unit test fails for a script that sends one that is 
 
 - **On the element, bubbling:** all but the first four are sent on the element they are about and bubble, so `document.addEventListener('mat:rating-change', e => ...)` hears every rating of the page. A listener on the element is the same with less to filter.
 - **On `<html>`, not bubbling:** `mat:theme`, `mat:accent`, `mat:scheme` and `mat:navset` are sent on the root element and do not bubble: listen on `document.documentElement` (`window` hears them only in the capture phase). `mat:theme` is also sent once when the script starts.
-- **Cancelable:** `mat:otp-complete`, `mat:schedule-select` and `mat:search-select` are; `preventDefault()` stops what the script would do next (the form that `data-submit` would send, a link that would be followed, the choice that would be made).
+- **Cancelable:** `mat:otp-complete`, `mat:schedule-select`, `mat:search-select` and `mat:wizard-step` are; `preventDefault()` stops what the script would do next (the form that `data-submit` would send, a link that would be followed, the choice that would be made, the step that would be shown).
 - **A white-labelled copy** (`CODE-09`) sends the same events under its prefix: `acme:theme`.
 
 | Event | Sent on | When | `detail` | Bubbles | Cancelable |
@@ -182,6 +183,7 @@ and to the changelog, and a unit test fails for a script that sends one that is 
 | `mat:upload-refused` | the `.mat-upload` | Files were not taken (type, size, number, a folder, a duplicate) | `refused`: each with its reason, `source` as above | yes | no |
 | `mat:search-results` | the `.mat-search` | Suggestions were drawn, or the question failed | `query`, `count`, `source`: `local`, `server` or `error` | yes | no |
 | `mat:search-select` | the `.mat-search` | An option was chosen (a click, Enter): `preventDefault()` means the app takes over and nothing is followed | `item`: its title, text, link, icon, kind and id (`null` for All results and for a recent query), `group`, `query`, `source`: `result`, `recent` or `all` | yes | yes |
+| `mat:wizard-step` | the `.mat-wizard` | Another step is about to be shown: Continue, Back, Skip, `MatUi.wizard.go`, or the send of the form from the last step that shows an earlier step with a wrong field. `preventDefault()` keeps the wizard on its step | `wizard`: the element, `from` and `to`: the steps (they count from 1), `direction`: `forward` or `back` | yes | yes |
 
 ## 4. Lists and forms (`LIST-*`, `FORM-*`)
 
@@ -363,7 +365,12 @@ and to the changelog, and a unit test fails for a script that sends one that is 
 
   In the **header bar** (`SHELL-20`) the same markup stands in `<div class="mat-topbar__search">` after the breadcrumb: a field of 18rem before the icons, one icon button below 640 px that opens the panel.
 
-## 4a. Layout and utilities
+- A set-up with several steps is a **wizard** (`FORM-26`): one wide card `mat-auth__card mat-auth__card--wide mat-wizard` with `mat-wizard__head` (logo, `h1`, a muted line "Step 3 of 5: Contact"), the bar `mat-steps` (`is-done`, `is-active` with `aria-current="step"`, a
+  `mat-sr-only` text in each item), the step `mat-wizard__step` (`mat-wizard__title` with an icon, `mat-wizard__text`, the fields) and `mat-btn-row mat-wizard__actions` (Continue, Skip, Back, `mat-btn-row__spacer`, the way out as `mat-btn--ghost mat-btn--end`).
+  **One page per step** is this markup drawn by the server with links for the buttons; it needs no script. **All steps in one page**: put `data-wizard` on the `form.mat-form`, write every step as a `mat-wizard__step` (`data-label`, `data-optional` to offer Skip),
+  the line of the head as `[data-wizard-status]` and the buttons as `[data-wizard-next]`, `[data-wizard-back]`, `[data-wizard-skip]` (all `type="button" hidden`) and `[data-wizard-submit]`; the script shows one step, checks it before Continue, marks the bar, moves the focus
+  to the title and announces the step. `mat:wizard-step` (cancelable) tells the page, `MatUi.wizard.go / next / back / current` drive it, the texts are `data-wz-<name>` (section 3a). The example on the components page is the one to copy.
+
 
 - **Containers and the grid:** a page inside the shell is `mat-page`; one without it (sign-in, a shared link) is `mat-container`. For a layout you have decided use the twelve columns
   (`mat-cols` with `mat-col-12 mat-col-md-6 mat-col-lg-3`); for cards that fill the row `mat-grid`; for the small cases `mat-stack` and `mat-row`. The breakpoints are the same in every app:

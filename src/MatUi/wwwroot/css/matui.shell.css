@@ -540,6 +540,9 @@ html.mat-lock { overflow: hidden; }
   border: 1px solid var(--mat-border);
   border-radius: var(--mat-radius-lg);
 }
+/* The wide card of an assistant (FORM-26): 760 px at most, more air at the sides from 600 px. */
+.mat-auth__card--wide { width: min(760px, 100%); }
+@media (min-width: 600px) { .mat-auth__card--wide { padding-inline: var(--mat-space-8); } }
 .mat-auth__brand { display: flex; flex-direction: column; align-items: center; gap: var(--mat-space-3); text-align: center; }
 .mat-auth__brand .mat-logo { width: 56px; height: 56px; }
 

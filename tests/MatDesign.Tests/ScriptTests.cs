@@ -165,7 +165,7 @@ public partial class ScriptTests
         Assert.True(start > 0, "the submit check of the forms was not found");
         var handler = Js[start..Js.IndexOf("}, true);", start, StringComparison.Ordinal)];
         Assert.Contains("e.submitter && e.submitter.hasAttribute('formnovalidate')", handler);
-        Assert.True(handler.IndexOf("formnovalidate", StringComparison.Ordinal) < handler.IndexOf("checkValidity", StringComparison.Ordinal), "formnovalidate is looked at after the fields were checked");
+        Assert.True(handler.IndexOf("formnovalidate", StringComparison.Ordinal) < handler.IndexOf("validateFields(", StringComparison.Ordinal), "formnovalidate is looked at after the fields were checked");
         Assert.Contains("form.requestSubmit(e.submitter || undefined)", Js);
 
         Assert.Contains("formnovalidate", BlockComment().Match(Js).Value);

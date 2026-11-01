@@ -292,6 +292,28 @@ a.mat-card:hover, .mat-card--link:hover { border-color: var(--mat-text-faint); b
 .mat-steps li.is-done { background: color-mix(in srgb, var(--mat-accent) 55%, transparent); }
 .mat-steps li.is-active { background: var(--mat-accent); }
 
+/* ---- Wizard (FORM-26): an assistant that leads through steps. The card is .mat-auth__card.mat-auth__card--wide (a page without the menu) or any card. In order: the head (logo, title, "Step 3 of 5: label"),
+   the bar above (.mat-steps), the step shown (title with an accent icon, text, fields) and the row of buttons: Continue, Skip, Back, a spacer, and at the end the way out. All of it flat, the space is generous. ---- */
+.mat-wizard { display: flex; flex-direction: column; gap: var(--mat-space-6); min-width: 0; }
+.mat-auth__card.mat-wizard { gap: var(--mat-space-6); }
+.mat-wizard__head { display: flex; flex-direction: column; align-items: center; gap: var(--mat-space-3); text-align: center; }
+.mat-wizard__head > h1, .mat-wizard__head > p { margin: 0; }
+/* One step: its title, its text and its fields one below another. A step that is not shown is hidden (the script) and takes no room. */
+.mat-wizard__step { display: flex; flex-direction: column; gap: var(--mat-space-4); min-width: 0; }
+.mat-wizard__step[hidden] { display: none; }
+.mat-wizard__title { display: flex; align-items: center; gap: var(--mat-space-2); margin: 0; font-size: var(--mat-fs-lg); }
+.mat-wizard__title > .mat-icon { flex: none; color: var(--mat-accent-text); }
+.mat-wizard__text { margin: 0; }
+/* The buttons (.mat-btn-row puts Continue first, the way out last): more air above them, and the ones the script hides (Back on the first step) take no room. */
+.mat-wizard__actions { margin-top: 0; padding-top: var(--mat-space-6); }
+.mat-wizard__actions > [hidden] { display: none; }
+/* Phones: Continue (and the final submit) on a line of its own, Skip and Back share the next one, the way out is the last line. */
+@media (max-width: 600px) {
+  .mat-wizard__actions > .mat-btn { flex: 1 1 auto; }
+  .mat-wizard__actions > .mat-btn--primary, .mat-wizard__actions > .mat-btn--end { flex-basis: 100%; }
+  .mat-wizard__actions > .mat-btn-row__spacer { display: none; }
+}
+
 /* Tooltip for icon buttons: [data-tip="Edit"]. Real information never lives only in a tooltip.
    A tip that is not shown takes no room (display: none, not only transparent): a button at the end of a table row or of the header bar would otherwise let
    its scrolling box scroll sideways by the width of a tip nobody sees. It fades in from @starting-style.

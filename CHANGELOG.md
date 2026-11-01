@@ -13,6 +13,15 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-01
+### Added
+
+- A wizard for a set-up with several steps (`mat-wizard`, rule `FORM-26`): one wide card (`mat-auth__card mat-auth__card--wide mat-wizard`, 760 px at most) with `mat-wizard__head` (logo, `h1`, a muted line "Step 3 of 5: Contact"), the bar `mat-steps` (unchanged), the step `mat-wizard__step` (`mat-wizard__title` with an accent icon, `mat-wizard__text`, the fields) and the row of buttons `mat-btn-row mat-wizard__actions` (Continue, Skip, Back, a spacer, the way out; on a phone Continue has a line of its own). **One page per step** is plain markup with links and needs no script. **All steps in one page** is `data-wizard` on a `form.mat-form`: the script shows one step at a time (the others are `hidden`, their fields are still posted), marks the bar (`is-done`, `is-active` with `aria-current="step"`, a hidden text for each step), writes "Step n of N: label" into `[data-wizard-status]`, moves the focus to the title of the step that comes up and says the step in a polite live region. Continue (`[data-wizard-next]`) checks the fields of the step like the form check does (`FORM-05`), Back (`[data-wizard-back]`) and Skip (`[data-wizard-skip]`, offered on a step with `data-optional`) check nothing, the last step shows `[data-wizard-submit]` instead of Continue, Enter in a field is Continue, and a send that finds an earlier field wrong shows that step again. `data-label`, `data-start` and a step with an error shown first. New event `mat:wizard-step` (cancelable; `detail.wizard`, `from`, `to`, `direction`), API `MatUi.wizard.init / go / next / back / current`, texts `WZ_TEXT` in English and German (`data-wz-<name>` on `<html>`), `MatUi.refresh` wires added markup. Also `mat-auth__card--wide`, the wide variant of the sign-in card. Nothing to do for existing apps: no existing class or attribute changed.
+
+### Changed
+
+- The check of a form (`FORM-05`) is one function now (`validateFields`) that the submit handler and the wizard share; what it does is unchanged.
+
 ## [0.11.0] - 2026-10-31
 ### Added
 

@@ -1233,7 +1233,7 @@ public static class ComponentCatalog
         "fields", "input-types", "selects", "checks", "choices", "range", "slider", "number-stepper", "input-groups", "special-inputs", "rich-select", "checkbox-select", "tag-input", "search", "date-picker", "time-picker", "colour-picker", "code-input", "rating", "floating-labels", "form-layout", "form-grid", "validation",
         "toolbar", "table", "table-groups", "pager", "gallery",
         "typography", "cards", "list-group", "accordion", "carousel", "avatars", "stat", "pills", "kv", "meter", "empty", "code",
-        "tabs", "menu", "breadcrumb", "topbar", "steps", "navmenu", "switcher", "toc", "footer",
+        "tabs", "menu", "breadcrumb", "topbar", "steps", "wizard", "navmenu", "switcher", "toc", "footer",
         "alerts", "toasts", "dialogs", "popover", "tooltip", "spinner", "skeleton",
         "breakpoints", "grid-cols", "stack-row-grid",
         "u-spacing", "u-display", "u-flex", "u-text", "u-colour", "u-borders", "u-sizing",
@@ -1256,6 +1256,7 @@ public static class ComponentCatalog
         .. TreeComponents.All,
         .. UploadComponents.All,
         .. SearchComponents.All,
+        .. WizardComponents.All,
     ]);
 
     /// <summary>A component with the examples that other files add to it.</summary>

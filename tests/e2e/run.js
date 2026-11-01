@@ -5555,6 +5555,214 @@ function seenAt(page, selector) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- the wizard (FORM-26)
+  console.log('\nWizard');
+  {
+    const { ctx, page } = await open(desktopOptions, '/Components/wizard');
+    const form = 'form[data-wizard]';
+    const shown = () => page.evaluate(f => [...document.querySelectorAll(f + ' .mat-wizard__step')].map(s => !s.hidden), form);
+    const status = () => page.evaluate(f => document.querySelector(f + ' [data-wizard-status]').textContent, form);
+    const buttons = () => page.evaluate(f => {
+      const on = sel => { const b = document.querySelector(f + ' ' + sel); return !!b && !b.hidden && b.getBoundingClientRect().width > 0; };
+      return { next: on('[data-wizard-next]'), back: on('[data-wizard-back]'), skip: on('[data-wizard-skip]'), submit: on('[data-wizard-submit]') };
+    }, form);
+    const bar = () => page.evaluate(f => [...document.querySelectorAll(f + ' .mat-steps li')].map(li => (li.classList.contains('is-done') ? 'done' : li.classList.contains('is-active') ? 'active' : 'open') + (li.getAttribute('aria-current') === 'step' ? '*' : '')), form);
+    const focused = () => page.evaluate(() => document.activeElement && document.activeElement.id);
+    await page.evaluate(f => {
+      window.__wzEvents = [];
+      document.querySelector(f).addEventListener('mat:wizard-step', e => { window.__wzEvents.push({ from: e.detail.from, to: e.detail.to, direction: e.detail.direction, root: e.detail.wizard === e.currentTarget, cancelable: e.cancelable }); if (window.__wzCancel === e.detail.to) { e.preventDefault(); } });
+    }, form);
+    const sentEvents = () => page.evaluate(() => window.__wzEvents);
+
+    await check('the wizard starts on its first step: the others are hidden, the bar and the status line say step 1 of 4, only Continue and the way out are there', async () => {
+      await page.locator(form).scrollIntoViewIfNeeded();
+      expect(await shown(), [true, false, false, false], 'the steps that are shown');
+      expect(await status(), 'Step 1 of 4: Your account', 'the status line');
+      expect(await bar(), ['active*', 'open', 'open', 'open'], 'the bar');
+      expect(await buttons(), { next: true, back: false, skip: false, submit: false }, 'the buttons');
+      expect(await page.textContent(form + ' .mat-steps li:nth-child(1) .mat-sr-only'), 'Step 1, Your account, current', 'the hidden text of the current item');
+      expect(await page.textContent(form + ' .mat-steps li:nth-child(2) .mat-sr-only'), 'Step 2, Company', 'the hidden text of a coming item');
+      expect(await page.textContent(form + ' .mat-steps li:nth-child(1) + li ~ li:nth-child(4) .mat-sr-only'), 'Step 4, Done', 'the last item');
+    });
+    await check('Continue with empty required fields stays: the messages are at the fields, the first wrong one has the focus and no event is sent', async () => {
+      await page.click(form + ' [data-wizard-next]');
+      expect(await shown(), [true, false, false, false], 'the steps that are shown');
+      expect(await page.textContent('#wz-all-name ~ .mat-error'), 'Please enter your name.', 'the message of the name');
+      expect(await page.textContent('#wz-all-mail ~ .mat-error'), 'Please enter your e-mail address.', 'the message of the e-mail');
+      expect(await focused(), 'wz-all-name', 'the focus');
+      expect((await sentEvents()).length, 0, 'events');
+    });
+    await check('Continue with valid fields shows the next step: focus on its title, status, bar, the buttons for a middle step and a live region that says it', async () => {
+      await page.fill('#wz-all-name', 'Ada Lovelace');
+      await page.fill('#wz-all-mail', 'ada@example.com');
+      await page.click(form + ' [data-wizard-next]');
+      expect(await shown(), [false, true, false, false], 'the steps that are shown');
+      expect(await focused(), 'wz-all-t2', 'the focus is on the title of the new step');
+      expect(await status(), 'Step 2 of 4: Company', 'the status line');
+      expect(await bar(), ['done', 'active*', 'open', 'open'], 'the bar');
+      expect(await buttons(), { next: true, back: true, skip: true, submit: false }, 'Continue, Back and Skip (the step is optional)');
+      expect(await page.textContent(form + ' [role=status].mat-sr-only'), 'Step 2 of 4: Company', 'the live region');
+      expect(await page.getAttribute(form + ' [role=status].mat-sr-only', 'aria-live'), 'polite', 'the kind of live region');
+      expect(await page.textContent(form + ' .mat-steps li:nth-child(1) .mat-sr-only'), 'Step 1, Your account, done', 'the hidden text of a finished item');
+      expect(await sentEvents(), [{ from: 1, to: 2, direction: 'forward', root: true, cancelable: true }], 'the event');
+    });
+    await check('mat:wizard-step can be cancelled: the step stays; Skip checks nothing, even a required field; Back never checks', async () => {
+      await page.evaluate(() => { window.__wzCancel = 3; document.getElementById('wz-all-company').required = true; });
+      await page.click(form + ' [data-wizard-skip]');
+      expect(await shown(), [false, true, false, false], 'a cancelled Skip stays');
+      await page.evaluate(() => { window.__wzCancel = 0; });
+      await page.click(form + ' [data-wizard-skip]');
+      expect(await shown(), [false, false, true, false], 'Skip leaves a step whose required field is empty');
+      expect(await status(), 'Step 3 of 4: Notifications', 'the status line');
+      await page.click(form + ' [data-wizard-back]');
+      expect(await shown(), [false, true, false, false], 'Back');
+      await page.click(form + ' [data-wizard-next]');
+      expect(await shown(), [false, true, false, false], 'Continue does check the required field');
+      expect(await page.textContent('#wz-all-company ~ .mat-error'), 'Please fill in this field.', 'the message of the company');
+      await page.evaluate(() => { document.getElementById('wz-all-company').required = false; });
+      const sent = await sentEvents();
+      expect(sent.map(e => e.direction + ':' + e.from + '>' + e.to), ['forward:1>2', 'forward:2>3', 'forward:2>3', 'back:3>2'], 'the events that were sent (the cancelled one too)');
+    });
+    await check('on the last step the submit button takes the place of Continue, Skip goes, and the bar has every earlier item finished', async () => {
+      await page.fill('#wz-all-company', '');
+      await page.click(form + ' [data-wizard-next]');
+      await page.click(form + ' [data-wizard-next]');
+      expect(await shown(), [false, false, false, true], 'the steps that are shown');
+      expect(await buttons(), { next: false, back: true, skip: false, submit: true }, 'the buttons of the last step');
+      expect(await bar(), ['done', 'done', 'done', 'active*'], 'the bar');
+      expect(await status(), 'Step 4 of 4: Done', 'the status line');
+    });
+    await check('sending the form while an earlier field is wrong shows that step with its message, and nothing is sent', async () => {
+      await page.evaluate(() => { document.getElementById('wz-all-mail').value = 'not an address'; });
+      const url = page.url();
+      await page.click(form + ' [data-wizard-submit]');
+      expect(await shown(), [true, false, false, false], 'the first step is shown again');
+      expect(await focused(), 'wz-all-mail', 'the focus is on the wrong field');
+      expect(await page.textContent('#wz-all-mail ~ .mat-error'), 'This is not an e-mail address.', 'the message');
+      expect(page.url(), url, 'the address (nothing was sent)');
+    });
+    await check('Enter in a field is Continue before the last step: the form is not sent and the next step comes up', async () => {
+      await page.fill('#wz-all-mail', 'ada@example.com');
+      const url = page.url();
+      await page.press('#wz-all-mail', 'Enter');
+      expect(await shown(), [false, true, false, false], 'Enter on the first step');
+      expect(page.url(), url, 'the address');
+      // and with a wrong field it is Continue that refuses
+      await page.click(form + ' [data-wizard-back]');
+      await page.fill('#wz-all-name', '');
+      await page.press('#wz-all-mail', 'Enter');
+      expect(await shown(), [true, false, false, false], 'Enter with an empty name');
+      expect(await page.textContent('#wz-all-name ~ .mat-error'), 'Please enter your name.', 'the message');
+      await page.fill('#wz-all-name', 'Ada Lovelace');
+    });
+    await check('the script can drive it (go, next, back, current), says the steps in German on a German page and takes a text from data-wz-<name>', async () => {
+      const r = await page.evaluate(f => {
+        const el = document.querySelector(f), out = {};
+        out.start = MatUi.wizard.current(el);
+        out.go = MatUi.wizard.go(el, 3, true);
+        out.at = MatUi.wizard.current(el);
+        out.again = MatUi.wizard.go(el, 3);
+        out.outside = MatUi.wizard.go(el, 9);
+        out.back = MatUi.wizard.back(el);
+        out.next = MatUi.wizard.next(el);
+        out.nextAt = MatUi.wizard.current(el);
+        document.documentElement.lang = 'de';
+        MatUi.wizard.go(el, 2, true);
+        out.german = el.querySelector('[data-wizard-status]').textContent + ' | ' + el.querySelector('.mat-steps li:nth-child(1) .mat-sr-only').textContent + ' | ' + el.querySelector('[role=status]').textContent;
+        document.documentElement.setAttribute('data-wz-statusnamed', 'Etappe {0}/{1}: {2}');
+        MatUi.wizard.go(el, 3, true);
+        out.custom = el.querySelector('[data-wizard-status]').textContent;
+        document.documentElement.removeAttribute('data-wz-statusnamed');
+        document.documentElement.lang = 'en';
+        MatUi.wizard.go(el, 1, true);
+        return out;
+      }, form);
+      const live = r.german.split(' | ')[2];
+      expect(r.german.split(' | ').slice(0, 2), ['Schritt 2 von 4: Company', 'Schritt 1, Your account, erledigt'], 'the German status line and hidden text');
+      expect(live, 'Schritt 2 von 4: Company', 'the German live region');
+      delete r.german;
+      expect(r, { start: 1, go: true, at: 3, again: false, outside: false, back: true, next: true, nextAt: 3, custom: 'Etappe 3/4: Notifications' }, 'the API and the texts');
+    });
+    await check('the form that was filled in is sent from the last step with the fields of every step, also the ones that were hidden', async () => {
+      await page.evaluate(() => { document.getElementById('wz-all-company').value = 'Analytical Engines'; });
+      await page.click(form + ' [data-wizard-next]');
+      await page.click(form + ' [data-wizard-next]');
+      await page.click(form + ' [data-wizard-next]');
+      expect(await shown(), [false, false, false, true], 'the last step');
+      await Promise.all([page.waitForURL(/\/Components\/wizard\?/), page.click(form + ' [data-wizard-submit]')]);
+      const q = new URL(page.url()).searchParams;
+      expect([q.get('name'), q.get('email'), q.get('company'), q.getAll('notify').join(',')], ['Ada Lovelace', 'ada@example.com', 'Analytical Engines', 'problems'], 'what was sent');
+    });
+    await check('the example of one page per step is plain markup: its bar has five items and one current, the row has Continue first and the way out at the far end, in a card of 760 px at most', async () => {
+      await page.goto(BASE + '/Components/wizard', { waitUntil: 'networkidle' });
+      const m = await page.evaluate(() => {
+        const card = document.querySelector('.mat-wizard:not([data-wizard])');
+        const box = el => el.getBoundingClientRect();
+        const btns = [...card.querySelectorAll('.mat-wizard__actions > .mat-btn')].map(b => ({ text: b.textContent.trim(), x: Math.round(box(b).left), right: Math.round(box(b).right), y: Math.round(box(b).top) }));
+        return {
+          width: Math.round(box(card).width),
+          items: card.querySelectorAll('.mat-steps li').length,
+          current: card.querySelectorAll('.mat-steps [aria-current="step"]').length,
+          head: getComputedStyle(card.querySelector('.mat-wizard__head')).textAlign,
+          texts: btns.map(b => b.text),
+          sameLine: new Set(btns.map(b => b.y)).size === 1,
+          first: btns[0].x,
+          lastRight: btns[btns.length - 1].right,
+          cardRight: Math.round(box(card).right),
+          hidden: card.querySelectorAll('[hidden]').length,
+        };
+      });
+      expectTrue(m.width <= 761 && m.width >= 560, 'the card is ' + m.width + ' px wide');
+      expect({ items: m.items, current: m.current, head: m.head, hidden: m.hidden }, { items: 5, current: 1, head: 'center', hidden: 0 }, 'the card');
+      expect(m.texts, ['Continue', 'Skip', 'Back', 'Skip setup'], 'the buttons in order');
+      expectTrue(m.sameLine, 'the buttons are not on one line');
+      expectTrue(m.cardRight - m.lastRight < 60, 'the way out is not at the far end: ' + (m.cardRight - m.lastRight) + ' px from the edge');
+    });
+    await ctx.close();
+  }
+  {
+    const { ctx, page } = await open(phoneOptions, '/Components/wizard');
+    const form = 'form[data-wizard]';
+    await check('on a phone the card fits, Continue has a line of its own, Skip and Back share the next one, the way out is last, and everything is a target of 44 px with 16 px type', async () => {
+      await page.locator(form).scrollIntoViewIfNeeded();
+      const m = await page.evaluate(f => {
+        const card = document.querySelector(f);
+        const r = el => el.getBoundingClientRect();
+        const row = card.querySelector('.mat-wizard__actions');
+        const visible = [...row.children].filter(b => b.matches('.mat-btn') && !b.hidden);
+        return {
+          scrolls: document.documentElement.scrollWidth > innerWidth,
+          inside: r(card).right <= innerWidth + 0.5 && r(card).left >= -0.5,
+          buttons: visible.map(b => ({ text: b.textContent.trim(), y: Math.round(r(b).top), w: Math.round(r(b).width), h: Math.round(r(b).height) })),
+          rowW: Math.round(r(row).width),
+          font: parseFloat(getComputedStyle(card.querySelector('#wz-all-name')).fontSize),
+        };
+      }, form);
+      expect(m.scrolls, false, 'a horizontal scroll bar');
+      expect(m.inside, true, 'the card is inside the screen');
+      expect(m.font >= 16, true, 'the type of a field is ' + m.font + ' px');
+      expectTrue(m.buttons.every(b => b.h >= 44), 'a button is lower than 44 px: ' + JSON.stringify(m.buttons));
+      expect(m.buttons.map(b => b.text), ['Continue', 'Skip setup'], 'the buttons of the first step');
+    });
+    await check('on a phone the middle step has Continue full width, Skip and Back side by side under it and the way out under them', async () => {
+      await page.fill('#wz-all-name', 'Ada Lovelace');
+      await page.fill('#wz-all-mail', 'ada@example.com');
+      await page.tap(form + ' [data-wizard-next]');
+      const m = await page.evaluate(f => {
+        const row = document.querySelector(f + ' .mat-wizard__actions');
+        const r = el => el.getBoundingClientRect();
+        const by = text => [...row.children].find(b => b.textContent.trim() === text);
+        const pick = text => { const b = r(by(text)); return { y: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height) }; };
+        return { rowW: Math.round(r(row).width), next: pick('Continue'), skip: pick('Skip'), back: pick('Back'), out: pick('Skip setup') };
+      }, form);
+      expectTrue(m.next.w >= m.rowW - 1, 'Continue is ' + m.next.w + ' of ' + m.rowW + ' px wide');
+      expectTrue(m.skip.y === m.back.y && m.skip.y > m.next.y, 'Skip and Back are not on the line under Continue: ' + JSON.stringify(m));
+      expectTrue(m.out.y > m.skip.y && m.out.w >= m.rowW - 1, 'the way out is not the last line: ' + JSON.stringify(m));
+      expectTrue([m.next, m.skip, m.back, m.out].every(b => b.h >= 44), 'a button is lower than 44 px');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- coloured marks (COLOR-10)
   console.log('\nColoured marks');
   {
@@ -9189,6 +9397,9 @@ function seenAt(page, selector) {
       expect(await page.evaluate((n) => { const c = document.querySelector('.mat-rating.is-wrapped input[name="' + n + '"]:checked'); return c ? c.value : null; }, tapped.name), '10', 'the tap on the last dot of the second row');
       const filled = await page.evaluate((n) => { const r = document.querySelector('.mat-rating.is-wrapped:has(input[name="' + n + '"])'); return getComputedStyle(r).getPropertyValue('--mat-rating-bottom').trim(); }, tapped.name);
       expectTrue(filled.length > 0, 'the filled part of the second row is not computed');
+    });
+    await check('the buttons of a wizard (the ones that show) are targets of 44 px', async () => {
+      await holds('.mat-wizard__actions > .mat-btn', 8);
     });
     await check('the remove buttons of chips and tags, the pager, the tabs, the segmented control, the carousel dots and the sort links are targets of 44 px', async () => {
       await holds('.mat-chip__x', 5);

@@ -234,7 +234,7 @@ public partial class ScriptEventsTests
         var line = section.Split('\n').Single(l => l.StartsWith("- **On `<html>`, not bubbling:**", StringComparison.Ordinal));
         Assert.All(rootOnes, n => Assert.Contains(n, line));
         var cancelable = Table().Where(r => r.Cancelable).Select(r => r.Name).Order().ToList();
-        Assert.Equal(["mat:otp-complete", "mat:schedule-select", "mat:search-select"], cancelable);
+        Assert.Equal(["mat:otp-complete", "mat:schedule-select", "mat:search-select", "mat:wizard-step"], cancelable);
         var cancel = section.Split('\n').Single(l => l.StartsWith("- **Cancelable:**", StringComparison.Ordinal));
         Assert.All(cancelable, n => Assert.Contains(n, cancel));
     }

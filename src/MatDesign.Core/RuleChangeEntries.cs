@@ -195,5 +195,6 @@ public static partial class RuleChanges
         Chg("2026-10-21", "MOBILE-02", "1aa6c933", "A swipe from the left edge opens the drawer and a swipe to the left closes it; the edges of a touch screen are then the app's."),
         Chg("2026-10-22", "MOBILE-02", "aa0afcb3", "A grid of key figures (mat-stat) keeps two columns on a phone, one only below 340 px."),
         Add("2026-10-27", "FORM-25", "69deafcc", "A list that can grow without limit (accounts, customers, instances) is searched and paged on the server, never put into the page whole."),
+        Add("2026-11-01", "FORM-26", "11da20a5", "A set-up with several steps is a wizard: one wide card, the head, the bar of the steps, the step and one row of buttons; the steps are checked when the person goes forward."),
     ];
 }
