@@ -26,6 +26,8 @@ const apps = {
   matpaper: { dir: 'MatPaper/src/MatPaper' },
   matdo: { dir: 'Matdo/src/Matdo.Web' },
   matfile: { dir: 'MatFile/src/MatFile.Web' },
+  matdrive: { dir: 'MatDrive/src/MatDrive' },
+  matoffice: { dir: 'MatOffice/src/MatOffice' },
   matcms: { dir: 'MatCMS/src/MatCMS', extra: ['MatCMS/src/MatCMS.Shared.Web'] },
   matmon: { dir: 'Matmon/src/Matmon.Host' },
   matstat: { dir: 'Matstat/src/Matstat.Web' },

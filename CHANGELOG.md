@@ -12,6 +12,9 @@ The format is [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) with two 
 A change that an app can see is written down under **Unreleased** in the pull request that makes it. `node tools/bump.js <patch|minor|major>` turns Unreleased into the next version.
 
 ## [Unreleased]
+### Added
+
+- The colours of two new apps, MatDrive (the drive of the family: files, sharing, versions, WebDAV) and MatOffice (the office suite: Docs, Sheets, Slides, Base): `[data-app="matdrive"]` sets `--mat-app-accent: #8e24aa` (white text on it, 7.0:1) and `[data-app="matoffice"]` sets `--mat-app-accent: #d83b01` (white text on it, 4.6:1); both pass AA. Nothing to do for the other apps but copy the files.
 
 ## [0.12.0] - 2026-11-01
 ### Added

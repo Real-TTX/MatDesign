@@ -78,7 +78,7 @@ public sealed class StudioAppsTests : IClassFixture<WebApplicationFactory<Progra
         var apps = await Api();
         Assert.Equal(AppRegistry.All.Count + 1, apps.Length);
         Assert.Contains(apps, a => a.GetProperty("id").GetString() == "matx" && a.GetProperty("accent").GetString() == "#0f766e");
-        Assert.Contains("MatX", await _studio.Get("/Identity"));
+        Assert.Contains("MatX", await _studio.Get("/Identity?q=matx"));
 
         // the toolkit: the colours are in the bundle and in the part, the hash and the archive moved on
         var rule = "[data-app=\"matx\"] { --mat-app-accent: #0f766e; }";
