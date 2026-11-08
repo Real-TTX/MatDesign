@@ -447,6 +447,9 @@ function seenAt(page, selector) {
     });
     await check('a swipe from the left edge opens the drawer, a swipe to the left closes it, and a tap at the edge still reaches the burger (MOBILE-02)', async () => {
       const cdp = await ctx.newCDPSession(page);
+      // Chrome and Edge 157 on Linux go Back on a sideways swipe in the middle of a phone page, like the back gesture of a phone: overscroll-behavior and
+      // --overscroll-history-navigation=0 do not stop it, and the swipe that must not open the drawer left the page for about:blank. With nothing to go back to the page stays.
+      await cdp.send('Page.resetNavigationHistory');
       const swipe = async (x0, x1, y) => {
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0, y }] });
         for (let i = 1; i <= 8; i++) { await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: x0 + (x1 - x0) * i / 8, y }] }); }

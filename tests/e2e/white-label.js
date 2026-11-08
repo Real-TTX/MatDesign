@@ -43,6 +43,9 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
   const failedRequests = [];
   const desktop = { viewport: { width: 1360, height: 900 }, reducedMotion: 'reduce' };
   const phone = { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' };
+  // How long a page may take until it is ready. /Components/All on a phone with reduced motion keeps the main thread busy for about 30 s while the script starts its controls
+  // (sliders, ratings, schedules, carousels measure a page of 286,000 px; 5 s without reduced motion), measured with Chrome on Linux: the 30 s of Playwright ran out.
+  const READY = { timeout: 120000 };
   const name = process.env.STUDIO_NAME || 'admin';
   const password = process.env.STUDIO_PASSWORD || 'studio-dev';
 
@@ -214,7 +217,7 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
     watch(p, 'renamed ' + url);
     await behindTheRenamer(p);
     await p.goto(BASE + url, { waitUntil: 'networkidle' });
-    await p.waitForFunction(() => document.readyState === 'complete');
+    await p.waitForFunction(() => document.readyState === 'complete', null, READY);
     return { ctx, page: p };
   }
 
@@ -422,7 +425,7 @@ const press = (p, selector) => Promise.all([p.waitForNavigation({ waitUntil: 'lo
         const op = await original.newPage();
         watch(op, 'original components ' + label);
         await op.goto(BASE + '/Components/All', { waitUntil: 'networkidle' });
-        await op.waitForFunction(() => document.readyState === 'complete');
+        await op.waitForFunction(() => document.readyState === 'complete', null, READY);
         const copy = await renamedPage(options, '/Components/All');
         await normalizeText(op);
         for (const p of [op, copy.page]) { await p.evaluate(() => { document.documentElement.style.scrollBehavior = 'auto'; }); }
