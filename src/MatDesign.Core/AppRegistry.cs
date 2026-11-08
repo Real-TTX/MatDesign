@@ -109,7 +109,7 @@ public static class AppRegistry
             FoundAccent: "#3b82f6", LogoColor: "#3b82f6", Port: 2222, CssPrefix: "mf-, mfx-", TokenScheme: "--mf-*"),
         new("matdrive", "MatDrive", "Files in the browser: drives, sharing, versions, WebDAV", Productivity, "#8e24aa", "folder", "MatDrive",
             Port: 4810, CssPrefix: "md-", Notes: "The drive of the family (like the cloud drives people know) with the storage locations of MatFile; opens office files in MatOffice."),
-        new("matoffice", "MatOffice", "Office in the browser: Docs, Sheets, Slides, Base", Productivity, "#d83b01", "file-text", "MatOffice",
+        new("matoffice", "MatOffice", "Office in the browser: Docs, Sheets, Slides, Base", Productivity, "#205a8e", "file-text", "MatOffice",
             Port: 4820, CssPrefix: "mo-", Notes: "Four editors in one app (documents, spreadsheets, presentations, databases); the editors are its special UI, each with the colour of its app."),
         new("matcms", "MatCMS", "Block-based CMS for websites", Productivity, "#2563eb", "template", "MatCMS",
             FoundAccent: "#2563eb", LogoColor: "#3b82f6", Port: 9101, CssPrefix: "el-, le-, admin-", TokenScheme: "--accent, --bg, --surface",

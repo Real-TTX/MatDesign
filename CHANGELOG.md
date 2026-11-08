@@ -14,7 +14,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 ## [Unreleased]
 ### Added
 
-- The colours of two new apps, MatDrive (the drive of the family: files, sharing, versions, WebDAV) and MatOffice (the office suite: Docs, Sheets, Slides, Base): `[data-app="matdrive"]` sets `--mat-app-accent: #8e24aa` (white text on it, 7.0:1) and `[data-app="matoffice"]` sets `--mat-app-accent: #d83b01` (white text on it, 4.6:1); both pass AA. Nothing to do for the other apps but copy the files.
+- The colours of two new apps, MatDrive (the drive of the family: files, sharing, versions, WebDAV) and MatOffice (the office suite: Docs, Sheets, Slides, Base): `[data-app="matdrive"]` sets `--mat-app-accent: #8e24aa` (white text on it, 7.0:1) and `[data-app="matoffice"]` sets `--mat-app-accent: #205a8e` (white text on it, 7.2:1; dark text on its dark variant, 4.8:1); both pass AA in light and dark. Nothing to do for the other apps but copy the files.
 
 ## [0.12.0] - 2026-11-01
 ### Added

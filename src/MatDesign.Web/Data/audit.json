@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-07",
+ "generated": "2026-11-08",
  "checks": [
   {
    "id": "shell.menu-left",
@@ -1071,7 +1071,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "35 max-width media queries."
+     "note": "36 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
@@ -1112,8 +1112,8 @@
      "note": "24 dialog or modal elements."
     },
     "color.tokens": {
-     "state": "partial",
-     "note": "34 literal colours outside the variables."
+     "state": "no",
+     "note": "247 literal colours outside the variables."
     },
     "code.inline": {
      "state": "yes",
@@ -1133,7 +1133,7 @@
     },
     "mobile.query": {
      "state": "yes",
-     "note": "38 max-width media queries."
+     "note": "46 max-width media queries."
     },
     "a11y.motion": {
      "state": "yes",
