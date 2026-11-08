@@ -85,6 +85,11 @@ jobs:
           -p:BuildNumber=${{ steps.ver.outputs.build }}
           -p:BuildDate=${{ steps.ver.outputs.date }}
 
+      # Every site the tests start in memory watches its files (the web root for asp-append-version, the content root): one inotify instance each. The tests run a few hundred
+      # sites at once (measured: 341 with every site stopped after its test), the runner allows 128 per user, and over it every new site fails with an IOException.
+      - name: Room for the sites of the tests
+        run: sudo sysctl -w fs.inotify.max_user_instances=8192
+
       - name: Test
         # The GitHubActions logger shows every failed test as an annotation of the run (and in the summary of a pull request).
         run: dotnet test MatDesign.slnx -c Release --no-build --verbosity normal --logger GitHubActions

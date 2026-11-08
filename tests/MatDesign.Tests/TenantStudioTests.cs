@@ -19,10 +19,18 @@ public sealed partial class TenantSetupTests : IClassFixture<WebApplicationFacto
     private readonly WebApplicationFactory<Program> _plain;
     private readonly List<string> _directories = [];
 
+    // the sites a test started: stopped after the test, not only when the class is done (a running host keeps an inotify instance open, CI has 128)
+    private readonly List<WebApplicationFactory<Program>> _sites = [];
+
     public TenantSetupTests(WebApplicationFactory<Program> factory) => _plain = factory;
 
     public void Dispose()
     {
+        foreach (var site in _sites)
+        {
+            site.Dispose();
+        }
+
         foreach (var directory in _directories.Where(Directory.Exists))
         {
             Directory.Delete(directory, recursive: true);
@@ -45,13 +53,15 @@ public sealed partial class TenantSetupTests : IClassFixture<WebApplicationFacto
     private WebApplicationFactory<Program> Studio(string? directory = null, string? template = null, string? company = null, string? adminPassword = null)
     {
         directory ??= NewDirectory();
-        return _plain.WithWebHostBuilder(builder =>
+        var site = _plain.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("MATDESIGN_DATA", directory);
             if (template is not null) { builder.UseSetting("MATDESIGN_TEMPLATE", template); }
             if (company is not null) { builder.UseSetting("MATDESIGN_COMPANY", company); }
             if (adminPassword is not null) { builder.UseSetting("MATDESIGN_ADMIN_PASSWORD", adminPassword); }
         });
+        _sites.Add(site);
+        return site;
     }
 
     private static HttpClient Client(WebApplicationFactory<Program> factory) => factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });

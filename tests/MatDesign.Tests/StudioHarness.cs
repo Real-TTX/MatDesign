@@ -58,8 +58,13 @@ public sealed partial class StudioHarness : IDisposable
     [GeneratedRegex(@"name=""__RequestVerificationToken""[^>]*value=""([^""]+)""")]
     private static partial Regex Token();
 
+    /// <summary>
+    /// Stops the site of this harness (its own server: the class fixture only stops the sites it derived when the whole class is done, and a host that runs keeps a watcher of
+    /// its configuration open; on Linux each one is an inotify instance, and CI has 128) and, when the directory is its own, deletes it.
+    /// </summary>
     public void Dispose()
     {
+        Factory.Dispose();
         if (_owns && Directory.Exists(_directory))
         {
             Directory.Delete(_directory, recursive: true);

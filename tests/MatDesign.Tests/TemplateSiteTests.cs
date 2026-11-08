@@ -13,11 +13,22 @@ namespace MatDesign.Tests;
 /// The site for the two templates (docs/PRODUCT.md, stage 14). The demo is the site exactly as it was before there were tenants (the pages are compared with the ones that main served, up to the
 /// numbers that change with the rulebook); a blank start shows the company's own names and none of the Mat apps, on every page, with the shell rules kept.
 /// </summary>
-public sealed partial class TemplateSiteTests : IClassFixture<WebApplicationFactory<Program>>
+public sealed partial class TemplateSiteTests : IClassFixture<WebApplicationFactory<Program>>, IDisposable
 {
     private readonly WebApplicationFactory<Program> _factory;
 
+    // the sites a test started: stopped after the test, not only when the class is done (a running host keeps an inotify instance open, CI has 128)
+    private readonly List<WebApplicationFactory<Program>> _sites = [];
+
     public TemplateSiteTests(WebApplicationFactory<Program> factory) => _factory = factory;
+
+    public void Dispose()
+    {
+        foreach (var site in _sites)
+        {
+            site.Dispose();
+        }
+    }
 
     [GeneratedRegex(@"<svg xmlns=""http://www\.w3\.org/2000/svg"" class=""mat-sprite"".*?</svg>", RegexOptions.Singleline)]
     private static partial Regex Sprite();
@@ -83,11 +94,15 @@ public sealed partial class TemplateSiteTests : IClassFixture<WebApplicationFact
     private static string Golden(string name) => File.ReadAllText(Path.Combine(TestPaths.RepoRoot, "tests", "MatDesign.Tests", "Golden", name + ".html"));
 
     private WebApplicationFactory<Program> Blank(string company = "Acme Industries")
-        => _factory.WithWebHostBuilder(builder =>
+    {
+        var site = _factory.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("MATDESIGN_TEMPLATE", "blank");
             builder.UseSetting("MATDESIGN_COMPANY", company);
         });
+        _sites.Add(site);
+        return site;
+    }
 
     private static async Task<string> Html(HttpClient client, string url)
     {
@@ -120,7 +135,8 @@ public sealed partial class TemplateSiteTests : IClassFixture<WebApplicationFact
     public async Task The_demo_template_chosen_in_the_environment_is_the_same_site_as_no_tenant_at_all(string url)
     {
         var plain = await Html(_factory.CreateClient(), url);
-        var chosen = await Html(_factory.WithWebHostBuilder(b => b.UseSetting("MATDESIGN_TEMPLATE", "demo")).CreateClient(), url);
+        using var demo = _factory.WithWebHostBuilder(b => b.UseSetting("MATDESIGN_TEMPLATE", "demo"));
+        var chosen = await Html(demo.CreateClient(), url);
 
         Assert.Equal(Normalize(plain), Normalize(chosen));
     }

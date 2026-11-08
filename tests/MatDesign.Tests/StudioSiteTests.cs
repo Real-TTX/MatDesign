@@ -15,10 +15,18 @@ public sealed partial class StudioSiteTests : IClassFixture<WebApplicationFactor
     private readonly WebApplicationFactory<Program> _plain;
     private readonly List<string> _directories = [];
 
+    // the sites a test started: stopped after the test, not only when the class is done (a running host keeps an inotify instance open, CI has 128)
+    private readonly List<WebApplicationFactory<Program>> _sites = [];
+
     public StudioSiteTests(WebApplicationFactory<Program> factory) => _plain = factory;
 
     public void Dispose()
     {
+        foreach (var site in _sites)
+        {
+            site.Dispose();
+        }
+
         foreach (var directory in _directories.Where(Directory.Exists))
         {
             Directory.Delete(directory, recursive: true);
@@ -35,7 +43,7 @@ public sealed partial class StudioSiteTests : IClassFixture<WebApplicationFactor
     {
         var directory = Path.Combine(Path.GetTempPath(), "matdesign-studio-" + Guid.NewGuid().ToString("N"));
         _directories.Add(directory);
-        return _plain.WithWebHostBuilder(builder =>
+        var site = _plain.WithWebHostBuilder(builder =>
         {
             builder.UseSetting("MATDESIGN_DATA", directory);
             if (password is not null)
@@ -43,6 +51,8 @@ public sealed partial class StudioSiteTests : IClassFixture<WebApplicationFactor
                 builder.UseSetting("MATDESIGN_ADMIN_PASSWORD", password);
             }
         });
+        _sites.Add(site);
+        return site;
     }
 
     /// <summary>The address of a redirect as path and query: the sign-in challenge of the cookie scheme is absolute, the page redirects are not.</summary>
@@ -99,7 +109,7 @@ public sealed partial class StudioSiteTests : IClassFixture<WebApplicationFactor
         await File.WriteAllTextAsync(file, "a file where a directory should be");
         try
         {
-            var factory = _plain.WithWebHostBuilder(b => { b.UseSetting("MATDESIGN_DATA", file); b.UseSetting("MATDESIGN_ADMIN_PASSWORD", Password); });
+            using var factory = _plain.WithWebHostBuilder(b => { b.UseSetting("MATDESIGN_DATA", file); b.UseSetting("MATDESIGN_ADMIN_PASSWORD", Password); });
             var html = await Html(Client(factory), "/Studio/Login");
             Assert.Contains("is not writable", html);
         }

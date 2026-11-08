@@ -24,6 +24,8 @@ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) before changing the design and
 - **Build:** `dotnet build MatDesign.slnx` (note: `.slnx`). SDK 10 (see `global.json`). Expected: 0 warnings, 0 errors.
 - **Tests:** `dotnet test`: xunit, no Docker, no browser. It also starts the whole site in memory and crawls it. **Browser checks:** `cd tests/e2e && npm install && node run.js http://localhost:8060` and `node white-label.js http://localhost:8060`
   (Playwright against the running container; CI runs both). Add a check there when behaviour of `matui.js` changes: reading a script proves little.
+  **A test that starts a site of its own stops it after the test** (`using var` on `WithWebHostBuilder`, `StudioHarness.Dispose`, or the class's `_sites` list): a running site watches its files with an inotify instance,
+  the class fixture stops derived sites only when the whole class is done, and on Linux the suite ran out of them (CI raises the runner's limit of 128 before the tests; 341 at once was measured).
 - **Run / test the site: always rebuild the container and redeploy the stack** (project rule): `./scripts/redeploy.ps1` (`-Port` changes the host port).
   Dev stack: `docker-compose.dev.yml`, container `matdesign-dev`, port 8060, explicit subnet `10.253.60.0/24` (the development PC has all Docker address pools used up:
   `all predefined address pools have been fully subnetted`; change it with `MATDESIGN_DEV_SUBNET`). CSS, JS and cshtml are baked into the image: rebuild after a change.
