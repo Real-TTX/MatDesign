@@ -282,9 +282,14 @@ internal address), `MATIDENTITY_CLIENT_ID`, `MATIDENTITY_CLIENT_SECRET` (a secre
 
 ### `web.route` (version 1, implicit)
 
-Matcad makes an app reachable under a name of the domain. **Parameters:** `host` (`<app>.<domain>`). **A binding** is a route from `host` to the consumer's internal address,
-named after the consumer, `managedBy` as the request says; its certificate is Matcad's (the wildcard certificate of the domain when the broker set up a DNS account). A new
-`host` for the same consumer moves its route. **Values:** `MAT_PUBLIC_URL` = `https://<host>` (`http://` for a development name under `.localhost`).
+Matcad makes an app reachable: under a name of the domain, or, without a domain, on a port of the machine. Every app with a web page is reached this way (the broker
+asks for it by itself); an app with a route publishes no port of its own. **Parameters** (strings): `host` (`<app>.<domain>`) **or** `port` (1024–65535; not 80, 443
+or 2019, which Caddy uses itself) with an optional `publicHost` (the name or IP address browsers use for the machine: `nas.local`, `192.168.1.20`, `fd00::20`); `host`
+and `port` together are refused. **A binding** is a route from `host`, or from the port (Caddy listens on it, plain HTTP, no host match), to the consumer's internal
+address, named after the consumer, `managedBy` as the request says; a host route's certificate is Matcad's (the wildcard certificate of the domain when the broker set up
+a DNS account). One route per consumer: a new `host` or `port` moves it (host to port and back when a domain comes or goes), and what an administrator set on it stays.
+Publishing the port on Matcad's container is the broker's job. **Values:** `MAT_PUBLIC_URL` = `https://<host>` (`http://` for a development name under `.localhost`), for a
+port route `http://<publicHost>:<port>` (an IPv6 address in brackets), and empty without `publicHost`: an app is never told `localhost`.
 
 ### `shell.embed` (version 1, implicit)
 
