@@ -16,6 +16,10 @@ A change that an app can see is written down under **Unreleased** in the pull re
 
 - The colours of two new apps, MatDrive (the drive of the family: files, sharing, versions, WebDAV) and MatOffice (the office suite: Docs, Sheets, Slides, Base): `[data-app="matdrive"]` sets `--mat-app-accent: #8e24aa` (white text on it, 7.0:1) and `[data-app="matoffice"]` sets `--mat-app-accent: #205a8e` (white text on it, 7.2:1; dark text on its dark variant, 4.8:1); both pass AA in light and dark. Nothing to do for the other apps but copy the files.
 
+### Fixed
+
+- With `prefers-reduced-motion: reduce` a long page with many controls was slow to start: the rule of `matui.base.css` set every transition to `.01ms`, which still starts a transition on each change, and the script that sets up sliders, ratings, schedules and carousels measured the page again with each of them (the components page of MatDesign on a phone was busy for 32 s, without reduced motion 5 s). Transitions are `0s` there now (6 s); animations stay at `.01ms`. Nothing to do for an app, unless its own script waits for `transitionend` while the user asks for reduced motion: that event no longer comes then (a transition of 0 s does not run).
+
 ## [0.12.0] - 2026-11-01
 ### Added
 

@@ -153,6 +153,16 @@ public sealed partial class RuleReviewTests(WebApplicationFactory<Program> facto
     }
 
     [Fact]
+    public void Under_reduced_motion_a_transition_does_not_run_at_all()
+    {
+        // .01ms still starts a transition on every change, and the script that sets up the controls measured a long page again with each of them:
+        // the components page on a phone was busy for 32 s instead of 6 (SPACE-04: transitions are reduced to nothing)
+        var block = Regex.Match(Css("base"), @"@media \(prefers-reduced-motion: reduce\) \{\s*\*, \*::before, \*::after \{(?<body>[^}]*)\}").Groups["body"].Value;
+        Assert.Contains("transition-duration: 0s !important;", block);
+        Assert.DoesNotContain("transition-duration: .01ms", block);
+    }
+
+    [Fact]
     public void A_toast_is_at_the_bottom_right_and_goes_after_a_few_seconds_with_an_X()
     {
         var host = Regex.Match(Css("controls"), @"\.mat-toasts \{[^}]*\}").Value;

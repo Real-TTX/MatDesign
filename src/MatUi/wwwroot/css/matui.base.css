@@ -127,11 +127,13 @@ kbd {
   vertical-align: -.2em;
 }
 
+/* Transitions are 0s, not .01ms: a transition of .01ms still starts on every change of a property, and every element the script measures while it sets up the controls
+   is then measured again with them (a long page on a phone was busy for 32 s instead of 6). Nothing of the toolkit waits for transitionend. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
+    transition-duration: 0s !important;
     scroll-behavior: auto !important;
   }
 }
