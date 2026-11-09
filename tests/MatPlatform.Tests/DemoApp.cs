@@ -170,6 +170,8 @@ public static class DemoHost
     /// <param name="signIn">More options of the sign-in, after the demo's own.</param>
     /// <param name="pipeline">Middleware of the app itself, before rate limiter and authentication (for example its own ForwardedHeaders).</param>
     /// <param name="withSessions">The users class also implements <see cref="IMatIdentitySessions"/> (<see cref="DemoSessionUsers"/>).</param>
+    /// <param name="frameAncestors">The value of <c>MAT_FRAME_ANCESTORS</c> (none: not set, whatever the environment of the test says).</param>
+    /// <param name="services">More services of the app itself, before it is built.</param>
     public static async Task<WebApplication> StartAsync(
         bool withKey = true,
         string? authority = null,
@@ -177,7 +179,9 @@ public static class DemoHost
         DemoStore? store = null,
         Action<MatIdentitySignInOptions>? signIn = null,
         Action<WebApplication>? pipeline = null,
-        bool withSessions = false)
+        bool withSessions = false,
+        string? frameAncestors = null,
+        Action<IServiceCollection>? services = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
         builder.WebHost.UseTestServer();
@@ -187,6 +191,7 @@ public static class DemoHost
             [MatPlatformSettings.ApiKeyVariable] = withKey ? ApiKey : null,
             [MatPlatformSettings.AuthorityVariable] = authority,
             [MatPlatformSettings.ClientSecretVariable] = authority is null ? null : "test-secret",
+            [MatFrameAncestors.Variable] = frameAncestors,
         });
 
         var settings = builder.AddMatPlatform<DemoApp>(DemoApp.Describe, configure);
@@ -232,6 +237,7 @@ public static class DemoHost
             });
         }
 
+        services?.Invoke(builder.Services);
         var app = builder.Build();
         pipeline?.Invoke(app);
         app.UseRateLimiter();

@@ -5,7 +5,7 @@ builder for it, the endpoints (`/api`, `/api/health`, `/api/state[/{key}]`, `GET
 MatIdentity's tokens, the checks of the settings, a validator of a definition for the app's tests and the sign-in through MatIdentity (OpenID Connect).
 An app only **describes** itself and **supplies its values**.
 
-Version **1.4.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
+Version **1.5.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
 The first app on it is MatSplit (`src/MatSplit.Web/Platform/SplitPlatform.cs` there is the example to read).
 
 ## How an app gets it: a copy (CODE-03)
@@ -16,7 +16,7 @@ Like MatUi, an app **copies** the package; nothing is loaded from elsewhere and 
 node tools/matplatform-copy.js <folder of the app's web project>      # or: ./tools/matplatform-copy.ps1 -Target <folder>
 ```
 
-It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.4.0 – a copy from MatDesign, do not edit here`, and
+It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.5.0 – a copy from MatDesign, do not edit here`, and
 `matplatform.version` (the version, then the SHA-256 of each file as copied, with LF line ends). Copying again updates the files and removes the ones the package no longer has.
 **Never change the copy in the app**: change `src/MatPlatform` here (with a test in `tests/MatPlatform.Tests`), raise the version and copy it to the apps.
 
@@ -37,6 +37,7 @@ IServiceCollection  services.AddMatPlatformValues<TApp>()
 AuthenticationBuilder authentication.AddMatIdentitySignIn<TUsers>(MatPlatformSettings settings, Action<MatIdentitySignInOptions>? configure = null) // TUsers : IMatIdentityUsers
 RouteGroupBuilder   app.MapMatPlatform()      // returns the protected group /api, for the app's own /api/provides/...; with MatIdentity on also POST /signout-backchannel
 IEndpointConventionBuilder? app.MapMatIdentityBackchannelLogout() // what MapMatPlatform calls (once; null when MatIdentity is off or it is mapped already)
+IServiceCollection  services.AddMatFrameAncestors() // 1.5.0: what AddMatPlatform registers (MAT_FRAME_ANCESTORS); for an app without AddMatPlatform
 
 // What the app implements (each optional; one class may implement all four)
 interface IMatPlatformState         { Task<IReadOnlyDictionary<string, MatStateValue>> GetStateAsync(MatPlatformCall call, CancellationToken ct); }
@@ -72,6 +73,7 @@ MatIdentitySignInOptions: CookieScheme, LoginPath = "/Account/Login", SignedOutR
     BackchannelLogoutPath = "/signout-backchannel", LogoutTokenMaxAge = 5 minutes
 MatIdentitySignIn.BackchannelLogoutPath ("/signout-backchannel")
 MatForwardedProto.Apply(HttpContext), MatForwardedProto.IsHttps(header): the scheme from X-Forwarded-Proto (registered by AddMatIdentitySignIn, see below)
+MatFrameAncestors (1.5.0): Variable ("MAT_FRAME_ANCESTORS"), From(configuration), Parse(value) -> the origins, Apply(policy, origins) -> the policy with frame-ancestors, ApplyTo(headers, origins)
 MatIdentitySignIn.Scheme ("MatIdentity"), MatIdentitySignIn.SignOutAtIdentity(HttpContext http, string idToken) -> SignOutResult
 MatIdentitySignIn.CompleteSignInAsync(HttpContext http, MatIdentityPerson person, string? returnUrl) -> where the browser goes (what /signin-oidc does; for the apps' tests)
 MatApiAccess (X-Api-Key in constant time, or a bearer token of MatIdentity for the audience = client id), MatApiAccess.BearerScheme, MatApiAccess.CallerOf(http)
@@ -96,6 +98,20 @@ changes nothing. Without it the app sees `http`, the `redirect_uri` is `http://.
 browser drops them and the sign-in fails. **Only the scheme**: `RemoteIpAddress` (`X-Forwarded-For`, which guards the rate limits) and `Host` stay the app's own
 ForwardedHeaders policy, and that policy, before or after it, comes to the same scheme. `X-Forwarded-Prefix` is not read: Matcad serves every app at the root of its own
 address. `MatIdentitySignInOptions.TrustForwardedProto = false` turns it off.
+
+## Shown inside another app: `MAT_FRAME_ANCESTORS` (1.5.0)
+
+Mattiverse opens apps in the window of its home screen, a frame (docs/PLATFORM.md "Shown inside another app"). `AddMatPlatform` registers an `IStartupFilter` (`AddMatFrameAncestors`;
+an app without `AddMatPlatform` calls `builder.Services.AddMatFrameAncestors()` itself) that reads `MAT_FRAME_ANCESTORS` once at startup:
+
+- **Origins in it** (separated by spaces or commas; each `http` or `https`, a host, maybe a port: `MatFrameAncestors.Parse` drops a path, a wildcard, `*`, a keyword, so a mistake
+  never opens the app to every site; an IPv6 address keeps its brackets): a tiny middleware at the very start of the pipeline registers `Response.OnStarting` on every request. It
+  removes `X-Frame-Options` (it knows no list of origins; also the `SAMEORIGIN` of the anti-forgery tokens) and puts `frame-ancestors 'self' <origins>` into the content security
+  policy (an existing `frame-ancestors` is replaced, the rest stays). The callbacks of `OnStarting` run last registered first, so this one, registered first, has the last word over
+  the app's own security headers. The log says once which origins may frame the app.
+- **Unset, empty or without an origin:** nothing is registered, the app's headers stay as they are (a value without an origin is a warning in the log).
+
+The app needs nothing else: its own security headers (`X-Frame-Options: DENY`, `frame-ancestors 'none'`) may stay as they are.
 
 ## Back-channel logout (1.4.0)
 
@@ -209,6 +225,10 @@ What the app stored for its own server stays stored and is used again when the v
     a logout token signed with a test key that is in the fixed `OpenIdConnectConfiguration.SigningKeys` (see `tests/MatPlatform.Tests/BackchannelLogoutTests.cs`) answers `200` and
     the session's next request lands on the sign-in page; `sub` alone ends every session of the person; without `MATIDENTITY_AUTHORITY` the path is `404`. Nothing to configure:
     Mattiverse registers `http://<container>:<port>/signout-backchannel` as the client's `backchannelLogoutUri` in MatIdentity for every app with `identity: {}`.
+
+13. **Shown in Mattiverse's window** (1.5.0, see "Shown inside another app" above): nothing in the code (`AddMatPlatform` does it); the README's settings table names
+    `MAT_FRAME_ANCESTORS`, the release `docker-compose.yml` has it as a comment, and the Mattiverse catalog entry passes it (`MAT_FRAME_ANCESTORS: ${MAT_FRAME_ANCESTORS:-}`), so
+    Mattiverse fills it.
 
 ## Changing the package
 

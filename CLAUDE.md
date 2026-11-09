@@ -64,6 +64,7 @@ src/MatPlatform            the platform contract for .NET apps (docs/PLATFORM.md
   MatIdentitySignIn.cs       AddMatIdentitySignIn<TUsers> (OIDC code + PKCE, JWT bearer), IMatIdentityUsers, IMatIdentitySessions (optional), CompleteSignInAsync, SignOutAtIdentity, MapMatIdentityBackchannelLogout (POST /signout-backchannel, 501 without IMatIdentitySessions); MatIdentityBackchannelHandler.cs (MATIDENTITY_INTERNAL_URL: the server-to-server calls, not the logout)
   MatIdentityLogoutToken.cs  the check of a logout token (OIDC Back-Channel Logout 1.0: signature with the handler's keys, typ, iss, aud, iat window, events, sub/sid, no nonce) and the jti replay cache
   MatForwardedProto.cs       behind a TLS proxy the scheme from X-Forwarded-Proto (only the scheme, never the address or host); an IStartupFilter AddMatIdentitySignIn registers (TrustForwardedProto)
+  MatFrameAncestors.cs       MAT_FRAME_ANCESTORS: the origins that may frame the app (Parse drops anything that is not an origin), frame-ancestors instead of X-Frame-Options in OnStarting; an IStartupFilter AddMatPlatform registers (AddMatFrameAncestors)
   MatIdentityPendingLink.cs  an account that matches by address is linked only after its password: the pending link (protected cookie, 10 minutes), LinkRequired sends to ?local=1&link=1
   MatPlatformInfo.cs         the version (= MatPlatformVersion in MatPlatform.csproj, a test holds them equal)
 src/MatDesign.Core         no web types

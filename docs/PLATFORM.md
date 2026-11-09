@@ -296,6 +296,25 @@ and it delivers it (directly or through a smarthost). Optional for every app tha
 - In .NET apps **MatPlatform** reads them (`MatSmtpSettings.From(configuration)`: `IsConfigured`, `Host`, `Port`, `Username`, `Password`, `FromAddress`, `Tls` with
   `UseStartTls` / `UseTls`) and describes the fixed state (`Describe(language)` for the sentence, `Fix(field, language)` for a field of `/api/configure`).
 
+## Shown inside another app: `MAT_FRAME_ANCESTORS`
+
+Mattiverse opens apps in the window of its home screen, which is a frame. An app that guards itself against being framed (`X-Frame-Options`, `frame-ancestors 'none'`,
+or the `SAMEORIGIN` that ASP.NET Core's anti-forgery tokens add) cannot be shown there. Such an app may name who may frame it:
+
+| Variable | Meaning |
+|---|---|
+| `MAT_FRAME_ANCESTORS` | the origins that may show the app in a frame, separated by spaces (`http://localhost:8030 https://mattiverse.example.com`). Each entry must be an origin: `http` or `https`, a host, maybe a port, nothing else; anything else (a path, a wildcard, `*`, a keyword) is left out, so a mistake never opens the app to every site |
+
+- **Set:** every answer carries `Content-Security-Policy: frame-ancestors 'self' <origins>` (an existing `frame-ancestors` is replaced, the rest of the policy stays) and **no**
+  `X-Frame-Options` (it knows no list of origins; the browsers let `frame-ancestors` win anyway). The cookies keep working in the frame as long as the frame and the page around
+  it are the same site (the apps of one host or of one domain are).
+- **Unset or empty:** the app behaves exactly as before.
+- **Mattiverse** sets it for every app whose catalog entry names `${MAT_FRAME_ANCESTORS}` in its compose file (the engines): its route behind the proxy
+  (`https://mattiverse.<domain>`), this machine with the port Mattiverse is published on (`localhost` and the configured address), and the addresses people signed in from.
+  An app learns a new address of Mattiverse with its next update. Mattiverse checks the headers before it frames an app and offers a new tab otherwise.
+- In .NET apps **MatPlatform** does it (1.5.0, `MatFrameAncestors`): `AddMatPlatform` registers it, an app without it calls `builder.Services.AddMatFrameAncestors()`; the app's own
+  security headers may stay as they are, the headers of the variable have the last word (src/MatPlatform/README.md "Shown inside another app").
+
 ## What an app has to do (definition of done)
 
 1. The MatApiDefinition at `/api` and `/api/health`, `/api/state`, `/api/configure`, `/api/actions/{id}` as above; the Docker `HEALTHCHECK` calls `/api/health`.
@@ -303,12 +322,12 @@ and it delivers it (directly or through a smarthost). Optional for every app tha
 3. MatUi as the toolkit ([ADOPTING.md](ADOPTING.md)), the app in the registry here (`AppRegistry.cs`, `matui.apps.css`) with its accent and port.
 4. Tests: the definition is valid (every key a section names exists, every icon is in the sprite, every `showIf` names a field), the answers of the endpoints (shape, status codes,
    a secret never sent back, `401` without key), the sign-in with and without MatIdentity, the back-channel logout (a valid logout token ends the session, `404` without MatIdentity).
-5. A catalog entry in Mattiverse (`src/Mattiverse.Core/Catalog/apps/<app>.yml`) that passes `MAT_API_KEY` and, when present, the `MATIDENTITY_*` variables.
+5. A catalog entry in Mattiverse (`src/Mattiverse.Core/Catalog/apps/<app>.yml`) that passes `MAT_API_KEY` and, when present, the `MATIDENTITY_*` variables and `MAT_FRAME_ANCESTORS`.
 6. An app that sends mail reads the `MATSMTP_*` variables (see "Mail through MatSMTP"): set = all its mail through MatSMTP and its own SMTP settings fixed, in its pages and in
    `/api/configure`; its catalog entry says `mail: {}` and passes the six variables; README and release `docker-compose.yml` name them like the others.
 
 **Shared code.** For .NET apps the endpoints, the key check, the checks of the settings, the validation of the definition and the OIDC wiring come as one package,
-**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 1.4.0), so that an app only describes its pages and supplies its values:
+**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 1.5.0), so that an app only describes its pages and supplies its values:
 `builder.AddMatPlatform<AppPlatform>(AppPlatform.Describe)` (a description with `o.App(...)`, `o.Page(...)`, `o.Tile(...)`, `o.Field(...)`, `o.LinkAction(...)` / `o.PostAction(...)`,
 `o.Role(...)`), the values from the interfaces `IMatPlatformState`, `IMatPlatformConfiguration`, `IMatPlatformActions` and `IMatPlatformHealth`, `.AddMatIdentitySignIn<AppUsers>(...)` with
 `IMatIdentityUsers` for the local user (and `IMatIdentitySessions` for the back-channel logout), and `app.MapMatPlatform()`. `MatPlatformValidator` checks a definition in the app's tests (keys of the sections, `showIf`, unique ids,
