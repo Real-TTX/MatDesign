@@ -5,7 +5,7 @@ builder for it, the endpoints (`/api`, `/api/health`, `/api/state[/{key}]`, `GET
 MatIdentity's tokens, the checks of the settings, a validator of a definition for the app's tests and the sign-in through MatIdentity (OpenID Connect).
 An app only **describes** itself and **supplies its values**.
 
-Version **1.5.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
+Version **2.2.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
 The first app on it is MatSplit (`src/MatSplit.Web/Platform/SplitPlatform.cs` there is the example to read).
 
 ## How an app gets it: a copy (CODE-03)
@@ -16,7 +16,7 @@ Like MatUi, an app **copies** the package; nothing is loaded from elsewhere and 
 node tools/matplatform-copy.js <folder of the app's web project>      # or: ./tools/matplatform-copy.ps1 -Target <folder>
 ```
 
-It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 1.5.0 – a copy from MatDesign, do not edit here`, and
+It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 2.2.0 – a copy from MatDesign, do not edit here`, and
 `matplatform.version` (the version, then the SHA-256 of each file as copied, with LF line ends). Copying again updates the files and removes the ones the package no longer has.
 **Never change the copy in the app**: change `src/MatPlatform` here (with a test in `tests/MatPlatform.Tests`), raise the version and copy it to the apps.
 
@@ -38,6 +38,24 @@ AuthenticationBuilder authentication.AddMatIdentitySignIn<TUsers>(MatPlatformSet
 RouteGroupBuilder   app.MapMatPlatform()      // returns the protected group /api, for the app's own /api/provides/...; with MatIdentity on also POST /signout-backchannel
 IEndpointConventionBuilder? app.MapMatIdentityBackchannelLogout() // what MapMatPlatform calls (once; null when MatIdentity is off or it is mapped already)
 IServiceCollection  services.AddMatFrameAncestors() // 1.5.0: what AddMatPlatform registers (MAT_FRAME_ANCESTORS); for an app without AddMatPlatform
+
+// 2.0.0, contract 2: capabilities, bindings, the Connections area, contributions (docs/PLATFORM.md)
+o.Provides(capability, version = 1, label = null)                     // what the app gives other apps
+o.Consumes(capability, version = 1, optional = false, label = null, parameters = null) // what it uses ("Opens office files with")
+o.Launcher(id, label, icon, url, audience = null, badge = null, accent = null)        // an icon on the home screen of a shell
+o.Widget(new MatWidget(id, label, kind, size) { Items, Icon, Url, Refresh, Audience }) // stat | meter | tiles | list
+o.QuickAction(launcher, label, icon, url = null, action = null)                    // the menu of a launcher
+options.DataDirectory = "/data";                                       // where the bindings are kept (matplatform/bindings.json)
+options.ConnectionsAccess = http => Task.FromResult(http.User.IsInRole("Admin")); // who may use the Connections area
+MatBindings          await bindings.GetAsync("office.edit") -> MatBinding { IsBound, Source, Url, InternalUrl, ServerUrl, Key, [key] }; IsFixed(capability); SaveByHandAsync; ClearByHandAsync
+IMatBindingHandler   Capability, ListAsync, BindAsync(MatBindRequest) -> MatBindResult, UnbindAsync  // only when a binding is more than a key
+MatBindingRefusedException(key, message, conflict) // 2.2.0: thrown by BindAsync: 400 (409 with conflict) for a broker, the message in the Connections area
+options.UiLanguage = _ => "de";                       // 2.2.0: the language of the Connections area for an app in one language (null: culture, then Accept-Language)
+MatKeyBindingHandler the generic one (a key per consumer, its hash in the data folder); MatBindingAccess.Require(capability) guards /api/provides/{capability}/...
+IMatPlatformWidgets  GetWidgetAsync(id, call) -> the rows of a list widget (GET /api/widgets/{id})
+<mat-connections />  the Connections area (a tag helper; the forms post to /api/connections/form)
+MatCapabilities      Of(capability) -> MatCapabilitySpec (values, variables, labels, ByHand); PrefixOf("office.edit") == "MAT_OFFICE_EDIT"
+MatPlatformSettings  AppPublicUrl (MAT_PUBLIC_URL), AppInternalUrl (MAT_INTERNAL_URL)
 
 // What the app implements (each optional; one class may implement all four)
 interface IMatPlatformState         { Task<IReadOnlyDictionary<string, MatStateValue>> GetStateAsync(MatPlatformCall call, CancellationToken ct); }
@@ -98,6 +116,24 @@ changes nothing. Without it the app sees `http`, the `redirect_uri` is `http://.
 browser drops them and the sign-in fails. **Only the scheme**: `RemoteIpAddress` (`X-Forwarded-For`, which guards the rate limits) and `Host` stay the app's own
 ForwardedHeaders policy, and that policy, before or after it, comes to the same scheme. `X-Forwarded-Prefix` is not read: Matcad serves every app at the root of its own
 address. `MatIdentitySignInOptions.TrustForwardedProto = false` turns it off.
+
+## Capabilities, bindings and the Connections area (2.0.0)
+
+An app says what it provides and consumes (`o.Provides`, `o.Consumes`). A broker (Mattiverse) binds every consumer to a provider of the same capability through
+`PUT /api/bindings/{capability}/{consumer}` and hands the answer to the consumer as environment variables; an administrator can do the same by hand in the Connections area of
+both apps. MatPlatform does all of it:
+
+- **Consumer:** `MatBindings.GetAsync(capability)`: the variables when any is set (the values are then fixed), else what was entered in the Connections area (kept in
+  `<DataDirectory>/matplatform/bindings.json`, a secret protected with Data Protection), else not bound. For a key capability (`office.edit`): `Url` for a browser,
+  `ServerUrl` (the internal address when there is one) for calls from the server, `Key` as the bearer token.
+- **Provider of a key capability:** no code. `MatKeyBindingHandler` makes a key per consumer and keeps only its hash; guard the endpoints of the capability with
+  `app.MapGroup("/api/provides/<capability>").AddEndpointFilter(MatBindingAccess.Require("<capability>"))`, and `MatBindingAccess.ConsumerOf(http)` names the caller.
+- **Provider whose binding is more** (a client, a relay user, a host with sessions): register an `IMatBindingHandler` for the capability; it wins over the generic one.
+- **The Connections area:** `<mat-connections />` on an admin page (needs `@addTagHelper *, <the app's assembly>` and `options.ConnectionsAccess`): uses, offers and what the
+  app adds to the home screen, drawn on the server with MatUi's classes; its forms post to `/api/connections/form` with the anti-forgery token and come back with the outcome
+  (and a new key, shown once) in a short-lived protected cookie. `GET /api/connections` answers the same as JSON.
+- **Contributions:** `o.Launcher`, `o.Widget`, `o.QuickAction`; `MatPlatformValidator` checks them (ids, addresses of the app, kinds, sizes, keys of `state`, the launcher of a
+  quick action). A `list` widget needs `IMatPlatformWidgets`.
 
 ## Shown inside another app: `MAT_FRAME_ANCESTORS` (1.5.0)
 
@@ -229,6 +265,10 @@ What the app stored for its own server stays stored and is used again when the v
 13. **Shown in Mattiverse's window** (1.5.0, see "Shown inside another app" above): nothing in the code (`AddMatPlatform` does it); the README's settings table names
     `MAT_FRAME_ANCESTORS`, the release `docker-compose.yml` has it as a comment, and the Mattiverse catalog entry passes it (`MAT_FRAME_ANCESTORS: ${MAT_FRAME_ANCESTORS:-}`), so
     Mattiverse fills it.
+14. **Contract 2** (2.0.0, see "Capabilities, bindings and the Connections area" above): `o.Provides` / `o.Consumes` for what the app gives and uses (the engines' capabilities
+    `identity.oidc` and `mail.smtp` as optional consumes, so the Connections area lists them), `options.DataDirectory` and `options.ConnectionsAccess`, an admin page with
+    `<mat-connections />` (instead of a page of its own for connected apps), its launchers and widgets, and a test that the app runs without any platform variable. The catalog
+    entry needs nothing for it: the broker passes the variables of the bindings and `MAT_PUBLIC_URL` / `MAT_INTERNAL_URL` itself.
 
 ## Changing the package
 

@@ -4,7 +4,14 @@ What every app of the family offers besides its own pages, so that **Mattiverse*
 set it up and act on it **without knowing anything about it beforehand**, so that the apps can find and call each other, and so that one sign-in (**MatIdentity**)
 works everywhere. The look is MatUi ([ADOPTING.md](ADOPTING.md)); this is the rest.
 
-Contract version: **1**. A change that breaks a consumer raises it; adding a field does not.
+Contract version: **2** (2026-11-09: capabilities with bindings, the Connections area, contributions to a shell; the reasoning is in [APP-MODEL.md](APP-MODEL.md)).
+A change that breaks a consumer raises it; adding a field does not. A consumer of version 1 reads a definition of version 2: everything new is an addition.
+
+Two rules stand behind the contract:
+
+- **No code that knows a particular app**, in Mattiverse or in another app. An app describes itself; a broker, a shell and the other apps work from that description.
+- **Every app works without Mattiverse, just as well.** Mattiverse makes the connections by itself; an administrator can make each of them by hand in the app
+  (the Connections area) or with environment variables. Nothing of an app's own function needs Mattiverse (see "Without Mattiverse").
 
 ## The idea in one paragraph
 
@@ -22,7 +29,10 @@ with MatUi, so an app looks the same inside Mattiverse as on its own.
 | `GET /api/state`, `GET /api/state/{key}` | the values of the tiles | key or token |
 | `GET /api/configure`, `PUT /api/configure` | the values of the **few** settings | key or token |
 | `POST /api/actions/{id}` | run an action | key or token |
-| `/api/provides/{capability}` | what the app does for other apps (see "Apps talking to each other") | token |
+| `GET /api/bindings`, `PUT` / `DELETE /api/bindings/{capability}/{consumer}` | a broker binds the consumers of what the app provides (see "Bindings") | key only |
+| `GET /api/connections` | what the app uses, offers and contributes, for the Connections area and a broker | key or token |
+| `GET /api/widgets/{id}` | the rows of a widget of the kind `list` (see "Contributions") | key or token |
+| `/api/provides/{capability}/...` | what the app does for other apps (see "Capabilities") | the key of a binding |
 
 - Everything starts with **`/api/`**. An app's own API stays where it is (the engines' `/api/v1/...`, see Mattiverse `docs/ENGINES.md`); the contract lives next to it and
   never under a version segment.
@@ -44,7 +54,7 @@ with MatUi, so an app looks the same inside Mattiverse as on its own.
 
 ```json
 {
-  "contract": 1,
+  "contract": 2,
   "app": {
     "id": "matsplit",
     "name": "MatSplit",
@@ -99,8 +109,17 @@ with MatUi, so an app looks the same inside Mattiverse as on its own.
 
   "roles": [ { "key": "admin", "label": "Administrator" }, { "key": "member", "label": "Member" } ],
 
-  "provides": [ { "capability": "mail.send", "version": 1 } ],
-  "consumes": [ { "capability": "files.store", "version": 1, "optional": true } ]
+  "provides": [ { "capability": "files.store", "version": 1, "label": "Keeps files for" } ],
+  "consumes": [
+    { "capability": "office.edit", "version": 1, "optional": true, "label": "Opens office files with" },
+    { "capability": "mail.smtp", "version": 1, "optional": true, "params": { "sender": "split" } }
+  ],
+
+  "contributes": {
+    "launchers": [ { "id": "split", "label": "MatSplit", "icon": "/icon.svg", "url": "/", "badge": "queue" } ],
+    "widgets": [ { "id": "balance", "label": "Open balance", "kind": "stat", "size": "small", "items": ["openBalance"], "url": "/groups", "refresh": 300, "audience": "admin" } ],
+    "quickActions": [ { "launcher": "split", "label": "New group", "icon": "plus", "url": "/groups/new" } ]
+  }
 }
 ```
 
@@ -140,7 +159,7 @@ values: dependent fields only when they are needed), `restart: true` (takes effe
 **`roles`:** the roles of the app, the most powerful first (`key` is the value of the claim `role`, small letters, digits, `-` and `_`). MatIdentity offers them when an
 administrator gives the app to people or groups. Optional: an app that decides its roles itself, or has none, leaves it out.
 
-**`provides` / `consumes`:** see "Apps talking to each other".
+**`provides` / `consumes`:** see "Capabilities" and "Bindings". **`contributes`:** see "Contributions".
 
 The definition is the same for every caller and changes only with a new version of the app: answer with an `ETag` and `Cache-Control: no-cache`, so a consumer asks again cheaply.
 The **values are never in the definition**.
@@ -202,22 +221,164 @@ The **values are never in the definition**.
 An empty body; the answer is `200 {"ok": true, "message": "12 feeds refreshed"}` or `409 {"ok": false, "message": "..."}`. Work that takes longer than a few seconds is started and
 answered right away (`"message": "Started"`); its result shows up in `/api/state`. A consumer shows the message as a toast.
 
-## Apps talking to each other
+## Capabilities
 
-An app can do something for the others (**provides** a capability) and use what another one does (**consumes** it). A capability has a name (`mail.send`, `files.store`,
-`notify.push`, ...) and a version, and its endpoints are under `/api/provides/{capability}/...` of the app that provides it. Each capability is written down here, in its own section
-below, before the first app uses it: what it takes and what it answers. Nothing else of an app is called by another app.
+An app can do something for the others (it **provides** a capability) and use what another one does (it **consumes** it). A capability has a name (`area.verb` in small letters:
+`office.edit`, `mail.smtp`) and a whole-number version that rises only when a change breaks something. Each capability is written down here before the first app uses it: the
+parameters a consumer may pass, the **values** of a binding (and whether each is a secret), the **environment variables** they become, the endpoints under
+`/api/provides/{capability}/` if it has any, and what a binding is for the provider. Nothing else of an app is called by another app.
 
-- **Finding each other:** Mattiverse knows what is installed. `GET /api/directory` on Mattiverse (token) answers the apps with their address and their `provides`:
-  `{"apps": [{"id": "matmail", "url": "https://mail.example.com", "provides": [{"capability": "mail.send", "version": 1}]}]}`. Without Mattiverse an app is told the address
-  of another one by a variable (`MAT_PROVIDER_MAIL_SEND=https://mail.example.com`).
-- **Trusting each other:** the calling app asks MatIdentity for a token with client credentials, for the audience of the other app and the scope of the capability
-  (`mail.send`); the providing app checks both. No shared keys between apps.
-- `consumes` with `optional: true` means the app works without it (and says so in a field hint or a tile); a consumer like Mattiverse can offer to install a provider.
+| Capability | Provider | A binding is | Variables of the consumer |
+|---|---|---|---|
+| `identity.oidc` | MatIdentity | an OpenID Connect client (see "Sign-in with MatIdentity") | `MATIDENTITY_AUTHORITY`, `_INTERNAL_URL`, `_CLIENT_ID`, `_CLIENT_SECRET` |
+| `mail.smtp` | MatSMTP | a relay user (see "Mail through MatSMTP") | `MATSMTP_HOST`, `_PORT`, `_USERNAME`, `_PASSWORD`, `_FROM`, `_TLS` |
+| `ai.openai` | MatAi | a client with its models and budget | `MATAI_URL`, `MATAI_KEY`, `MATAI_MODEL` |
+| `shell.embed` | Mattiverse | the right to show the app in its window (see "Shown inside another app") | `MAT_FRAME_ANCESTORS` |
+| `web.route` | Matcad | a route to the app, with a certificate | `MAT_PUBLIC_URL` |
+| `office.edit` | MatOffice | a key for the host that opens its files in MatOffice (MatDrive) | `MAT_OFFICE_EDIT_URL`, `_INTERNAL_URL`, `_KEY` |
 
-### Capabilities
+- **A key capability** is one that is not in this table with values of its own: a binding is the address of the provider and a key made for the consumer, as
+  `MAT_<CAPABILITY>_URL` (public, for a browser), `_INTERNAL_URL` (on the shared network, for a server) and `_KEY` (dots become `_`, capitals). So a new capability between
+  two apps needs no new variable names. `office.edit` is one.
+- The engines' capabilities (`identity.oidc`, `mail.smtp`, `ai.openai`, `shell.embed`, `web.route`) are set with their variables only, never typed into the Connections area.
+  Since 2.1 Mattiverse binds `identity.oidc`, `mail.smtp`, `web.route` and `shell.embed` like any other capability (their sections below); `ai.openai` follows with MatAi.
+- **Implicit capabilities:** an app does not name `web.route` and `shell.embed`. A broker binds them for every app with a web page: `web.route` when a domain is set and a
+  provider is installed, `shell.embed` always (the broker is the shell).
+- **The DNS records** of the routes are not a capability: the DNS account, the zone and the list of records belong to the broker's domain (Mattiverse keeps one group of records in
+  Matddns that follows the routes). A record gives an app nothing, so it is the broker's setup of Matddns, like the DNS account of Matcad's wildcard certificate.
+- `optional: true` on `consumes` means the app works without it and says so (the Connections area shows "Not connected (optional)").
+- `label` says what the app does with it, in words ("Opens office files with"); `params` is what a consumer passes to the provider when it is bound (`sender` of `mail.smtp`).
+- **Calls between apps** go to `/api/provides/{capability}/...` of the provider with `Authorization: Bearer <the key of the binding>`; the provider checks the key and knows the
+  consumer from it. A capability that is a protocol (OpenID Connect, SMTP, the OpenAI API) is called as that protocol instead.
 
-None yet. The first one is defined together with the first pair of apps that needs it.
+### `office.edit` (version 1)
+
+MatOffice edits the office files of a host (MatDrive). A key capability: the host gets `MAT_OFFICE_EDIT_URL` (where a browser opens the editor), `MAT_OFFICE_EDIT_INTERNAL_URL`
+(where the host's server calls MatOffice) and `MAT_OFFICE_EDIT_KEY`. The endpoints, with the key as a bearer token:
+
+- `GET /api/provides/office.edit/formats`: the kinds MatOffice edits (Docs, Sheets, Slides, Base) with the file types each opens and writes.
+- `GET /api/provides/office.edit/new?kind=&format=&name=&language=`: an empty file of a kind, to be stored by the host.
+- `POST /api/provides/office.edit/sessions`: opens a file. The host hands over the file's name, where MatOffice reads it (`GET`) and writes it (`PUT` with `If-Match`) at the
+  host, and a token for that address that names the file, the person and their right; the answer is the address of the editor for the person's browser.
+
+The same endpoints answer under `/api/v1/host/` for hosts that were connected before version 2. The host's own address for the callbacks is `MAT_INTERNAL_URL` when a broker set it.
+
+### `mail.smtp` (version 1)
+
+MatSMTP relays the mail of an app. **Parameters:** `sender`, the part before the `@` (default: the consumer id). **A binding** is a relay user: its id is the consumer id,
+its name the consumer's, `managedBy` as the request says, and its only allowed sender `<sender>@<domain>` (`domain`: MatSMTP's default sender domain, else `localhost`). A
+password is made when the binding is new or renewed. **Values:** `MATSMTP_HOST` (the host of the provider's internal address: MatSMTP's container on the shared network),
+`MATSMTP_PORT` (its SMTP port inside the container), `MATSMTP_USERNAME`, `MATSMTP_PASSWORD` (a secret), `MATSMTP_FROM`, `MATSMTP_TLS` (`none`, `starttls` or `tls`, as MatSMTP
+offers it). The consumer reads them as before ("Mail through MatSMTP"); nothing changes for it.
+
+### `identity.oidc` (version 1)
+
+MatIdentity signs people in for an app. **Parameters:** `callback` (default `/signin-oidc`), `signedOut` (default `/signout-callback-oidc`), `backchannel` (default
+`/signout-backchannel`; empty: none). **A binding** is an OpenID Connect client: its id is the consumer id (`-app` added when it is shorter than two characters), its name the
+consumer's, `managedBy` as the request says, the redirect addresses `<address><callback>` and `<address><signedOut>` for **every** public address of the consumer (`consumer.urls`,
+else `consumer.url`), the back-channel logout `<consumer.internalUrl><backchannel>` (server to server, so never the public address), and the roles the consumer's `/api` names.
+A secret is made when the binding is new or renewed. **Values:** `MATIDENTITY_AUTHORITY` (MatIdentity's issuer: its public address), `MATIDENTITY_INTERNAL_URL` (the provider's
+internal address), `MATIDENTITY_CLIENT_ID`, `MATIDENTITY_CLIENT_SECRET` (a secret). The consumer reads them as before ("Sign-in with MatIdentity").
+
+### `web.route` (version 1, implicit)
+
+Matcad makes an app reachable under a name of the domain. **Parameters:** `host` (`<app>.<domain>`). **A binding** is a route from `host` to the consumer's internal address,
+named after the consumer, `managedBy` as the request says; its certificate is Matcad's (the wildcard certificate of the domain when the broker set up a DNS account). A new
+`host` for the same consumer moves its route. **Values:** `MAT_PUBLIC_URL` = `https://<host>` (`http://` for a development name under `.localhost`).
+
+### `shell.embed` (version 1, implicit)
+
+Mattiverse shows an app in the window of its home screen. The broker is the provider: it needs no request to itself and hands every app with a web page **`MAT_FRAME_ANCESTORS`**,
+its own addresses (its route, this machine with the port it is published on, the addresses people signed in from), see "Shown inside another app".
+
+## Bindings
+
+A **binding** connects one consumer with one provider for one capability. The provider makes it (a key, a client, a relay user) and answers its values; the consumer gets them as
+environment variables. A broker (Mattiverse) makes the bindings by itself; an administrator can make each of them by hand in the Connections area of both apps.
+
+**What every provider answers** (only to its own `MAT_API_KEY`: a token of a person or another app may not change bindings):
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /api/bindings` | `{"bindings": [{"capability", "consumer", "name", "managedBy", "since", "lastUsed"}]}` |
+| `PUT /api/bindings/{capability}/{consumer}` | make or update the binding of this consumer; the same request twice is one binding |
+| `DELETE /api/bindings/{capability}/{consumer}?managedBy=mattiverse` | remove it (only one made by `managedBy`); `204`, or `404` when there is none |
+
+```json
+PUT /api/bindings/office.edit/matdrive
+{ "version": 1, "managedBy": "mattiverse",
+  "consumer": { "name": "MatDrive", "url": "https://drive.example.com", "internalUrl": "http://mattiverse-matdrive-web:4810" },
+  "provider": { "url": "https://office.example.com", "internalUrl": "http://mattiverse-matoffice-web:4820" },
+  "params": {}, "renew": false }
+
+200 { "variables": { "MAT_OFFICE_EDIT_URL": "https://office.example.com", "MAT_OFFICE_EDIT_INTERNAL_URL": "http://mattiverse-matoffice-web:4820", "MAT_OFFICE_EDIT_KEY": "mo_…" } }
+```
+
+- The consumer id is small letters, digits and `-` (in Mattiverse the slug of the app); `managedBy` is `mattiverse` or `manual` (the Connections area).
+- **A secret goes out once**: when the binding is made, or with `"renew": true`. After that it is `{"isSet": true}`, the same rule as `/api/configure`. A broker keeps what it got
+  and asks with `renew` when it has lost it; a new key replaces the old one at once.
+- `provider` names the addresses the broker publishes the provider under; without them the provider uses `MAT_PUBLIC_URL` / `MAT_INTERNAL_URL`, else the address of the request.
+- `404` for a capability the app does not provide, `409` for a version it does not speak, `400` for a wrong body or id.
+- **A provider may refuse** a binding: `400` when a parameter is missing or wrong, `409` when something is in the way that it must not take over (a route someone made by hand for
+  the same host), each with `{"errors": {"<key>": "<message>"}}`. The Connections area shows the message. In .NET apps the handler throws `MatBindingRefusedException`.
+
+**What the consumer does:** it reads the variables. When any variable of a capability is set it wins, and the app shows the values as fixed (in the Connections area and in
+`/api/configure`); else the values entered by hand in the Connections area count; else the capability is not bound and the app works without it.
+
+**What a broker does, the same for every app (Mattiverse `BindingBroker`):**
+
+1. **Install an app:** start it, read its `/api`, bind every capability it consumes to an installed provider, write the variables into its `.env` and its web service, and
+   deploy it once more; then bind every installed consumer of what it provides (a consumer that has a provider keeps it) and deploy those again.
+2. **Update an app:** read `/api` again; bind what is new, remove what it no longer consumes.
+3. **Uninstall an app:** remove its bindings at their providers; the consumers of what it provided get another provider or lose the variables, and are deployed again.
+4. Every app of the contract also gets its own addresses: `MAT_INTERNAL_URL` (where the other apps reach it) and `MAT_PUBLIC_URL` (only when it is a real address: a route
+   under the domain or this host by its configured name, never a guessed `localhost`).
+
+## Contributions
+
+What an app adds to a shell (the home screen of Mattiverse): the shell draws it in its own look and knows no app. Addresses and pictures are relative to the app.
+
+| Member | What the shell does with it |
+|---|---|
+| `launchers` | Icons on the home screen, each `id`, `label`, `icon` (a picture of the app), `url`; optional `accent`, `audience`, `badge` (a key of `state` whose number sits on the icon). None: one icon for `app.home` |
+| `widgets` | Tiles of the home screen: `id`, `label`, `kind`, `size` (`small` 2×1, `medium` 2×2, `wide` 4×2), `items`, `icon` (of the MatUi sprite), `url`, `refresh` (seconds, at least 30), `audience` |
+| `quickActions` | The menu of a launcher: `launcher`, `label`, `icon`, and a `url` of the app or the id of a post `action` |
+
+| `kind` | Shows | Values |
+|---|---|---|
+| `stat` | one value: number, text, time or status | one key of `state` |
+| `meter` | used of max | one key of `state` that is a `meter` |
+| `tiles` | up to four values | one to four keys of `state` |
+| `list` | up to eight rows: title, subtitle, icon, time, address | `GET /api/widgets/{id}` → `{"items": [{"title", "subtitle", "icon", "url", "time", "level"}]}` |
+
+- `audience`: `everyone` (default), `admin`, or `person` (values of the person who is looking: a shell needs a token of that person for the app, so Mattiverse does not show
+  such widgets yet; a launcher for `person` is shown to everyone).
+- The browser never sees an app's key: the shell's server asks for the values (`/api/state`, `/api/widgets/{id}`) and keeps them a few seconds.
+- Not in this version: a widget made of the app's own HTML, and a search across the apps.
+
+## The Connections area
+
+Every app has the same admin page: what it **uses** (each capability it consumes: what for, connected to what, set by the variables / entered here / not connected, and, when no
+variable sets it, a form with the values), what it **offers** (each capability it provides with the apps bound to it, who manages each, renew a key, remove, and *Connect an app by
+hand*, which makes a binding and shows its values once) and what it **adds to the home screen**. `GET /api/connections` answers the same as JSON
+(`{"uses": [...], "offers": [...], "contributes": {...}}`, secrets as `{"isSet": bool}`); Mattiverse shows it in the tab *Connections* of the app.
+
+In .NET apps MatPlatform draws it: `<mat-connections />` on an admin page (a tag helper, drawn on the server with the classes of MatUi, no script needed); its forms post to
+`/api/connections/form` with the anti-forgery token, and the app says who may use them (`MatPlatformOptions.ConnectionsAccess`, usually its administrators) and, for an app in one language, its language (`MatPlatformOptions.UiLanguage`). *Issue new* is
+offered only for a capability with a secret.
+
+## Without Mattiverse
+
+The same app, with the connections made by an administrator instead of a broker:
+
+- **No variable is required.** An app starts and does its whole job with none of the `MAT_*`, `MATIDENTITY_*`, `MATSMTP_*` or `MATAI_*` variables.
+- **Every binding can be made by hand**: in the provider's Connections area (*Connect an app by hand*, its values are shown once) and the consumer's (the form), or with the
+  variables in the compose file. MatDrive and MatOffice: MatOffice → Connections → *Connect an app by hand* → MatDrive; then MatDrive → Connections → *Opens office files with*.
+- **A field is fixed only while a variable sets it**; without it the app's own setting is editable, and what was stored comes back when the variable goes.
+- **Contributions cost nothing** without a shell; the app's own menu stays the way in. `/api/bindings` answers only to `MAT_API_KEY`: without the key it is off.
+- **Any broker will do**: the contract names no Mattiverse. Any program with the key can read the definitions and make bindings.
+- The old key variables of the engines (`MatDock__Api__Key`, `Matcad__ApiKey`, `MATDDNS_API_KEY`, `MATSMTP_API_KEY`, `MATAI_API_KEY`) stay valid next to `MAT_API_KEY`, so an
+  installation without Mattiverse does not break with an update.
 
 ## Sign-in with MatIdentity
 
@@ -312,25 +473,33 @@ or the `SAMEORIGIN` that ASP.NET Core's anti-forgery tokens add) cannot be shown
 - **Mattiverse** sets it for every app whose catalog entry names `${MAT_FRAME_ANCESTORS}` in its compose file (the engines): its route behind the proxy
   (`https://mattiverse.<domain>`), this machine with the port Mattiverse is published on (`localhost` and the configured address), and the addresses people signed in from.
   An app learns a new address of Mattiverse with its next update. Mattiverse checks the headers before it frames an app and offers a new tab otherwise.
+- This is the capability `shell.embed` (see "Capabilities"); Mattiverse sets it with its `FrameLink` until that moves onto the bindings.
 - In .NET apps **MatPlatform** does it (1.5.0, `MatFrameAncestors`): `AddMatPlatform` registers it, an app without it calls `builder.Services.AddMatFrameAncestors()`; the app's own
   security headers may stay as they are, the headers of the variable have the last word (src/MatPlatform/README.md "Shown inside another app").
 
 ## What an app has to do (definition of done)
 
-1. The MatApiDefinition at `/api` and `/api/health`, `/api/state`, `/api/configure`, `/api/actions/{id}` as above; the Docker `HEALTHCHECK` calls `/api/health`.
+1. The MatApiDefinition at `/api` and `/api/health`, `/api/state`, `/api/configure`, `/api/actions/{id}` as above; the Docker `HEALTHCHECK` calls `/api/health`. Contract 2:
+   what it provides and consumes, `/api/bindings` and `/api/connections`, the Connections area on an admin page, and its launchers and widgets.
 2. `MAT_API_KEY` and the `MATIDENTITY_*` variables, documented in the README's settings table and in the release `docker-compose.yml` as comments (not required).
 3. MatUi as the toolkit ([ADOPTING.md](ADOPTING.md)), the app in the registry here (`AppRegistry.cs`, `matui.apps.css`) with its accent and port.
-4. Tests: the definition is valid (every key a section names exists, every icon is in the sprite, every `showIf` names a field), the answers of the endpoints (shape, status codes,
+4. Tests: the app runs without any of the platform variables (its sign-in, its mail, its main function), a binding made by hand works,
+   the definition is valid (every key a section names exists, every icon is in the sprite, every `showIf` names a field, the contributions), the answers of the endpoints (shape, status codes,
    a secret never sent back, `401` without key), the sign-in with and without MatIdentity, the back-channel logout (a valid logout token ends the session, `404` without MatIdentity).
-5. A catalog entry in Mattiverse (`src/Mattiverse.Core/Catalog/apps/<app>.yml`) that passes `MAT_API_KEY` and, when present, the `MATIDENTITY_*` variables and `MAT_FRAME_ANCESTORS`.
+5. A catalog entry in Mattiverse (`src/Mattiverse.Core/Catalog/apps/<app>.yml`) that passes `MAT_API_KEY` and names what the app consumes (`consumes: identity.oidc`, `mail.smtp`, ...)
+   for an image that does not say it in its `/api`; the variables of the bindings and `MAT_FRAME_ANCESTORS` the broker passes to the web service itself.
 6. An app that sends mail reads the `MATSMTP_*` variables (see "Mail through MatSMTP"): set = all its mail through MatSMTP and its own SMTP settings fixed, in its pages and in
-   `/api/configure`; its catalog entry says `mail: {}` and passes the six variables; README and release `docker-compose.yml` name them like the others.
+   `/api/configure`; it consumes `mail.smtp` (its `/api` or its catalog entry); README and release `docker-compose.yml` name the variables like the others.
 
 **Shared code.** For .NET apps the endpoints, the key check, the checks of the settings, the validation of the definition and the OIDC wiring come as one package,
-**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 1.5.0), so that an app only describes its pages and supplies its values:
+**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 2.2.0), so that an app only describes its pages and supplies its values:
 `builder.AddMatPlatform<AppPlatform>(AppPlatform.Describe)` (a description with `o.App(...)`, `o.Page(...)`, `o.Tile(...)`, `o.Field(...)`, `o.LinkAction(...)` / `o.PostAction(...)`,
 `o.Role(...)`), the values from the interfaces `IMatPlatformState`, `IMatPlatformConfiguration`, `IMatPlatformActions` and `IMatPlatformHealth`, `.AddMatIdentitySignIn<AppUsers>(...)` with
-`IMatIdentityUsers` for the local user (and `IMatIdentitySessions` for the back-channel logout), and `app.MapMatPlatform()`. `MatPlatformValidator` checks a definition in the app's tests (keys of the sections, `showIf`, unique ids,
+`IMatIdentityUsers` for the local user (and `IMatIdentitySessions` for the back-channel logout), and `app.MapMatPlatform()`. Contract 2 (2.0.0) adds `o.Provides(...)` and
+`o.Consumes(..., label, parameters)`, `o.Launcher(...)`, `o.Widget(...)`, `o.QuickAction(...)`, `IMatPlatformWidgets` for list widgets, `MatBindings` for what the app consumes
+(`GetAsync(capability)`), `IMatBindingHandler` when a binding is more than a key (a key capability needs no code: `MatKeyBindingHandler`, and `MatBindingAccess.Require(capability)`
+for its endpoints), the options `DataDirectory` (where the bindings are kept) and `ConnectionsAccess` (who may use the Connections area), and the tag helper `<mat-connections />`.
+`MatPlatformValidator` checks a definition in the app's tests (keys of the sections, `showIf`, unique ids,
 kinds, icons of the sprite). Like MatUi it is **copied** (`CODE-03`): `node tools/matplatform-copy.js <web project of the app>` writes the files to `<app>/MatPlatform/` with a
 first line that names the version, and `matplatform.version`. The first app on it is MatSplit. The same types (`MatApiDefinition` and its records, `MatApiDefinition.Json`) read
 a definition on the consumer's side; Mattiverse (`PlatformClient`) and MatIdentity still carry their own copies. Not there yet: a JSON Schema of the MatApiDefinition and a page

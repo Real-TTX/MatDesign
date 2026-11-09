@@ -108,10 +108,10 @@ public sealed class ValidatorTests
             Roles = [new MatRole("Admin", "Administrator"), new MatRole("user", "User"), new MatRole("user", "Again")],
             Provides = [new MatCapability("mail", 1)],
             Consumes = [new MatCapability("files.store", 0, true)],
-            Contract = 2,
+            Contract = 1,
         };
         var problems = MatPlatformValidator.Validate(definition);
-        Assert.Contains(problems, p => p.StartsWith("contract is 2", StringComparison.Ordinal));
+        Assert.Contains(problems, p => p.StartsWith("contract is 1", StringComparison.Ordinal));
         Assert.Contains(problems, p => p.StartsWith("app.id \"Demo App\"", StringComparison.Ordinal));
         Assert.Contains(problems, p => p.StartsWith("app.accent \"blue\"", StringComparison.Ordinal));
         Assert.Contains(problems, p => p.StartsWith("role \"Admin\"", StringComparison.Ordinal));
@@ -139,7 +139,7 @@ public sealed class DefinitionJsonTests
     {
         var json = JsonSerializer.Serialize(MatPlatformBuilder.Build(DemoApp.Describe), MatApiDefinition.Json);
 
-        Assert.StartsWith("{\"contract\":1,\"app\":{\"id\":\"demoapp\",\"name\":\"Demo\",\"description\":\"Eine Demo für Tests\",\"version\":\"1.2.3-20261016\",\"icon\":\"/icon.svg\",\"accent\":\"#2f6feb\",\"home\":\"/\"},\"auth\":{\"apiKey\":false},", json);
+        Assert.StartsWith("{\"contract\":2,\"app\":{\"id\":\"demoapp\",\"name\":\"Demo\",\"description\":\"Eine Demo für Tests\",\"version\":\"1.2.3-20261016\",\"icon\":\"/icon.svg\",\"accent\":\"#2f6feb\",\"home\":\"/\"},\"auth\":{\"apiKey\":false},", json);
         Assert.Contains("{\"kind\":\"form\",\"items\":[\"publicUrl\",\"currency\",\"retries\"],\"label\":\"Allgemein\"}", json);
         Assert.Contains("{\"key\":\"groups\",\"label\":\"Gruppen\",\"widget\":\"number\",\"icon\":\"users\"}", json);
         Assert.Contains("{\"key\":\"smtpHost\",\"label\":\"Mailserver\",\"type\":\"text\",\"required\":true,\"pattern\":\"[a-z0-9.-]{1,253}\",\"showIf\":{\"smtpEnabled\":true}}", json);

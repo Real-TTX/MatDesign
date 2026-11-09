@@ -14,6 +14,12 @@ public sealed class MatPlatformSettings
     public const string ClientSecretVariable = "MATIDENTITY_CLIENT_SECRET";
     public const string InternalUrlVariable = "MATIDENTITY_INTERNAL_URL";
 
+    /// <summary>The public address of the app, set by a broker (Mattiverse): the app shows its own setting of the address as fixed while it is set.</summary>
+    public const string PublicUrlVariable = "MAT_PUBLIC_URL";
+
+    /// <summary>Where the other apps reach this app on the shared Docker network (<c>http://mattiverse-matdrive-web:4810</c>), set by a broker.</summary>
+    public const string AppInternalUrlVariable = "MAT_INTERNAL_URL";
+
     /// <summary>The id of the app in the platform (and the default client id in MatIdentity).</summary>
     public required string AppId { get; init; }
 
@@ -31,6 +37,12 @@ public sealed class MatPlatformSettings
     /// <summary>The address MatIdentity is reached at from this app (inside Docker); null = the public address.</summary>
     public string? InternalUrl { get; init; }
 
+    /// <summary>The public address of the app from <c>MAT_PUBLIC_URL</c>, without a trailing slash; null = the app's own setting.</summary>
+    public string? AppPublicUrl { get; init; }
+
+    /// <summary>The address of the app on the shared network from <c>MAT_INTERNAL_URL</c>, without a trailing slash; null = not known.</summary>
+    public string? AppInternalUrl { get; init; }
+
     public bool IdentityEnabled => Authority is not null;
 
     public static MatPlatformSettings From(IConfiguration configuration, string appId)
@@ -46,6 +58,8 @@ public sealed class MatPlatformSettings
             ClientId = Clean(configuration[ClientIdVariable]) ?? appId,
             ClientSecret = Clean(configuration[ClientSecretVariable]),
             InternalUrl = Clean(configuration[InternalUrlVariable])?.TrimEnd('/'),
+            AppPublicUrl = Clean(configuration[PublicUrlVariable])?.TrimEnd('/'),
+            AppInternalUrl = Clean(configuration[AppInternalUrlVariable])?.TrimEnd('/'),
         };
     }
 
