@@ -361,6 +361,8 @@ It is built once:
 5. **The engines, one at a time:**
    - MatSMTP (`mail.smtp`), MatAi (`ai.openai`), MatIdentity (`identity.oidc`), Matcad and Matddns (`web.route`, `dns.record`), then the frames (`shell.embed`);
    - after that, delete `IdentityLink`, `MailLink`, `AiLink`, `FrameLink`, `ProxyPublisher`, `DnsPublisher`, the write paths of the engine clients, and the catalog keys.
-6. **The other apps:** contract 2, with their launchers and widgets.
+6. **The other apps:** contract 2, with their launchers and widgets. The first are MatDo, MatPaper, MatBoard and MatShape (the owner's choice, 2026-11-09):
+   they stand completely on their own and use no other app (at most the sign-in of the engine, `identity.oidc`), so they need MatPlatform 2.2, their
+   launchers and widgets, and nothing new in Mattiverse. MatBoard and MatShape also need an entry in Mattiverse's catalog.
 
 MatDock stays the runtime of the broker: it runs the compose files and the backups. That is Mattiverse's own job, not a binding.
