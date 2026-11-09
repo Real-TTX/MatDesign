@@ -440,6 +440,29 @@ public sealed class BindingTests : IDisposable
         Assert.Contains("<h2>Nutzt</h2>", await RenderAsync(app, admin: true, language: _ => "fr"), StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task An_app_that_uses_only_the_engines_is_not_asked_to_enter_values()
+    {
+        // office.edit can be entered by hand: the area says so and draws its form
+        await using (var app = await StartAsync())
+        {
+            var html = await RenderAsync(app, admin: true, language: _ => "en");
+            Assert.Contains("enter the values here", html, StringComparison.Ordinal);
+        }
+
+        // identity.oidc and mail.smtp are set by their variables only: no form, and the text does not ask for one
+        await using (var app = await StartAsync(describe: o => o
+            .App("demoapp", "Demo", "A demo", "2.0.0-20261109", "/icon.svg", "#2f6feb", "/home")
+            .Consumes("identity.oidc", optional: true)
+            .Consumes("mail.smtp", optional: true)))
+        {
+            var html = await RenderAsync(app, admin: true, language: _ => "en");
+            Assert.Contains("without it, set the variables.", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("enter the values here", html, StringComparison.Ordinal);
+            Assert.DoesNotContain("<form", html, StringComparison.Ordinal);
+        }
+    }
+
     private static int CountOf(string text, string part) => (text.Length - text.Replace(part, string.Empty, StringComparison.Ordinal).Length) / part.Length;
 
     /// <summary>Runs the tag helper as a Razor page would, in a request of its own.</summary>

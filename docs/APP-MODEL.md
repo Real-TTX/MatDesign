@@ -10,6 +10,9 @@ Where the build differs from the draft:
 - Step 5 (2026-11-09): MatIdentity (`identity.oidc`), MatSMTP (`mail.smtp`) and Matcad (`web.route`) are providers like any app, Mattiverse provides `shell.embed`
   itself; the per-app parts of IdentityLink, MailLink, FrameLink and ProxyPublisher are gone, the catalog says `consumes`. The DNS records stay Mattiverse's setup of Matddns
   (they give an app nothing; see PLATFORM.md "Capabilities"). MatAi (`ai.openai`) follows when its branch `feature/matai` is merged.
+- Step 6 (2026-11-09): MatDo, MatPaper, MatBoard and MatShape are on contract 2 (MatPlatform 2.2.1): each has one launcher named like the app with the views of its menu as
+  quick actions and two widgets for administrators made of its tiles, a Connections area, and `MAT_PUBLIC_URL` fixes its public address. MatBoard and MatShape got entries in
+  Mattiverse's catalog. The other apps follow.
 - Mattiverse's own icons and widgets (Store, Backups, the Engines widget, ...) are still drawn by its own code, not yet from a manifest of its own.
 
 One language for three questions that every Mat app answers today in its own way:
@@ -362,7 +365,7 @@ It is built once:
    - MatSMTP (`mail.smtp`), MatAi (`ai.openai`), MatIdentity (`identity.oidc`), Matcad and Matddns (`web.route`, `dns.record`), then the frames (`shell.embed`);
    - after that, delete `IdentityLink`, `MailLink`, `AiLink`, `FrameLink`, `ProxyPublisher`, `DnsPublisher`, the write paths of the engine clients, and the catalog keys.
 6. **The other apps:** contract 2, with their launchers and widgets. The first are MatDo, MatPaper, MatBoard and MatShape (the owner's choice, 2026-11-09):
-   they stand completely on their own and use no other app (at most the sign-in of the engine, `identity.oidc`), so they need MatPlatform 2.2, their
-   launchers and widgets, and nothing new in Mattiverse. MatBoard and MatShape also need an entry in Mattiverse's catalog.
+   they stand completely on their own and use no other app (at most the engines: the sign-in `identity.oidc`, the mail `mail.smtp`), so they need MatPlatform 2.2,
+   their launchers and widgets, and nothing new in Mattiverse. MatBoard and MatShape also need an entry in Mattiverse's catalog. Done on 2026-11-09 (see the top).
 
 MatDock stays the runtime of the broker: it runs the compose files and the backups. That is Mattiverse's own job, not a binding.

@@ -5,7 +5,7 @@ builder for it, the endpoints (`/api`, `/api/health`, `/api/state[/{key}]`, `GET
 MatIdentity's tokens, the checks of the settings, a validator of a definition for the app's tests and the sign-in through MatIdentity (OpenID Connect).
 An app only **describes** itself and **supplies its values**.
 
-Version **2.2.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
+Version **2.2.1** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
 The first app on it is MatSplit (`src/MatSplit.Web/Platform/SplitPlatform.cs` there is the example to read).
 
 ## How an app gets it: a copy (CODE-03)
@@ -16,7 +16,7 @@ Like MatUi, an app **copies** the package; nothing is loaded from elsewhere and 
 node tools/matplatform-copy.js <folder of the app's web project>      # or: ./tools/matplatform-copy.ps1 -Target <folder>
 ```
 
-It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 2.2.0 – a copy from MatDesign, do not edit here`, and
+It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 2.2.1 – a copy from MatDesign, do not edit here`, and
 `matplatform.version` (the version, then the SHA-256 of each file as copied, with LF line ends). Copying again updates the files and removes the ones the package no longer has.
 **Never change the copy in the app**: change `src/MatPlatform` here (with a test in `tests/MatPlatform.Tests`), raise the version and copy it to the apps.
 
@@ -131,7 +131,7 @@ both apps. MatPlatform does all of it:
 - **Provider whose binding is more** (a client, a relay user, a host with sessions): register an `IMatBindingHandler` for the capability; it wins over the generic one.
 - **The Connections area:** `<mat-connections />` on an admin page (needs `@addTagHelper *, <the app's assembly>` and `options.ConnectionsAccess`): uses, offers and what the
   app adds to the home screen, drawn on the server with MatUi's classes; its forms post to `/api/connections/form` with the anti-forgery token and come back with the outcome
-  (and a new key, shown once) in a short-lived protected cookie. `GET /api/connections` answers the same as JSON.
+  (and a new key, shown once) in a short-lived protected cookie. `GET /api/connections` answers the same as JSON. Since 2.2.1 the text of *Uses* asks for values only when a capability can be entered by hand (the engines' are set by their variables only).
 - **Contributions:** `o.Launcher`, `o.Widget`, `o.QuickAction`; `MatPlatformValidator` checks them (ids, addresses of the app, kinds, sizes, keys of `state`, the launcher of a
   quick action). A `list` widget needs `IMatPlatformWidgets`.
 
