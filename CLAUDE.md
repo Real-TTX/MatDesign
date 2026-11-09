@@ -66,6 +66,14 @@ src/MatPlatform            the platform contract for .NET apps (docs/PLATFORM.md
   MatIdentitySignIn.cs       AddMatIdentitySignIn<TUsers> (OIDC code + PKCE, JWT bearer), IMatIdentityUsers, IMatIdentitySessions (optional), CompleteSignInAsync, SignOutAtIdentity, MapMatIdentityBackchannelLogout (POST /signout-backchannel, 501 without IMatIdentitySessions); MatIdentityBackchannelHandler.cs (MATIDENTITY_INTERNAL_URL: the server-to-server calls, not the logout)
   MatIdentityLogoutToken.cs  the check of a logout token (OIDC Back-Channel Logout 1.0: signature with the handler's keys, typ, iss, aud, iat window, events, sub/sid, no nonce) and the jti replay cache
   MatForwardedProto.cs       behind a TLS proxy the scheme from X-Forwarded-Proto (only the scheme, never the address or host); an IStartupFilter AddMatIdentitySignIn registers (TrustForwardedProto)
+  MatFrameAncestors.cs       MAT_FRAME_ANCESTORS: the origins that may frame the app (Parse drops anything that is not an origin), frame-ancestors instead of X-Frame-Options in OnStarting; an IStartupFilter AddMatPlatform registers (AddMatFrameAncestors)
+  MatContributions.cs        2.0 (contract 2): launchers, widgets (stat, meter, tiles, list), quick actions, MatAudience, MatWidgetItem
+  MatCapabilities.cs         what a capability is (values, variables, labels, ByHand): the engines' ones and office.edit; any other is a key capability (MAT_<CAP>_URL, _INTERNAL_URL, _KEY)
+  MatBindings.cs             the consumer side: GetAsync(capability) = variables first (fixed), else entered by hand, else none; SaveByHandAsync, ClearByHandAsync
+  MatBindingStore.cs         <DataDirectory>/matplatform/bindings.json: bindings made for consumers (key hashes) and values entered by hand (secrets protected); atomic writes under a lock
+  MatBindingHandler.cs       the provider side: IMatBindingHandler, MatKeyBindingHandler (no code for a key capability), MatBindingAccess.Require (the bearer key of /api/provides/...)
+  MatConnections.cs          the view of /api/connections, the broker endpoints /api/bindings (key only), /api/widgets/{id}, the form of the Connections area (/api/connections/form)
+  MatConnectionsTagHelper.cs <mat-connections />: the Connections area drawn on the server with MatUi's classes (uses, offers, contributions; the outcome of a form in a protected cookie)
   MatIdentityPendingLink.cs  an account that matches by address is linked only after its password: the pending link (protected cookie, 10 minutes), LinkRequired sends to ?local=1&link=1
   MatPlatformInfo.cs         the version (= MatPlatformVersion in MatPlatform.csproj, a test holds them equal)
 src/MatDesign.Core         no web types

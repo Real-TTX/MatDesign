@@ -18,7 +18,7 @@ using Microsoft.IdentityModel.Tokens;
 namespace MatPlatform.Tests;
 
 /// <summary>A tiny app of the platform: its description and its values, kept in a <see cref="DemoStore"/>.</summary>
-public sealed class DemoApp(DemoStore store) : IMatPlatformState, IMatPlatformConfiguration, IMatPlatformActions, IMatPlatformHealth
+public sealed class DemoApp(DemoStore store) : IMatPlatformState, IMatPlatformConfiguration, IMatPlatformActions, IMatPlatformHealth, IMatPlatformWidgets
 {
     public const string Password = "very-secret-password";
 
@@ -92,6 +92,12 @@ public sealed class DemoApp(DemoStore store) : IMatPlatformState, IMatPlatformCo
             _ => null,
         });
     }
+
+    /// <summary>The rows of the list widget "recent" (twelve, the platform sends eight).</summary>
+    public Task<IReadOnlyList<MatWidgetItem>?> GetWidgetAsync(string id, MatPlatformCall call, CancellationToken ct)
+        => Task.FromResult<IReadOnlyList<MatWidgetItem>?>(id == "recent"
+            ? [.. Enumerable.Range(1, 12).Select(i => new MatWidgetItem($"File {i}") { Url = $"/files/{i}", Icon = "file" })]
+            : null);
 
     public Task<IReadOnlyList<MatHealthCheck>> CheckHealthAsync(MatPlatformCall call, CancellationToken ct)
         => Task.FromResult<IReadOnlyList<MatHealthCheck>>(store.Down
@@ -170,6 +176,11 @@ public static class DemoHost
     /// <param name="signIn">More options of the sign-in, after the demo's own.</param>
     /// <param name="pipeline">Middleware of the app itself, before rate limiter and authentication (for example its own ForwardedHeaders).</param>
     /// <param name="withSessions">The users class also implements <see cref="IMatIdentitySessions"/> (<see cref="DemoSessionUsers"/>).</param>
+    /// <param name="frameAncestors">The value of <c>MAT_FRAME_ANCESTORS</c> (none: not set, whatever the environment of the test says).</param>
+    /// <param name="services">More services of the app itself, before it is built.</param>
+    /// <param name="describe">Another description than the demo's (the bindings and contributions of 2.0).</param>
+    /// <param name="configuration">More configuration (environment variables of the app).</param>
+    /// <param name="endpoints">More endpoints of the app itself, after MapMatPlatform.</param>
     public static async Task<WebApplication> StartAsync(
         bool withKey = true,
         string? authority = null,
@@ -177,7 +188,12 @@ public static class DemoHost
         DemoStore? store = null,
         Action<MatIdentitySignInOptions>? signIn = null,
         Action<WebApplication>? pipeline = null,
-        bool withSessions = false)
+        bool withSessions = false,
+        string? frameAncestors = null,
+        Action<IServiceCollection>? services = null,
+        Action<MatPlatformBuilder>? describe = null,
+        IDictionary<string, string?>? configuration = null,
+        Action<WebApplication>? endpoints = null)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
         builder.WebHost.UseTestServer();
@@ -187,9 +203,14 @@ public static class DemoHost
             [MatPlatformSettings.ApiKeyVariable] = withKey ? ApiKey : null,
             [MatPlatformSettings.AuthorityVariable] = authority,
             [MatPlatformSettings.ClientSecretVariable] = authority is null ? null : "test-secret",
+            [MatFrameAncestors.Variable] = frameAncestors,
         });
+        if (configuration is not null)
+        {
+            builder.Configuration.AddInMemoryCollection(configuration);
+        }
 
-        var settings = builder.AddMatPlatform<DemoApp>(DemoApp.Describe, configure);
+        var settings = builder.AddMatPlatform<DemoApp>(describe ?? DemoApp.Describe, configure);
         builder.Services.AddSingleton(store ?? new DemoStore());
         void SignInOptions(MatIdentitySignInOptions o)
         {
@@ -212,32 +233,34 @@ public static class DemoHost
         if (authority is not null)
         {
             // A fixed OpenID configuration, so no MatIdentity has to run (the tests look at the redirects only).
-            var configuration = new OpenIdConnectConfiguration
+            var oidc = new OpenIdConnectConfiguration
             {
                 Issuer = authority,
                 AuthorizationEndpoint = authority + "/connect/authorize",
                 TokenEndpoint = authority + "/connect/token",
                 EndSessionEndpoint = authority + "/connect/logout",
             };
-            configuration.SigningKeys.Add(Credentials.Key);
+            oidc.SigningKeys.Add(Credentials.Key);
             builder.Services.PostConfigure<OpenIdConnectOptions>(MatIdentitySignIn.Scheme, options =>
             {
-                options.Configuration = configuration;
-                options.ConfigurationManager = new StaticConfigurationManager<OpenIdConnectConfiguration>(configuration);
+                options.Configuration = oidc;
+                options.ConfigurationManager = new StaticConfigurationManager<OpenIdConnectConfiguration>(oidc);
             });
             builder.Services.PostConfigure<JwtBearerOptions>(MatApiAccess.BearerScheme, options =>
             {
-                options.Configuration = configuration;
-                options.ConfigurationManager = new StaticConfigurationManager<OpenIdConnectConfiguration>(configuration);
+                options.Configuration = oidc;
+                options.ConfigurationManager = new StaticConfigurationManager<OpenIdConnectConfiguration>(oidc);
             });
         }
 
+        services?.Invoke(builder.Services);
         var app = builder.Build();
         pipeline?.Invoke(app);
         app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapMatPlatform();
+        endpoints?.Invoke(app);
         app.MapGet("/login", (HttpContext http) => Results.Challenge(new AuthenticationProperties { RedirectUri = "/" }, [MatIdentitySignIn.Scheme]));
         app.MapPost("/logout", (HttpContext http) => MatIdentitySignIn.SignOutAtIdentity(http, "the.id.token"));
         // What the app sees of the request (scheme, client address, host).
