@@ -41,7 +41,7 @@ public sealed class EndpointTests : IAsyncLifetime
         Assert.Equal("demoapp", root.GetProperty("app").GetProperty("id").GetString());
         Assert.True(root.GetProperty("auth").GetProperty("apiKey").GetBoolean());
         Assert.False(root.GetProperty("auth").TryGetProperty("identity", out _));
-        Assert.Equal(["/api/health", "/api/state", "/api/configure", "/api/actions", "/api/bindings", "/api/connections", "/api/widgets"], root.GetProperty("endpoints").EnumerateArray().Select(e => e.GetString()));
+        Assert.Equal(["/api/health", "/api/state", "/api/configure", "/api/actions", "/api/bindings", "/api/connections", "/api/widgets", "/api/quotas"], root.GetProperty("endpoints").EnumerateArray().Select(e => e.GetString()));
         Assert.Equal(JsonValueKind.Array, root.GetProperty("consumes").ValueKind);
         Assert.Equal("diskMax", root.GetProperty("state")[2].GetProperty("max").GetString());
         Assert.True(root.GetProperty("configure")[4].GetProperty("showIf").GetProperty("smtpEnabled").GetBoolean());

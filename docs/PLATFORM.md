@@ -5,6 +5,8 @@ set it up and act on it **without knowing anything about it beforehand**, so tha
 works everywhere. The look is MatUi ([ADOPTING.md](ADOPTING.md)); this is the rest.
 
 Contract version: **2** (2026-11-09: capabilities with bindings, the Connections area, contributions to a shell; the reasoning is in [APP-MODEL.md](APP-MODEL.md)).
+Additions of 2026-11-10: the people of an app, their permissions and quotas (`permissions`, `quotas`, the claims `entitlements` and `mat_quotas`, `GET /api/quotas/{subject}`,
+`people.scim`, `roles` of a contribution; see "People, permissions and quotas", the reasoning is in [ACCESS.md](ACCESS.md)).
 A change that breaks a consumer raises it; adding a field does not. A consumer of version 1 reads a definition of version 2: everything new is an addition.
 
 Two rules stand behind the contract:
@@ -32,6 +34,7 @@ with MatUi, so an app looks the same inside Mattiverse as on its own.
 | `GET /api/bindings`, `PUT` / `DELETE /api/bindings/{capability}/{consumer}` | a broker binds the consumers of what the app provides (see "Bindings") | key only |
 | `GET /api/connections` | what the app uses, offers and contributes, for the Connections area and a broker | key or token |
 | `GET /api/widgets/{id}` | the rows of a widget of the kind `list` (see "Contributions") | key or token |
+| `GET /api/quotas/{subject}` | what a person uses of the app's quotas (see "People, permissions and quotas") | key or the token of a machine |
 | `/api/provides/{capability}/...` | what the app does for other apps (see "Capabilities") | the key of a binding |
 
 - Everything starts with **`/api/`**. An app's own API stays where it is (the engines' `/api/v1/...`, see Mattiverse `docs/ENGINES.md`); the contract lives next to it and
@@ -108,6 +111,8 @@ with MatUi, so an app looks the same inside Mattiverse as on its own.
   ],
 
   "roles": [ { "key": "admin", "label": "Administrator" }, { "key": "member", "label": "Member" } ],
+  "permissions": [ { "key": "export", "label": "Export groups", "roles": ["admin"] } ],
+  "quotas": [ { "key": "groups", "label": "Groups", "unit": "count", "min": 0 } ],
 
   "provides": [ { "capability": "files.store", "version": 1, "label": "Keeps files for" } ],
   "consumes": [
@@ -158,6 +163,11 @@ values: dependent fields only when they are needed), `restart: true` (takes effe
 
 **`roles`:** the roles of the app, the most powerful first (`key` is the value of the claim `role`, small letters, digits, `-` and `_`). MatIdentity offers them when an
 administrator gives the app to people or groups. Optional: an app that decides its roles itself, or has none, leaves it out.
+
+**`permissions`:** rights on top of a role, each an on/off switch: `key` (small letters and digits first, then also `-` and `_`, at most 64), `label`, optional `hint` and
+`roles` (the roles that have it without anyone giving it; each must be one of `roles`). Optional. **`quotas`:** numbers per person: `key` (as a permission), `label`, `unit`
+(`bytes`, `count`, `tokens`, `minutes` or `requests`), optional `period` (`day` or `month`; none: a quota that does not renew, like storage), `min`, `max` (whole numbers) and
+`hint`. A quota has **no default** here: without a value from MatIdentity the app's own setting applies. Both are given out by MatIdentity; see "People, permissions and quotas".
 
 **`provides` / `consumes`:** see "Capabilities" and "Bindings". **`contributes`:** see "Contributions".
 
@@ -236,10 +246,11 @@ parameters a consumer may pass, the **values** of a binding (and whether each is
 | `shell.embed` | Mattiverse | the right to show the app in its window (see "Shown inside another app") | `MAT_FRAME_ANCESTORS` |
 | `web.route` | Matcad | a route to the app, with a certificate | `MAT_PUBLIC_URL` |
 | `office.edit` | MatOffice | a key for the host that opens its files in MatOffice (MatDrive) | `MAT_OFFICE_EDIT_URL`, `_INTERNAL_URL`, `_KEY` |
+| `people.scim` | MatIdentity | a key that reads the people of the consumer through SCIM 2.0 (see "People, permissions and quotas") | `MAT_PEOPLE_SCIM_URL`, `_INTERNAL_URL`, `_KEY` |
 
 - **A key capability** is one that is not in this table with values of its own: a binding is the address of the provider and a key made for the consumer, as
   `MAT_<CAPABILITY>_URL` (public, for a browser), `_INTERNAL_URL` (on the shared network, for a server) and `_KEY` (dots become `_`, capitals). So a new capability between
-  two apps needs no new variable names. `office.edit` is one.
+  two apps needs no new variable names. `office.edit` and `people.scim` are two.
 - The engines' capabilities (`identity.oidc`, `mail.smtp`, `ai.openai`, `shell.embed`, `web.route`) are set with their variables only, never typed into the Connections area.
   Since 2.1 Mattiverse binds `identity.oidc`, `mail.smtp`, `web.route` and `shell.embed` like any other capability (their sections below); `ai.openai` follows with MatAi.
 - **Implicit capabilities:** an app does not name `web.route` and `shell.embed`. A broker binds them for every app with a web page: `web.route` when a domain is set and a
@@ -357,7 +368,11 @@ What an app adds to a shell (the home screen of Mattiverse): the shell draws it 
 | `list` | up to eight rows: title, subtitle, icon, time, address | `GET /api/widgets/{id}` → `{"items": [{"title", "subtitle", "icon", "url", "time", "level"}]}` |
 
 - `audience`: `everyone` (default), `admin`, or `person` (values of the person who is looking: a shell needs a token of that person for the app, so Mattiverse does not show
-  such widgets yet; a launcher for `person` is shown to everyone).
+  such widgets yet; a launcher for `person` is shown to everyone). `admin` is a person who has the **first role** of the app (MatIdentity says which role a person has in
+  each app, see "People, permissions and quotas"); for an app without `roles` it is an administrator of the shell.
+- `roles` (launchers and widgets, optional): the role keys of the app whose people see it (`["admin", "verwalter"]`), on top of `audience`. A shell that does not know the
+  person's role in the app shows it by `audience` alone, so an app that narrows a widget to roles sets `audience: admin` as well when the widget must stay hidden from others.
+- **Which apps a person sees at all** is the shell's business: Mattiverse shows each person only the apps MatIdentity lets them use.
 - The browser never sees an app's key: the shell's server asks for the values (`/api/state`, `/api/widgets/{id}`) and keeps them a few seconds.
 - Not in this version: a widget made of the app's own HTML, and a search across the apps.
 
@@ -437,6 +452,77 @@ Optional for every app, on as soon as the environment names MatIdentity:
 - Mattiverse sets these variables when it installs or updates an app and MatIdentity is installed (the catalog entry says `identity: {}`, and `platform: true` for `MAT_API_KEY`); the client is created in MatIdentity through its API at the same time (`managedBy: mattiverse`, client id = the slug of the app) and removed with the app. When MatIdentity comes or goes, Mattiverse connects or disconnects every such app and redeploys it. Mattiverse signs in through MatIdentity itself too (client `mattiverse`).
 - The local sign-in stays at `?local=1` (`1` or `true`) in every app.
 
+## People, permissions and quotas
+
+**MatIdentity is the one place for people** ([ACCESS.md](ACCESS.md)). It keeps the people, their groups and the **grants**: which person or group may use which app, with
+which role, which `permissions` and which `quotas` of the app's definition. A shell (Mattiverse) administers them through MatIdentity's SCIM endpoint and keeps no people of its own.
+
+**What a person ends up with in an app** (only when MatIdentity decides the roles of the app; in the mode *Managed by the app* it only says who may come in):
+
+| | Rule |
+|---|---|
+| Access | a MatIdentity administrator, a grant to the person, a grant to one of their groups, or an app open to everyone |
+| `role` | the role of the person's own grant, else the most powerful role among their groups' grants, else the first role for an administrator, else the last role |
+| Permissions | **only added, never taken away**: those the role brings (`roles` of the permission), those of the person's own grant, those of every grant of their groups |
+| Quotas | the value of the person's own grant, else the **largest** value among their groups' grants (*no limit* beats every number), else none: the app's own setting |
+
+**The claims**, with the scope `roles` (which every app asks for), in the ID token, the access token and the user info, each app only its own values (the audience is the app):
+
+| Claim | Value | Standard |
+|---|---|---|
+| `role` | the role in this app | the contract since version 1 |
+| `entitlements` | the permissions in this app: `["export"]`; sent with `role`, so no claim with a `role` means none | RFC 9068 2.2.3.1 (RFC 7643 4.1.2) |
+| `mat_quotas` | the quotas that are set: `{"groups": 50, "storage": null}`; `null` = no limit, a key that is not there = the app's own setting | a private claim (RFC 7519 4.3) |
+
+- **The app follows them at every sign-in** and enforces them with its own code (only it knows what its quota counts). Without `role` (MatIdentity off, or the app manages
+  its roles) nothing comes and the app decides as before.
+- **A change reaches the app within seconds:** when the access, the role, a permission or a quota of a person in an app changes (directly, through a group, through
+  membership of a group, or through new `roles` or `permissions` of the app), MatIdentity sends a **back-channel logout** with the `sub` only to that app and revokes the
+  person's refresh tokens for it. The app ends the person's sessions; their next request signs them in again without a password (the session at MatIdentity is still there),
+  with the new claims. Taking an app away ends the sessions the same way.
+- **What a person uses:** `GET /api/quotas/{subject}` (the key, or the token of a machine, whose `sub` is its `client_id`; never a person's token):
+
+```json
+{ "subject": "6f1c...",
+  "values": { "storage":   { "used": 3435973836, "limit": 53687091200, "fixed": true },
+              "ai-tokens": { "used": 120400,     "limit": 1000000,     "fixed": false, "period": "month" } } }
+```
+
+  `limit` is what applies now (`null`: no limit), `fixed` is true when MatIdentity set it and false for the app's own setting; one entry per quota of the definition. `404` for
+  a person the app does not know (never signed in), and for an app without quotas.
+- **Without MatIdentity** the app keeps its own users, roles and limits. **With it**, the app's own page of a person shows role, permissions and quotas as set by MatIdentity
+  (fixed, like the `MATSMTP_*` settings).
+
+**`people.scim` (version 1):** MatIdentity lets an app read its people before they first sign in (to share with a colleague, to assign a task). A key capability:
+`MAT_PEOPLE_SCIM_URL` (MatIdentity's public address), `_INTERNAL_URL`, `_KEY`. SCIM is a protocol, so the consumer calls `<address>/scim/v2/...` with the key as the bearer
+token. The key **only reads**, and only the people who may use the consumer, with their role, permissions and quotas **in the consumer** (`GET /scim/v2/Users`,
+`/Users/{id}`, `/Groups`); a write answers `403`.
+
+### SCIM at MatIdentity
+
+MatIdentity is a SCIM 2.0 service provider (RFC 7643, RFC 7644) at `/scim/v2`: `Users`, `Groups`, `ServiceProviderConfig`, `Schemas`, `ResourceTypes`,
+`Content-Type: application/scim+json`, errors with the schema `urn:ietf:params:scim:api:messages:2.0:Error`.
+
+| SCIM | MatIdentity |
+|---|---|
+| `User.id` | the subject (the `sub` of the tokens) |
+| `userName`, `displayName`, `emails` (primary), `active`, `externalId` | the user name, the name, the e-mail, active, the id the client keeps |
+| `password` (write only) | sets the password; a person made without one and with an e-mail gets an invitation |
+| `groups` (read only); `Group.displayName`, `Group.members`, `Group.externalId` | the groups and their members |
+| `roles`, `entitlements` (read only) | what the person ends up with, one entry per app, `type` = the app id: `{"value": "member", "type": "matsplit"}` |
+| `urn:mat:scim:schemas:extension:access:1.0:User` | `grants` (given to the person directly; written as a whole), `access` (read only: per app what they end up with, with `via`: `person`, `group:<name>`, `everyone`, `administrator`), `administrator` (MatIdentity's own flag) |
+| `urn:mat:scim:schemas:extension:access:1.0:Group` | `grants` |
+
+A grant: `{"app": "matsplit", "role": "member", "permissions": ["export"], "quotas": {"groups": 50}}`; an entry of `access` also has `via`.
+
+- Filters: `userName`, `emails.value`, `externalId` and `id` with `eq` (users), `displayName` and `externalId` with `eq` (groups); paging with `startIndex` and `count`
+  (100, at most 500). `PATCH` with `add`, `replace` and `remove` on `active`, `userName`, `displayName`, `emails`, `externalId`, `members` (also `members[value eq "..."]`)
+  and the `grants` of the extension. No bulk, no sorting, no ETags.
+- **Access:** MatIdentity's `MAT_API_KEY` (as `X-Api-Key` or `Authorization: Bearer`) reads and writes everything; a key of `people.scim` reads its own people (above).
+  Every write lands in MatIdentity's activity log; a broker names the person who acted with `X-Mat-Actor: <sub>`.
+- What SCIM has no word for is in MatIdentity's `/api/v1`: `POST /api/v1/people/{id}/actions/{action}` with `invite`, `resetPassword`, `signOut`, `unlock` and
+  `resetSecondStep`, and the apps' `roles`, `permissions`, `quotas`, role mode and *open to everyone* in `GET /api/v1/clients` (what a shell draws its forms from).
+
 ## Mail through MatSMTP
 
 **MatSMTP** is the mail relay of the family and one of the engines of Mattiverse (Mattiverse `docs/ENGINES.md`): the apps hand their mail to it on the shared Docker network
@@ -495,15 +581,20 @@ or the `SAMEORIGIN` that ASP.NET Core's anti-forgery tokens add) cannot be shown
    for an image that does not say it in its `/api`; the variables of the bindings and `MAT_FRAME_ANCESTORS` the broker passes to the web service itself.
 6. An app that sends mail reads the `MATSMTP_*` variables (see "Mail through MatSMTP"): set = all its mail through MatSMTP and its own SMTP settings fixed, in its pages and in
    `/api/configure`; it consumes `mail.smtp` (its `/api` or its catalog entry); README and release `docker-compose.yml` name the variables like the others.
+7. An app with rights on top of its roles or with limits per person declares them as `permissions` and `quotas`, follows the claims (see "People, permissions and quotas"),
+   answers `/api/quotas/{subject}` and shows a value set by MatIdentity as fixed on its own page of the person. An app that needs its people before they sign in consumes
+   `people.scim`.
 
 **Shared code.** For .NET apps the endpoints, the key check, the checks of the settings, the validation of the definition and the OIDC wiring come as one package,
-**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 2.2.1), so that an app only describes its pages and supplies its values:
+**MatPlatform** ([src/MatPlatform](../src/MatPlatform/README.md), version 2.4.0), so that an app only describes its pages and supplies its values:
 `builder.AddMatPlatform<AppPlatform>(AppPlatform.Describe)` (a description with `o.App(...)`, `o.Page(...)`, `o.Tile(...)`, `o.Field(...)`, `o.LinkAction(...)` / `o.PostAction(...)`,
 `o.Role(...)`), the values from the interfaces `IMatPlatformState`, `IMatPlatformConfiguration`, `IMatPlatformActions` and `IMatPlatformHealth`, `.AddMatIdentitySignIn<AppUsers>(...)` with
 `IMatIdentityUsers` for the local user (and `IMatIdentitySessions` for the back-channel logout), and `app.MapMatPlatform()`. Contract 2 (2.0.0) adds `o.Provides(...)` and
 `o.Consumes(..., label, parameters)`, `o.Launcher(...)`, `o.Widget(...)`, `o.QuickAction(...)`, `IMatPlatformWidgets` for list widgets, `MatBindings` for what the app consumes
 (`GetAsync(capability)`), `IMatBindingHandler` when a binding is more than a key (a key capability needs no code: `MatKeyBindingHandler`, and `MatBindingAccess.Require(capability)`
 for its endpoints), the options `DataDirectory` (where the bindings are kept) and `ConnectionsAccess` (who may use the Connections area), and the tag helper `<mat-connections />`.
+2.4.0 adds the people: `o.Permission(...)` and `o.Quota(...)`, `MatIdentityPerson.Permissions` and `.Quotas` from the claims, `MatAccess` (the last values of every person:
+`Has`, `Limit`, `IsFixed`, `Describe`), `IMatPlatformQuotas` for `/api/quotas/{subject}`, `MatPeople` (the SCIM reader of `people.scim`) and `roles` on launchers and widgets.
 `MatPlatformValidator` checks a definition in the app's tests (keys of the sections, `showIf`, unique ids,
 kinds, icons of the sprite). Like MatUi it is **copied** (`CODE-03`): `node tools/matplatform-copy.js <web project of the app>` writes the files to `<app>/MatPlatform/` with a
 first line that names the version, and `matplatform.version`. The first app on it is MatSplit. The same types (`MatApiDefinition` and its records, `MatApiDefinition.Json`) read

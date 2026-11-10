@@ -5,7 +5,7 @@ builder for it, the endpoints (`/api`, `/api/health`, `/api/state[/{key}]`, `GET
 MatIdentity's tokens, the checks of the settings, a validator of a definition for the app's tests and the sign-in through MatIdentity (OpenID Connect).
 An app only **describes** itself and **supplies its values**.
 
-Version **2.2.1** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
+Version **2.4.0** (`MatPlatformVersion` in `MatPlatform.csproj`, the same as `MatPlatformInfo.Version`; semantic versioning: a change an app has to react to is a major).
 The first app on it is MatSplit (`src/MatSplit.Web/Platform/SplitPlatform.cs` there is the example to read).
 
 ## How an app gets it: a copy (CODE-03)
@@ -16,7 +16,7 @@ Like MatUi, an app **copies** the package; nothing is loaded from elsewhere and 
 node tools/matplatform-copy.js <folder of the app's web project>      # or: ./tools/matplatform-copy.ps1 -Target <folder>
 ```
 
-It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 2.2.1 – a copy from MatDesign, do not edit here`, and
+It writes every `.cs` file of `src/MatPlatform` to `<folder>/MatPlatform/` with the first line `// MatPlatform 2.4.0 – a copy from MatDesign, do not edit here`, and
 `matplatform.version` (the version, then the SHA-256 of each file as copied, with LF line ends). Copying again updates the files and removes the ones the package no longer has.
 **Never change the copy in the app**: change `src/MatPlatform` here (with a test in `tests/MatPlatform.Tests`), raise the version and copy it to the apps.
 
@@ -56,6 +56,18 @@ IMatPlatformWidgets  GetWidgetAsync(id, call) -> the rows of a list widget (GET 
 <mat-connections />  the Connections area (a tag helper; the forms post to /api/connections/form)
 MatCapabilities      Of(capability) -> MatCapabilitySpec (values, variables, labels, ByHand); PrefixOf("office.edit") == "MAT_OFFICE_EDIT"
 MatPlatformSettings  AppPublicUrl (MAT_PUBLIC_URL), AppInternalUrl (MAT_INTERNAL_URL)
+
+// 2.4.0: the people: permissions and quotas per person, given out by MatIdentity (docs/PLATFORM.md "People, permissions and quotas")
+o.Permission(key, label, hint = null, params roles)                    // a right on top of a role; roles: the roles that have it without anyone giving it
+o.Quota(key, label, unit, period = null, min = 0, max = null, hint = null) // a number per person: unit bytes|count|tokens|minutes|requests, period day|month
+o.Launcher(..., roles = null); new MatWidget(...) { Roles }             // shown only to people with one of these roles of the app (on top of audience)
+MatIdentityPerson.Permissions, .Quotas                                  // the claims entitlements and mat_quotas (null / empty without a role: the app decides)
+MatAccess            await access.HasAsync(subject, "share-public", fallback) // MatIdentity's answer when it decides the roles, else the app's own rule
+                     await access.LimitAsync(subject, "storage", ownLimit)   // MatIdentity's value (null: no limit) when it set one, else ownLimit
+                     IsFixedAsync(subject, key), IsDecidedAsync(subject), GetAsync(subject) -> MatPersonAccess, ForgetAsync(subject), MatAccess.Describe(language)
+IMatPlatformQuotas   GetUsageAsync(subject, call) -> per quota MatQuotaUsage(Used, Limit = the app's own); null: the person is unknown (GET /api/quotas/{subject}, key or machine only)
+MatPeople            (consumes people.scim) FindAsync(subject), FindByUserNameAsync, FindByEmailAsync, ListAsync, GroupsAsync -> MatPerson { Role, Permissions, Quotas, Groups }
+MatAccessClaims      PermissionsOf(principal), QuotasOf(principal), IsKey(key); MatApiAccess.IsMachine(http)
 
 // What the app implements (each optional; one class may implement all four)
 interface IMatPlatformState         { Task<IReadOnlyDictionary<string, MatStateValue>> GetStateAsync(MatPlatformCall call, CancellationToken ct); }
@@ -116,6 +128,24 @@ changes nothing. Without it the app sees `http`, the `redirect_uri` is `http://.
 browser drops them and the sign-in fails. **Only the scheme**: `RemoteIpAddress` (`X-Forwarded-For`, which guards the rate limits) and `Host` stay the app's own
 ForwardedHeaders policy, and that policy, before or after it, comes to the same scheme. `X-Forwarded-Prefix` is not read: Matcad serves every app at the root of its own
 address. `MatIdentitySignInOptions.TrustForwardedProto = false` turns it off.
+
+## People, permissions and quotas (2.4.0)
+
+MatIdentity decides who may use an app, with which role, which **permissions** (rights on top of the role) and which **quotas** (numbers per person). The app says what can be given
+(`o.Permission`, `o.Quota` next to `o.Role`); MatIdentity sends the person's values for this app at every sign-in in the claims `role`, `entitlements` and `mat_quotas`.
+
+- `MatIdentityPerson.Permissions` and `.Quotas` carry them to the app's `IMatIdentityUsers`. Without a `role` MatIdentity decides nothing here (it is off, or the app manages its
+  roles): `Permissions` is null and `Quotas` empty, and the app follows its own rules as before.
+- **`MatAccess`** keeps the last values of every person (`<DataDirectory>/matplatform/people.json`, in memory without a data folder), written before the app's `SignInAsync` runs. The
+  app asks it, also about a person who is not the one making the request: `HasAsync(subject, permission, fallback)`, `LimitAsync(subject, quota, ownLimit)`. The fallback and the
+  own limit are the app's own rule, so the same code works with and without MatIdentity. On its own page of a person the app shows a value MatIdentity set as fixed (`IsFixedAsync`,
+  `MatAccess.Describe(language)`).
+- **A change** of a person's access, role, permissions or quotas makes MatIdentity send a back-channel logout for that person to the app (`IMatIdentitySessions`): the next request
+  signs them in again, without a password, with the new values. An app without `IMatIdentitySessions` gets them at the next sign-in.
+- **`GET /api/quotas/{subject}`** answers what a person uses (`IMatPlatformQuotas`: the app's count and its own limit; MatPlatform puts MatIdentity's value over the limit and marks
+  it `fixed`). Only the key or a machine's token may call it (`MatApiAccess.IsMachine`: the subject of the token is its client id), never a person's token: `403`.
+- **`MatPeople`** reads the people before they sign in (to share with a colleague, to assign a task) through MatIdentity's SCIM endpoint and the binding `people.scim`
+  (`o.Consumes("people.scim", optional: true, label: ...)`; a key capability, so no other code). Without the binding every answer is empty.
 
 ## Capabilities, bindings and the Connections area (2.0.0)
 
