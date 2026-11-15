@@ -68,6 +68,11 @@ public partial class SiteSmokeTests : IClassFixture<WebApplicationFactory<Progra
         yield return "/Foundations/Tokens?group=Schemes";
         yield return "/Download";
         yield return "/Rules/Changes";
+        yield return "/Desktop";
+        yield return "/Desktop/App";
+        yield return "/Desktop/Tray";
+        yield return "/Desktop/Setup";
+        yield return "/Desktop/Agents";
     }
 
     private async Task<(HttpStatusCode Status, string Html)> Get(string url)

@@ -1,0 +1,36 @@
+@model string
+@inject MatDesign.Web.Studio.DesignData Design
+@*
+    The rules of one area of Desktop and services as cards (the look of the rules on the page of a component): id, title, level, statement, do and do not. The texts come from DesignData, so a
+    rule the Studio changed reads as changed, and a blank site reads them in its own words.
+*@
+@{
+    var rules = Design.RulesIn(Model).ToList();
+}
+@if (rules.Count == 0)
+{
+    <p class="mat-muted">This area has no rules on this site.</p>
+}
+else
+{
+    <ul class="doc-rulecards">
+        @foreach (var rule in rules)
+        {
+            <li class="doc-rulecard">
+                <div class="doc-rulecard__head">
+                    <a class="doc-rule-id" href="/Rules/Detail?id=@rule.Id">@rule.Id</a>
+                    <a class="doc-rulecard__title" href="/Rules/Detail?id=@rule.Id">@rule.Title</a>
+                    <span class="mat-pill @Ui.RuleLevelClass(rule.Level)">@rule.Level</span>
+                </div>
+                <p class="doc-rulecard__text">@Ui.Inline(rule.Statement)</p>
+                @if (rule.Do is not null || rule.Dont is not null)
+                {
+                    <div class="doc-dodont">
+                        @if (rule.Do is not null) { <div class="doc-do"><strong>Do</strong>@("\n")@rule.Do</div> }
+                        @if (rule.Dont is not null) { <div class="doc-dont"><strong>Do not</strong>@("\n")@rule.Dont</div> }
+                    </div>
+                }
+            </li>
+        }
+    </ul>
+}

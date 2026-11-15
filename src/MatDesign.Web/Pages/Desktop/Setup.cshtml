@@ -1,0 +1,120 @@
+@page "/Desktop/Setup"
+@inject MatDesign.Web.Studio.DesignData Design
+@{
+    ViewData["Title"] = "Setup";
+    ViewData["PageSub"] = "One window installs, updates and removes a program. It can run without a window for administrators, checks every update and shows the version the same way as everywhere else.";
+    ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Desktop and services", "/Desktop"), ("Setup", null));
+    var sample = DesktopFigures.Sample(Design);
+    var steps = new (string Name, string Text)[]
+    {
+        ("Welcome", "What will happen, where to and with which rights. A desktop program: for you only, no administrator rights, to the folder it names."),
+        ("Role", "Only where the program can be installed in more than one role (a server, a probe)."),
+        ("Connect", "Only where it pairs with a server: the address and the enrolment code or rollout key, checked before anything is installed."),
+        ("Options", "Switches with the safe choice set: start at sign-in, a desktop shortcut, automatic updates; for a service the port and the firewall."),
+        ("Progress", "A bar and the list of the steps with their state. It can be neither cancelled nor closed."),
+        ("Finish", "The program is ready: Start now, or what the user has to copy (host, port, password, fingerprint)."),
+    };
+}
+
+<section class="mat-section" aria-labelledby="window-title">
+    <div class="mat-section__head">
+        <h2 id="window-title">One window for every mode</h2>
+        <p class="mat-section__lead">About 600 × 560, not resizable. The header names the program and the mode; the footer has the version at the left and the buttons at the right: the primary action, Back, Cancel (<a href="/Rules/Detail?id=SETUP-01">SETUP-01</a>).</p>
+    </div>
+    <figure class="mat-figure">
+        <div class="doc-dlg" data-app="@sample.App.Id">
+            <div class="doc-dlg__head">@Ui.Logo(sample.App)<span class="doc-dlg__name">@sample.Product</span><span class="doc-dlg__mode">Setup</span></div>
+            <div class="doc-dlg__body">
+                <ol class="mat-steps" aria-label="Step 1 of 4">
+                    <li class="is-active"></li><li></li><li></li><li></li>
+                </ol>
+                <strong class="doc-dlg__title">Welcome</strong>
+                <p class="doc-dlg__text">This installs @sample.Product on this computer. It runs in the tray and opens with a shortcut.</p>
+                <ul class="doc-dlg__options">
+                    <li>@Ui.Icon("check-circle")<span><strong>Start at sign-in</strong><span class="mat-muted">In the tray, without a window</span></span></li>
+                    <li>@Ui.Icon("check-circle")<span><strong>Desktop shortcut</strong><span class="mat-muted">A start menu entry is always made</span></span></li>
+                    <li>@Ui.Icon("check-circle")<span><strong>Install updates automatically</strong><span class="mat-muted">New versions without a question; the program starts again</span></span></li>
+                </ul>
+                <p class="doc-dlg__note">@Ui.Icon("info")<span>For you only, no administrator rights: to <code>%LocalAppData%\Programs\@sample.Product</code>.</span></p>
+            </div>
+            <div class="doc-dlg__foot">
+                <span class="doc-dlg__version">@DesktopSample.Version</span>
+                <span class="mat-btn mat-btn--primary mat-btn--sm">Install</span>
+                <span class="mat-btn mat-btn--secondary mat-btn--sm">Cancel</span>
+            </div>
+        </div>
+        <figcaption>The first step of a desktop program. An update shows the same window with the mode Update and no options; the uninstall shows it with the mode Uninstall.</figcaption>
+    </figure>
+</section>
+
+<section class="mat-section" aria-labelledby="steps-title">
+    <div class="mat-section__head">
+        <h2 id="steps-title">The steps</h2>
+        <p class="mat-section__lead">A step that has nothing to ask is left out (<a href="/Rules/Detail?id=SETUP-02">SETUP-02</a>). The steps look like a <a href="@(Design.Component("wizard") is { } wizard ? ComponentCatalog.PageOf(wizard) : "/Components")">wizard</a> of the web.</p>
+    </div>
+    <ol class="doc-steps">
+        @foreach (var (name, text) in steps)
+        {
+            <li><div><strong>@name</strong><span>@text</span></div></li>
+        }
+    </ol>
+</section>
+
+<section class="mat-section" aria-labelledby="modes-title">
+    <div class="mat-section__head">
+        <h2 id="modes-title">Install, update, uninstall</h2>
+    </div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">The three modes of the setup window</caption>
+            <thead><tr><th scope="col">Mode</th><th scope="col">Steps</th><th scope="col">Buttons</th></tr></thead>
+            <tbody>
+                <tr><td data-label="Mode"><strong>Setup</strong> <span class="mat-muted">(Einrichtung)</span></td><td data-label="Steps">Every step that applies</td><td data-label="Buttons">Install, Back, Cancel</td></tr>
+                <tr><td data-label="Mode"><strong>Update</strong> <span class="mat-muted">(Update)</span></td><td data-label="Steps">Welcome, Progress, Finish; the settings are kept</td><td data-label="Buttons">Update, Cancel</td></tr>
+                <tr><td data-label="Mode"><strong>Uninstall</strong> <span class="mat-muted">(Deinstallation)</span></td><td data-label="Steps">What will be removed, and "Also delete my data", off</td><td data-label="Buttons">Remove (danger), Cancel</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="mat-muted">Every program has an entry in Installed apps; its uninstall opens this window (<a href="/Rules/Detail?id=SETUP-04">SETUP-04</a>). A desktop program installs for the user without administrator rights, an agent asks for them once (<a href="/Rules/Detail?id=SETUP-03">SETUP-03</a>).</p>
+</section>
+
+<section class="mat-section" aria-labelledby="quiet-title">
+    <div class="mat-section__head">
+        <h2 id="quiet-title">Without a window</h2>
+        <p class="mat-section__lead">For scripts and the tools that install on many machines (<a href="/Rules/Detail?id=SETUP-05">SETUP-05</a>). Exit code 0 when it worked; an error on the error output and in the log.</p>
+    </div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">The command line of a setup</caption>
+            <thead><tr><th scope="col">Command</th><th scope="col">What it does</th></tr></thead>
+            <tbody>
+                <tr><td data-label="Command"><code>@(sample.Slug)-agent install --quiet --url https://monitor.example.com --code K7QM-4TXC</code></td><td data-label="What it does">Enrols with the code, then installs the service and the tray</td></tr>
+                <tr><td data-label="Command"><code>msiexec /i @(sample.Slug)-agent.msi /qn URL=https://monitor.example.com KEY=ag_…</code></td><td data-label="What it does">The same as an MSI, with a rollout key</td></tr>
+                <tr><td data-label="Command"><code>@(sample.Slug).exe --quiet</code></td><td data-label="What it does">A desktop program installs itself for the user with the default options</td></tr>
+                <tr><td data-label="Command"><code>@(sample.Slug).exe --uninstall</code></td><td data-label="What it does"><span>Opens the uninstall; with <code>--quiet</code> it removes the program and keeps the data</span></td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="update-title">
+    <div class="mat-section__head">
+        <h2 id="update-title">Updates and the version</h2>
+        <p class="mat-section__lead">An update comes with a manifest that names the version, the channel and the SHA-256 of each package; a package that differs never runs, and a version that does not confirm its start is rolled back (<a href="/Rules/Detail?id=SETUP-06">SETUP-06</a>). The version reads the same everywhere (<a href="/Rules/Detail?id=SETUP-07">SETUP-07</a>):</p>
+    </div>
+    <div class="doc-strip">
+        <code>Version 1.4.2 · release</code>
+        <code>Version nightly-212-20261115 · nightly</code>
+        <code>Version local-20261115 · local</code>
+    </div>
+</section>
+
+<partial name="_DesktopShots" model='"setup"' />
+
+<section class="mat-section" aria-labelledby="rules-title">
+    <div class="mat-section__head">
+        <h2 id="rules-title">The rules</h2>
+        <p class="mat-section__lead">@Design.Area("SETUP")?.Summary</p>
+    </div>
+    <partial name="_DesktopRules" model='"SETUP"' />
+</section>

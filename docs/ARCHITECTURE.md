@@ -444,6 +444,19 @@ turns the data into releases, without giving up what the site is: the decisions 
   tokens (`ToolkitFiles.AssetsOverlay`) with a URL **relative to the stylesheet**, so the same text is right on the site (`/ui/`), in a release and in an app's own folder; a release carries the files under `brand/`. Nothing in the toolkit's source knows a brand: `.mat-brandmark` (the image of a logo, two of them with a dark variant) is the only
   class added, and a page without assets is byte for byte what it was.
 
+## 13. Programs that are not web pages
+
+Desktop programs, their tray and setup, and the agents that run as a service follow the same design with rules of their own: the areas `DESK`, `TRAY`, `SETUP` and `AGENT` of the rulebook,
+explained under **Desktop and services** on the site and in [DESKTOP.md](DESKTOP.md) (window sizes, the words of the menus in German and English, the command line, the pictures of the windows).
+
+- **Rules, not a toolkit, for now.** Nothing of it is in `src/MatUi`: a desktop program copies the values of the tokens into its theme file and generates its icons from the sprite. A toolkit
+  for desktop programs (MatDesktop, Avalonia) is planned; the rules say what it will have to do.
+- **Checked by a reviewer.** The site cannot run a desktop program, so every rule of the four areas says `Review` and how; `DesktopPagesTests` holds what the site can hold: the rules are the
+  owner's, cite rules that exist, name no app of the family, and the pages show them.
+- **Pictures are data, drawn by the programs.** `DesktopFigures` lists the pictures (page, file, alt text, caption, size, rules, the dark twin) and `wwwroot/img/desktop` holds them; a test
+  reads the size of each file. The programs draw them from sample data without a screen. They are sample material of the demo: another template shows only the drawn specimens, which are made
+  of text and tokens and use the company's names (`IDENT-09`).
+
 ## What it does not do
 
 - It does not change the other apps. Adoption is a decision and a piece of work in each repository ([ADOPTING.md](ADOPTING.md)); the audit shows where each one stands.

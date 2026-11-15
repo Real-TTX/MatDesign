@@ -1,0 +1,60 @@
+@model string
+@inject MatDesign.Web.Studio.DesignData Design
+@*
+    The pictures of real programs for one page of Desktop and services (DesktopFigures). They are sample material of the demo: on any other template the section is left out, with its
+    alt texts and captions, and the page shows only its drawn specimens (IDENT-09). A picture the program drew in both modes is two img: the classes of the brand's dark variants show the one of
+    the site's theme, and the other, hidden and lazy, is not loaded.
+*@
+@{
+    IReadOnlyList<DesktopFigure> figures = Design.IsDemo ? DesktopFigures.On(Model) : [];
+    var icons = figures.Where(f => f.Kind != DesktopFigureKind.Window).ToList();
+    var windows = figures.Where(f => f.Kind == DesktopFigureKind.Window).ToList();
+}
+@if (figures.Count > 0)
+{
+    <section class="mat-section" aria-labelledby="shots-title">
+        <div class="mat-section__head">
+            <h2 id="shots-title">In real programs</h2>
+            <p class="mat-section__lead">Pictures of programs that follow these rules today, drawn by the programs themselves from sample data. A picture that exists in light and dark follows the theme of this site.</p>
+        </div>
+        @if (icons.Count > 0)
+        {
+            <ul class="doc-shots doc-shots--icons">
+                @foreach (var figure in icons)
+                {
+                    <li>
+                        <figure class="mat-figure doc-shot">
+                            <span class="doc-shot__tile @(figure.Kind == DesktopFigureKind.TemplateIcon ? "doc-shot__tile--template" : "")">
+                                <img class="mat-img" src="@figure.Src" alt="@figure.Alt" width="@figure.Width" height="@figure.Height" loading="lazy" decoding="async">
+                            </span>
+                            <figcaption><span>@figure.Caption</span></figcaption>
+                        </figure>
+                    </li>
+                }
+            </ul>
+        }
+        <div class="doc-shots">
+            @foreach (var figure in windows)
+            {
+                <figure class="mat-figure doc-shot">
+                    @if (figure.DarkSrc is { } dark)
+                    {
+                        <img class="doc-shot__img mat-brandmark--light" src="@figure.Src" alt="@figure.Alt" width="@figure.Width" height="@figure.Height" loading="lazy" decoding="async">
+                        <img class="doc-shot__img mat-brandmark--dark" src="@dark" alt="@figure.Alt" width="@figure.Width" height="@figure.Height" loading="lazy" decoding="async">
+                    }
+                    else
+                    {
+                        <img class="doc-shot__img" src="@figure.Src" alt="@figure.Alt" width="@figure.Width" height="@figure.Height" loading="lazy" decoding="async">
+                    }
+                    <figcaption>
+                        <span>@figure.Caption</span>
+                        @foreach (var id in figure.Rules)
+                        {
+                            <a class="doc-rule-id" href="/Rules/Detail?id=@id">@id</a>
+                        }
+                    </figcaption>
+                </figure>
+            }
+        </div>
+    </section>
+}

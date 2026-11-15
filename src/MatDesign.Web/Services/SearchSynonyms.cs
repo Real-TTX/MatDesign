@@ -159,6 +159,13 @@ public static class SearchSynonyms
         G("language", "language sprache locale lokalisierung sprachen"),
         G("print", "print drucken druck"),
         G("arrow", "arrow pfeil richtung"),
+
+        // ---- programs on a computer (Desktop and services)
+        G("tray", "tray infobereich systray traysymbol benachrichtigungsbereich"),
+        G("installer", "installer installation installieren setup msi"),
+        G("uninstall", "uninstall deinstallieren deinstallation"),
+        G("update", "update aktualisierung aktualisieren updater"),
+        G("agent", "agent dienst service daemon hintergrunddienst"),
     ];
 
     private static readonly Dictionary<string, List<Group>> ByTerm = Groups

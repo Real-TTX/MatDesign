@@ -1,0 +1,87 @@
+@page "/Desktop/Agents"
+@inject MatDesign.Web.Studio.DesignData Design
+@{
+    ViewData["Title"] = "Agents";
+    ViewData["PageSub"] = "A program that runs as a service on a machine and reports to a server, or serves it: named the same way everywhere, paired with a code, its secrets kept in the service.";
+    ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Desktop and services", "/Desktop"), ("Agents", null));
+    var sample = DesktopFigures.Sample(Design);
+    var names = new (string What, string Name)[]
+    {
+        ("Service and its display name", sample.Agent),
+        ("Program", sample.Slug + "-agent.exe"),
+        ("Autostart value of the tray", sample.Agent + " Tray"),
+        ("Data folder on Windows", @"C:\ProgramData\" + sample.Agent),
+        ("Configuration and data on Linux", $"/etc/{sample.Slug}-agent, /var/lib/{sample.Slug}-agent"),
+        ("Local status channel", sample.Slug + "-agent-status"),
+        ("Start menu and Installed apps", sample.Agent),
+    };
+    var pairing = new (string Name, string Text)[]
+    {
+        ("A code is made on the server", "An enrolment code for one machine, which works once and for a short time, or a rollout key for many machines, which may wait for an administrator's approval."),
+        ("The setup enrols first", "It sends the code to the server and receives the token of the machine. A code that is wrong or used installs nothing and says why in one sentence."),
+        ("Then it installs", "The service, the tray, the entry in Installed apps; the token goes into the data folder behind an access list."),
+        ("The service connects", "The tray shows the state: running, or waiting while the approval is open."),
+    };
+}
+
+<section class="mat-section" aria-labelledby="names-title">
+    <div class="mat-section__head">
+        <h2 id="names-title">The names of an agent</h2>
+        <p class="mat-section__lead">An administrator finds an agent by its name in the services, the task manager, the folders and the logs (<a href="/Rules/Detail?id=AGENT-01">AGENT-01</a>). For a product called @sample.Product:</p>
+    </div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">The names of the agent of @sample.Product</caption>
+            <thead><tr><th scope="col">What</th><th scope="col">Name</th></tr></thead>
+            <tbody>
+                @foreach (var (what, name) in names)
+                {
+                    <tr><td data-label="What">@what</td><td data-label="Name"><code>@name</code></td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="pairing-title">
+    <div class="mat-section__head">
+        <h2 id="pairing-title">Pairing</h2>
+        <p class="mat-section__lead">Enrol first, install after: a machine that is installed but cannot connect is the worst case (<a href="/Rules/Detail?id=AGENT-02">AGENT-02</a>).</p>
+    </div>
+    <ol class="doc-steps">
+        @foreach (var (name, text) in pairing)
+        {
+            <li><div><strong>@name</strong><span>@text</span></div></li>
+        }
+    </ol>
+    <p class="mat-muted">An agent that is itself the server others connect to shows, on the last step of its setup and in its connection details, the host, the port, the password and the SHA-256 fingerprint of its certificate, each with a Copy button.</p>
+</section>
+
+<section class="mat-section" aria-labelledby="service-title">
+    <div class="mat-section__head">
+        <h2 id="service-title">A service and a tray</h2>
+        <p class="mat-section__lead">The work runs as a service of the system that starts without anybody signed in; the tray is a separate program in the session of the user that only shows it (<a href="/Rules/Detail?id=AGENT-04">AGENT-04</a>). The secret stays in the service (<a href="/Rules/Detail?id=AGENT-03">AGENT-03</a>).</p>
+    </div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">What runs where, and what crosses between them</caption>
+            <thead><tr><th scope="col">Part</th><th scope="col">Runs as</th><th scope="col">Knows the secret</th></tr></thead>
+            <tbody>
+                <tr><td data-label="Part"><strong>Service</strong></td><td data-label="Runs as">A Windows service, a systemd unit, a launchd daemon</td><td data-label="Knows the secret">Yes, from the data folder that only the system and administrators can read</td></tr>
+                <tr><td data-label="Part"><strong>Tray</strong></td><td data-label="Runs as">The signed-in user; Quit ends the tray, never the service</td><td data-label="Knows the secret">No: the status channel carries the state, the version and the server, never the token</td></tr>
+                <tr><td data-label="Part"><strong>Setup</strong></td><td data-label="Runs as">An administrator, once</td><td data-label="Knows the secret">Only to write it, and to show it where the user must copy it, with a warning</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="mat-muted">An agent whose tray and setup are written with WinForms may keep them, if they follow these rules and the colours of the tokens; a new one is written with Avalonia (<a href="/Rules/Detail?id=AGENT-05">AGENT-05</a>).</p>
+</section>
+
+<partial name="_DesktopShots" model='"agents"' />
+
+<section class="mat-section" aria-labelledby="rules-title">
+    <div class="mat-section__head">
+        <h2 id="rules-title">The rules</h2>
+        <p class="mat-section__lead">@Design.Area("AGENT")?.Summary</p>
+    </div>
+    <partial name="_DesktopRules" model='"AGENT"' />
+</section>

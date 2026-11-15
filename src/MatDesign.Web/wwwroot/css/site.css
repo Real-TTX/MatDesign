@@ -438,3 +438,85 @@ ol.doc-changes > li { list-style: decimal; }
   /* the title of a rule in its card is a link of its own: a line of text is not a target */
   .doc-rulecard__title { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; }
 }
+
+/* ---- Desktop and services: pictures of real programs, and drawings of a window, a tray menu, tray icons and a setup window. A drawing is made of text and tokens and
+   holds no control: nothing in it can be pressed, so nothing in it needs a hit area. ---- */
+.doc-shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: var(--mat-space-6); align-items: start; }
+.doc-shot { min-width: 0; }
+/* no display here: the light and the dark picture of a pair are shown and hidden by .mat-brandmark--light and --dark of the toolkit */
+.doc-shot__img { align-self: flex-start; max-width: 100%; height: auto; border: 1px solid var(--mat-border); border-radius: var(--mat-radius); background: var(--mat-surface); }
+.doc-shots--icons { list-style: none; margin: 0 0 var(--mat-space-6); padding: 0; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+.doc-shot__tile { display: grid; place-items: center; padding: var(--mat-space-4); border: 1px solid var(--mat-border); border-radius: var(--mat-radius); background: var(--mat-surface-2); }
+/* a macOS template image is black on transparent: a tile that stays light in dark mode keeps it visible (--mat-thumb is white in every mode) */
+.doc-shot__tile--template { background: var(--mat-thumb); }
+.doc-shot figcaption { display: flex; flex-wrap: wrap; align-items: center; gap: 0 var(--mat-space-2); }
+.doc-shot figcaption > span { flex-basis: 100%; }
+.doc-specimens { display: flex; flex-wrap: wrap; gap: var(--mat-space-6); align-items: flex-start; }
+.doc-specimens > * { flex: 1 1 260px; min-width: 0; max-width: 340px; }
+.doc-dot { display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--mat-text-faint); }
+.doc-dot--ok { background: var(--mat-success); }
+.doc-dot--warn { background: var(--mat-warning); }
+.doc-dot--error { background: var(--mat-danger); }
+.doc-dot--off { background: var(--mat-text-faint); }
+
+/* a main window: its own title bar, the menu of the web shell, a page; below 600 px the menu is the rail it folds to */
+.doc-win { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius-lg); overflow: hidden; background: var(--mat-bg); font-size: var(--mat-fs-sm); }
+.doc-win__bar { display: flex; align-items: center; gap: var(--mat-space-3); min-width: 0; padding: var(--mat-space-2) 0 var(--mat-space-2) var(--mat-space-3); background: var(--mat-surface); border-bottom: 1px solid var(--mat-border); }
+.doc-win--mac .doc-win__bar { padding-right: var(--mat-space-3); border-bottom: 0; }
+.doc-win__brand { display: flex; align-items: center; gap: var(--mat-space-2); flex: none; font-weight: 650; }
+.doc-win__search { display: flex; align-items: center; gap: var(--mat-space-2); flex: 1 1 auto; min-width: 0; max-width: 22rem; margin-inline: auto; padding: var(--mat-space-1) var(--mat-space-3); border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius); color: var(--mat-text-muted); }
+.doc-win__key { flex: none; padding: 2px var(--mat-space-2); border-radius: var(--mat-radius-xs); background: var(--mat-accent-soft); color: var(--mat-accent-text); font-size: var(--mat-fs-xs); }
+.doc-win__caps { display: flex; flex: none; }
+.doc-win__cap { display: grid; place-items: center; width: 40px; height: 28px; color: var(--mat-text-muted); }
+.doc-win__cap--max::before { content: ""; width: 10px; height: 10px; border: 1px solid currentColor; border-radius: 2px; }
+.doc-win__lights { display: flex; flex: none; gap: 6px; }
+.doc-win__lights > .doc-dot { width: 12px; height: 12px; }
+.doc-win__body { display: grid; grid-template-columns: 11rem minmax(0, 1fr); min-height: 260px; }
+.doc-win__nav { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: var(--mat-space-2); background: var(--mat-nav-bg); border-right: 1px solid var(--mat-border); }
+.doc-win__item { display: flex; align-items: center; gap: var(--mat-space-2); min-width: 0; padding: var(--mat-space-2); border-radius: var(--mat-radius-sm); color: var(--mat-text); }
+.doc-win__item.is-current { background: var(--mat-accent-soft-strong); color: var(--mat-accent-text); }
+.doc-win__sep { height: 1px; margin: var(--mat-space-2) var(--mat-space-1); background: var(--mat-border); }
+.doc-win__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--mat-space-2); margin-top: auto; padding: var(--mat-space-2); color: var(--mat-accent-text); font-size: var(--mat-fs-xs); }
+.doc-win__foot > .mat-icon { color: var(--mat-text-muted); }
+.doc-win__main { display: flex; flex-direction: column; gap: var(--mat-space-3); min-width: 0; padding: var(--mat-space-4); }
+.doc-win__line { height: 10px; border-radius: var(--mat-radius-pill); background: var(--mat-surface-3); }
+.doc-win__line--short { width: 60%; }
+@media (max-width: 600px) {
+  .doc-win__search, .doc-win__key, .doc-win__label { display: none; }
+  .doc-win__body { grid-template-columns: 52px minmax(0, 1fr); }
+  .doc-win__item, .doc-win__foot { justify-content: center; }
+  .doc-win__caps { margin-left: auto; }
+  .doc-win__cap { width: 32px; }
+}
+
+/* a tray menu, drawn: the look of a context menu of the system, not a menu that opens */
+.doc-traymenu { list-style: none; margin: 0; padding: var(--mat-space-1); border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius); background: var(--mat-surface); font-size: var(--mat-fs-sm); }
+.doc-traymenu__item { display: flex; align-items: center; gap: var(--mat-space-2); min-height: 30px; padding: 0 var(--mat-space-3); }
+.doc-traymenu__item--off { color: var(--mat-text-muted); }
+.doc-traymenu__item--default { font-weight: 700; }
+.doc-traymenu__key, .doc-traymenu__shield { margin-left: auto; color: var(--mat-text-muted); font-size: var(--mat-fs-xs); font-weight: 500; }
+.doc-traymenu__sep { height: 1px; margin: var(--mat-space-1); background: var(--mat-border); }
+
+/* tray icons: the mark with the state as a dot at its bottom right, a gap of the surface around the dot */
+.doc-trayicons { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: var(--mat-space-3); }
+.doc-trayicon { display: flex; align-items: flex-start; gap: var(--mat-space-4); min-width: 0; padding: var(--mat-space-4); border: 1px solid var(--mat-border); border-radius: var(--mat-radius); background: var(--mat-surface); }
+.doc-trayicon__mark { position: relative; display: inline-flex; flex: none; }
+.doc-trayicon__dot { position: absolute; right: -5px; bottom: -5px; width: 14px; height: 14px; box-shadow: 0 0 0 3px var(--mat-surface); }
+.doc-trayicon__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: var(--mat-fs-sm); }
+
+/* a small window of a tray or a setup: header with logo, name and mode, the content, a footer with the version at the left and the buttons at the right */
+.doc-dlg { display: flex; flex-direction: column; width: 100%; max-width: 600px; min-width: 0; border: 1px solid var(--mat-border-strong); border-radius: var(--mat-radius-lg); overflow: hidden; background: var(--mat-surface); font-size: var(--mat-fs-sm); }
+.doc-dlg__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-2) var(--mat-space-3); padding: var(--mat-space-4) var(--mat-space-5); border-bottom: 1px solid var(--mat-border); }
+.doc-dlg__name { font-size: var(--mat-fs-xl); font-weight: 650; }
+.doc-dlg__mode { color: var(--mat-accent-text); }
+.doc-dlg__body { display: flex; flex-direction: column; gap: var(--mat-space-4); min-width: 0; padding: var(--mat-space-5); }
+.doc-dlg__title { font-size: var(--mat-fs-lg); }
+.doc-dlg__text { margin: 0; }
+.doc-dlg__options { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--mat-space-3); }
+.doc-dlg__options > li { display: flex; align-items: flex-start; gap: var(--mat-space-3); }
+.doc-dlg__options > li > .mat-icon { color: var(--mat-accent-text); }
+.doc-dlg__options > li > span { display: flex; flex-direction: column; }
+.doc-dlg__note { display: flex; align-items: flex-start; gap: var(--mat-space-2); margin: 0; padding: var(--mat-space-3); border-radius: var(--mat-radius); background: var(--mat-surface-2); color: var(--mat-text-muted); overflow-wrap: anywhere; }
+.doc-dlg__foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mat-space-2); padding: var(--mat-space-3) var(--mat-space-5); background: var(--mat-surface-2); border-top: 1px solid var(--mat-border); }
+.doc-dlg__version { margin-right: auto; color: var(--mat-text-muted); font-size: var(--mat-fs-xs); }
+.doc-state { display: flex; align-items: baseline; gap: var(--mat-space-2); padding-bottom: var(--mat-space-4); border-bottom: 1px solid var(--mat-border); }

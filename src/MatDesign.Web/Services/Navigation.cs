@@ -161,6 +161,15 @@ public static class Navigation
                     new("All tokens", "/Foundations/Tokens", null),
                 ]),
             ]),
+            // programs that are not web pages: a desktop program, its tray and setup, and the agents that run as a service (docs/DESKTOP.md)
+            new("Desktop and services",
+            [
+                new("Overview", "/Desktop", "compass"),
+                new("Desktop app", "/Desktop/App", "monitor"),
+                new("Tray", "/Desktop/Tray", "bell"),
+                new("Setup", "/Desktop/Setup", "download"),
+                new("Agents", "/Desktop/Agents", "server"),
+            ]),
         ]),
         new("toolkit", "Toolkit", "toggle",
         [

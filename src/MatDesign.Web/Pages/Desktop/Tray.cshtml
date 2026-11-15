@@ -1,0 +1,144 @@
+@page "/Desktop/Tray"
+@inject MatDesign.Web.Studio.DesignData Design
+@{
+    ViewData["Title"] = "Tray";
+    ViewData["PageSub"] = "The icon in the notification area of Windows and in the menu bar of macOS: one menu in one order, the state as a dot and in words, notifications only for news, and one Info window.";
+    ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Desktop and services", "/Desktop"), ("Tray", null));
+    var sample = DesktopFigures.Sample(Design);
+    var states = new (string Tone, string Word, string Text)[]
+    {
+        ("ok", "Running", "Connected, or ready for connections."),
+        ("warn", "Waiting", "Waiting for an approval, or the server cannot be reached: it tries again."),
+        ("error", "Stopped", "The service is stopped, or an error keeps it from working."),
+        ("off", "Not set up", "Installed, but not paired or configured yet."),
+    };
+}
+
+<section class="mat-section" aria-labelledby="menu-title">
+    <div class="mat-section__head">
+        <h2 id="menu-title">One menu, in one order</h2>
+        <p class="mat-section__lead">The name and the state at the top, Open in bold, Quit at the bottom (<a href="/Rules/Detail?id=TRAY-01">TRAY-01</a>). Items a program does not need are left out; the order of the others stays. There is no Uninstall in a tray.</p>
+    </div>
+    <div class="doc-specimens">
+        <figure class="mat-figure">
+            <ul class="doc-traymenu" data-app="@sample.App.Id">
+                <li class="doc-traymenu__item doc-traymenu__item--off">@sample.Agent 1.4.2</li>
+                <li class="doc-traymenu__item doc-traymenu__item--off"><span class="doc-dot doc-dot--ok"></span>Connected</li>
+                <li class="doc-traymenu__sep" aria-hidden="true"></li>
+                <li class="doc-traymenu__item doc-traymenu__item--default">Open @sample.Product</li>
+                <li class="doc-traymenu__item">Info …</li>
+                <li class="doc-traymenu__item">Set up …</li>
+                <li class="doc-traymenu__item">Open log folder</li>
+                <li class="doc-traymenu__sep" aria-hidden="true"></li>
+                <li class="doc-traymenu__item">Restart service …@Ui.Icon("shield", "doc-traymenu__shield")</li>
+                <li class="doc-traymenu__sep" aria-hidden="true"></li>
+                <li class="doc-traymenu__item">Quit</li>
+            </ul>
+            <figcaption>An agent: Open goes to the web page of @sample.Product; the service actions carry the shield because they need administrator rights.</figcaption>
+        </figure>
+        <figure class="mat-figure">
+            <ul class="doc-traymenu" data-app="@sample.App.Id">
+                <li class="doc-traymenu__item doc-traymenu__item--off">@sample.Product 1.4.2</li>
+                <li class="doc-traymenu__item doc-traymenu__item--off"><span class="doc-dot doc-dot--ok"></span>Running</li>
+                <li class="doc-traymenu__sep" aria-hidden="true"></li>
+                <li class="doc-traymenu__item doc-traymenu__item--default">Open @sample.Product<span class="doc-traymenu__key">Ctrl+Shift+V</span></li>
+                <li class="doc-traymenu__sep" aria-hidden="true"></li>
+                <li class="doc-traymenu__item">Pause</li>
+                <li class="doc-traymenu__sep" aria-hidden="true"></li>
+                <li class="doc-traymenu__item">Settings …</li>
+                <li class="doc-traymenu__item">Install update …</li>
+                <li class="doc-traymenu__sep" aria-hidden="true"></li>
+                <li class="doc-traymenu__item">Quit</li>
+            </ul>
+            <figcaption>A desktop program: Open shows the main window; Pause is an item of its own; Install update appears only while an update waits.</figcaption>
+        </figure>
+    </div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">The words of the tray menu in English and German</caption>
+            <thead><tr><th scope="col">English</th><th scope="col">German</th><th scope="col" class="mat-hide-sm">When</th></tr></thead>
+            <tbody>
+                <tr><td data-label="English">Open @sample.Product</td><td data-label="German">@sample.Product öffnen</td><td data-label="When" class="mat-hide-sm">Always, in bold: the default item</td></tr>
+                <tr><td data-label="English">Info …</td><td data-label="German">Info …</td><td data-label="When" class="mat-hide-sm">Always</td></tr>
+                <tr><td data-label="English">Set up … / Settings …</td><td data-label="German">Einrichten … / Einstellungen …</td><td data-label="When" class="mat-hide-sm">When there is something to set</td></tr>
+                <tr><td data-label="English">Open log folder</td><td data-label="German">Log-Ordner öffnen</td><td data-label="When" class="mat-hide-sm">When the program writes a log</td></tr>
+                <tr><td data-label="English">Install update …</td><td data-label="German">Update installieren …</td><td data-label="When" class="mat-hide-sm">Only while an update waits</td></tr>
+                <tr><td data-label="English">Start / Stop / Restart service …</td><td data-label="German">Dienst starten / beenden / neu starten …</td><td data-label="When" class="mat-hide-sm">Services only, with the shield</td></tr>
+                <tr><td data-label="English">Quit</td><td data-label="German">Beenden</td><td data-label="When" class="mat-hide-sm">Always, last</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="states-title">
+    <div class="mat-section__head">
+        <h2 id="states-title">Four states, a dot and a word</h2>
+        <p class="mat-section__lead">The dot sits at the bottom right of the icon with a gap around it, drawn while the program runs. The state is always in words too: in the menu, the tooltip and the Info window (<a href="/Rules/Detail?id=TRAY-02">TRAY-02</a>). A desktop program may add a state of its own, such as paused. On macOS the icon is a template image in black, which the system colours: a state there is a shape, not a colour.</p>
+    </div>
+    <ul class="doc-trayicons">
+        @foreach (var (tone, word, text) in states)
+        {
+            <li class="doc-trayicon">
+                <span class="doc-trayicon__mark">@Ui.Logo(sample.App)<span class="doc-trayicon__dot doc-dot doc-dot--@tone"></span></span>
+                <span class="doc-trayicon__text"><strong>@word</strong><span class="mat-muted">@text</span></span>
+            </li>
+        }
+    </ul>
+</section>
+
+<section class="mat-section" aria-labelledby="clicks-title">
+    <div class="mat-section__head">
+        <h2 id="clicks-title">Clicks and notifications</h2>
+        <p class="mat-section__lead">The clicks follow the system (<a href="/Rules/Detail?id=TRAY-03">TRAY-03</a>). A notification is news the user did not cause: the connection was lost or came back, an update is ready (<a href="/Rules/Detail?id=TRAY-04">TRAY-04</a>).</p>
+    </div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">What a click on the tray icon does on each system</caption>
+            <thead><tr><th scope="col">System</th><th scope="col">Left click</th><th scope="col">Right click</th><th scope="col" class="mat-hide-sm">Icon</th></tr></thead>
+            <tbody>
+                <tr><td data-label="System">Windows</td><td data-label="Left click">The default item: Open</td><td data-label="Right click">The menu</td><td data-label="Icon" class="mat-hide-sm">An .ico of 16 to 256 px with the state dot</td></tr>
+                <tr><td data-label="System">macOS</td><td data-label="Left click">The menu</td><td data-label="Right click">The menu</td><td data-label="Icon" class="mat-hide-sm">A template image, black and transparent</td></tr>
+                <tr><td data-label="System">Linux</td><td data-label="Left click">The menu</td><td data-label="Right click">The menu</td><td data-label="Icon" class="mat-hide-sm">The icon with the state dot</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="mat-section" aria-labelledby="info-title">
+    <div class="mat-section__head">
+        <h2 id="info-title">The Info window</h2>
+        <p class="mat-section__lead">The one window of a tray without a main window, and the first one every tray opens: does it run, what is it connected to, where is the log (<a href="/Rules/Detail?id=TRAY-05">TRAY-05</a>).</p>
+    </div>
+    <figure class="mat-figure">
+        <div class="doc-dlg" data-app="@sample.App.Id">
+            <div class="doc-dlg__head">@Ui.Logo(sample.App)<span class="doc-dlg__name">@sample.Agent</span><span class="doc-dlg__mode">Info</span></div>
+            <div class="doc-dlg__body">
+                <div class="doc-state"><span class="doc-dot doc-dot--ok"></span><span><strong>Running</strong><br><span class="mat-muted">Connected to monitor.example.com since 08:02. What it sends is in the log.</span></span></div>
+                <dl class="mat-kv">
+                    <dt>Machine</dt><dd>SAMPLE-PC</dd>
+                    <dt>Server</dt><dd>https://monitor.example.com</dd>
+                    <dt>Mode</dt><dd>Windows service</dd>
+                    <dt>Started</dt><dd>2026-11-15 08:02</dd>
+                    <dt>Data</dt><dd><code>C:\ProgramData\@sample.Agent</code></dd>
+                </dl>
+            </div>
+            <div class="doc-dlg__foot">
+                <span class="doc-dlg__version">@DesktopSample.Version</span>
+                <span class="mat-btn mat-btn--primary mat-btn--sm">Open</span>
+                <span class="mat-btn mat-btn--secondary mat-btn--sm">Log folder</span>
+                <span class="mat-btn mat-btn--secondary mat-btn--sm">Close</span>
+            </div>
+        </div>
+        <figcaption>The state as a dot and a word with one sentence, the facts as rows, the version at the left and the buttons at the right. No token, no password.</figcaption>
+    </figure>
+</section>
+
+<partial name="_DesktopShots" model='"tray"' />
+
+<section class="mat-section" aria-labelledby="rules-title">
+    <div class="mat-section__head">
+        <h2 id="rules-title">The rules</h2>
+        <p class="mat-section__lead">@Design.Area("TRAY")?.Summary</p>
+    </div>
+    <partial name="_DesktopRules" model='"TRAY"' />
+</section>

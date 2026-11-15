@@ -1,0 +1,91 @@
+@page "/Desktop/App"
+@inject MatDesign.Web.Studio.DesignData Design
+@{
+    ViewData["Title"] = "Desktop app";
+    ViewData["PageSub"] = "A program with windows: written once with Avalonia, coloured by the tokens, with a title bar of its own, the menu of the web, one instance and everything on the keyboard.";
+    ViewData["Crumbs"] = Crumbs.Of(("Design", "/"), ("Desktop and services", "/Desktop"), ("Desktop app", null));
+    var sample = DesktopFigures.Sample(Design);
+    var items = new (string Icon, string Label, bool Current)[] { ("clock", "History", true), ("image", "Pictures", false), ("star", "Favourites", false) };
+}
+
+<section class="mat-section" aria-labelledby="window-title">
+    <div class="mat-section__head">
+        <h2 id="window-title">The main window</h2>
+        <p class="mat-section__lead">A title bar of its own with the logo, the name and the search (<a href="/Rules/Detail?id=DESK-03">DESK-03</a>), the menu of the web shell at the left with the version at its foot (<a href="/Rules/Detail?id=DESK-04">DESK-04</a>), the page at the right. Folded, the menu is a rail of icons; this drawing folds it on a phone.</p>
+    </div>
+    <figure class="mat-figure">
+        <div class="doc-win" data-app="@sample.App.Id">
+            <div class="doc-win__bar">
+                <span class="doc-win__brand">@Ui.Logo(sample.App, "sm")<span>@sample.Product</span></span>
+                <span class="doc-win__search">@Ui.Icon("search")<span>Search</span></span>
+                <span class="doc-win__key">Ctrl+Shift+V</span>
+                <span class="doc-win__caps" aria-hidden="true">
+                    <span class="doc-win__cap">@Ui.Icon("minus")</span>
+                    <span class="doc-win__cap doc-win__cap--max"></span>
+                    <span class="doc-win__cap">@Ui.Icon("x")</span>
+                </span>
+            </div>
+            <div class="doc-win__body">
+                <div class="doc-win__nav">
+                    @foreach (var (icon, label, current) in items)
+                    {
+                        <span class="doc-win__item @(current ? "is-current" : "")">@Ui.Icon(icon)<span class="doc-win__label">@label</span></span>
+                    }
+                    <span class="doc-win__sep"></span>
+                    <span class="doc-win__item">@Ui.Icon("settings")<span class="doc-win__label">Settings</span></span>
+                    <span class="doc-win__foot"><span class="doc-win__label">@DesktopSample.Version</span>@Ui.Icon("sidebar")</span>
+                </div>
+                <div class="doc-win__main">
+                    <strong>History</strong>
+                    <span class="doc-win__line"></span>
+                    <span class="doc-win__line doc-win__line--short"></span>
+                    <span class="doc-win__line"></span>
+                    <span class="doc-win__line doc-win__line--short"></span>
+                </div>
+            </div>
+        </div>
+        <figcaption>On Windows the program draws minimise, maximise and close at the right in the shape of the system. The bar can be dragged, and a double click maximises.</figcaption>
+    </figure>
+
+    <figure class="mat-figure">
+        <div class="doc-win doc-win--mac" data-app="@sample.App.Id">
+            <div class="doc-win__bar">
+                <span class="doc-win__lights" aria-hidden="true"><span class="doc-dot doc-dot--error"></span><span class="doc-dot doc-dot--warn"></span><span class="doc-dot doc-dot--ok"></span></span>
+                <span class="doc-win__brand">@Ui.Logo(sample.App, "sm")<span>@sample.Product</span></span>
+                <span class="doc-win__search">@Ui.Icon("search")<span>Search</span></span>
+            </div>
+        </div>
+        <figcaption>On macOS the traffic lights at the left belong to the system; the program keeps room for them and starts its bar after them.</figcaption>
+    </figure>
+</section>
+
+<section class="mat-section" aria-labelledby="sizes-title">
+    <div class="mat-section__head">
+        <h2 id="sizes-title">Sizes and behaviour</h2>
+        <p class="mat-section__lead">Sizes are in device-independent pixels, as the program sets them; the system scales them.</p>
+    </div>
+    <div class="mat-table-wrap">
+        <table class="mat-table">
+            <caption class="mat-sr-only">The sizes and the behaviour of the windows of a desktop program</caption>
+            <thead><tr><th scope="col">What</th><th scope="col">Size or behaviour</th><th scope="col" class="mat-hide-sm">Rule</th></tr></thead>
+            <tbody>
+                <tr><td data-label="What">Main window</td><td data-label="Size or behaviour">1180 × 760 at the first start, at least 760 × 460; the size and the place are remembered</td><td data-label="Rule" class="mat-hide-sm"><a class="doc-rule-id" href="/Rules/Detail?id=DESK-03">DESK-03</a></td></tr>
+                <tr><td data-label="What">Title bar</td><td data-label="Size or behaviour">68 high: logo 32, the name, the search, the shortcut, the caption buttons</td><td data-label="Rule" class="mat-hide-sm"><a class="doc-rule-id" href="/Rules/Detail?id=DESK-03">DESK-03</a></td></tr>
+                <tr><td data-label="What">Menu</td><td data-label="Size or behaviour">248 wide (210 in a window under 900), folded a rail of 68; the choice is remembered</td><td data-label="Rule" class="mat-hide-sm"><a class="doc-rule-id" href="/Rules/Detail?id=DESK-04">DESK-04</a></td></tr>
+                <tr><td data-label="What">Close, Escape, Alt+F4</td><td data-label="Size or behaviour">Hide the window; the program stays in the tray, only Quit ends it</td><td data-label="Rule" class="mat-hide-sm"><a class="doc-rule-id" href="/Rules/Detail?id=DESK-06">DESK-06</a></td></tr>
+                <tr><td data-label="What">A second start</td><td data-label="Size or behaviour">Shows the window of the program that runs and ends itself</td><td data-label="Rule" class="mat-hide-sm"><a class="doc-rule-id" href="/Rules/Detail?id=DESK-05">DESK-05</a></td></tr>
+                <tr><td data-label="What">Appearance</td><td data-label="Size or behaviour">System, Light, Dark in the settings; System follows the operating system</td><td data-label="Rule" class="mat-hide-sm"><a class="doc-rule-id" href="/Rules/Detail?id=DESK-02">DESK-02</a></td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<partial name="_DesktopShots" model='"app"' />
+
+<section class="mat-section" aria-labelledby="rules-title">
+    <div class="mat-section__head">
+        <h2 id="rules-title">The rules</h2>
+        <p class="mat-section__lead">@Design.Area("DESK")?.Summary</p>
+    </div>
+    <partial name="_DesktopRules" model='"DESK"' />
+</section>

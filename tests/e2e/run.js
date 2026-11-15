@@ -10895,6 +10895,47 @@ function seenAt(page, selector) {
     await ctx.close();
   }
 
+  // ---------------------------------------------------------------------------------------------------- Desktop and services (DESK, TRAY, SETUP, AGENT)
+  // The five pages: one h1, the pictures of the demo load (the lazy ones after they are scrolled to), a pair shows the picture of the site's theme only, nothing scrolls sideways on a phone.
+  console.log('\nDesktop and services');
+  for (const url of ['/Desktop', '/Desktop/App', '/Desktop/Tray', '/Desktop/Setup', '/Desktop/Agents']) {
+    for (const [name, options] of [['desktop', desktopOptions], ['phone', phoneOptions]]) {
+      const { ctx, page } = await open(options, url);
+      await check(`${url} on a ${name}: one h1, its pictures load, nothing scrolls sideways`, async () => {
+        expect(await page.locator('h1').count(), 1, 'the number of h1');
+        const images = page.locator('main img');
+        const count = await images.count();
+        for (let i = 0; i < count; i++) {
+          const img = images.nth(i);
+          if (!(await img.isVisible())) { continue; }
+          await img.scrollIntoViewIfNeeded();
+          await page.waitForFunction(el => el.complete, await img.elementHandle(), { timeout: 10000 });
+          const natural = await img.evaluate(el => el.naturalWidth);
+          expectTrue(natural > 0, 'a picture did not load: ' + await img.getAttribute('src'));
+        }
+        const widths = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, window: innerWidth }));
+        expectTrue(widths.page <= widths.window, `the page is ${widths.page} px wide in a window of ${widths.window} px`);
+      });
+      await ctx.close();
+    }
+  }
+  {
+    const { ctx, page } = await open(desktopOptions, '/Desktop/App');
+    await check('a picture drawn in light and dark shows the one of the theme of the site', async () => {
+      const shown = () => page.evaluate(() => [...document.querySelectorAll('main img.mat-brandmark--light, main img.mat-brandmark--dark')].filter(i => i.offsetParent !== null).map(i => i.getAttribute('src')));
+      await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'light'));
+      const light = await shown();
+      expectTrue(light.length > 0 && light.every(s => s.endsWith('-light.png')), 'light: ' + light.join(', '));
+      await page.evaluate(() => document.documentElement.setAttribute('data-theme', 'dark'));
+      const dark = await shown();
+      expectTrue(dark.length === light.length && dark.every(s => s.endsWith('-dark.png')), 'dark: ' + dark.join(', '));
+    });
+    await check('the drawn window folds its menu to a rail on a phone-wide box only', async () => {
+      expectTrue(await page.locator('.doc-win__label').first().isVisible(), 'the labels of the menu are shown on a desktop');
+    });
+    await ctx.close();
+  }
+
   // ---------------------------------------------------------------------------------------------------- the icon inside a field
   // The room for an icon is at the side of the icon: a field whose icon is at its end (the eye of a password) starts like every field, a search field with its icon at the start keeps the room.
   console.log('\nThe icon inside a field');
