@@ -74,8 +74,6 @@ public static class DesktopFigures
             "A notification of the program's own for news the user did not cause: an update is ready.", 360, 90, "TRAY-04"),
         Pair("tray", "dialog-pause", "The small dialog of ThixClip that pauses the recording for 15 minutes, 30 minutes, an hour, until the next start or until resumed.",
             "Pause is chosen by the user, so it is answered in the window and never by a notification.", 400, 408, "TRAY-04"),
-        new("tray", "agent-tray-info.png", "The Info window of the Matgate Agent: the header with logo, name and Info, the state Running with a green dot and a sentence, rows of facts, the version at the left and the buttons Log folder, Connection details and Close.",
-            "The Info window of an agent (WinForms): the state in words, the facts as rows, the version and the buttons at the bottom.", 632, 499, ["TRAY-05", "AGENT-05"]),
 
         // ---- the setup of the desktop program, light and dark
         Pair("setup", "setup-welcome", "The first step of the setup of ThixClip: header with logo, name and the mode Setup, three switches (start at sign-in, desktop shortcut, automatic updates), a note that it installs for the user without administrator rights and where to, the version at the left of the footer and Install and Cancel at the right.",
@@ -92,12 +90,8 @@ public static class DesktopFigures
         // ---- the setup of an agent (Matgate Agent, WinForms)
         new("setup", "agent-setup-update.png", "The first step of the setup of the Matgate Agent in the mode Update: header with logo, name and mode, what the update keeps, a note that it needs administrator rights, the version at the left of the footer and the buttons Next and Cancel.",
             "An agent (WinForms): the Welcome step says that administrator rights are needed.", 656, 719, ["SETUP-03", "AGENT-05"]),
-        new("setup", "agent-setup-finish.png", "The last step of the setup of the Matgate Agent: the agent is ready, with host, port, connection password and certificate fingerprint, each with a Copy button.",
-            "Finish of an agent that others connect to: what the user copies, each with Copy.", 656, 719, ["SETUP-02", "AGENT-02"]),
 
         // ---- the agents
-        new("agents", "agent-tray-connection.png", "The connection details of the Matgate Agent: host, port, connection password and certificate fingerprint with Copy buttons, and a warning that the token is the only key to this computer.",
-            "The one place where the secret of an agent is shown, with Copy and a warning.", 632, 465, ["AGENT-02", "AGENT-03"]),
         new("agents", "agent-setup-uninstall.png", "The setup of the Matgate Agent in the mode Uninstall: what will be removed, an unticked box to also delete the settings with the token and the certificate, and the buttons Remove and Cancel.",
             "Removing an agent keeps its token unless the box is ticked, so that installing again keeps the connection.", 656, 719, ["SETUP-04", "AGENT-03"]),
     ];

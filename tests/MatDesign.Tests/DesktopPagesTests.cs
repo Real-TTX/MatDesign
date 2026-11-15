@@ -86,7 +86,7 @@ public sealed partial class DesktopPagesTests(WebApplicationFactory<Program> fac
             // a blank site reads them as they are: no word of the family in them
             foreach (var text in new[] { rule.Title, rule.Statement, rule.Why, rule.Do, rule.Dont })
             {
-                Assert.Empty(MatWords.Find(text ?? string.Empty).Where(f => f.Kind != MatWords.Toolkit));
+                Assert.DoesNotContain(MatWords.Find(text ?? string.Empty), f => f.Kind != MatWords.Toolkit);
             }
 
             var line = Assert.Single(RuleChanges.For(rule.Id));

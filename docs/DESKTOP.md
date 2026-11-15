@@ -180,7 +180,8 @@ dark mode:
   `dialog-pause-{light,dark}.png`, `toast-{light,dark}.png` and the tray icons `tray-icon-windows[-paused].png`, `tray-icon-macos[-paused].png` (sample computer `ANNA-PC`, version 1.0.0).
   The headless UI tests (`Avalonia.Headless`) use the same sample data.
 - Matgate Agent: `matgate-agent setup-preview <folder>` draws the setup steps, the uninstall, Info and the connection details (WinForms `DrawToBitmap`). It still writes the real computer
-  name into Info; it has to take a sample name like ThixClip.
+  name into Info, Finish and the connection details; it has to take a sample name like ThixClip. Until it does, this site shows only its pictures without
+  that name (the update and the uninstall step); Info and the connection details are drawn as specimens.
 
 On this site the pictures are data: `src/MatDesign.Web/Services/DesktopFigures.cs` (page, file, alt text, caption, size, rules, the dark twin) and the files in
 `src/MatDesign.Web/wwwroot/img/desktop` (named `app-*` for the desktop program, `agent-*` for the agent). A new picture is a line there and its files; `DesktopPagesTests` holds the list, the
