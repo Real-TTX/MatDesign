@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using MatDesign.Core.Studio;
 using MatDesign.Web.Studio;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace MatDesign.Tests;
@@ -434,6 +435,23 @@ public sealed partial class StudioAccessTests : IClassFixture<WebApplicationFact
         var renamed = await admin.Client.PostAsync("/Studio/Releases/WhiteLabel/rename?prefix=acme&name=AcmeUi", new StringContent("mat-btn"));
         Assert.Equal(HttpStatusCode.OK, renamed.StatusCode);
         Assert.Equal("acme-btn", await renamed.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task A_refusal_without_a_page_stays_a_refusal_in_production()
+    {
+        // In production the status code pages send an empty answer on to /Error with the method of the request: the POST there must not turn the 403 into the 400 of the anti-forgery check
+        // (the browser checks against the container found it; a site in memory runs as Development, without the status code pages).
+        // (the files of the toolkit are a class library's static web assets: published in the image, mapped by hand here)
+        using var site = new StudioHarness(_factory.WithWebHostBuilder(builder => builder.UseEnvironment("Production").UseStaticWebAssets()));
+        site.AddUser("Eddie", "editor");
+        var editor = await site.ClientOf("Eddie");
+
+        var response = await editor.PostAsync(WhiteLabelEndpoints.RenameUrl + "?prefix=acme&name=AcmeUi", new StringContent("mat-btn"));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        var html = await response.Content.ReadAsStringAsync();
+        Assert.Contains("This is not for your role", html);
+        Assert.DoesNotContain("acme-btn", html);
     }
 
     [Fact]

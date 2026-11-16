@@ -1,13 +1,25 @@
 @page "/Error"
+@* The status code pages send an empty answer on to this page with the method of the request (Program.cs): a POST that was refused with 403 must come back as the 403 page, not as the 400 of
+   the anti-forgery check. The page changes nothing, so it does not need the token. *@
+@attribute [Microsoft.AspNetCore.Mvc.IgnoreAntiforgeryToken]
 @{
-    ViewData["Title"] = "Not found";
-    ViewData["Crumbs"] = new List<(string, string?)> { ("Error", null) }.AsReadOnly() as IReadOnlyList<(string Text, string? Url)>;
     var code = Request.Query["code"].ToString();
+    var forbidden = code == "403";
+    ViewData["Title"] = forbidden ? "Not allowed" : "Not found";
+    ViewData["Crumbs"] = new List<(string, string?)> { ("Error", null) }.AsReadOnly() as IReadOnlyList<(string Text, string? Url)>;
 }
 
 <div class="mat-empty">
     <span class="mat-empty__icon">@Ui.Icon("alert")</span>
-    <div class="mat-empty__title">@(code == "404" || code == "" ? "This page does not exist" : $"Something went wrong ({code})")</div>
-    <p>The address may be wrong, or the page has moved.</p>
+    @if (forbidden)
+    {
+        <div class="mat-empty__title">This is not for your role</div>
+        <p>Your role may not do this. An administrator can give you a role that may.</p>
+    }
+    else
+    {
+        <div class="mat-empty__title">@(code == "404" || code == "" ? "This page does not exist" : $"Something went wrong ({code})")</div>
+        <p>The address may be wrong, or the page has moved.</p>
+    }
     <a class="mat-btn mat-btn--primary" href="/">@Ui.Icon("home")<span>Go to the overview</span></a>
 </div>
