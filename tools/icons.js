@@ -59,6 +59,12 @@ const extra = {
   'circle': "<circle cx='12' cy='12' r='9'/>",
   // the open folder of the tree view (LIST-17); the closed one is `folder`
   'folder-open': "<path d='m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2'/>",
+  // desktop programs (DESK-09): the icons a desktop program drew for itself until now, so that MatDesktop takes them from the sprite (Lucide shapes)
+  'clipboard': "<rect x='8' y='2' width='8' height='4' rx='1'/><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/>",
+  'paste': "<rect x='8' y='2' width='8' height='4' rx='1'/><path d='M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2'/><path d='M16 4h2a2 2 0 0 1 2 2v4'/><path d='M21 14H11'/><path d='m15 10-4 4 4 4'/>",
+  'pin': "<line x1='12' y1='17' x2='12' y2='22'/><path d='M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z'/>",
+  'keyboard': "<rect x='2' y='4' width='20' height='16' rx='2'/><path d='M6 8h.01'/><path d='M10 8h.01'/><path d='M14 8h.01'/><path d='M18 8h.01'/><path d='M8 12h.01'/><path d='M12 12h.01'/><path d='M16 12h.01'/><path d='M7 16h10'/>",
+  'power': "<path d='M18.36 6.64a9 9 0 1 1-12.73 0'/><line x1='12' y1='2' x2='12' y2='12'/>",
 };
 
 const all = { ...base, ...extra };

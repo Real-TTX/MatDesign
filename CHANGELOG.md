@@ -15,6 +15,7 @@ A change that an app can see is written down under **Unreleased** in the pull re
 ### Added
 
 - The colours of two new apps, MatDrive (the drive of the family: files, sharing, versions, WebDAV) and MatOffice (the office suite: Docs, Sheets, Slides, Base): `[data-app="matdrive"]` sets `--mat-app-accent: #8e24aa` (white text on it, 7.0:1) and `[data-app="matoffice"]` sets `--mat-app-accent: #205a8e` (white text on it, 7.2:1; dark text on its dark variant, 4.8:1); both pass AA in light and dark. Nothing to do for the other apps but copy the files.
+- Five icons in the sprite that desktop programs drew for themselves until now (`DESK-09`): `clipboard`, `paste`, `pin`, `keyboard` and `power` (Lucide shapes, 24 × 24, a 2 px line like the others). The toolkit's library for desktop programs takes every icon from the sprite. Nothing to do for an app but copy the files.
 
 ### Fixed
 
