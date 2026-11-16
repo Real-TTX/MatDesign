@@ -72,6 +72,12 @@ public sealed record MatState(MatStateKind Kind, string Word, string ColorToken,
         return new MatState(MatStateKind.Custom, word, colorToken, templateMark);
     }
 
+    /// <summary>
+    /// The colour token of the dot on a tray icon. The task bar is light or dark whatever the window is, so the grey of Not set up is <c>--mat-text-faint</c> there (3.5:1 on a light,
+    /// 4.2:1 on a dark task bar), not <c>--mat-text-muted</c>, which is 2.4:1 on a dark one; every other state keeps its token.
+    /// </summary>
+    public string TrayColorToken => Kind == MatStateKind.NotSetUp ? "--mat-text-faint" : ColorToken;
+
     /// <summary>The tooltip of the tray icon: <c>Example Agent: Running</c>.</summary>
     public string Tooltip(string appName) => MatText.Format("state.tooltip", appName, Word);
 }

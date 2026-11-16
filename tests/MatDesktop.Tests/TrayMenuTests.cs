@@ -169,6 +169,32 @@ public sealed class TrayMenuTests
     }
 
     [Fact]
+    public void Open_may_say_what_it_opens_and_stays_the_default_in_its_place()
+    {
+        var menu = new MatTrayMenu("Example Agent", "1.4.2", () => { }) { Open = () => { }, OpenText = "Open Example Kiosk", Info = () => { } };
+        var open = menu.Build().Single(e => e.Role == MatTrayRole.Open);
+        Assert.Equal("Open Example Kiosk", open.Text);
+        Assert.True(open.IsDefault);
+        Assert.Equal(MatTrayRole.Open, menu.Build().First(e => e.IsEnabled).Role);
+        menu.OpenText = " ";
+        Assert.Equal(MatText.Format("tray.open", "Example Agent"), menu.Build().Single(e => e.Role == MatTrayRole.Open).Text);
+    }
+
+    [Fact]
+    public void The_grey_of_not_set_up_is_seen_on_a_light_and_a_dark_task_bar_and_the_danger_line_is_in_the_palette()
+    {
+        var light = MatPalette.For(null, dark: false);
+        foreach (var bar in new[] { "#f3f3f3", "#202020" })
+        {
+            Assert.True(MatColor.Contrast(light[MatState.NotSetUp.TrayColorToken], MatRgba.Parse(bar)) >= 3, bar);
+        }
+
+        Assert.Equal("--mat-text-muted", MatState.NotSetUp.ColorToken);
+        Assert.All(MatState.Standard.Where(s => s.Kind != MatStateKind.NotSetUp), s => Assert.Equal(s.ColorToken, s.TrayColorToken));
+        Assert.Equal(MatColor.Transparent(light.Danger, 0.45), light.DangerLine);
+    }
+
+    [Fact]
     public void The_version_needs_a_number_and_a_channel_and_the_tray_names_the_number()
     {
         Assert.Throws<ArgumentException>(() => MatVersion.Format(" ", "release"));

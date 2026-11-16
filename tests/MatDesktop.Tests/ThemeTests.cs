@@ -276,7 +276,7 @@ public sealed partial class ThemeTests
         {
             using var icon = MatTrayIcons.Draw(mark, state, template: false);
             var dot = Pixel(icon, 48, 48);
-            Assert.True(Near(dot, MatTheme.ToColor(palette[state.ColorToken])), $"{state.Word}: {dot}");
+            Assert.True(Near(dot, MatTheme.ToColor(palette[state.TrayColorToken])), $"{state.Word}: {dot}");
 
             // the gap around the dot is transparent, the rest of the mark is drawn
             Assert.Equal(0, Pixel(icon, 31, 48).A);

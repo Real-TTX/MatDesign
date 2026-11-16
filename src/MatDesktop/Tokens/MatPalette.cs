@@ -96,6 +96,9 @@ public sealed class MatPalette
     /// <summary>Stopped, an error (<c>--mat-danger</c>).</summary>
     public MatRgba Danger => this["--mat-danger"];
 
+    /// <summary>The line of a danger button: the danger colour at 45 % (MatUi's <c>mat-btn--danger</c>; <c>Mat.DangerLine</c> of the Avalonia theme), so a WinForms copy does not repeat the share.</summary>
+    public MatRgba DangerLine => MatColor.Transparent(Danger, 0.45);
+
     /// <summary>
     /// The colours of one mode for an accent: <paramref name="accentHex"/> is the app's accent (<c>--mat-app-accent</c>, IDENT-01), <paramref name="onAccent"/> the colour of text on it
     /// where the app sets one (<c>--mat-app-on-accent</c>, light mode only, like the CSS) and <paramref name="accentText"/> its own accent text colour (<c>--mat-app-accent-text</c>,

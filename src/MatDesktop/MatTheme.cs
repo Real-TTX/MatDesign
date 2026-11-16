@@ -150,7 +150,7 @@ public static class MatTheme
         }
 
         // the line of a danger button: color-mix(in srgb, var(--mat-danger) 45%, transparent) (matui.controls.css)
-        Add(d, "Mat.DangerLine", MatColor.Transparent(p.Danger, 0.45));
+        Add(d, "Mat.DangerLine", p.DangerLine);
 
         // Fluent's keys: the text fields, combo boxes, switches and check boxes in the colours of MatUi's fields (matui.forms.css)
         var surface = p.Surface;

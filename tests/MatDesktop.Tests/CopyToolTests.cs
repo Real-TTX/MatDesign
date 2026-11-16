@@ -92,6 +92,39 @@ public sealed class CopyToolTests : IDisposable
     }
 
     [Fact]
+    public void A_winforms_program_takes_every_file_without_avalonia_and_the_copy_builds_on_its_own()
+    {
+        if (Run(_folder, "--winforms") is not { } result)
+        {
+            return;
+        }
+
+        Assert.Equal(0, result.Code);
+        var copy = Path.Combine(_folder, "MatDesktop");
+        var files = Directory.GetFiles(copy, "*.cs", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(copy, f).Replace('\\', '/')).Order(StringComparer.Ordinal);
+        Assert.Equal(SourceTests.AvaloniaFree.Order(StringComparer.Ordinal), files);
+        Assert.Contains("--winforms", File.ReadAllLines(Path.Combine(copy, "matdesktop.version"))[0], StringComparison.Ordinal);
+        Assert.DoesNotContain("needs <PackageReference", result.Output, StringComparison.Ordinal);
+        Assert.NotEqual(0, Run(_folder, "--winforms", "--tokens-only")!.Value.Code);
+
+        // the folder of the test is a project without any package: what --winforms copies compiles there, as in a WinForms program
+        File.WriteAllText(Path.Combine(_folder, "Example.csproj"),
+            "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup><TargetFramework>net10.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>"
+            + "<TreatWarningsAsErrors>true</TreatWarningsAsErrors></PropertyGroup></Project>");
+        File.WriteAllText(Path.Combine(_folder, "Directory.Build.props"), "<Project />");
+        var build = new ProcessStartInfo("dotnet") { RedirectStandardOutput = true, RedirectStandardError = true, WorkingDirectory = _folder };
+        foreach (var arg in new[] { "build", "-nologo", "-v", "q" })
+        {
+            build.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(build)!;
+        var output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        Assert.True(process.ExitCode == 0, output);
+    }
+
+    [Fact]
     public void The_tool_refuses_a_folder_without_a_project_and_reads_the_version_from_the_project()
     {
         var empty = Path.Combine(_folder, "empty");

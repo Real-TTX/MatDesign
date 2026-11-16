@@ -95,6 +95,12 @@ public sealed partial class SourceTests
             Assert.Matches("(?m)^namespace MatDesktop;\r?$", text);
         }
 
+        // and the list is complete: every file of the package that names no Avalonia is on it (the PLAIN list of tools/matdesktop-copy.js is the same)
+        var plain = Sources("*.cs").Where(s => !Code(s.Text).Contains("Avalonia", StringComparison.Ordinal) && !s.Relative.StartsWith("obj/", StringComparison.Ordinal)).Select(s => s.Relative).Order(StringComparer.Ordinal);
+        Assert.Equal(AvaloniaFree.Order(StringComparer.Ordinal), plain);
+        var tool = File.ReadAllText(Path.Combine(Paths.Root, "tools", "matdesktop-copy.js"));
+        Assert.All(AvaloniaFree, f => Assert.Contains($"'{f}'", tool, StringComparison.Ordinal));
+
         // the three of --tokens-only need only each other
         foreach (var file in AvaloniaFree.Take(3))
         {

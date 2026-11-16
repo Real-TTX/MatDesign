@@ -98,6 +98,12 @@ public sealed class MatTrayMenu
     /// <summary>Opens the main window, or the web page when there is no window, or Info when there is neither. Required: a menu without it cannot be built.</summary>
     public Action? Open { get; set; }
 
+    /// <summary>
+    /// The text of the default item when <c>Open &lt;App&gt;</c> does not say what it opens (an agent whose window is a kiosk: <c>Open Example Kiosk</c>); null takes
+    /// <c>Open &lt;App&gt;</c>. It stays the default item in the place of TRAY-01.
+    /// </summary>
+    public string? OpenText { get; set; }
+
     /// <summary><c>Info …</c>, or null when the program has no Info window.</summary>
     public Action? Info { get; set; }
 
@@ -164,7 +170,7 @@ public sealed class MatTrayMenu
         List<List<MatTrayEntry>> groups =
         [
             [new(MatTrayRole.Title, MatVersion.Title(AppName, Version), IsEnabled: false), new(MatTrayRole.State, State.Word, IsEnabled: false)],
-            [new(MatTrayRole.Open, MatText.Format("tray.open", AppName), IsDefault: true, Run: Open)],
+            [new(MatTrayRole.Open, string.IsNullOrWhiteSpace(OpenText) ? MatText.Format("tray.open", AppName) : OpenText.Trim(), IsDefault: true, Run: Open)],
             [.. _own],
             Present(
                 (MatTrayRole.Info, "tray.info", Info),

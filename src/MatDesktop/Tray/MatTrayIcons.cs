@@ -42,7 +42,7 @@ public static class MatTrayIcons
                 }
 
                 // a template image is read by its opacity only: any opaque colour of the tokens will do
-                var colour = template ? MatTokens.Light.Text : MatPalette.For(MatTheme.Options?.Accent, dark: false, MatTheme.Options?.OnAccent)[state.ColorToken];
+                var colour = template ? MatTokens.Light.Text : MatPalette.For(MatTheme.Options?.Accent, dark: false, MatTheme.Options?.OnAccent)[state.TrayColorToken];
                 context.DrawGeometry(new SolidColorBrush(MatTheme.ToColor(colour)), null, dot);
             }
         }
