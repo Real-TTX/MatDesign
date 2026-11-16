@@ -96,7 +96,7 @@ public sealed class GalleryTests
             new MatFact("Server", $"https://{Server}"),
             new MatFact("Mode", "Service, started by the system"),
             new MatFact("Started", "12 November 2026, 09:12"),
-            new MatFact("Version", $"{Version} (release)", IsMono: true),
+            new MatFact("Version", MatVersion.Value(Version, MatVersion.Release), IsMono: true),
             new MatFact("Data folder", @"C:\ProgramData\Matmon Agent", IsMono: true),
         ])
     {
@@ -183,7 +183,7 @@ public sealed class GalleryTests
                 {
                     new Border { Padding = new Thickness(0, 12, 0, 4), Child = new MatStateDot { State = MatState.Running } },
                     new TextBlock { Text = $"Connected to {Server}. The last report went out at 14:31.", Margin = new Thickness(0, 0, 0, 8) }.Themed("MatText.Muted"),
-                    new MatFacts { Facts = [new MatFact("Computer", Computer), new MatFact("Checks", "24, all passing"), new MatFact("Version", $"{Version} (release)", IsMono: true)] },
+                    new MatFacts { Facts = [new MatFact("Computer", Computer), new MatFact("Checks", "24, all passing"), new MatFact("Version", MatVersion.Value(Version, MatVersion.Release), IsMono: true)] },
                 },
             },
         }.Themed("MatCard");

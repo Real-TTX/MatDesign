@@ -24,6 +24,17 @@ public static class MatVersion
         return MatText.Format("version", version.Trim(), channel.Trim());
     }
 
+    /// <summary>
+    /// <c>1.4.2 · release</c>: the same order and sign without the word, for the value of a row that is already labelled Version (the facts of Info, About), so that it never reads
+    /// another way, like <c>1.4.2 (release)</c>.
+    /// </summary>
+    public static string Value(string version, string channel)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(version);
+        ArgumentException.ThrowIfNullOrWhiteSpace(channel);
+        return $"{version.Trim()} · {channel.Trim()}";
+    }
+
     /// <summary>The first line of the tray menu: the name and the number (<c>Example Agent 1.4.2</c>).</summary>
     public static string Title(string appName, string version) => $"{appName} {version}";
 

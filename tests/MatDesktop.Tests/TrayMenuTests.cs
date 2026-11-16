@@ -162,6 +162,8 @@ public sealed class TrayMenuTests
     public void The_version_reads_the_same_everywhere(string version, string channel, string expected)
     {
         Assert.Equal(expected, MatVersion.Format(version, channel));
+        // the value of a row labelled Version is the same text without the word
+        Assert.Equal(expected, "Version " + MatVersion.Value(version, channel));
         Assert.Equal(channel != "local", MatVersion.GetsUpdates(channel));
         Assert.Equal(channel == "local", MatVersion.LocalNote(channel) is not null);
     }
