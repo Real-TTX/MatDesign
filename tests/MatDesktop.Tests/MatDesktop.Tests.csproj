@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Tests of MatDesktop: the generated tokens and icons against MatUi (read by MatDesign.Core, an independent reader of the CSS), the palette against Core's colour maths, the sources
+    (no literal colour, the Avalonia-free files), the tray menu, the texts, and the windows rendered headless with Avalonia and Skia (real pixels, no screen, Linux too).
+    MATDESKTOP_SHOTS=<folder> also writes the pictures of the gallery (GalleryTests).
+  -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="11.3.22" />
+    <PackageReference Include="Avalonia.Skia" Version="11.3.22" />
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="GitHubActionsTestLogger" Version="3.0.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- The tests read the CSS, the sprite and the sources of MatDesktop from the source tree, and compare with MatDesign.Core. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MatDesktop\MatDesktop.csproj" />
+    <ProjectReference Include="..\..\src\MatDesign.Core\MatDesign.Core.csproj" />
+  </ItemGroup>
+
+</Project>

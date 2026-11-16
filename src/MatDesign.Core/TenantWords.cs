@@ -72,6 +72,10 @@ public sealed partial class TenantWords
         new(WordScope.General, "a literal MatDesign in a page", "a literal product name in a page", "IDENT-09 (don't): the same warning without the maker's name."),
         new(WordScope.General, "with MatDesign (docs/PRODUCT.md", "with this program (docs/PRODUCT.md", "COLOR-11 and CODE-09 (why): the product, not the company's site."),
 
+        // ---- the library for desktop programs: its name is the makers' (it is not renamed by a white label build), a company reads what it is
+        new(WordScope.General, "generated into the theme of MatDesktop, the toolkit's library for desktop programs (", "generated into the theme of the toolkit's library for desktop programs (", "DESK-02: the library that generates the tokens, by what it is rather than by the makers' name."),
+        new(WordScope.General, "geometry resources that MatDesktop generates from", "geometry resources that the toolkit's library for desktop programs generates from", "DESK-09: the library that generates the icons, by what it is rather than by the makers' name."),
+
         // ---- the examples of the rules: an app of the registry used as an example
         new(WordScope.General, " (MatMail, Matcad, Matddns ...)", string.Empty, "IDENT-06: the names of three apps of the registry as an example; without them the sentence says the same."),
         new(WordScope.General, "MatPaper, Matdo and MatMail already offer a choice", "Some apps already offer a choice", "IDENT-05 (why): three apps of the family that had a choice of accents."),

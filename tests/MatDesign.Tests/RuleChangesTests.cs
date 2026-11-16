@@ -348,8 +348,10 @@ public sealed partial class RuleChangesTests(WebApplicationFactory<Program> fact
         var html = await Html("/Rules/Changes");
 
         Assert.Contains("data-groups=\"rule-changes\"", html);
-        Assert.Contains("<tbody class=\"mat-group\" data-group=\"2026-10\">", html);
-        Assert.Contains("October 2026", html);
+        // the first page starts with the month of the newest line (which month that is moves with the changelog)
+        var newest = RuleChanges.All.Max(c => c.Date);
+        Assert.Contains($"<tbody class=\"mat-group\" data-group=\"{newest.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture)}\">", html);
+        Assert.Contains(newest.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture), html);
         Assert.Contains("data-group-toggle aria-expanded=\"true\"", html);
         var table = html[html.IndexOf("<table class=\"mat-table\"", StringComparison.Ordinal)..html.IndexOf("</table>", StringComparison.Ordinal)];
         var cells = Regex.Matches(table, @"<td\b([^>]*)>").Select(m => m.Groups[1].Value).ToList();

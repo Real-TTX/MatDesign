@@ -449,10 +449,17 @@ turns the data into releases, without giving up what the site is: the decisions 
 Desktop programs, their tray and setup, and the agents that run as a service follow the same design with rules of their own: the areas `DESK`, `TRAY`, `SETUP` and `AGENT` of the rulebook,
 explained under **Desktop and services** on the site and in [DESKTOP.md](DESKTOP.md) (window sizes, the words of the menus in German and English, the command line, the pictures of the windows).
 
-- **Rules, not a toolkit, for now.** Nothing of it is in `src/MatUi`: a desktop program copies the values of the tokens into its theme file and generates its icons from the sprite. A toolkit
-  for desktop programs (MatDesktop, Avalonia) is planned; the rules say what it will have to do.
+- **MatDesktop, the toolkit for desktop programs** (`src/MatDesktop`, Avalonia 11, its README). Nothing of it is in `src/MatUi`, and it is not part of the site or its image: like MatPlatform it is a
+  folder that programs copy (`tools/matdesktop-copy.js`, `CODE-03`). Its tokens and icons are **generated** from MatUi by `tools/desktop.js` (`Tokens/MatTokens.g.cs` from `matui.tokens.css`, with the
+  sizes of the compact density with a mouse; `Themes/MatIcons.axaml` from the sprite), never written by hand, and CI fails when they are stale. The accent tokens are not values but rules
+  (`MatTokens.AccentLight`/`AccentDark`, read from the `color-mix` of the CSS) that `MatPalette` applies to the app's accent at run time; `MatDesktop.Tests` holds the tokens to what
+  `CssTokens` reads and the palette to `AccentReport` and `SchemeSurfaces` of Core, within one step per channel. The tokens, the colour maths and the palette need nothing but System, so a tray that
+  stays WinForms takes them (`--tokens-only`, `AGENT-05`). The theme maps every colour token to a brush (`Mat.Surface2`) in a light and a dark dictionary, sets Fluent's keys to them and adds the
+  control themes of the flat look; the windows, the tray, Info and the setup are controls built from those (the setup and Info in code, the looks in `Controls.axaml`). There is no literal colour
+  in it but the red of the close button of Windows (a test scans it). The tests draw everything headless with Skia (Linux too) and, with `MATDESKTOP_SHOTS`, the pictures of the site.
 - **Checked by a reviewer.** The site cannot run a desktop program, so every rule of the four areas says `Review` and how; `DesktopPagesTests` holds what the site can hold: the rules are the
-  owner's, cite rules that exist, name no app of the family, and the pages show them.
+  owner's, cite rules that exist, name no app of the family (read through the word map: `DESK-02` and `DESK-09` name MatDesktop, which a company reads as "the toolkit's library for desktop
+  programs"), and the pages show them. What a program does with MatDesktop, the library's own tests hold.
 - **Pictures are data, drawn by the programs.** `DesktopFigures` lists the pictures (page, file, alt text, caption, size, rules, the dark twin) and `wwwroot/img/desktop` holds them; a test
   reads the size of each file. The programs draw them from sample data without a screen. They are sample material of the demo: another template shows only the drawn specimens, which are made
   of text and tokens and use the company's names (`IDENT-09`).

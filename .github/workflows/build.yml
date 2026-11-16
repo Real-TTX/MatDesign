@@ -58,6 +58,12 @@ jobs:
           node tools/icons.js
           git diff --exit-code -- src/MatUi/wwwroot/img
 
+      # MatDesktop's tokens and icons are generated from MatUi's tokens and sprite (tools/desktop.js): hand-edited or stale files are a build error.
+      - name: MatDesktop tokens and icons are up to date
+        run: |
+          node tools/desktop.js
+          git diff --exit-code -- src/MatDesktop
+
       # main -> release (0.1.<run number>-<date>), dev -> nightly (nightly-<run number>-<date>), everything else -> local.
       - name: Determine version metadata
         id: ver

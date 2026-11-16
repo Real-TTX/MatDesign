@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/MatDesktop/MatDesktop.csproj" />
     <Project Path="src/MatPlatform/MatPlatform.csproj" />
     <Project Path="src/MatUi/MatUi.csproj" />
     <Project Path="src/MatDesign.Core/MatDesign.Core.csproj" />
@@ -7,6 +8,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MatDesign.Tests/MatDesign.Tests.csproj" />
+    <Project Path="tests/MatDesktop.Tests/MatDesktop.Tests.csproj" />
     <Project Path="tests/MatPlatform.Tests/MatPlatform.Tests.csproj" />
   </Folder>
 </Solution>

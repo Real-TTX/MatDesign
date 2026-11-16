@@ -49,6 +49,16 @@ public static class DesktopFigures
     private static DesktopFigure Pair(string page, string stem, string alt, string caption, int width, int height, params string[] rules)
         => new(page, $"app-{stem}-light.png", alt, caption, width, height, rules, $"app-{stem}-dark.png");
 
+    /// <summary>A picture drawn by MatDesktop (the gallery of its tests, MATDESKTOP_SHOTS) with its sample program, light and dark.</summary>
+    private static DesktopFigure Desk(string page, string stem, string alt, string caption, int width, int height, params string[] rules)
+        => new(page, $"matdesktop-{stem}-light.png", alt, caption, width, height, rules, $"matdesktop-{stem}-dark.png");
+
+    /// <summary>A tray icon drawn by MatDesktop: in colour, or as the template image of macOS.</summary>
+    private static DesktopFigure DeskIcon(string state, string word, bool macos, string caption)
+        => new("tray", $"matdesktop-tray-{(macos ? "macos-" : "")}{state}.png",
+            macos ? $"The tray icon of the sample agent as a macOS template image, {word}: the mark in black with the state as a shape at the bottom right." : $"The tray icon of the sample agent, {word}: its mark with the dot of the state at the bottom right, in a cut-out.",
+            caption, 64, 64, ["TRAY-02"], Kind: macos ? DesktopFigureKind.TemplateIcon : DesktopFigureKind.Icon);
+
     public static IReadOnlyList<DesktopFigure> All { get; } =
     [
         // ---- the desktop program (ThixClip, Avalonia), drawn by ThixClip.exe --snapshot with sample data, light and dark
@@ -94,6 +104,36 @@ public static class DesktopFigures
         // ---- the agents
         new("agents", "agent-setup-uninstall.png", "The setup of the Matgate Agent in the mode Uninstall: what will be removed, an unticked box to also delete the settings with the token and the certificate, and the buttons Remove and Cancel.",
             "Removing an agent keeps its token unless the box is ticked, so that installing again keeps the connection.", 656, 719, ["SETUP-04", "AGENT-03"]),
+
+        // ---- MatDesktop, the toolkit for desktop programs: drawn by its tests from the sample agent (computer ANNA-PC, version 1.4.2), light and dark
+        Desk("app", "main-open", "A main window drawn by MatDesktop: its own title bar with the logo, the name, a search field and the caption buttons of Windows; the menu with Overview tinted as the current item, a line, Settings, and the version at its foot; a page with the state, facts, two settings and two buttons.",
+            "MatDesktop: the title bar, the menu with the version at its foot and the controls, in the colours of the tokens.", 1000, 640, "DESK-02", "DESK-03", "DESK-04", "SETUP-07"),
+        Desk("app", "main-folded", "The same window with the menu folded to a rail of icons: the current item tinted, an info icon for About and the button that opens the menu again at the foot.",
+            "MatDesktop: the menu folded to a rail of 68 px.", 1000, 640, "DESK-04"),
+        Desk("tray", "info", "The Info window drawn by MatDesktop for the sample agent: header with logo, name and Info; the state Running as a green dot and a word, one sentence; the facts as rows (computer, server, mode, started, version, data folder); the version at the left of the footer and Open, Log folder and Close at the right.",
+            "MatDesktop: Info, the one window of a tray.", 630, 500, "TRAY-05", "COLOR-04"),
+        Desk("tray", "notification", "A notification drawn by MatDesktop, 360 px wide: Connection lost, the agent cannot reach its server and tries again every minute.",
+            "MatDesktop: a notification of the program's own, for what the user did not cause.", 360, 108, "TRAY-04"),
+        DeskIcon("running", "running", macos: false, "MatDesktop, running: a green dot."),
+        DeskIcon("waiting", "waiting", macos: false, "Waiting: an amber dot."),
+        DeskIcon("stopped", "stopped", macos: false, "Stopped: a red dot."),
+        DeskIcon("notsetup", "not set up", macos: false, "Not set up: a grey dot."),
+        DeskIcon("running", "running", macos: true, "macOS, running: the mark alone."),
+        DeskIcon("waiting", "waiting", macos: true, "macOS, waiting: a ring."),
+        DeskIcon("stopped", "stopped", macos: true, "macOS, stopped: a cross."),
+        DeskIcon("notsetup", "not set up", macos: true, "macOS, not set up: a dot."),
+        Desk("setup", "setup-welcome", "The first step of the setup window drawn by MatDesktop for the sample agent: header with logo, name and the mode Setup; Welcome says what it does, that it runs as a service and needs administrator rights once, and where it goes; the version at the left of the footer and Next and Cancel at the right.",
+            "MatDesktop: Welcome says what will happen, where to and with which rights.", 600, 560, "SETUP-01", "SETUP-02", "SETUP-03"),
+        Desk("setup", "setup-connect", "The Connect step of the setup window drawn by MatDesktop: the address of the server and the enrolment code as fields with hints; Next, Back and Cancel.",
+            "MatDesktop: Connect, the code is checked before anything is installed.", 600, 560, "SETUP-02", "AGENT-02"),
+        Desk("setup", "setup-options", "The Options step drawn by MatDesktop: three switches, start at sign-in and automatic updates on, the desktop shortcut off; Install, Back and Cancel.",
+            "MatDesktop: Options are switches with the safe choice set.", 600, 560, "SETUP-02"),
+        Desk("setup", "setup-progress", "The Progress step drawn by MatDesktop: a bar two thirds along and the steps with their state in an icon and a word (done, running, waiting); the buttons are turned off.",
+            "MatDesktop: Progress cannot be cancelled or closed.", 600, 560, "SETUP-02", "COLOR-04"),
+        Desk("setup", "setup-finish", "The Finish step drawn by MatDesktop: the agent is ready, a sentence where its icon is, a switch to start it now that is on, and Done.",
+            "MatDesktop: Finish offers to start the program now.", 600, 560, "SETUP-02"),
+        Desk("setup", "setup-uninstall", "The setup window drawn by MatDesktop in the mode Uninstall: what will be removed, the switch Also delete my data that is off, a danger button Uninstall and Cancel.",
+            "MatDesktop: Uninstall in the same window, the data kept unless the switch is turned on.", 600, 560, "SETUP-01", "SETUP-04"),
     ];
 
     /// <summary>The pictures of one page, in the order of the list.</summary>

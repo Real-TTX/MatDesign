@@ -224,5 +224,9 @@ public static partial class RuleChanges
         Add("2026-11-15", "AGENT-03", "f73cf5eb", "The secrets of an agent stay in the service, never in the tray or a log."),
         Add("2026-11-15", "AGENT-04", "c958ab10", "The agent is a service, and quitting its tray never stops it."),
         Add("2026-11-15", "AGENT-05", "68c8ec29", "Trays and setups that are WinForms may stay, and follow the rules and the tokens."),
+
+        // ---- the toolkit for desktop programs (docs/DESKTOP.md): the tokens and the icons come from its library, no longer from each program
+        Chg("2026-11-16", "DESK-02", "83ebb2bf", "The tokens come generated in the theme of the toolkit's library for desktop programs; a WinForms tray takes its generated tokens."),
+        Chg("2026-11-16", "DESK-09", "94ca876a", "The icons come from the geometry that the toolkit's library for desktop programs generates from the sprite, no longer from a script of each program."),
     ];
 }

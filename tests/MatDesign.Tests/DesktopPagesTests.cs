@@ -2,6 +2,7 @@ using System.Buffers.Binary;
 using System.Net;
 using System.Text.RegularExpressions;
 using MatDesign.Core;
+using MatDesign.Core.Studio;
 using MatDesign.Web.Services;
 using Microsoft.AspNetCore.Mvc.Testing;
 
@@ -76,6 +77,7 @@ public sealed partial class DesktopPagesTests(WebApplicationFactory<Program> fac
     [Fact]
     public void The_rules_of_desktop_programs_are_the_owners_checked_by_a_reviewer_and_name_no_app_of_the_family()
     {
+        var blank = TenantWords.For(Tenant.For("Acme Industries", DesignTemplates.BlankId), "Acme CRM");
         foreach (var rule in Areas.SelectMany(RuleBook.In))
         {
             // the owner decided them (2026-11-15); a May is never the owner's, so the one optional rule is the design's
@@ -83,14 +85,18 @@ public sealed partial class DesktopPagesTests(WebApplicationFactory<Program> fac
             // this site cannot run a desktop program: a reviewer checks them
             Assert.StartsWith("Review", rule.Check, StringComparison.Ordinal);
             Assert.NotNull(rule.Why);
-            // a blank site reads them as they are: no word of the family in them
-            foreach (var text in new[] { rule.Title, rule.Statement, rule.Why, rule.Do, rule.Dont })
+            // a blank site reads them through the word map: no word of the family in them (DESK-02 and DESK-09 name the library for desktop programs, which the map says in words)
+            var read = blank.OfRule(rule);
+            foreach (var text in new[] { read.Title, read.Statement, read.Why, read.Do, read.Dont, read.Check })
             {
                 Assert.DoesNotContain(MatWords.Find(text ?? string.Empty), f => f.Kind != MatWords.Toolkit);
             }
 
-            var line = Assert.Single(RuleChanges.For(rule.Id));
-            Assert.Equal(RuleChangeKind.Added, line.Kind);
+            // added on the day the owner decided them; a later line only changes them
+            var lines = RuleChanges.For(rule.Id);
+            Assert.Equal(RuleChangeKind.Added, lines[0].Kind);
+            Assert.Equal("2026-11-15", lines[0].Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+            Assert.All(lines.Skip(1), l => Assert.Equal(RuleChangeKind.Changed, l.Kind));
         }
     }
 

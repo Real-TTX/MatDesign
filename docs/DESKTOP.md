@@ -5,9 +5,8 @@ macOS), its **tray icon** and its **setup**, and the **agents**, programs that r
 instance of Matmon, the Matgate Agent, the MatHub Agent). The rules are in the rulebook in four areas, `DESK`, `TRAY`, `SETUP` and `AGENT` (decided by the owner on 2026-11-15); the site
 explains them under **Desktop and services** (`/Desktop`, `/Desktop/App`, `/Desktop/Tray`, `/Desktop/Setup`, `/Desktop/Agents`). This file says what each rule means in practice.
 
-Nothing of it is in `src/MatUi`: the toolkit is CSS and a script for web pages. A toolkit for desktop programs, **MatDesktop** (the theme with the tokens, the window chrome, the tray, the
-setup window and the controls as one Avalonia library), is planned and not built yet. Until it exists, every program does what is written here by itself, and the rules say what
-MatDesktop will have to do.
+Nothing of it is in `src/MatUi`: the toolkit is CSS and a script for web pages. What a desktop program needs is **MatDesktop** (`src/MatDesktop`, section 1a): the theme with the tokens,
+the window chrome, the menu, the tray, the Info window, the setup window and the controls as one Avalonia library, which programs copy like web apps copy MatUi.
 
 ## 1. What applies to which program
 
@@ -18,13 +17,41 @@ MatDesktop will have to do.
 
 Where the programs stand on 2026-11-15, and what they still have to change, is at the end of this file.
 
+## 1a. MatDesktop, the toolkit for desktop programs
+
+MatDesktop is to a desktop program what MatUi is to a web page: one Avalonia library (Avalonia 11.3.22, .NET 10) in `src/MatDesktop`, built and tested in this repository
+(`tests/MatDesktop.Tests`, headless with Skia), not part of the site or its image. Its README has the details and the code; in short:
+
+- **Copy, do not reference** (`CODE-03`). `node tools/matdesktop-copy.js <folder of the program's project>` writes the files into `<folder>/MatDesktop/`, each with the line
+  `// MatDesktop <version> – a copy from MatDesign, do not edit here` (an XML comment in `.axaml`), a manifest `matdesktop.version` with the SHA-256 of each file, and removes the files of an
+  older copy. The version is `MatDesktopVersion` (0.1.0).
+- **Generated from MatUi, never by hand.** `node tools/desktop.js` writes `Tokens/MatTokens.g.cs` from `matui.tokens.css` (the colours of light and dark, the sizes, the type, the motion and
+  the rules by which the accent tokens are derived) and `Themes/MatIcons.axaml` from the sprite (every symbol as a geometry `MatIcon.<name>`). CI runs it and fails on a difference.
+  **A desktop window is used with a mouse, so the sizes are those of MatUi's compact density with a fine pointer**: controls 34 px, body type 14 px, the radii and the spacing of the tokens.
+  Colour schemes (`COLOR-09`) are not part of 0.1.
+- **The theme** (`DESK-02`). `MatTheme.Install(app, new MatThemeOptions(accent))` in `Application.Initialize` adds Fluent in the colours of MatUi, a brush per colour token in a light and a
+  dark dictionary (`--mat-surface-2` is `Mat.Surface2`; the accent tokens computed from the app's accent like the CSS computes them, `MatPalette`), the sizes (`Mat.Radius`,
+  `Mat.ControlHeight`, `Mat.FontSize`, `Mat.Font` ...) and the control themes of the flat look: the default button (MatUi's secondary), `MatButton.Primary`, `.Danger`, `.Ghost`, `.Icon`,
+  `.Link`, the text looks `MatText.PageTitle` ..., `MatCard`, `MatKeyCap`, `MatBadge`, `MatSearchBox`, `MatProgress`, the tabs. `MatTheme.SetAppearance` is System, Light or Dark.
+  A window derives from `MatWindow` and uses `{DynamicResource Mat.Surface}`, never a literal colour.
+- **The chrome and the controls**: `MatTitleBar` (`DESK-03`: logo and name, a slot in the middle, the caption buttons of Windows 11 drawn by the program, room for the traffic lights on
+  macOS, drag and double click), `MatNav` and `MatNavItem` (`DESK-04`: the current item a tint, Settings below a line, the version at the foot that opens About, the fold to a rail of
+  68 px), `MatIcon` (`DESK-09`), `MatStateDot` (a dot and a word), `MatSettingRow`, `MatFormField`, `MatFacts`, `MatCopyField`, `MatVersion` (`SETUP-07`), `MatText` (every text of the library
+  in English and German, `DESK-08`), `MatSingleInstance` (`DESK-05`).
+- **The tray**: `MatTrayMenu` builds the menu of `TRAY-01` in its order whatever order a program adds its items in (and has no Uninstall), `MatTray` shows it with Avalonia's tray icon and
+  handles the clicks of `TRAY-03`, `MatTrayIcons` draws the dot of the state (`TRAY-02`), `MatNotification` is the notification of `TRAY-04` and `MatInfoWindow` the Info window of `TRAY-05`.
+- **The setup**: `MatSetupWindow` is the one window of `SETUP-01` for Setup, Update and Uninstall, with the steps of `SETUP-02` as building blocks (`MatSetupStep.Welcome`, `Role`, `Connect`,
+  `WithOptions`, `Finish`, `Uninstall`; Progress is the window's) and the work as a callback that reports its steps.
+- **A tray that stays WinForms** (`AGENT-05`) takes the tokens only: `tools/matdesktop-copy.js <folder> --tokens-only` copies `MatTokens.g.cs`, `MatColor.cs` and `MatPalette.cs`, which need
+  nothing but System (`MatPalette.For(accent, dark).Surface` ...). `MatText`, `MatVersion`, `MatState` and `MatTrayMenu` need nothing but System either.
+
 ## 2. Desktop programs (DESK)
 
 - **Avalonia, once for every system** (`DESK-01`, Should). C#, Avalonia 11, the current .NET (10), one project for Windows, macOS and Linux. What differs (title bar, tray, autostart,
   paths, installer) sits behind `OperatingSystem.IsWindows()` / `IsMacOS()` in one class each, never in a second project. WinForms and WPF are not used for new programs.
-- **Colours from the tokens** (`DESK-02`). `matui.tokens.css` is the source of names and values. The program has one theme file (`Themes/Theme.axaml`) with a light and a dark
-  `ResourceDictionary` whose brushes are named after the tokens (`Surface`, `Surface2`, `Border`, `Text`, `TextMuted`, `Accent`, `AccentSoft`, `Success`, `Warning`, `Danger` ...) and carry
-  their values; a window uses `{DynamicResource ...}` and never a literal colour. The appearance is a setting **System / Light / Dark** ("Erscheinungsbild": Wie das System, Hell, Dunkel),
+- **Colours from the tokens** (`DESK-02`). `matui.tokens.css` is the source of names and values; MatDesktop generates them into its theme, a light and a dark dictionary whose brushes are
+  named after the tokens (`Mat.Surface`, `Mat.Surface2`, `Mat.Border`, `Mat.Text`, `Mat.TextMuted`, `Mat.Accent`, `Mat.AccentSoft`, `Mat.Success`, `Mat.Warning`, `Mat.Danger` ...); a window uses
+  `{DynamicResource ...}` and never a literal colour. A program writes no theme file of its own. The appearance is a setting **System / Light / Dark** ("Erscheinungsbild": Wie das System, Hell, Dunkel),
   saved per user; System follows the operating system and changes with it. Selected is a tint, never a bar (`COLOR-08`).
 - **A title bar of its own** (`DESK-03`). `ExtendClientAreaToDecorationsHint` with the chrome hints that the system needs. Left: the logo (32 px) and the name or word mark. Middle: the search
   or the main actions (ThixClip: the search, Pause, the global shortcut as a chip). Windows: minimise, maximise/restore and close at the right, drawn by the program in the shape of the
@@ -42,8 +69,8 @@ Where the programs stand on 2026-11-15, and what they still have to change, is a
   `Anheften (Strg+P)` / `Pin (Ctrl+P)`, on macOS `⌘P`. A list may name its keys in a line at its foot (ThixClip: ↵ Einfügen, ↑↓ Auswählen, Strg D Favorit ...). Icon-only buttons have
   `AutomationProperties.Name` and a tooltip with the same words.
 - **German and English** (`DESK-08`, Should). Resources in both languages, chosen by `CultureInfo.CurrentUICulture` (German for `de-*`, English otherwise); a setting may override it.
-- **Icons from the sprite** (`DESK-09`). `tools/avalonia-icons.js` of the program reads `matui-icons.svg` of MatUi and writes geometry resources (`Icon.Search`, `Icon.Pin` ...) that a
-  small `IconView` control strokes like the web does (1.6 to 2 px, round caps). No Segoe Fluent Icons, no Font Awesome, no emoji. An icon the sprite lacks is added to MatDesign first.
+- **Icons from the sprite** (`DESK-09`). MatDesktop carries every symbol of `matui-icons.svg` as a geometry (`MatIcon.search`, `MatIcon.pin` ..., generated by `tools/desktop.js`), which the
+  control `MatIcon` strokes like the web does (2 units on the grid of 24, round caps). No Segoe Fluent Icons, no Font Awesome, no emoji. An icon the sprite lacks is added to MatDesign first.
   The app icon, the tray icon and the logo are drawn from the same mark (`tools/render-icons.js`).
 - **Policies** (`DESK-10`, May). Windows: `HKLM\SOFTWARE\Policies\<Product>` (DWORD values), macOS: a configuration profile for the bundle id. Names say what they do: `LockConfiguration`,
   `DisableCloud`, `DisableUpdates`. A locked setting is shown, turned off, with "Von deiner Organisation festgelegt" / "Set by your organisation".
@@ -183,13 +210,18 @@ dark mode:
   name into Info, Finish and the connection details; it has to take a sample name like ThixClip. Until it does, this site shows only its pictures without
   that name (the update and the uninstall step); Info and the connection details are drawn as specimens.
 
+- MatDesktop: its tests draw every window of the library with a sample agent (`Matmon Agent`, computer `ANNA-PC`, version 1.4.2) when `MATDESKTOP_SHOTS=<folder>` is set:
+  `dotnet test tests/MatDesktop.Tests --filter GalleryTests` writes `matdesktop-{info,setup-welcome,setup-connect,setup-options,setup-progress,setup-finish,setup-uninstall,main-open,main-folded,notification}-{light,dark}.png`
+  and the tray icons `matdesktop-tray[-macos]-{running,waiting,stopped,notsetup}.png`.
+
 On this site the pictures are data: `src/MatDesign.Web/Services/DesktopFigures.cs` (page, file, alt text, caption, size, rules, the dark twin) and the files in
-`src/MatDesign.Web/wwwroot/img/desktop` (named `app-*` for the desktop program, `agent-*` for the agent). A new picture is a line there and its files; `DesktopPagesTests` holds the list, the
+`src/MatDesign.Web/wwwroot/img/desktop` (named `app-*` for the desktop program, `agent-*` for the agent, `matdesktop-*` for MatDesktop). A new picture is a line there and its files; `DesktopPagesTests` holds the list, the
 files and their sizes together. A pair is shown by the theme of the site (two `img` with `mat-brandmark--light` / `--dark`, lazy, so the hidden one is not loaded). The pictures are sample
 material of the demo: on another template the pages show only their drawn specimens, with the company's names (`IDENT-09`).
 
 ## 7. Where the programs stand (2026-11-15)
 
+- **MatDesktop** 0.1.0 exists (section 1a); no program uses it yet. ThixClip is its model: moving ThixClip onto it replaces its own theme file, `IconView` and icon script.
 - **ThixClip** follows DESK, TRAY and SETUP; its setup footer shows `Version 1.0.0` without the channel (`SETUP-07`).
 - **ThixTunnel** differs: dark only, the Fluent icon font, its own colours, separate windows, a tray icon drawn in code with a status dot. It needs the tokens (`DESK-02`), the sprite
   (`DESK-09`), the menu in pages (`DESK-04`).

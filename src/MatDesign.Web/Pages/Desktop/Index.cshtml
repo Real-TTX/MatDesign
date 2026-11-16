@@ -74,7 +74,7 @@
     </div>
     <div class="mat-prose">
         <p>A program on the desktop is the same product as its web app. It takes its colours, radii, spacing and type from the <a href="/Foundations/Tokens">tokens</a> (<a href="/Rules/Detail?id=DESK-02">DESK-02</a>), its icons from the <a href="/Foundations/Icons">sprite</a> (<a href="/Rules/Detail?id=DESK-09">DESK-09</a>) and its menu from the <a href="/Shell">shell</a> (<a href="/Rules/Detail?id=DESK-04">DESK-04</a>), in light and dark mode. What the web does not have is here: the title bar, the tray, the setup, the service.</p>
-        <p>A toolkit for desktop programs, with the theme, the frame of the windows and the controls as one library, is planned. Until it exists, a program writes the values of the tokens into its theme file and generates its icons from the sprite with a script of its own.</p>
+        <p>The toolkit has a library for desktop programs, written with Avalonia: the theme with the tokens, the title bar and the menu, the tray and its menu, the Info window, the setup window and the controls. Its colours, sizes and icons are generated from the same tokens and the same sprite as the web, so a program copies the library like a web app copies the toolkit and writes no theme file of its own. A tray that stays WinForms takes only the tokens and the colour maths of it.</p>
         <p>The names in the drawings on these pages are examples: the agent of <strong>@sample.Product</strong> is called <strong>@sample.Agent</strong>.</p>
     </div>
 </section>
