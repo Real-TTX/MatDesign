@@ -60,19 +60,26 @@ public enum MatServiceAction
 /// <summary>One entry of the built menu: its role, its text, whether it can be chosen, whether it is the default item, whether it needs administrator rights (the shield) and what it does.</summary>
 public sealed record MatTrayEntry(MatTrayRole Role, string Text, bool IsEnabled = true, bool IsDefault = false, bool NeedsElevation = false, Action? Run = null)
 {
+    /// <summary>The shortcut of the item (<c>Ctrl+Shift+V</c>), shown at the right of its text where the menu of the system can, or null.</summary>
+    public string? Shortcut { get; init; }
+
     /// <summary>A separator.</summary>
     public static MatTrayEntry Line { get; } = new(MatTrayRole.Separator, string.Empty, IsEnabled: false);
 }
 
 /// <summary>
 /// The tray menu of TRAY-01 as a model: a program says what it has, in any order, and <see cref="Build"/> puts it in THE order: the name and the version (disabled), the state in words
-/// (disabled), a separator; <c>Open &lt;App&gt;</c> (the default); the program's own items between separators; <c>Info …</c>, <c>Set up …</c> or <c>Settings …</c>, <c>Open log folder</c>,
+/// (disabled), a separator; <c>Open &lt;App&gt;</c> (the default, with the shortcut that opens the program); the program's own items between separators, in groups of their own
+/// (<see cref="AddOwnSeparator"/>); <c>Info …</c>, <c>Set up …</c> or <c>Settings …</c>, <c>Open log folder</c>,
 /// <c>Install update …</c> only while an update waits; a separator; the actions of a service; a separator; <c>Hide icon</c> of an agent; <c>Quit</c>, always last. What a program does not
 /// have is left out and no separator stands twice, first or last. There is no Uninstall item: a program is removed where it was installed (SETUP-04).
 /// </summary>
 public sealed class MatTrayMenu
 {
-    private readonly List<MatTrayEntry> _own = [];
+    /// <summary>The longest tooltip of a tray icon: Windows shows 127 characters (NOTIFYICONDATA), a longer one is cut there with an ellipsis.</summary>
+    public const int TooltipMax = 127;
+
+    private readonly List<List<MatTrayEntry>> _own = [[]];
     private readonly List<MatTrayEntry> _services = [];
 
     /// <summary>A menu for a program and its version (the number, as in <c>Example Agent 1.4.2</c>); <paramref name="quit"/> ends the program, or the tray of an agent.</summary>
@@ -104,6 +111,30 @@ public sealed class MatTrayMenu
     /// </summary>
     public string? OpenText { get; set; }
 
+    /// <summary>The shortcut that opens the program from anywhere (<c>Ctrl+Shift+V</c>, DESK-07), shown at the right of Open, or null.</summary>
+    public string? OpenShortcut { get; set; }
+
+    /// <summary>
+    /// More words for the tooltip of the icon after the name and the state (<c>Example: Running</c>, then a new line and these words: <c>Synchronised 14:32</c>), or null. The tooltip
+    /// always begins with the name and the state (TRAY-02); see <see cref="Tooltip"/>.
+    /// </summary>
+    public string? TooltipText { get; set; }
+
+    /// <summary>The tooltip of the icon: <c>&lt;App&gt;: &lt;state&gt;</c> and, on a line of its own, <see cref="TooltipText"/>; at most <see cref="TooltipMax"/> characters.</summary>
+    public string Tooltip
+    {
+        get
+        {
+            var text = State.Tooltip(AppName);
+            if (!string.IsNullOrWhiteSpace(TooltipText))
+            {
+                text += "\n" + TooltipText.Trim();
+            }
+
+            return text.Length <= TooltipMax ? text : text[..(TooltipMax - 1)] + "…";
+        }
+    }
+
     /// <summary><c>Info …</c>, or null when the program has no Info window.</summary>
     public Action? Info { get; set; }
 
@@ -125,11 +156,25 @@ public sealed class MatTrayMenu
     /// <summary>Ends the program (or the tray of an agent, never its service: AGENT-04).</summary>
     public Action Quit { get; }
 
-    /// <summary>Adds an item of the program's own; these keep the order in which they are added.</summary>
+    /// <summary>Adds an item of the program's own; these keep the order in which they are added. Without an action it is shown disabled (a heading such as <c>Last copied</c>).</summary>
     public MatTrayMenu AddOwn(string text, Action? run, bool enabled = true)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(text);
-        _own.Add(new MatTrayEntry(MatTrayRole.Own, text, enabled && run is not null, Run: run));
+        _own[^1].Add(new MatTrayEntry(MatTrayRole.Own, text, enabled && run is not null, Run: run));
+        return this;
+    }
+
+    /// <summary>
+    /// Starts a new group of the program's own items: a separator stands between the groups (the last entries, then Pause), all of them still in the place of TRAY-01. An empty
+    /// group is left out, so a separator never stands twice.
+    /// </summary>
+    public MatTrayMenu AddOwnSeparator()
+    {
+        if (_own[^1].Count > 0)
+        {
+            _own.Add([]);
+        }
+
         return this;
     }
 
@@ -152,7 +197,11 @@ public sealed class MatTrayMenu
     }
 
     /// <summary>Removes the items of the program's own (before they are added again, when the last entries changed).</summary>
-    public void ClearOwn() => _own.Clear();
+    public void ClearOwn()
+    {
+        _own.Clear();
+        _own.Add([]);
+    }
 
     /// <summary>The entries in the order of TRAY-01, with the separators.</summary>
     public IReadOnlyList<MatTrayEntry> Build()
@@ -170,8 +219,11 @@ public sealed class MatTrayMenu
         List<List<MatTrayEntry>> groups =
         [
             [new(MatTrayRole.Title, MatVersion.Title(AppName, Version), IsEnabled: false), new(MatTrayRole.State, State.Word, IsEnabled: false)],
-            [new(MatTrayRole.Open, string.IsNullOrWhiteSpace(OpenText) ? MatText.Format("tray.open", AppName) : OpenText.Trim(), IsDefault: true, Run: Open)],
-            [.. _own],
+            [new(MatTrayRole.Open, string.IsNullOrWhiteSpace(OpenText) ? MatText.Format("tray.open", AppName) : OpenText.Trim(), IsDefault: true, Run: Open)
+            {
+                Shortcut = string.IsNullOrWhiteSpace(OpenShortcut) ? null : OpenShortcut.Trim(),
+            }],
+            .. _own.Select(g => g.ToList()),
             Present(
                 (MatTrayRole.Info, "tray.info", Info),
                 (MatTrayRole.SetUp, "tray.setUp", SetUp),

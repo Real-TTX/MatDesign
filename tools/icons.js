@@ -65,6 +65,9 @@ const extra = {
   'pin': "<line x1='12' y1='17' x2='12' y2='22'/><path d='M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z'/>",
   'keyboard': "<rect x='2' y='4' width='20' height='16' rx='2'/><path d='M6 8h.01'/><path d='M10 8h.01'/><path d='M14 8h.01'/><path d='M18 8h.01'/><path d='M8 12h.01'/><path d='M12 12h.01'/><path d='M16 12h.01'/><path d='M7 16h10'/>",
   'power': "<path d='M18.36 6.64a9 9 0 1 1-12.73 0'/><line x1='12' y1='2' x2='12' y2='12'/>",
+  // a picture in a viewer: zoom to its original size and back to fit (Lucide zoom-in and zoom-out)
+  'zoom-in': "<circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/><line x1='11' y1='8' x2='11' y2='14'/><line x1='8' y1='11' x2='14' y2='11'/>",
+  'zoom-out': "<circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/><line x1='8' y1='11' x2='14' y2='11'/>",
 };
 
 const all = { ...base, ...extra };

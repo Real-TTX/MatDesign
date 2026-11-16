@@ -203,4 +203,34 @@ public sealed class TrayMenuTests
         Assert.Equal("A local build gets no updates.", MatVersion.LocalNote("local"));
         Assert.Equal("Version 1.4.2 · release", MatText.German["version"].Replace("{0}", "1.4.2").Replace("{1}", "release"));
     }
+
+    [Fact]
+    public void Own_items_come_in_groups_with_a_line_between_them_still_in_the_place_of_the_rule()
+    {
+        var menu = new MatTrayMenu("Example", "1.0.0", Nothing) { Open = Nothing, Settings = Nothing };
+        menu.AddOwnSeparator(); // nothing yet: no empty group
+        menu.AddOwn("Last copied", null).AddOwn("Hello", Nothing).AddOwnSeparator().AddOwnSeparator().AddOwn("Pause …", Nothing).AddOwnSeparator();
+        Assert.Equal(
+            ["Example 1.0.0", "Running", "", "Open Example", "", "Last copied", "Hello", "", "Pause …", "", "Settings …", "", "Quit"],
+            menu.Build().Select(e => e.Text));
+        menu.ClearOwn();
+        menu.AddOwn("Sync now", Nothing);
+        Assert.Equal(["Sync now"], menu.Build().Where(e => e.Role == MatTrayRole.Own).Select(e => e.Text));
+    }
+
+    [Fact]
+    public void Open_carries_its_shortcut_and_the_tooltip_begins_with_the_name_and_the_state()
+    {
+        var menu = new MatTrayMenu("ThixClip", "1.0.0", Nothing) { Open = Nothing, OpenShortcut = " Ctrl+Shift+V " };
+        Assert.Equal("Ctrl+Shift+V", menu.Build().Single(e => e.Role == MatTrayRole.Open).Shortcut);
+        Assert.All(menu.Build().Where(e => e.Role != MatTrayRole.Open), e => Assert.Null(e.Shortcut));
+
+        Assert.Equal("ThixClip: Running", menu.Tooltip);
+        menu.TooltipText = "Synchronised at 14:32";
+        Assert.Equal("ThixClip: Running\nSynchronised at 14:32", menu.Tooltip);
+        menu.TooltipText = new string('x', 300);
+        Assert.Equal(MatTrayMenu.TooltipMax, menu.Tooltip.Length);
+        Assert.StartsWith("ThixClip: Running\n", menu.Tooltip, StringComparison.Ordinal);
+        Assert.EndsWith("…", menu.Tooltip, StringComparison.Ordinal);
+    }
 }

@@ -10,7 +10,7 @@ public sealed partial class SourceTests
     public static readonly string[] AvaloniaFree =
     [
         "Tokens/MatTokens.g.cs", "Tokens/MatColor.cs", "Tokens/MatPalette.cs",
-        "MatText.cs", "MatVersion.cs", "MatState.cs", "MatDesktopInfo.cs", "MatSingleInstance.cs", "Tray/MatTrayMenu.cs",
+        "Tokens/MatIconPaths.g.cs", "MatText.cs", "MatVersion.cs", "MatState.cs", "MatDesktopInfo.cs", "MatSingleInstance.cs", "Tray/MatTrayMenu.cs",
     ];
 
     /// <summary>The literal colours that are allowed, and where: the red of the close button of Windows (MatTitleBar says why).</summary>
@@ -48,7 +48,7 @@ public sealed partial class SourceTests
         var findings = new List<string>();
         foreach (var (file, text) in Sources("*.cs", "*.axaml"))
         {
-            if (file == "Tokens/MatTokens.g.cs" || file == "Themes/MatIcons.axaml")
+            if (file == "Tokens/MatTokens.g.cs" || file == "Themes/MatIcons.axaml" || file == "Tokens/MatIconPaths.g.cs")
             {
                 continue;
             }
@@ -137,7 +137,7 @@ public sealed partial class SourceTests
     [Fact]
     public void The_generated_files_say_that_they_are_generated_and_use_lf()
     {
-        foreach (var file in new[] { "Tokens/MatTokens.g.cs", "Themes/MatIcons.axaml" })
+        foreach (var file in new[] { "Tokens/MatTokens.g.cs", "Themes/MatIcons.axaml", "Tokens/MatIconPaths.g.cs" })
         {
             var text = File.ReadAllText(Path.Combine(Paths.Package, file));
             Assert.Contains("tools/desktop.js", text, StringComparison.Ordinal);

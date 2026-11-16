@@ -34,6 +34,18 @@ public sealed record MatSetup(string AppName, string Version, string Channel, Ma
 
     /// <summary>The Finish step; without it Finish says that the program is ready and offers to start it.</summary>
     public MatSetupStep? Finish { get; init; }
+
+    /// <summary>The word mark of the program for the header instead of its name as text (a control, as in the title bar); the name stays its accessible name.</summary>
+    public Control? WordMark { get; init; }
+
+    /// <summary>
+    /// The words of the switch of an uninstall when the program says what its data is (<c>Auch meinen Verlauf löschen</c>, docs/DESKTOP.md); null takes <c>Also delete my data</c>. The
+    /// switch stays off (SETUP-04).
+    /// </summary>
+    public string? DeleteDataText { get; init; }
+
+    /// <summary>The sentence under the switch (what goes, what stays without the tick); null takes the sentence of MatDesktop.</summary>
+    public string? DeleteDataDescription { get; init; }
 }
 
 /// <summary>
@@ -99,15 +111,15 @@ public sealed class MatSetupWindow : MatWindow
         }
 
         ModeText = new TextBlock();
-        var header = MatChrome.Header(setup.Logo, setup.AppName, modeWord, ModeText);
+        var header = MatDialogChrome.Header(setup.Logo, setup.AppName, modeWord, ModeText, setup.WordMark);
         PrimaryButton = new Button { IsDefault = true };
         BackButton = new Button { Content = MatText.Get("setup.back") };
         CancelButton = new Button { Content = MatText.Get("setup.cancel"), IsCancel = true };
         PrimaryButton.Click += OnPrimaryClick;
         BackButton.Click += (_, _) => Show(_index - 1);
         CancelButton.Click += (_, _) => Close();
-        VersionText = MatChrome.VersionText(setup.Version, setup.Channel);
-        Footer = MatChrome.Footer(VersionText, PrimaryButton, BackButton, CancelButton);
+        VersionText = MatDialogChrome.VersionText(setup.Version, setup.Channel);
+        Footer = MatDialogChrome.Footer(VersionText, PrimaryButton, BackButton, CancelButton);
 
         var dock = new DockPanel();
         DockPanel.SetDock(header, Dock.Top);
@@ -344,14 +356,15 @@ public sealed class MatSetupWindow : MatWindow
                 page.Children.Add(new Border { Padding = new Thickness(16, 0), Child = rows }.Themed("MatCard"));
                 break;
             case MatSetupStepKind.Uninstall:
-                AutomationProperties.SetName(_deleteData, MatText.Get("setup.deleteData"));
+                var deleteText = string.IsNullOrWhiteSpace(_setup.DeleteDataText) ? MatText.Get("setup.deleteData") : _setup.DeleteDataText.Trim();
+                AutomationProperties.SetName(_deleteData, deleteText);
                 page.Children.Add(new Border
                 {
                     Padding = new Thickness(16, 0),
                     Child = new MatSettingRow
                     {
-                        Title = MatText.Get("setup.deleteData"),
-                        Description = MatText.Get("setup.deleteData.text"),
+                        Title = deleteText,
+                        Description = string.IsNullOrWhiteSpace(_setup.DeleteDataDescription) ? MatText.Get("setup.deleteData.text") : _setup.DeleteDataDescription.Trim(),
                         Content = _deleteData,
                         BorderThickness = new Thickness(0),
                     },

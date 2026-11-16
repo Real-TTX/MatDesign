@@ -8,7 +8,7 @@ namespace MatDesktop;
 /// <summary>
 /// An icon of the toolkit's sprite (DESK-09): <see cref="Icon"/> is the name of the sprite (<c>search</c>, <c>settings</c>, the <c>x</c> of <c>mat-i-x</c>), drawn from the geometry
 /// <c>MatIcon.&lt;name&gt;</c> of <c>Themes/MatIcons.axaml</c> on its 24 × 24 grid with a line of 2 units and round ends, scaled to <see cref="Size"/>, like the web strokes it; the parts
-/// that the sprite fills are filled. The colour is the text colour (<see cref="Foreground"/>, inherited). Not <c>Name</c>: that is the name of an element in Avalonia.
+/// that the sprite fills are filled, and <see cref="IsFilled"/> fills the whole icon (a chosen star). The colour is the text colour (<see cref="Foreground"/>, inherited). Not <c>Name</c>: that is the name of an element in Avalonia.
 /// </summary>
 public sealed class MatIcon : Control
 {
@@ -24,12 +24,15 @@ public sealed class MatIcon : Control
     /// <summary>The width of the line on the 24 × 24 grid (2, like the web).</summary>
     public static readonly StyledProperty<double> StrokeWidthProperty = AvaloniaProperty.Register<MatIcon, double>(nameof(StrokeWidth), 2);
 
+    /// <summary>True draws the icon filled: the same geometry, its inside filled and its line stroked (a chosen star, a pinned pin).</summary>
+    public static readonly StyledProperty<bool> IsFilledProperty = AvaloniaProperty.Register<MatIcon, bool>(nameof(IsFilled));
+
     private Geometry? _stroke;
     private Geometry? _fill;
 
     static MatIcon()
     {
-        AffectsRender<MatIcon>(IconProperty, ForegroundProperty, StrokeWidthProperty);
+        AffectsRender<MatIcon>(IconProperty, ForegroundProperty, StrokeWidthProperty, IsFilledProperty);
         AffectsMeasure<MatIcon>(SizeProperty);
         IconProperty.Changed.AddClassHandler<MatIcon>((icon, _) => icon.Resolve());
         VerticalAlignmentProperty.OverrideDefaultValue<MatIcon>(Avalonia.Layout.VerticalAlignment.Center);
@@ -63,6 +66,13 @@ public sealed class MatIcon : Control
         set => SetValue(StrokeWidthProperty, value);
     }
 
+    /// <summary>True draws the icon filled (the same geometry, the inside filled too): a chosen star, a pinned pin. The outline stays, so the filled and the open icon have the same size.</summary>
+    public bool IsFilled
+    {
+        get => GetValue(IsFilledProperty);
+        set => SetValue(IsFilledProperty, value);
+    }
+
     /// <summary>True when the icon was found among the resources.</summary>
     public bool IsResolved => _stroke is not null;
 
@@ -92,7 +102,7 @@ public sealed class MatIcon : Control
         var offset = new Vector((Bounds.Width - side) / 2, (Bounds.Height - side) / 2);
         using (context.PushTransform(Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(offset)))
         {
-            context.DrawGeometry(null, new Pen(Foreground, StrokeWidth, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), _stroke);
+            context.DrawGeometry(IsFilled ? Foreground : null, new Pen(Foreground, StrokeWidth, lineCap: PenLineCap.Round, lineJoin: PenLineJoin.Round), _stroke);
             if (_fill is not null)
             {
                 context.DrawGeometry(Foreground, null, _fill);

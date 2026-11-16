@@ -228,5 +228,6 @@ public static partial class RuleChanges
         // ---- the toolkit for desktop programs (docs/DESKTOP.md): the tokens and the icons come from its library, no longer from each program
         Chg("2026-11-16", "DESK-02", "83ebb2bf", "The tokens come generated in the theme of the toolkit's library for desktop programs; a WinForms tray takes its generated tokens."),
         Chg("2026-11-16", "DESK-09", "94ca876a", "The icons come from the geometry that the toolkit's library for desktop programs generates from the sprite, no longer from a script of each program."),
+        Chg("2026-11-16", "DESK-09", "95939103", "The icons of a WinForms window come from the toolkit's library for desktop programs too: plain segments generated from the sprite like the geometries of Avalonia."),
     ];
 }

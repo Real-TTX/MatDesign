@@ -4,6 +4,7 @@ using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.Metadata;
 using Avalonia.Layout;
+using Avalonia.Media;
 
 namespace MatDesktop;
 
@@ -102,7 +103,8 @@ public sealed class MatNavItem : Button
 /// <summary>
 /// The menu of a main window (DESK-04, the menu of the web shell SHELL-01): the items with an icon and a label, a line, Settings as an item of its own below them, and at the foot the version
 /// (<c>Version 1.4.2 · release</c>, SETUP-07) as a link that opens About (<see cref="AboutRequested"/>) and the button that folds the menu to a rail of 68 px and back
-/// (<see cref="IsFolded"/>, <see cref="FoldChanged"/>: the program remembers it). The open menu is 248 px wide, 210 px in a window narrower than 900 px.
+/// (<see cref="IsFolded"/>, <see cref="FoldChanged"/>: the program remembers it; <see cref="FoldShortcut"/> names its key). Above the version the program's own <see cref="Foot"/> and, while an update waits,
+/// a link to it (<see cref="UpdateVersion"/>). The open menu is 248 px wide, 210 px in a window narrower than 900 px.
 /// </summary>
 public sealed class MatNav : Border
 {
@@ -130,10 +132,23 @@ public sealed class MatNav : Border
     /// <summary>The channel (release, nightly, local).</summary>
     public static readonly StyledProperty<string> ChannelProperty = AvaloniaProperty.Register<MatNav, string>(nameof(Channel), MatVersion.Release);
 
+    /// <summary>What the program shows at the foot above the version (a card, the state of a connection), or null.</summary>
+    public static readonly StyledProperty<Control?> FootProperty = AvaloniaProperty.Register<MatNav, Control?>(nameof(Foot));
+
+    /// <summary>The version of an update that waits (SETUP-06), or null: then a link above the version says so.</summary>
+    public static readonly StyledProperty<string?> UpdateVersionProperty = AvaloniaProperty.Register<MatNav, string?>(nameof(UpdateVersion));
+
+    /// <summary>The shortcut that folds and opens the menu (<c>Ctrl+B</c>), named in the tooltip of the fold button (DESK-07), or null.</summary>
+    public static readonly StyledProperty<string?> FoldShortcutProperty = AvaloniaProperty.Register<MatNav, string?>(nameof(FoldShortcut));
+
     private readonly StackPanel _items = new() { Spacing = 2 };
     private readonly Border _line = new() { Height = 1, Margin = new Thickness(12, 8, 12, 8) };
     private readonly ContentControl _settingsHost = new();
+    private readonly ContentControl _footHost = new() { HorizontalContentAlignment = HorizontalAlignment.Stretch };
+    private readonly TextBlock _versionText = new() { TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap };
     private readonly Button _version = new() { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Center };
+    private readonly TextBlock _updateText = new() { TextTrimming = TextTrimming.CharacterEllipsis, TextWrapping = TextWrapping.NoWrap, VerticalAlignment = VerticalAlignment.Center };
+    private readonly Button _update = new() { HorizontalAlignment = HorizontalAlignment.Left, IsVisible = false, Margin = new Thickness(0, 0, 0, 6) };
     private readonly Button _fold = new() { VerticalAlignment = VerticalAlignment.Center };
     private readonly Grid _foot = new() { ColumnDefinitions = new ColumnDefinitions("*,Auto"), RowDefinitions = new RowDefinitions("Auto,Auto") };
     private TopLevel? _topLevel;
@@ -146,6 +161,9 @@ public sealed class MatNav : Border
         AppNameProperty.Changed.AddClassHandler<MatNav>((nav, _) => nav.Refresh());
         VersionProperty.Changed.AddClassHandler<MatNav>((nav, _) => nav.Refresh());
         ChannelProperty.Changed.AddClassHandler<MatNav>((nav, _) => nav.Refresh());
+        UpdateVersionProperty.Changed.AddClassHandler<MatNav>((nav, _) => nav.Refresh());
+        FoldShortcutProperty.Changed.AddClassHandler<MatNav>((nav, _) => nav.Refresh());
+        FootProperty.Changed.AddClassHandler<MatNav>((nav, e) => nav._footHost.Content = e.NewValue);
     }
 
     /// <summary>An empty menu: add <see cref="Items"/> and <see cref="Settings"/>.</summary>
@@ -156,17 +174,27 @@ public sealed class MatNav : Border
         this.Use(BorderBrushProperty, "Mat.Border");
         _line.Use(Border.BackgroundProperty, "Mat.Border");
         _version.Themed("MatButton.Link");
+        _update.Themed("MatButton.Link");
         _fold.Themed("MatButton.Icon");
+        _version.Content = _versionText;
+        _update.Content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 8,
+            Children = { new MatIcon { Icon = "download", Size = 16 }, _updateText },
+        };
         _version.Click += (_, _) => AboutRequested?.Invoke(this, EventArgs.Empty);
+        _update.Click += (_, _) => UpdateRequested?.Invoke(this, EventArgs.Empty);
         _fold.Click += (_, _) => IsFolded = !IsFolded;
         Grid.SetColumn(_fold, 1);
         _foot.Children.Add(_version);
         _foot.Children.Add(_fold);
 
         var top = new StackPanel { Children = { _items, _line, _settingsHost } };
+        var bottom = new StackPanel { Children = { _footHost, _update, _foot } };
         var dock = new DockPanel { Margin = new Thickness(12, 16, 12, 12) };
-        DockPanel.SetDock(_foot, Dock.Bottom);
-        dock.Children.Add(_foot);
+        DockPanel.SetDock(bottom, Dock.Bottom);
+        dock.Children.Add(bottom);
         dock.Children.Add(top);
         Child = dock;
 
@@ -179,6 +207,36 @@ public sealed class MatNav : Border
 
     /// <summary>The version at the foot was chosen: open About (a page of the main window).</summary>
     public event EventHandler? AboutRequested;
+
+    /// <summary>The link of the waiting update was chosen (<see cref="UpdateVersion"/>): show where it is installed (About or the settings of updates).</summary>
+    public event EventHandler? UpdateRequested;
+
+    /// <summary>
+    /// What the program shows at the foot of the menu above the version: a card with a setting, the state of a connection. It stays while the menu is folded; the program shows
+    /// the part of it that fits a rail of 68 px (<see cref="FoldChanged"/>).
+    /// </summary>
+    public Control? Foot
+    {
+        get => GetValue(FootProperty);
+        set => SetValue(FootProperty, value);
+    }
+
+    /// <summary>
+    /// The version of an update that waits (SETUP-06), or null. While it is set a link with the download icon stands above the version (<c>Update to 1.5.0</c>; folded the icon with
+    /// the words as its tooltip) and raises <see cref="UpdateRequested"/>.
+    /// </summary>
+    public string? UpdateVersion
+    {
+        get => GetValue(UpdateVersionProperty);
+        set => SetValue(UpdateVersionProperty, value);
+    }
+
+    /// <summary>The shortcut that folds and opens the menu (<c>Ctrl+B</c>, on macOS with the command key), named in the tooltip of the fold button (DESK-07); the program handles the key.</summary>
+    public string? FoldShortcut
+    {
+        get => GetValue(FoldShortcutProperty);
+        set => SetValue(FoldShortcutProperty, value);
+    }
 
     /// <summary>The menu was folded or opened (the value is <see cref="IsFolded"/>): remember it for the next start.</summary>
     public event EventHandler<bool>? FoldChanged;
@@ -245,6 +303,12 @@ public sealed class MatNav : Border
 
     /// <summary>The button that folds and opens the menu (for tests).</summary>
     public Button FoldButton => _fold;
+
+    /// <summary>The link of a waiting update (for tests).</summary>
+    public Button UpdateButton => _update;
+
+    /// <summary>The text of the version as it is shown, <c>Version 1.4.2 · release</c> (trimmed with an ellipsis where the menu is too narrow; the tooltip has all of it).</summary>
+    public string VersionText => MatVersion.Format(Version, Channel);
 
     /// <summary>The current item, or null.</summary>
     public MatNavItem? Current => Items.Append(_settings).FirstOrDefault(i => i?.IsCurrent == true);
@@ -344,18 +408,31 @@ public sealed class MatNav : Border
             item.IsFolded = folded;
         }
 
-        var version = MatVersion.Format(Version, Channel);
+        // the version: a long one (local-20261115 · local) is trimmed with an ellipsis, and the tooltip always has all of it
+        var version = VersionText;
         var about = MatText.Format("nav.about", AppName);
-        _version.Content = folded ? new MatIcon { Icon = "info", Size = 18 } : version;
-        ToolTip.SetTip(_version, folded ? $"{about} – {version}" : about);
+        _versionText.Text = version;
+        _version.Content = folded ? new MatIcon { Icon = "info", Size = 18 } : _versionText;
+        ToolTip.SetTip(_version, $"{about} – {version}");
         AutomationProperties.SetName(_version, folded ? about : version);
         _version.HorizontalAlignment = folded ? HorizontalAlignment.Center : HorizontalAlignment.Left;
         _version.Margin = folded ? new Thickness(0) : new Thickness(8, 0, 0, 0);
         Grid.SetColumnSpan(_version, folded ? 2 : 1);
 
+        // an update that waits: a link above the version (the icon alone on the rail)
+        var update = string.IsNullOrWhiteSpace(UpdateVersion) ? null : UpdateVersion.Trim();
+        _update.IsVisible = update is not null;
+        _updateText.Text = update is null ? string.Empty : MatText.Format("nav.update", update);
+        _updateText.IsVisible = !folded;
+        var available = update is null ? null : MatText.Format("nav.updateAvailable", update);
+        ToolTip.SetTip(_update, available);
+        AutomationProperties.SetName(_update, available ?? string.Empty);
+        _update.HorizontalAlignment = folded ? HorizontalAlignment.Center : HorizontalAlignment.Left;
+        _update.Margin = folded ? new Thickness(0, 0, 0, 6) : new Thickness(8, 0, 0, 6);
+
         _fold.Content = new MatIcon { Icon = "sidebar", Size = 18 };
         var action = MatText.Get(folded ? "nav.unfold" : "nav.fold");
-        ToolTip.SetTip(_fold, action);
+        ToolTip.SetTip(_fold, string.IsNullOrWhiteSpace(FoldShortcut) ? action : $"{action} ({FoldShortcut.Trim()})");
         AutomationProperties.SetName(_fold, action);
         Grid.SetRow(_fold, folded ? 1 : 0);
         Grid.SetColumn(_fold, folded ? 0 : 1);

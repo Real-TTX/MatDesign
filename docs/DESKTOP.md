@@ -15,7 +15,7 @@ the window chrome, the menu, the tray, the Info window, the setup window and the
 | A desktop program (ThixClip, ThixCalendar) | all | when it has a tray | per user, no rights | no |
 | An agent or a service (Matmon Agent, Matgate Agent, MatHub Agent) | its windows: tokens, icons, keyboard (`DESK-02`, `DESK-07`, `DESK-09`) | all | administrator rights once | all |
 
-Where the programs stand on 2026-11-15, and what they still have to change, is at the end of this file.
+Where the programs stand on 2026-11-16, and what they still have to change, is at the end of this file.
 
 ## 1a. MatDesktop, the toolkit for desktop programs
 
@@ -24,26 +24,28 @@ MatDesktop is to a desktop program what MatUi is to a web page: one Avalonia lib
 
 - **Copy, do not reference** (`CODE-03`). `node tools/matdesktop-copy.js <folder of the program's project>` writes the files into `<folder>/MatDesktop/`, each with the line
   `// MatDesktop <version> – a copy from MatDesign, do not edit here` (an XML comment in `.axaml`), a manifest `matdesktop.version` with the SHA-256 of each file, and removes the files of an
-  older copy. The version is `MatDesktopVersion` (0.1.0).
+  older copy. The version is `MatDesktopVersion` (0.2.0; its README lists what each version brought).
 - **Generated from MatUi, never by hand.** `node tools/desktop.js` writes `Tokens/MatTokens.g.cs` from `matui.tokens.css` (the colours of light and dark, the sizes, the type, the motion and
-  the rules by which the accent tokens are derived) and `Themes/MatIcons.axaml` from the sprite (every symbol as a geometry `MatIcon.<name>`). CI runs it and fails on a difference.
+  the rules by which the accent tokens are derived) and `Themes/MatIcons.axaml` from the sprite (every symbol as a geometry `MatIcon.<name>`), and the same icons as plain segments for WinForms (`Tokens/MatIconPaths.g.cs`: MoveTo, LineTo, CubicTo, Close; a test holds them to the geometries). CI runs it and fails on a difference.
   **A desktop window is used with a mouse, so the sizes are those of MatUi's compact density with a fine pointer**: controls 34 px, body type 14 px, the radii and the spacing of the tokens.
-  Colour schemes (`COLOR-09`) are not part of 0.1.
+  Colour schemes (`COLOR-09`) are not part of 0.2.
 - **The theme** (`DESK-02`). `MatTheme.Install(app, new MatThemeOptions(accent))` in `Application.Initialize` adds Fluent in the colours of MatUi, a brush per colour token in a light and a
   dark dictionary (`--mat-surface-2` is `Mat.Surface2`; the accent tokens computed from the app's accent like the CSS computes them, `MatPalette`), the sizes (`Mat.Radius`,
-  `Mat.ControlHeight`, `Mat.FontSize`, `Mat.Font` ...) and the control themes of the flat look: the default button (MatUi's secondary), `MatButton.Primary`, `.Danger`, `.Ghost`, `.Icon`,
-  `.Link`, the text looks `MatText.PageTitle` ..., `MatCard`, `MatKeyCap`, `MatBadge`, `MatSearchBox`, `MatProgress`, the tabs. `MatTheme.SetAppearance` is System, Light or Dark.
+  `Mat.ControlHeight`, `Mat.FontSize`, `Mat.Font` ...) and the control themes of the flat look: the default button (MatUi's secondary), `MatButton.Primary`, `.Danger`, `.Warning`, `.Ghost`, `.Icon`,
+  `.Link`, the text looks `MatText.PageTitle` ..., `MatCard`, `MatKeyCap`, `MatBadge`, `MatBadge.Soft`, `MatSearchBox`, `MatProgress`, the tabs, and the lists `MatList` with `MatChoiceRow`
+  or `MatCardRow` (chosen: a tint with the accent line all around, `COLOR-08`). `MatThemeOptions.Icon` is the icon of every window. `MatTheme.SetAppearance` is System, Light or Dark.
   A window derives from `MatWindow` and uses `{DynamicResource Mat.Surface}`, never a literal colour.
 - **The chrome and the controls**: `MatTitleBar` (`DESK-03`: logo and name, a slot in the middle, the caption buttons of Windows 11 drawn by the program, room for the traffic lights on
   macOS, drag and double click), `MatNav` and `MatNavItem` (`DESK-04`: the current item a tint, Settings below a line, the version at the foot that opens About, the fold to a rail of
-  68 px), `MatIcon` (`DESK-09`), `MatStateDot` (a dot and a word), `MatSettingRow`, `MatFormField`, `MatFacts`, `MatCopyField`, `MatVersion` (`SETUP-07`), `MatText` (every text of the library
+  68 px; a place of the program's own at its foot, a link while an update waits, the fold shortcut in the tooltip), `MatIcon` (`DESK-09`, `IsFilled` for a chosen star), `MatStateDot` (a dot and a word), `MatSettingRow`, `MatFormField`, `MatFacts`, `MatCopyField`, `MatVersion` (`SETUP-07`), `MatText` (every text of the library
   in English and German, `DESK-08`), `MatSingleInstance` (`DESK-05`).
 - **The tray**: `MatTrayMenu` builds the menu of `TRAY-01` in its order whatever order a program adds its items in (and has no Uninstall), `MatTray` shows it with Avalonia's tray icon and
-  handles the clicks of `TRAY-03`, `MatTrayIcons` draws the dot of the state (`TRAY-02`), `MatNotification` is the notification of `TRAY-04` and `MatInfoWindow` the Info window of `TRAY-05`.
+  handles the clicks of `TRAY-03`, `MatTrayIcons` draws the dot of the state (`TRAY-02`), `MatNotification` is the notification of `TRAY-04` and `MatInfoWindow` the Info window of `TRAY-05`; `MatDialogChrome` is the header and the footer of Info and the setup, for a program's own dialogs too.
 - **The setup**: `MatSetupWindow` is the one window of `SETUP-01` for Setup, Update and Uninstall, with the steps of `SETUP-02` as building blocks (`MatSetupStep.Welcome`, `Role`, `Connect`,
   `WithOptions`, `Finish`, `Uninstall`; Progress is the window's) and the work as a callback that reports its steps.
-- **A tray that stays WinForms** (`AGENT-05`) takes the tokens only: `tools/matdesktop-copy.js <folder> --tokens-only` copies `MatTokens.g.cs`, `MatColor.cs` and `MatPalette.cs`, which need
-  nothing but System (`MatPalette.For(accent, dark).Surface` ...). `MatText`, `MatVersion`, `MatState` and `MatTrayMenu` need nothing but System either.
+- **A tray that stays WinForms** (`AGENT-05`) takes the part without Avalonia: `tools/matdesktop-copy.js <folder> --winforms` copies the tokens (`MatPalette.For(accent, dark).Surface` ...),
+  the icons of the sprite as segments (`MatIconPaths`, stroked into a `GraphicsPath`: the README has the lines, instead of Segoe Fluent glyphs, `DESK-09`), `MatText`, `MatVersion`, `MatState`,
+  `MatTrayMenu` and `MatSingleInstance`; `--tokens-only` takes the three files of the tokens.
 
 ## 2. Desktop programs (DESK)
 
@@ -153,7 +155,7 @@ DisplayIcon, EstimatedSize, UninstallString, QuietUninstallString. The uninstall
 | `<product>.exe --uninstall [--quiet]` | removes it (quiet: without a window, the data kept) |
 | `<product>.exe --autostart` / `--tray` | how autostart starts it: hidden, in the tray |
 | `<product>-agent install --quiet --url <server> --code <code>` | an agent enrols, then installs the service and the tray |
-| `<product>-agent uninstall [--keep-config]` | removes the agent |
+| `<product>-agent uninstall [--delete-data]` | removes the agent; its data (token, certificate, log) stays unless `--delete-data` (`SETUP-04`) |
 | `msiexec /i <product>-agent.msi /qn URL=<server> KEY=<rollout key>` | the same as an MSI, for Intune, GPO and the like |
 | the Matmon instance: `setup.exe /silent ...` | the existing form; new setups use `install --quiet` |
 
@@ -193,8 +195,8 @@ Schlüssel zu diesem Rechner – nur in Matgate eintragen."
 **Service and tray** (`AGENT-04`). The work is a Windows service, a systemd unit or a launchd daemon. The tray is a separate process in the user's session (autostart `<Product> Agent Tray`),
 it reads the pipe and asks the service, elevated, to start, stop or restart. Quit ends the tray only.
 
-**WinForms** (`AGENT-05`, Should). The trays and setups of the Matmon Agent, the Matmon instance and the Matgate Agent are WinForms and may stay so. They share one chrome (a white header
-of 84 px with the mark, a grey footer of 58 px with the version at the left and the buttons at the right) and follow TRAY, SETUP and AGENT; their colours come from the tokens. A new tray,
+**WinForms** (`AGENT-05`, Should). The trays and setups of the Matmon Agent, the Matmon instance and the Matgate Agent are WinForms and may stay so. They share one chrome (a header
+of 84 px on the surface with the mark, a footer of 58 px on the second surface with the version at the left and the buttons at the right) and follow TRAY, SETUP and AGENT; their colours come from the tokens. A new tray,
 setup or agent is Avalonia.
 
 ## 6. Pictures of the windows
@@ -203,12 +205,12 @@ Every desktop program and agent can **draw its windows into PNG files without a 
 computer name, user name, path or token). The pictures in each README, in `docs/images` and on the pages of Desktop and services are made that way, again after every change, in light and
 dark mode:
 
-- ThixClip: `ThixClip.exe --snapshot <folder>` writes `setup-welcome|progress|finish|update|uninstall-{light,dark}.png`, `main-history|settings|about|folded-{light,dark}.png`,
-  `dialog-pause-{light,dark}.png`, `toast-{light,dark}.png` and the tray icons `tray-icon-windows[-paused].png`, `tray-icon-macos[-paused].png` (sample computer `ANNA-PC`, version 1.0.0).
+- ThixClip (on MatDesktop): `ThixClip.exe --snapshot <folder>` writes `setup-welcome|options|progress|finish|update|uninstall-{light,dark}.png`, `main-history|settings|about|folded|paused-{light,dark}.png`,
+  `dialog-pause|clear-history|viewer-{light,dark}.png`, `toast-{light,dark}.png` and the tray icons `tray-icon-windows[-paused].png`, `tray-icon-macos[-paused].png` (sample computer `ANNA-PC`, version 1.0.0).
   The headless UI tests (`Avalonia.Headless`) use the same sample data.
-- Matgate Agent: `matgate-agent setup-preview <folder>` draws the setup steps, the uninstall, Info and the connection details (WinForms `DrawToBitmap`). It still writes the real computer
-  name into Info, Finish and the connection details; it has to take a sample name like ThixClip. Until it does, this site shows only its pictures without
-  that name (the update and the uninstall step); Info and the connection details are drawn as specimens.
+- Matgate Agent: `matgate-agent setup-preview <folder>` draws the setup steps, the uninstall, Info, the connection details and the tray menu (WinForms `DrawToBitmap`), light and dark,
+  from sample data only (computer `ANNA-PC`, user `Anna`, a sample password, version 0.8.0.42). This site shows its Info, Finish with the connection details and Copy, the connection
+  details, the update and the uninstall, each light and dark.
 
 - MatDesktop: its tests draw every window of the library with a sample agent (`Matmon Agent`, computer `ANNA-PC`, version 1.4.2) when `MATDESKTOP_SHOTS=<folder>` is set:
   `dotnet test tests/MatDesktop.Tests --filter GalleryTests` writes `matdesktop-{info,setup-welcome,setup-connect,setup-options,setup-progress,setup-finish,setup-uninstall,main-open,main-folded,notification}-{light,dark}.png`
@@ -219,13 +221,18 @@ On this site the pictures are data: `src/MatDesign.Web/Services/DesktopFigures.c
 files and their sizes together. A pair is shown by the theme of the site (two `img` with `mat-brandmark--light` / `--dark`, lazy, so the hidden one is not loaded). The pictures are sample
 material of the demo: on another template the pages show only their drawn specimens, with the company's names (`IDENT-09`).
 
-## 7. Where the programs stand (2026-11-15)
+## 7. Where the programs stand (2026-11-16)
 
-- **MatDesktop** 0.1.0 exists (section 1a); no program uses it yet. ThixClip is its model: moving ThixClip onto it replaces its own theme file, `IconView` and icon script.
-- **ThixClip** follows DESK, TRAY and SETUP; its setup footer shows `Version 1.0.0` without the channel (`SETUP-07`).
+- **MatDesktop** 0.2.0 (the toolkit, section 1a). ThixClip is on it.
+- **ThixClip** is on MatDesktop (branch `feature/matdesktop`) and follows DESK, TRAY and SETUP. Left: German only (`DESK-08`); the DisplayVersion in Installed apps lacks the channel
+  (`SETUP-07`); two notifications are for events the user caused (`TRAY-04`); macOS is not checked on a Mac.
 - **ThixTunnel** differs: dark only, the Fluent icon font, its own colours, separate windows, a tray icon drawn in code with a status dot. It needs the tokens (`DESK-02`), the sprite
   (`DESK-09`), the menu in pages (`DESK-04`).
-- **Matmon Agent and the Matmon instance**: WinForms, follow the tray menu and the states; no dark mode yet (`DESK-02`).
-- **Matgate Agent**: German, WinForms; its menu starts with `Info …` in bold instead of `Open Matgate`, has no amber state and ends with "Symbol ausblenden" rather than Quit (`TRAY-01`,
-  `TRAY-02`); no dark mode; `setup-preview` uses the real computer name (section 6).
-- **MatHub Agent**: installed by the command line only, no entry in Installed apps (`SETUP-04`), no states, no Quit (`TRAY-01`), its own amber Fluent look (`DESK-02`, `DESK-09`).
+- **Matmon Agent and the Matmon instance**: the tray and the setup take their colours from the tokens. Left: light only (`DESK-02`); an update still asks through Options; administrator
+  rights are asked at the start; the setup of the agent is not a wizard (`SETUP-02`); the progress bar is the green one of the system. The tray of the instance has no log folder, by design.
+- **Matgate Agent** (branch `feature/agent-desktop-rules`): the tray menu in the order of `TRAY-01`, the amber state (`TRAY-02`), Quit, the tokens in light and dark; `setup-preview`
+  draws sample data only (section 6). Left: German only (`DESK-08`); it knows no address of Matgate, so the default item is Info instead of Open (`TRAY-01`); the mode as the signed-in user
+  is a sign-in task, not a service (`AGENT-04`).
+- **MatHub Agent** (branch `feature/agent-desktop-rules`): an entry in Installed apps (`SETUP-04`), a tray with the state, Info and Quit (`TRAY-01`, `TRAY-02`, `TRAY-05`), the tokens.
+  Left: light only (`DESK-02`); Segoe glyphs instead of the sprite (`DESK-09`; MatDesktop 0.2.0 has the sprite's icons as plain C# segments for WinForms, `MatIconPaths`); no setup
+  window, the command line only (`SETUP-01`); no MSI (`SETUP-05`). Its start menu entry is "MatHub Kiosk": a decision of the owner against `AGENT-01`.

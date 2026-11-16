@@ -48,7 +48,7 @@ public sealed class MatInfoWindow : MatWindow
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Title = $"{info.AppName} – {MatText.Get("info.title")}";
 
-        var header = MatChrome.Header(info.Logo, info.AppName, MatText.Get("info.title"));
+        var header = MatDialogChrome.Header(info.Logo, info.AppName, MatText.Get("info.title"));
 
         StateDot = new MatStateDot { State = info.State, DotSize = 12 };
         StateDot.Children.OfType<TextBlock>().First().FontSize = MatTokens.Type.FsLg;
@@ -63,8 +63,8 @@ public sealed class MatInfoWindow : MatWindow
         LogFolderButton.Click += (_, _) => info.OpenLogFolder?.Invoke();
         CloseButton = new Button { Content = MatText.Get("info.close"), IsCancel = true };
         CloseButton.Click += (_, _) => Close();
-        VersionText = MatChrome.VersionText(info.Version, info.Channel);
-        var footer = MatChrome.Footer(VersionText, OpenButton, LogFolderButton, CloseButton);
+        VersionText = MatDialogChrome.VersionText(info.Version, info.Channel);
+        var footer = MatDialogChrome.Footer(VersionText, OpenButton, LogFolderButton, CloseButton);
 
         var dock = new DockPanel();
         DockPanel.SetDock(header, Dock.Top);
@@ -98,61 +98,4 @@ public sealed class MatInfoWindow : MatWindow
 
     /// <summary>Close.</summary>
     public Button CloseButton { get; }
-}
-
-/// <summary>The header and the footer that the Info window and the setup window share (AGENT-05 names the same chrome for the WinForms trays).</summary>
-internal static class MatChrome
-{
-    /// <summary>A header on the surface with a line under it: the logo (44 px), the name and the mode or the window in the muted colour.</summary>
-    public static Border Header(IImage? logo, string name, string mode, TextBlock? modeText = null)
-    {
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14 };
-        if (logo is not null)
-        {
-            row.Children.Add(new Image { Source = logo, Width = 44, Height = 44 });
-        }
-
-        row.Children.Add(new TextBlock { Text = name, FontSize = MatTokens.Type.Fs2xl, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
-        var label = modeText ?? new TextBlock();
-        label.Text = mode;
-        label.FontSize = MatTokens.Type.FsLg;
-        label.VerticalAlignment = VerticalAlignment.Center;
-        label.Margin = new Thickness(0, 4, 0, 0);
-        label.Use(TextBlock.ForegroundProperty, "Mat.TextMuted");
-        row.Children.Add(label);
-        return new Border { Padding = new Thickness(28, 18), BorderThickness = new Thickness(0, 0, 0, 1), Child = row }
-            .Use(Border.BackgroundProperty, "Mat.Surface")
-            .Use(Border.BorderBrushProperty, "Mat.Border");
-    }
-
-    /// <summary><c>Version 1.4.2 · release</c> in the muted colour, with the sentence of a local build as its tooltip.</summary>
-    public static TextBlock VersionText(string version, string channel)
-    {
-        var text = new TextBlock { Text = MatVersion.Format(version, channel), VerticalAlignment = VerticalAlignment.Center, FontSize = MatTokens.Type.FsSm }
-            .Use(TextBlock.ForegroundProperty, "Mat.TextMuted");
-        if (MatVersion.LocalNote(channel) is { } note)
-        {
-            ToolTip.SetTip(text, note);
-        }
-
-        return text;
-    }
-
-    /// <summary>A footer in the colour of the menu with a line above it: the version at the left, the buttons at the right in the order given (the primary action first).</summary>
-    public static Border Footer(TextBlock version, params Button[] buttons)
-    {
-        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, VerticalAlignment = VerticalAlignment.Center };
-        foreach (var button in buttons)
-        {
-            row.Children.Add(button);
-        }
-
-        var dock = new DockPanel();
-        DockPanel.SetDock(row, Dock.Right);
-        dock.Children.Add(row);
-        dock.Children.Add(version);
-        return new Border { Padding = new Thickness(28, 12), BorderThickness = new Thickness(0, 1, 0, 0), Child = dock, MinHeight = 58 }
-            .Use(Border.BackgroundProperty, "Mat.NavBg")
-            .Use(Border.BorderBrushProperty, "Mat.Border");
-    }
 }

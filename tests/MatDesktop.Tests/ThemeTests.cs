@@ -141,8 +141,15 @@ public sealed partial class ThemeTests
                 new Button { Content = "A link" }.Themed("MatButton.Link"),
                 new Border { Child = new TextBlock { Text = "Ctrl" } }.Themed("MatKeyCap"),
                 new Border { Child = new TextBlock { Text = "3" } }.Themed("MatBadge"),
+                new Border { Child = new TextBlock { Text = "OCR" } }.Themed("MatBadge.Soft"),
+                new Button { Content = "Resume" }.Themed("MatButton.Warning"),
+                new MatIcon { Icon = "star", IsFilled = true },
             },
         };
+        var choices = new ListBox { ItemsSource = new[] { "15 minutes", "An hour" }, SelectedIndex = 1 }.Themed("MatList");
+        choices.Use(ItemsControl.ItemContainerThemeProperty, "MatChoiceRow");
+        var cards = new ListBox { ItemsSource = new[] { "A row as a card", "The chosen one" }, SelectedIndex = 1 }.Themed("MatList");
+        cards.Use(ItemsControl.ItemContainerThemeProperty, "MatCardRow");
         var tabs = new TabControl { ItemsSource = new[] { new TabItem { Header = "General", Content = new TextBlock { Text = "One" } }, new TabItem { Header = "Updates" } }, SelectedIndex = 0 };
         var body = new StackPanel
         {
@@ -164,6 +171,8 @@ public sealed partial class ThemeTests
                 new MatCopyField("Password", "x7Q-2mP"),
                 new CheckBox { Content = "A check", IsChecked = true },
                 new ComboBox { ItemsSource = new[] { "System", "Light", "Dark" }, SelectedIndex = 0 },
+                choices,
+                cards,
                 tabs,
             },
         };
@@ -215,7 +224,8 @@ public sealed partial class ThemeTests
         var window = Ui.Show(new MatWindow { Width = 1180, Height = 600, Content = new DockPanel { Children = { nav } } });
 
         Assert.Equal(MatNav.OpenWidth, nav.Width);
-        Assert.Equal("Version 1.4.2 · release", nav.VersionButton.Content);
+        Assert.Equal("Version 1.4.2 · release", nav.VersionText);
+        Assert.Equal("Version 1.4.2 · release", Assert.IsType<TextBlock>(nav.VersionButton.Content).Text);
         nav.VersionButton.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
         Assert.Equal(1, about);
 

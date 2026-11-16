@@ -7,6 +7,8 @@
 //                                         a WinForms tray copies it with MatColor.cs and MatPalette.cs (AGENT-05).
 //   src/MatDesktop/Themes/MatIcons.axaml   every symbol of src/MatUi/wwwroot/img/matui-icons.svg as an Avalonia geometry (MatIcon.<name>, and MatIcon.<name>.Fill for the parts the
 //                                         sprite fills), drawn by the control MatIcon with the 2 px line of the web (DESK-09).
+//   src/MatDesktop/Tokens/MatIconPaths.g.cs the same icons as segments (MoveTo, LineTo, CubicTo, Close; arcs and quadratic curves as cubic curves) for a program without Avalonia:
+//                                         plain C#, only System, copied by --winforms (DESK-09, AGENT-05).
 //
 // A desktop window is used with a mouse, so the sizes are those of MatUi's compact density with a fine pointer (`:root[data-density="compact"]` and its `(pointer: fine)` block:
 // controls 34 px, body type 14 px). Every token of the base block is either written or skipped here with its reason: a new token stops this script until it is decided.
@@ -461,15 +463,148 @@ const iconsFile = [
   '',
 ].join(LF);
 
+// --------------------------------------------------------------------------------------------------- MatIconPaths.g.cs
+
+// The same icons as plain segments for a program without Avalonia (WinForms, AGENT-05): every path of an icon in absolute coordinates on the grid of 24 as MoveTo, LineTo, CubicTo
+// and Close. Arcs and quadratic curves become cubic Béziers here (an arc in pieces of 90 degrees at most), H and V become lines, and a figure that goes on after Close starts with a
+// MoveTo to its start, so that a reader needs no state but the current point. A test of MatDesktop draws both and compares them.
+function arcToCubics(x1, y1, rxIn, ryIn, rotation, large, sweep, x2, y2) {
+  if (x1 === x2 && y1 === y2) return [];
+  let rx = Math.abs(rxIn), ry = Math.abs(ryIn);
+  if (rx === 0 || ry === 0) return [['L', x2, y2]];
+  const phi = rotation * Math.PI / 180, cos = Math.cos(phi), sin = Math.sin(phi);
+  const dx = (x1 - x2) / 2, dy = (y1 - y2) / 2;
+  const x1p = cos * dx + sin * dy, y1p = -sin * dx + cos * dy;
+  const lambda = (x1p * x1p) / (rx * rx) + (y1p * y1p) / (ry * ry);
+  if (lambda > 1) { rx *= Math.sqrt(lambda); ry *= Math.sqrt(lambda); }
+  const num = rx * rx * ry * ry - rx * rx * y1p * y1p - ry * ry * x1p * x1p;
+  const den = rx * rx * y1p * y1p + ry * ry * x1p * x1p;
+  let coef = Math.sqrt(Math.max(0, num / den));
+  if (large === sweep) coef = -coef;
+  const cxp = coef * rx * y1p / ry, cyp = -coef * ry * x1p / rx;
+  const cx = cos * cxp - sin * cyp + (x1 + x2) / 2, cy = sin * cxp + cos * cyp + (y1 + y2) / 2;
+  const angle = (ux, uy, vx, vy) => Math.atan2(ux * vy - uy * vx, ux * vx + uy * vy);
+  const start = angle(1, 0, (x1p - cxp) / rx, (y1p - cyp) / ry);
+  let delta = angle((x1p - cxp) / rx, (y1p - cyp) / ry, (-x1p - cxp) / rx, (-y1p - cyp) / ry);
+  if (!sweep && delta > 0) delta -= 2 * Math.PI;
+  else if (sweep && delta < 0) delta += 2 * Math.PI;
+  const pieces = Math.max(1, Math.ceil(Math.abs(delta) / (Math.PI / 2) - 1e-9));
+  const step = delta / pieces, k = 4 / 3 * Math.tan(step / 4);
+  const at = (ux, uy) => [cx + rx * ux * cos - ry * uy * sin, cy + rx * ux * sin + ry * uy * cos];
+  const out = [];
+  for (let i = 0, t = start; i < pieces; i++, t += step) {
+    const c1 = Math.cos(t), s1 = Math.sin(t), c2 = Math.cos(t + step), s2 = Math.sin(t + step);
+    const end = i === pieces - 1 ? [x2, y2] : at(c2, s2);
+    out.push(['C', ...at(c1 - k * s1, s1 + k * c1), ...at(c2 + k * s2, s2 - k * c2), ...end]);
+  }
+  return out;
+}
+
+function segments(d) {
+  const tokens = d.match(/[MLHVCQAZ]|[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/g) || [];
+  let i = 0;
+  const n = () => Number(tokens[i++]);
+  const out = [];
+  let x = 0, y = 0, sx = 0, sy = 0, closed = false;
+  while (i < tokens.length) {
+    const c = tokens[i++];
+    if (!/^[MLHVCQAZ]$/.test(c)) fail(`a path for MatIconPaths is not absolute: ${d}`);
+    if (c !== 'M' && c !== 'Z' && closed) out.push(['M', sx, sy]);
+    closed = false;
+    if (c === 'M') { x = n(); y = n(); sx = x; sy = y; out.push(['M', x, y]); }
+    else if (c === 'L') { x = n(); y = n(); out.push(['L', x, y]); }
+    else if (c === 'H') { x = n(); out.push(['L', x, y]); }
+    else if (c === 'V') { y = n(); out.push(['L', x, y]); }
+    else if (c === 'C') { const s = [n(), n(), n(), n(), n(), n()]; out.push(['C', ...s]); x = s[4]; y = s[5]; }
+    else if (c === 'Q') {
+      const qx = n(), qy = n(), ex = n(), ey = n();
+      out.push(['C', x + 2 / 3 * (qx - x), y + 2 / 3 * (qy - y), ex + 2 / 3 * (qx - ex), ey + 2 / 3 * (qy - ey), ex, ey]);
+      x = ex; y = ey;
+    } else if (c === 'A') {
+      const rx = n(), ry = n(), rotation = n(), large = n(), sweep = n(), ex = n(), ey = n();
+      out.push(...arcToCubics(x, y, rx, ry, rotation, large === 1, sweep === 1, ex, ey));
+      x = ex; y = ey;
+    } else { out.push(['Z']); x = sx; y = sy; closed = true; }
+  }
+  return out;
+}
+
+const segmentCode = s => s[0] === 'Z' ? 'Z' : `${s[0]}(${s.slice(1).map(fmt).join(', ')})`;
+const segmentList = d => `[${segments(d).map(segmentCode).join(', ')}]`;
+const pathsFile = [
+  '// <auto-generated>',
+  `// Generated by tools/desktop.js from ${spritePath}: do not edit. Change the sprite (tools/icons.js) and run \`node tools/desktop.js\` (CI fails when this file is stale).`,
+  '// </auto-generated>',
+  '// Plain C#, only System: a WinForms program draws the icons of the sprite with it (DESK-09, AGENT-05; tools/matdesktop-copy.js --winforms copies it).',
+  '#nullable enable',
+  'namespace MatDesktop;',
+  '',
+  '/// <summary>What a segment of an icon\'s path does.</summary>',
+  'public enum MatPathVerb',
+  '{',
+  '    /// <summary>Starts a figure at (X, Y).</summary>',
+  '    MoveTo,',
+  '',
+  '    /// <summary>A line from the current point to (X, Y).</summary>',
+  '    LineTo,',
+  '',
+  '    /// <summary>A cubic Bézier curve from the current point over (X1, Y1) and (X2, Y2) to (X, Y).</summary>',
+  '    CubicTo,',
+  '',
+  '    /// <summary>Closes the figure with a line back to its start.</summary>',
+  '    Close,',
+  '}',
+  '',
+  '/// <summary>One segment of an icon\'s path on the grid of 24: the point (X, Y) and, for a curve, its two control points.</summary>',
+  'public readonly record struct MatPathSegment(MatPathVerb Verb, double X = 0, double Y = 0, double X1 = 0, double Y1 = 0, double X2 = 0, double Y2 = 0);',
+  '',
+  '/// <summary>An icon of the sprite as segments: <see cref="Stroke"/> is stroked with a line of <see cref="MatIconPaths.StrokeWidth"/> and round ends and joins, <see cref="Fill"/> is filled.</summary>',
+  'public sealed record MatIconPath(IReadOnlyList<MatPathSegment> Stroke, IReadOnlyList<MatPathSegment> Fill);',
+  '',
+  '/// <summary>',
+  `/// Every symbol of the sprite (${icons.length}) as segments on its 24 × 24 grid, for a program without Avalonia: arcs and quadratic curves are cubic Béziers, every figure starts with a MoveTo.`,
+  '/// The same picture as the geometries <c>MatIcon.&lt;name&gt;</c> of <c>Themes/MatIcons.axaml</c> (a test compares them). Stroke with a line of 2 and round ends, scaled to the size.',
+  '/// </summary>',
+  'public static class MatIconPaths',
+  '{',
+  '    /// <summary>The width and height of the grid the icons are drawn on.</summary>',
+  '    public const double Grid = 24;',
+  '',
+  '    /// <summary>The width of the line on the grid (2, like the web).</summary>',
+  '    public const double StrokeWidth = 2;',
+  '',
+  '    private static readonly Dictionary<string, MatIconPath> Icons = new(StringComparer.Ordinal)',
+  '    {',
+  ...icons.map(icon => `        ["${icon.name}"] = new(${segmentList(icon.stroke)}, ${segmentList(icon.fill)}),`),
+  '    };',
+  '',
+  '    /// <summary>The names of the icons (the <c>x</c> of <c>mat-i-x</c>).</summary>',
+  '    public static IReadOnlyCollection<string> Names => Icons.Keys;',
+  '',
+  '    /// <summary>The icon of a name of the sprite, or null when the sprite has no such icon.</summary>',
+  '    public static MatIconPath? Find(string name) => Icons.GetValueOrDefault(name);',
+  '',
+  '    private static MatPathSegment Z => new(MatPathVerb.Close);',
+  '',
+  '    private static MatPathSegment M(double x, double y) => new(MatPathVerb.MoveTo, x, y);',
+  '',
+  '    private static MatPathSegment L(double x, double y) => new(MatPathVerb.LineTo, x, y);',
+  '',
+  '    private static MatPathSegment C(double x1, double y1, double x2, double y2, double x, double y) => new(MatPathVerb.CubicTo, x, y, x1, y1, x2, y2);',
+  '}',
+  '',
+].join(LF);
+
 // ------------------------------------------------------------------------------------------------------------- write
 
 const targets = [
   [path.join(root, 'src', 'MatDesktop', 'Tokens', 'MatTokens.g.cs'), tokensFile],
   [path.join(root, 'src', 'MatDesktop', 'Themes', 'MatIcons.axaml'), iconsFile],
+  [path.join(root, 'src', 'MatDesktop', 'Tokens', 'MatIconPaths.g.cs'), pathsFile],
 ];
 for (const [file, text] of targets) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, text);
 }
 console.log(`${colours.length} colours, ${sizes.length} sizes, ${type.length} type values, ${motion.length} motion values and ${rulesLight.length} accent rules written to src/MatDesktop/Tokens/MatTokens.g.cs`);
-console.log(`${icons.length} icons written to src/MatDesktop/Themes/MatIcons.axaml`);
+console.log(`${icons.length} icons written to src/MatDesktop/Themes/MatIcons.axaml and src/MatDesktop/Tokens/MatIconPaths.g.cs`);

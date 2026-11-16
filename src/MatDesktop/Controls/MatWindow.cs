@@ -13,9 +13,14 @@ namespace MatDesktop;
 /// </summary>
 public class MatWindow : Window
 {
-    /// <summary>A window in the colours of the theme.</summary>
+    /// <summary>A window in the colours of the theme, with <see cref="DefaultIcon"/> as its icon.</summary>
     public MatWindow()
     {
+        if (DefaultIcon is { } icon)
+        {
+            Icon = icon;
+        }
+
         this.Use(BackgroundProperty, "Mat.Bg");
         this.Use(ForegroundProperty, "Mat.Text");
         this.Use(FontFamilyProperty, "Mat.Font");
@@ -24,6 +29,12 @@ public class MatWindow : Window
         Opened += (_, _) => ApplyTitleBarTheme();
         ActualThemeVariantChanged += (_, _) => ApplyTitleBarTheme();
     }
+
+    /// <summary>
+    /// The icon of every window of the program (the task bar, Alt+Tab): set it once at the start (<c>MatWindow.DefaultIcon = new WindowIcon(...)</c>, or <see cref="MatThemeOptions.Icon"/>)
+    /// and each <see cref="MatWindow"/> made after that has it, the setup and the Info window included. A window may still set its own.
+    /// </summary>
+    public static WindowIcon? DefaultIcon { get; set; }
 
     /// <inheritdoc />
     protected override Type StyleKeyOverride => typeof(Window);

@@ -80,6 +80,24 @@
     </Style>
   </ControlTheme>
 
+  <!--
+    A state that needs attention and the button that ends it ("Resume" while recording is paused): the colours of a warning (the tint, its text, its line), so that nobody forgets the
+    state. Not for a destructive action (MatButton.Danger) and not for the main action (MatButton.Primary).
+  -->
+  <ControlTheme x:Key="MatButton.Warning" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+    <Setter Property="Foreground" Value="{DynamicResource Mat.WarningText}" />
+    <Setter Property="Background" Value="{DynamicResource Mat.WarningBg}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Mat.Warning}" />
+    <Style Selector="^:pointerover /template/ Border#Frame">
+      <Setter Property="Background" Value="{DynamicResource Mat.WarningBg}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Mat.WarningText}" />
+    </Style>
+    <Style Selector="^:pressed /template/ Border#Frame">
+      <Setter Property="Background" Value="{DynamicResource Mat.WarningBg}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Mat.WarningText}" />
+    </Style>
+  </ControlTheme>
+
   <!-- Without a frame: an action in a row or a header; muted until the pointer is over it. -->
   <ControlTheme x:Key="MatButton.Ghost" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
     <Setter Property="Background" Value="Transparent" />
@@ -221,6 +239,107 @@
     <Setter Property="TextElement.Foreground" Value="{DynamicResource Mat.OnAccent}" />
     <Setter Property="TextElement.FontSize" Value="{DynamicResource Mat.FontSizeXs}" />
     <Setter Property="TextElement.FontWeight" Value="SemiBold" />
+  </ControlTheme>
+
+  <!-- A quiet label (mat-badge mat-badge-soft): the strong tint of the accent with the accent text, for a mark such as "OCR" beside a title; an icon and a word fit in it. -->
+  <ControlTheme x:Key="MatBadge.Soft" TargetType="Border" BasedOn="{StaticResource MatBadge}">
+    <Setter Property="Background" Value="{DynamicResource Mat.AccentSoftStrong}" />
+    <Setter Property="TextElement.Foreground" Value="{DynamicResource Mat.AccentText}" />
+  </ControlTheme>
+
+  <!-- ===== Lists of rows: a list without a frame of its own, whose items are choices or cards ===== -->
+  <ControlTheme x:Key="MatList" TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+  </ControlTheme>
+
+  <!--
+    A choice in a short list (an item of MatList, like a ticked mat-choice of MatUi): a row of a control's height with a hairline; the chosen one is the tint of the accent behind the whole
+    row with the accent as its line all around (COLOR-08, never a bar at one side), the keyboard focus the ring of the accent.
+  -->
+  <ControlTheme x:Key="MatChoiceRow" TargetType="ListBoxItem">
+    <Setter Property="Foreground" Value="{DynamicResource Mat.Text}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="MinHeight" Value="{DynamicResource Mat.ControlHeight}" />
+    <Setter Property="Margin" Value="0,0,0,4" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Mat.Radius}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <Border Name="Ring" Margin="-3" BorderThickness="3" CornerRadius="9" BorderBrush="{DynamicResource Mat.FocusRing}" IsVisible="False" />
+          <Border Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                  CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}" MinHeight="{TemplateBinding MinHeight}">
+            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                              Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center"
+                              HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" />
+          </Border>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Frame">
+      <Setter Property="Background" Value="{DynamicResource Mat.Surface3}" />
+    </Style>
+    <Style Selector="^:selected /template/ Border#Frame">
+      <Setter Property="Background" Value="{DynamicResource Mat.AccentSoft}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Mat.Accent}" />
+    </Style>
+    <Style Selector="^:selected">
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="^:focus-visible /template/ Border#Ring">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="^:disabled">
+      <Setter Property="Opacity" Value="0.5" />
+      <Setter Property="Cursor" Value="Arrow" />
+    </Style>
+  </ControlTheme>
+
+  <!--
+    A row of a list as a card (an item of MatList: the history of a clipboard, the computers of a server): the surface with a hairline and the radius of a card, a step darker under the
+    pointer; the chosen one is the tint of the accent with the accent as its line all around (COLOR-08), the keyboard focus a line in the colour of the ring. The content brings its own
+    layout; Padding is the space inside the card.
+  -->
+  <ControlTheme x:Key="MatCardRow" TargetType="ListBoxItem">
+    <Setter Property="Foreground" Value="{DynamicResource Mat.Text}" />
+    <Setter Property="Background" Value="{DynamicResource Mat.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Mat.Border}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="{DynamicResource Mat.RadiusLg}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="14,10" />
+    <Setter Property="Margin" Value="0,0,0,8" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                            Foreground="{TemplateBinding Foreground}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Frame">
+      <Setter Property="Background" Value="{DynamicResource Mat.Surface2}" />
+    </Style>
+    <Style Selector="^:selected /template/ Border#Frame">
+      <Setter Property="Background" Value="{DynamicResource Mat.AccentSoft}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Mat.Accent}" />
+    </Style>
+    <Style Selector="^:focus-visible /template/ Border#Frame">
+      <Setter Property="BorderBrush" Value="{DynamicResource Mat.FocusRing}" />
+    </Style>
+    <Style Selector="^:disabled">
+      <Setter Property="Cursor" Value="Arrow" />
+    </Style>
   </ControlTheme>
 
   <!-- ===== The menu (DESK-04): the current item is a tint behind the whole item, its icon in the accent ===== -->

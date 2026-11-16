@@ -6,7 +6,7 @@
 // and matdesktop.version next to them (the version, then the SHA-256 of each file as copied, like sha256sum), removes the files of an older copy that the package no longer has,
 // and says which package references the program's project still needs.
 // --tokens-only copies only the files that need nothing but System: Tokens/MatTokens.g.cs, Tokens/MatColor.cs and Tokens/MatPalette.cs, for a tray that stays WinForms (AGENT-05).
-// --winforms copies every file that needs nothing but System (the PLAIN list): the tokens and the colours, and also the texts (MatText), the version (MatVersion), the states (MatState),
+// --winforms copies every file that needs nothing but System (the PLAIN list): the tokens and the colours, the icons of the sprite as segments (Tokens/MatIconPaths.g.cs), and also the texts (MatText), the version (MatVersion), the states (MatState),
 // the order of the tray menu (Tray/MatTrayMenu.cs) and the single instance, so that a WinForms tray or setup does not write them again. A test holds the list to the files that name no Avalonia.
 // The version is MatDesktopVersion in src/MatDesktop/MatDesktop.csproj. Generated files are copied as they are in the repository (run node tools/desktop.js first, CI holds them fresh).
 // Exit code: 0 copied, 64 wrong arguments, 66 the folder is not a project folder.
@@ -37,7 +37,7 @@ const LF = String.fromCharCode(10);
 const MARK_CS = '// MatDesktop ';
 const MARK_XAML = '<!-- MatDesktop ';
 const TOKENS = ['Tokens/MatTokens.g.cs', 'Tokens/MatColor.cs', 'Tokens/MatPalette.cs'];
-const PLAIN = [...TOKENS, 'MatText.cs', 'MatVersion.cs', 'MatState.cs', 'MatDesktopInfo.cs', 'MatSingleInstance.cs', 'Tray/MatTrayMenu.cs'];
+const PLAIN = [...TOKENS, 'Tokens/MatIconPaths.g.cs', 'MatText.cs', 'MatVersion.cs', 'MatState.cs', 'MatDesktopInfo.cs', 'MatSingleInstance.cs', 'Tray/MatTrayMenu.cs'];
 const destination = path.join(folder, 'MatDesktop');
 const sha = text => crypto.createHash('sha256').update(text, 'utf8').digest('hex');
 

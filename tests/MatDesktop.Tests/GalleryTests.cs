@@ -167,7 +167,12 @@ public sealed class GalleryTests
     private static MatWindow MainWindow(Bitmap logo, bool folded)
     {
         var bar = new MatTitleBar { AppName = "Matmon", Logo = logo, CloseKey = "Esc", ShowCaptionButtons = true, Center = new TextBox { Watermark = "Search checks", Width = 420, HorizontalAlignment = HorizontalAlignment.Left }.Themed("MatSearchBox") };
-        var nav = new MatNav { AppName = "Matmon", Version = Version, Channel = MatVersion.Release, TitleBar = bar, IsFolded = folded };
+        var nav = new MatNav { AppName = "Matmon", Version = Version, Channel = MatVersion.Release, TitleBar = bar, IsFolded = folded, UpdateVersion = "1.5.0", FoldShortcut = "Ctrl+B" };
+        if (!folded)
+        {
+            // the program's own at the foot of the menu: the state of the connection above the update and the version
+            nav.Foot = new Border { Padding = new Thickness(8, 0, 8, 10), Child = new MatStateDot { State = MatState.Running } };
+        }
         nav.Items.Add(new MatNavItem("dashboard", "Overview", "Ctrl+1") { IsCurrent = true });
         nav.Items.Add(new MatNavItem("activity", "Checks", "Ctrl+2"));
         nav.Items.Add(new MatNavItem("bell", "Alerts", "Ctrl+3"));

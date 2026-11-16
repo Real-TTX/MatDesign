@@ -74,7 +74,7 @@ public sealed partial class TenantWords
 
         // ---- the library for desktop programs: its name is the makers' (it is not renamed by a white label build), a company reads what it is
         new(WordScope.General, "generated into the theme of MatDesktop, the toolkit's library for desktop programs (", "generated into the theme of the toolkit's library for desktop programs (", "DESK-02: the library that generates the tokens, by what it is rather than by the makers' name."),
-        new(WordScope.General, "geometry resources that MatDesktop generates from", "geometry resources that the toolkit's library for desktop programs generates from", "DESK-09: the library that generates the icons, by what it is rather than by the makers' name."),
+        new(WordScope.General, "drawn from what MatDesktop generates from `matui-icons.svg` (the geometry resources for Avalonia, the segments of `MatIconPaths` for a window", "drawn from what the toolkit's library for desktop programs generates from `matui-icons.svg` (the geometry resources for Avalonia, its plain segments for a window", "DESK-09: the library that generates the icons, by what it is rather than by the makers' name."),
 
         // ---- the examples of the rules: an app of the registry used as an example
         new(WordScope.General, " (MatMail, Matcad, Matddns ...)", string.Empty, "IDENT-06: the names of three apps of the registry as an example; without them the sentence says the same."),

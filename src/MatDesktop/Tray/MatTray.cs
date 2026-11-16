@@ -8,8 +8,13 @@ using AvaloniaTrayIcon = Avalonia.Controls.TrayIcon;
 namespace MatDesktop;
 
 /// <summary>
-/// The tray icon of a program with Avalonia: the icon with the dot of the state (<see cref="MatTrayIcons"/>, a template image on macOS), the tooltip <c>&lt;App&gt;: &lt;state&gt;</c> and the
-/// menu of <see cref="MatTrayMenu"/> (TRAY-01), built again each time it opens. A left click on Windows runs Open; on macOS and Linux every click opens the menu (TRAY-03).
+/// The tray icon of a program with Avalonia: the icon with the dot of the state (<see cref="MatTrayIcons"/>, a template image on macOS), the tooltip <c>&lt;App&gt;: &lt;state&gt;</c>
+/// (<see cref="MatTrayMenu.Tooltip"/>) and the menu of <see cref="MatTrayMenu"/> (TRAY-01). A left click on Windows runs Open; on macOS and Linux every click opens the menu (TRAY-03).
+/// <para>
+/// A program whose items change (the last entries) fills the model in <see cref="MenuOpening"/>, which comes where the system says that the menu opens (macOS, Linux); Avalonia 11 on Windows
+/// builds the menu from what was there at the last <see cref="Refresh"/> without asking, so a program also calls <see cref="Refresh"/> when its items change. <see cref="Refresh"/> draws the
+/// icon again only when the colour or the mark of the state changed: a new menu or tooltip costs no picture.
+/// </para>
 /// </summary>
 public sealed class MatTray : IDisposable
 {
@@ -17,6 +22,7 @@ public sealed class MatTray : IDisposable
     private readonly NativeMenu _menu = new();
     private readonly Bitmap _mark;
     private readonly bool _template = OperatingSystem.IsMacOS();
+    private (string Color, MatStateMark Mark)? _drawn;
 
     /// <summary>A tray icon for <paramref name="app"/> with the menu <paramref name="menu"/> and the mark of the app (a square PNG of 64 px or more).</summary>
     public MatTray(Application app, MatTrayMenu menu, Bitmap mark)
@@ -37,19 +43,45 @@ public sealed class MatTray : IDisposable
                 Menu.Open?.Invoke();
             }
         };
-        _menu.Opening += (_, _) => Fill(_menu, Menu);
+        _menu.Opening += (_, _) =>
+        {
+            MenuOpening?.Invoke(this, EventArgs.Empty);
+            Fill(_menu, Menu);
+        };
         AvaloniaTrayIcon.SetIcons(app, [_icon]);
         Refresh();
     }
 
+    /// <summary>The menu is about to open (where the system says so: macOS, Linux): fill the model now (<see cref="MatTrayMenu.ClearOwn"/>, <see cref="MatTrayMenu.AddOwn"/>); the menu is built after it.</summary>
+    public event EventHandler? MenuOpening;
+
     /// <summary>The model of the menu.</summary>
     public MatTrayMenu Menu { get; }
 
-    /// <summary>Shows the state of the model: the icon, the tooltip and the menu. Call it after the state or an item changed.</summary>
+    /// <summary>How often the icon was drawn (the first time and after each change of the colour or mark of the state); for tests.</summary>
+    public int IconDraws { get; private set; }
+
+    /// <summary>The tooltip shown now.</summary>
+    public string? ToolTipText => _icon.ToolTipText;
+
+    /// <summary>The menu as it is shown now (for tests).</summary>
+    public NativeMenu NativeMenu => _menu;
+
+    /// <summary>
+    /// Shows the state of the model: the tooltip and the menu, and the icon when the colour or the mark of the state changed (a paused state whose words change keeps its picture). Call it
+    /// after the state or an item changed.
+    /// </summary>
     public void Refresh()
     {
-        _icon.Icon = MatTrayIcons.Icon(_mark, Menu.State, _template);
-        _icon.ToolTipText = Menu.State.Tooltip(Menu.AppName);
+        var look = (Menu.State.TrayColorToken, Menu.State.TemplateMark);
+        if (_drawn != look)
+        {
+            _icon.Icon = MatTrayIcons.Icon(_mark, Menu.State, _template);
+            _drawn = look;
+            IconDraws++;
+        }
+
+        _icon.ToolTipText = Menu.Tooltip;
         Fill(_menu, Menu);
     }
 
@@ -83,6 +115,19 @@ public sealed class MatTray : IDisposable
             }
 
             var item = new NativeMenuItem(entry.Text) { IsEnabled = entry.IsEnabled };
+            if (entry.Shortcut is { } shortcut)
+            {
+                // a key the menu of the system can show at the right of the text; a shortcut it cannot read (Ctrl+Option+V) goes after a tab, as the menus of Windows write it
+                if (Gesture(shortcut) is { } gesture)
+                {
+                    item.Gesture = gesture;
+                }
+                else
+                {
+                    item.Header = entry.Text + "\t" + shortcut;
+                }
+            }
+
             if (entry.Run is { } run && entry.IsEnabled)
             {
                 item.Command = new Command(run);
@@ -94,6 +139,18 @@ public sealed class MatTray : IDisposable
             }
 
             native.Items.Add(item);
+        }
+    }
+
+    private static Avalonia.Input.KeyGesture? Gesture(string text)
+    {
+        try
+        {
+            return Avalonia.Input.KeyGesture.Parse(text);
+        }
+        catch (Exception exception) when (exception is ArgumentException or FormatException or KeyNotFoundException or InvalidOperationException)
+        {
+            return null;
         }
     }
 

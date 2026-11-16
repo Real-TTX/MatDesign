@@ -696,7 +696,7 @@ public static class RuleBook
             Dont: "a German window in an English program, a text that is only in the code",
             Check: "Review (the program on a German and on an English system)"),
         new("DESK-09", "DESK", "Icons come from the toolkit's sprite",
-            "The icons of a desktop program are the icons of the toolkit's sprite (ICON-01), drawn from the geometry resources that MatDesktop generates from `matui-icons.svg` and stroked with the line of the web, never an icon font and never an emoji. An icon that the sprite does not have is added to the sprite first, so that the web and the desktop draw the same picture. The tray icon and the logo are drawn from the same mark.",
+            "The icons of a desktop program are the icons of the toolkit's sprite (ICON-01), drawn from what MatDesktop generates from `matui-icons.svg` (the geometry resources for Avalonia, the segments of `MatIconPaths` for a window that stays WinForms, AGENT-05) and stroked with the line of the web, never an icon font and never an emoji. An icon that the sprite does not have is added to the sprite first, so that the web and the desktop draw the same picture. The tray icon and the logo are drawn from the same mark.",
             RuleLevel.Must, Owner,
             Why: "One picture for one meaning (ICON-02) on the web and on the desktop. An icon font draws other shapes, needs a font that a system may not have and cannot be checked against the sprite.",
             Do: "an icon of the library named after its symbol in the sprite (search, pin, power), from the geometry generated from matui-icons.svg",
