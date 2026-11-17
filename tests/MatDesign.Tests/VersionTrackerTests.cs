@@ -1,3 +1,4 @@
+using MatDesign.Core;
 using System.Net;
 using MatDesign.Web.Studio;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -208,6 +209,6 @@ public sealed class VersionTrackerTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Contains($"MatDock uses MatUi {Ver.First}, 1 release behind the latest ({Ver.Next(1)}).", found.Message);
         Assert.Equal("/Studio/Versions/Edit?id=matdock", _studio.Checks.UrlOf(found));
         Assert.True(_studio.Checks.Report.Passed);
-        Assert.Contains("1 of 27", await _studio.Get("/Studio"));
+        Assert.Contains($"1 of {AppRegistry.All.Count}", await _studio.Get("/Studio"));
     }
 }
