@@ -1142,6 +1142,68 @@
    }
   },
   {
+   "id": "matcloud",
+   "layout": "MatCloud/src/MatCloud.Core/Pages/Shared/_Layout.cshtml, MatCloud/src/MatCloud.Core/Pages/Shared/_LayoutAuth.cshtml",
+   "results": {
+    "shell.menu-left": {
+     "state": "yes",
+     "note": "Sidebar with a brand in the layout."
+    },
+    "shell.breadcrumb": {
+     "state": "yes",
+     "note": "In the layout."
+    },
+    "shell.theme": {
+     "state": "yes",
+     "note": "Dark mode and a system option."
+    },
+    "shell.user": {
+     "state": "yes",
+     "note": "Sign-out and a menu around it."
+    },
+    "shell.version": {
+     "state": "yes",
+     "note": "A version is shown in the layout."
+    },
+    "dialog.native": {
+     "state": "yes",
+     "note": "No browser dialogs."
+    },
+    "dialog.used": {
+     "state": "yes",
+     "note": "24 dialog or modal elements."
+    },
+    "color.tokens": {
+     "state": "yes",
+     "note": "0 literal colours outside the variables."
+    },
+    "code.inline": {
+     "state": "yes",
+     "note": "0 inline style attributes."
+    },
+    "code.external": {
+     "state": "yes",
+     "note": "The layout loads nothing from another site."
+    },
+    "type.system": {
+     "state": "yes",
+     "note": "System fonts."
+    },
+    "icon.inline": {
+     "state": "yes",
+     "note": "Inline SVG."
+    },
+    "mobile.query": {
+     "state": "yes",
+     "note": "40 max-width media queries."
+    },
+    "a11y.motion": {
+     "state": "yes",
+     "note": "prefers-reduced-motion is honoured."
+    }
+   }
+  },
+  {
    "id": "matcms",
    "layout": "MatCMS/src/MatCMS/Pages/Shared/_Layout.cshtml",
    "results": {
