@@ -229,5 +229,10 @@ public static partial class RuleChanges
         Chg("2026-11-16", "DESK-02", "83ebb2bf", "The tokens come generated in the theme of the toolkit's library for desktop programs; a WinForms tray takes its generated tokens."),
         Chg("2026-11-16", "DESK-09", "94ca876a", "The icons come from the geometry that the toolkit's library for desktop programs generates from the sprite, no longer from a script of each program."),
         Chg("2026-11-16", "DESK-09", "95939103", "The icons of a WinForms window come from the toolkit's library for desktop programs too: plain segments generated from the sprite like the geometries of Avalonia."),
+
+        // ---- install options (docs/DESKTOP.md): one installer.json per program, read by the setup, a launcher and an installer
+        Chg("2026-11-19", "SETUP-05", "18e42e9b", "A desktop program installs, updates and configures itself without a window with the install options; a wrong option ends with exit code 2 and installs nothing."),
+        Chg("2026-11-19", "SETUP-06", "21333fb4", "The update manifest carries the install options of the program as installer."),
+        Add("2026-11-19", "SETUP-08", "a2d077ef", "A program names its install options and their defaults in installer.json; the setup, a launcher and an installer ask them; file types per user."),
     ];
 }

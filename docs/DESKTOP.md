@@ -135,7 +135,7 @@ channel` at the left, the buttons at the right: the primary action, Back, Cancel
 
 **The steps** (`SETUP-02`): **Welcome** (what will happen, where to, with which rights) → **Role** (only if the program has roles: the Matmon instance asks for Server or Probe) →
 **Connect** (only where it pairs, `AGENT-02`: the address and the code, checked at once) → **Options** (switches with the safe choice set: start at sign-in, desktop shortcut, automatic
-updates; for a service the port, the firewall rule, run as user / system / service) → **Progress** (a bar, the list of steps with ✓; no Cancel, the window cannot be closed) →
+updates, file types – a desktop program builds them from its `installer.json`, `SETUP-08`; for a service the port, the firewall rule, run as user / system / service) → **Progress** (a bar, the list of steps with ✓; no Cancel, the window cannot be closed) →
 **Finish** ("`<App>` ist bereit", "`<App>` jetzt starten" on; an agent that others connect to shows host, port, password and fingerprint, each with Copy). An **update** asks nothing:
 Welcome says which version is installed and which comes, then Progress and Finish; the settings are kept.
 
@@ -151,23 +151,49 @@ DisplayIcon, EstimatedSize, UninstallString, QuietUninstallString. The uninstall
 
 | Command | What it does |
 | --- | --- |
-| `<product>.exe --quiet` | a desktop program installs itself for the user with the default options |
-| `<product>.exe --uninstall [--quiet]` | removes it (quiet: without a window, the data kept) |
+| `<product>.exe --quiet [options] [--start]` | a desktop program installs itself for the user without a window; `--start` starts it afterwards (a tray program hidden in the tray) |
+| `<product>.exe --update [options]` | updates the installed program without a window (what the program does after an update stays, e.g. the restart in the tray) |
+| `<product> --configure [options]` | applies the options to the installed program, copies nothing and ends; Windows and macOS (`<App>.app/Contents/MacOS/<App> --configure …` after the bundle was copied) |
+| options (`SETUP-08`) | `--desktop-shortcut=yes\|no`, `--autostart=yes\|no`, `--automatic-updates=yes\|no`, `--file-types=.a,.b\|none\|default` (with or without the dot, any case, only extensions of `installer.json`) |
+| `<product>.exe --uninstall [--quiet]` | removes it (quiet: without a window, the data kept) and its file types |
 | `<product>.exe --autostart` / `--tray` | how autostart starts it: hidden, in the tray |
 | `<product>-agent install --quiet --url <server> --code <code>` | an agent enrols, then installs the service and the tray |
 | `<product>-agent uninstall [--delete-data]` | removes the agent; its data (token, certificate, log) stays unless `--delete-data` (`SETUP-04`) |
 | `msiexec /i <product>-agent.msi /qn URL=<server> KEY=<rollout key>` | the same as an MSI, for Intune, GPO and the like |
 | the Matmon instance: `setup.exe /silent ...` | the existing form; new setups use `install --quiet` |
 
-Exit code 0 when it worked, anything else with a message on stderr and in the log. A quiet install that lacks a value fails at once.
+Exit code 0 when it worked, anything else with a message on stderr and in the log. A quiet install that lacks a value fails at once. An option that is not given takes its default on a
+first install and keeps what an installed program has. An unknown option, a wrong value, an option or an extension the program does not offer, or options without `--quiet` / `--update` /
+`--configure` end with **exit code 2**, the message on stderr and in the log, and **nothing installed**. A bare `--autostart` (no `=`) stays the argument of the start at sign-in.
 
 **Updates** (`SETUP-06`). A manifest per channel (`release`, `nightly`):
-`{ "version": "1.4.2", "channel": "release", "buildNumber": 212, "packages": { "win-x64": { "file": "<Product>Setup.exe", "sha256": "..." }, "osx-arm64": { ... } } }`. The program downloads,
+`{ "version": "1.4.2", "channel": "release", "buildNumber": 212, "installer": { ... }, "packages": { "win-x64": { "file": "<Product>Setup.exe", "sha256": "..." }, "osx-arm64": { ... } } }`
+(`installer` is the program's `installer.json`, `SETUP-08`). The program downloads,
 checks the SHA-256, runs nothing that differs, starts the new version, which has to confirm its start (a file or a call) within a set time; otherwise the old version is put back and
 the version is marked failed, so that it is not tried again and again (the agents keep `pending.json` and `last-update.json` for it). Users and the policy `DisableUpdates` can switch automatic updates off.
 
 **The version** (`SETUP-07`) reads `Version 1.4.2 · release` (`Version nightly-212-20261115 · nightly`, `Version local-20261115 · local`) at the foot of the menu, in About, in the footer of
 the setup, in Info, and in Installed apps; the first line of the tray menu is the name and the number. A local build says that it gets no updates.
+
+**Install options** (`SETUP-08`). Every desktop program has an `installer.json` (camelCase; an option that is missing is not offered; `"fileTypes": []` when it has none):
+
+```json
+{
+  "desktopShortcut": { "default": false },
+  "autostart": { "default": true },
+  "automaticUpdates": { "default": true },
+  "fileTypes": [ { "extension": ".md", "name": "Markdown-Notiz", "default": true } ]
+}
+```
+
+It is embedded in the program (a resource `installer.json`) and is the `installer` of its update manifest (`SETUP-06`, CI copies the file into the manifest). The Options step of the
+setup (`SETUP-02`) builds its switches from it (a file type is a switch of its own); ThixLauncher and ThixInstall read it from the manifest, ask the same questions with the same defaults
+and pass the answers to the quiet install (`--quiet` / `--update` / `--configure` with the options of `SETUP-05`). File types are registered **per user, without administrator rights**:
+on Windows a ProgID `<Product>.<ext>` under `HKCU\Software\Classes` (the name, `DefaultIcon`, `shell\open\command` = `"<exe>" "%1"`), the ProgID in `.<ext>\OpenWithProgids` and as the
+default of `.<ext>`, `Applications\<exe>\SupportedTypes`, then `SHChangeNotify`; on macOS the bundle's `Info.plist` declares every file type of `installer.json` (`CFBundleDocumentTypes`,
+`LSHandlerRank` Alternate, role Editor or Viewer, written by the packaging script) and the chosen ones get the program as their default handler in Launch Services
+(`LSSetDefaultRoleHandlerForContentType`). The uninstall removes them. A program with file types **opens a file given as its first argument**, and a second start with a file hands it
+to the running instance (`DESK-05`). The model is ThixFred (`InstallerOptions`, `FileAssociations`, `MacFileAssociations`).
 
 ## 5. Agents (AGENT)
 

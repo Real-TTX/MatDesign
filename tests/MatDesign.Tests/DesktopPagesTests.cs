@@ -16,6 +16,9 @@ public sealed partial class DesktopPagesTests(WebApplicationFactory<Program> fac
 {
     private static readonly string[] Areas = ["DESK", "TRAY", "SETUP", "AGENT"];
 
+    /// <summary>The desktop rules the owner decided after the first day (2026-11-15).</summary>
+    private static readonly Dictionary<string, string> AddedOn = new() { ["SETUP-08"] = "2026-11-19" };
+
     private static readonly (string Url, string Page, string Area)[] PageList =
     [
         ("/Desktop", "overview", ""),
@@ -92,10 +95,10 @@ public sealed partial class DesktopPagesTests(WebApplicationFactory<Program> fac
                 Assert.DoesNotContain(MatWords.Find(text ?? string.Empty), f => f.Kind != MatWords.Toolkit);
             }
 
-            // added on the day the owner decided them; a later line only changes them
+            // added on the day the owner decided them (the install options of SETUP-08 later, 2026-11-19); a later line only changes them
             var lines = RuleChanges.For(rule.Id);
             Assert.Equal(RuleChangeKind.Added, lines[0].Kind);
-            Assert.Equal("2026-11-15", lines[0].Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
+            Assert.Equal(AddedOn.GetValueOrDefault(rule.Id, "2026-11-15"), lines[0].Date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture));
             Assert.All(lines.Skip(1), l => Assert.Equal(RuleChangeKind.Changed, l.Kind));
         }
     }
@@ -108,6 +111,10 @@ public sealed partial class DesktopPagesTests(WebApplicationFactory<Program> fac
         Assert.Contains("Only Quit", RuleBook.Get("DESK-06")!.Statement);
         Assert.Contains("\"Also delete my data\"", RuleBook.Get("SETUP-04")!.Statement);
         Assert.Contains("`Version <version> · <channel>`", RuleBook.Get("SETUP-07")!.Statement);
+        Assert.Contains("ends with exit code 2 and installs nothing", RuleBook.Get("SETUP-05")!.Statement);
+        Assert.Contains("`installer` (SETUP-08)", RuleBook.Get("SETUP-06")!.Statement);
+        Assert.Contains("an `installer.json`", RuleBook.Get("SETUP-08")!.Statement);
+        Assert.Contains("hands it to the running instance", RuleBook.Get("SETUP-08")!.Statement);
         Assert.Contains("never travels over the local status channel", RuleBook.Get("AGENT-03")!.Statement);
         Assert.Contains("Avalonia", RuleBook.Get("DESK-01")!.Statement);
         Assert.Equal(RuleLevel.Should, RuleBook.Get("AGENT-05")!.Level);

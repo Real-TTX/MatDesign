@@ -81,7 +81,7 @@
 <section class="mat-section" aria-labelledby="quiet-title">
     <div class="mat-section__head">
         <h2 id="quiet-title">Without a window</h2>
-        <p class="mat-section__lead">For scripts and the tools that install on many machines (<a href="/Rules/Detail?id=SETUP-05">SETUP-05</a>). Exit code 0 when it worked; an error on the error output and in the log.</p>
+        <p class="mat-section__lead">For scripts and the tools that install on many machines (<a href="/Rules/Detail?id=SETUP-05">SETUP-05</a>). Exit code 0 when it worked; an error on the error output and in the log. A desktop program takes its install options (<a href="/Rules/Detail?id=SETUP-08">SETUP-08</a>) on the command line: what is not given takes its default on a first install and stays as it is on an installed program; a wrong option ends with exit code 2 and installs nothing.</p>
     </div>
     <div class="mat-table-wrap">
         <table class="mat-table">
@@ -90,8 +90,11 @@
             <tbody>
                 <tr><td data-label="Command"><code>@(sample.Slug)-agent install --quiet --url https://monitor.example.com --code K7QM-4TXC</code></td><td data-label="What it does">Enrols with the code, then installs the service and the tray</td></tr>
                 <tr><td data-label="Command"><code>msiexec /i @(sample.Slug)-agent.msi /qn URL=https://monitor.example.com KEY=ag_…</code></td><td data-label="What it does">The same as an MSI, with a rollout key</td></tr>
-                <tr><td data-label="Command"><code>@(sample.Slug).exe --quiet</code></td><td data-label="What it does">A desktop program installs itself for the user with the default options</td></tr>
-                <tr><td data-label="Command"><code>@(sample.Slug).exe --uninstall</code></td><td data-label="What it does"><span>Opens the uninstall; with <code>--quiet</code> it removes the program and keeps the data</span></td></tr>
+                <tr><td data-label="Command"><code>@(sample.Slug).exe --quiet --autostart=no --file-types=.md --start</code></td><td data-label="What it does"><span>A desktop program installs itself for the user without a window; <code>--start</code> starts it afterwards</span></td></tr>
+                <tr><td data-label="Command"><code>@(sample.Slug).exe --update --automatic-updates=yes</code></td><td data-label="What it does">Updates the installed program without a window</td></tr>
+                <tr><td data-label="Command"><code>@(sample.Slug) --configure --desktop-shortcut=yes</code></td><td data-label="What it does">Applies the options to the installed program and copies nothing, on Windows and macOS</td></tr>
+                <tr><td data-label="Command"><code>--desktop-shortcut=yes|no --autostart=yes|no --automatic-updates=yes|no --file-types=.a,.b|none|default</code></td><td data-label="What it does">The install options, only those the program offers in its installer.json</td></tr>
+                <tr><td data-label="Command"><code>@(sample.Slug).exe --uninstall</code></td><td data-label="What it does"><span>Opens the uninstall; with <code>--quiet</code> it removes the program and its file types and keeps the data</span></td></tr>
             </tbody>
         </table>
     </div>
